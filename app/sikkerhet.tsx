@@ -1,5 +1,7 @@
-import { PlaceholderScreen } from '@/components/PlaceholderScreen';
+import { useLocalSearchParams } from 'expo-router';
+import { SafetyScreen } from '@/screens/SafetyScreen';
 
 export default function Route() {
-  return <PlaceholderScreen title="Sikkerhet, rapportering og blokkering" icon="alert-octagon" />;
+  const { profil } = useLocalSearchParams<{ profil?: string }>();
+  return <SafetyScreen targetProfileId={typeof profil === 'string' ? profil : undefined} />;
 }

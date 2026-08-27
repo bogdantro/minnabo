@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Listing, ListingFilter, ListingSort } from '@/domain/types';
 import { listings as seedListings } from './seed';
+import { safetyStore } from './safetyStore';
 
 const USER_ADDED_KEY = 'minnabo.listings.userAdded';
 
@@ -67,7 +68,9 @@ export const repositories = {
   listings: {
     list(filter?: ListingFilter, sort?: ListingSort): Listing[] {
       return sortListings(
-        all().filter((l) => matchesFilter(l, filter)),
+        all().filter(
+          (l) => matchesFilter(l, filter) && !safetyStore.isBlocked(l.owner.id),
+        ),
         sort,
       );
     },

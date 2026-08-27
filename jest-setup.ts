@@ -29,6 +29,21 @@ afterEach(() => {
   } catch {
     /* not loaded */
   }
+  try {
+    require('@/data/profileRepository').profileRepository._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
+    require('@/data/safetyStore').safetyStore._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
+    require('@/data/authStore').authStore._reset();
+  } catch {
+    /* not loaded */
+  }
 });
 
 jest.mock('@react-native-async-storage/async-storage', () => {

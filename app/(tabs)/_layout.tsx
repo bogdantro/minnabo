@@ -1,8 +1,15 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { TabBar, type TabBarProps } from '@/components/TabBar';
+import { useAuth } from '@/data/authStore';
 import nb from '@/i18n/nb';
 
 export default function TabsLayout() {
+  const { isOnboarded } = useAuth();
+
+  if (!isOnboarded) {
+    return <Redirect href="/velkommen" />;
+  }
+
   return (
     <Tabs
       tabBar={(props) => <TabBar {...(props as unknown as TabBarProps)} />}

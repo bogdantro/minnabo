@@ -176,6 +176,29 @@ export type Review = {
   createdAt: string;
 };
 
+export type ReportTargetType =
+  | 'USER'
+  | 'LISTING'
+  | 'PROPOSAL'
+  | 'MESSAGE'
+  | 'REVIEW';
+
+export type Report = {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: string;
+  details?: string;
+  byProfileId: string;
+  createdAt: string;
+};
+
+export type Block = {
+  byProfileId: string;
+  blockedProfileId: string;
+  createdAt: string;
+};
+
 export type CompletionConfirmation = {
   agreementProposalId: string;
   byProfileId: string;

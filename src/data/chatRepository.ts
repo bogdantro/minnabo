@@ -6,6 +6,7 @@ import type {
 } from '@/domain/types';
 import { transition, type ProposalEvent, type Actor } from '@/domain/proposalMachine';
 import nb from '@/i18n/nb';
+import { safetyStore } from './safetyStore';
 import {
   conversations as seedConversations,
   messagesByConversation as seedMessages,
@@ -29,9 +30,9 @@ export const chatRepository = {
   currentUserId: CURRENT_USER_ID,
 
   listConversations(opts?: { unreadOnly?: boolean; query?: string }): Conversation[] {
-    let result = [...conversations].sort(
-      (a, b) => Date.parse(b.lastMessageAt) - Date.parse(a.lastMessageAt),
-    );
+    let result = [...conversations]
+      .filter((c) => !safetyStore.isBlocked(c.counterpart.id))
+      .sort((a, b) => Date.parse(b.lastMessageAt) - Date.parse(a.lastMessageAt));
     if (opts?.unreadOnly) result = result.filter((c) => c.unread);
     if (opts?.query?.trim()) {
       const q = opts.query.trim().toLowerCase();
