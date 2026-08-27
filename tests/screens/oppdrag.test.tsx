@@ -19,3 +19,20 @@ test('filtering by Hage removes non-hage listings', async () => {
     expect(screen.getByText('Klippe plen')).toBeTruthy();
   });
 });
+
+test('job-type filter separates offers from requests', async () => {
+  await renderWithProviders(<OppdragScreen />);
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+
+  await fireEvent.press(screen.getByText('Folk som tilbyr hjelp'));
+  await waitFor(() => {
+    expect(screen.getByText('Jeg kan klippe plenen din')).toBeTruthy();
+    expect(screen.queryByText('Klippe plen')).toBeNull();
+  });
+
+  await fireEvent.press(screen.getByText('Oppdrag å ta'));
+  await waitFor(() => {
+    expect(screen.getByText('Klippe plen')).toBeTruthy();
+    expect(screen.queryByText('Jeg kan klippe plenen din')).toBeNull();
+  });
+});

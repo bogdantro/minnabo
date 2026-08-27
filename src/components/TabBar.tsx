@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,6 +7,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { AppText } from './ui/Text';
 import { Icon, type IconName } from './ui/Icon';
+import { MenySheet } from './MenySheet';
 
 type TabRoute = { key: string; name: string };
 export type TabBarProps = {
@@ -20,22 +22,25 @@ export type TabBarProps = {
   };
 };
 
-type Slot = { name: string; label: string; icon: IconName };
+type NavSlot = { kind: 'route'; name: string; label: string; icon: IconName };
+type ActionSlot = { kind: 'action'; id: 'leggUt' | 'meny'; label: string; icon: IconName };
+type Slot = NavSlot | ActionSlot;
 
-const LEFT: Slot[] = [
-  { name: 'index', label: nb.tabs.oppdrag, icon: 'clipboard' },
-  { name: 'fellesskap', label: nb.tabs.fellesskap, icon: 'users' },
+const LEFT: NavSlot[] = [
+  { kind: 'route', name: 'index', label: nb.tabs.oppdrag, icon: 'clipboard' },
+  { kind: 'route', name: 'fellesskap', label: nb.tabs.fellesskap, icon: 'users' },
 ];
 const RIGHT: Slot[] = [
-  { name: 'innboks', label: nb.tabs.innboks, icon: 'message-circle' },
-  { name: 'meny', label: nb.tabs.meny, icon: 'menu' },
+  { kind: 'route', name: 'innboks', label: nb.tabs.innboks, icon: 'message-circle' },
+  { kind: 'action', id: 'meny', label: nb.tabs.meny, icon: 'menu' },
 ];
 
 export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  const [menuOpen, setMenuOpen] = useState(false);
   const activeName = state.routes[state.index]?.name;
 
-  const renderSlot = (slot: Slot) => {
+  const renderNav = (slot: NavSlot) => {
     const active = activeName === slot.name;
     return (
       <Pressable
@@ -63,32 +68,54 @@ export function TabBar({ state, navigation }: TabBarProps) {
     );
   };
 
-  return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom + tokens.space.sm }]}>
-      {LEFT.map(renderSlot)}
-
+  const renderRight = (slot: Slot) => {
+    if (slot.kind === 'route') return renderNav(slot);
+    return (
       <Pressable
+        key={slot.id}
         accessibilityRole="button"
-        accessibilityLabel={nb.tabs.leggUt}
+        accessibilityLabel={slot.label}
         style={styles.slot}
-        onPress={() => router.push('/legg-ut')}
+        onPress={() => setMenuOpen(true)}
       >
-        <View style={styles.fab}>
-          <LinearGradient
-            colors={[tokens.color.lime, tokens.color.limeGradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Icon name="plus" size={28} color="navy" />
-        </View>
+        <Icon name={slot.icon} size={22} color="navy" />
         <AppText variant="meta" color="navy">
-          {nb.tabs.leggUt}
+          {slot.label}
         </AppText>
       </Pressable>
+    );
+  };
 
-      {RIGHT.map(renderSlot)}
-    </View>
+  return (
+    <>
+      <View style={[styles.bar, { paddingBottom: insets.bottom + tokens.space.sm }]}>
+        {LEFT.map(renderNav)}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={nb.tabs.leggUt}
+          style={styles.slot}
+          onPress={() => router.push('/legg-ut')}
+        >
+          <View style={styles.fab}>
+            <LinearGradient
+              colors={[tokens.color.lime, tokens.color.limeGradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <Icon name="plus" size={28} color="navy" />
+          </View>
+          <AppText variant="meta" color="navy">
+            {nb.tabs.leggUt}
+          </AppText>
+        </Pressable>
+
+        {RIGHT.map(renderRight)}
+      </View>
+
+      <MenySheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
+    </>
   );
 }
 

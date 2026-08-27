@@ -21,6 +21,11 @@ const nb = {
     question: 'Hva trenger du hjelp med?',
     searchPlaceholder: 'Søk etter småjobber',
     nearYou: 'Jobber nær deg',
+    typeAll: 'Alle',
+    typeNeed: 'Oppdrag å ta',
+    typeOffer: 'Folk som tilbyr hjelp',
+    nearYouNeed: 'Oppdrag nær deg',
+    nearYouOffer: 'Tilbyr hjelp nær deg',
   },
 
   categories: {
@@ -101,6 +106,36 @@ const nb = {
     phone: 'Telefon verifisert',
     email: 'E-post verifisert',
     business: 'Bedrift verifisert',
+  },
+
+  inbox: {
+    title: 'Innboks',
+    searchPlaceholder: 'Søk i meldinger',
+    filterAll: 'Alle',
+    filterUnread: 'Uleste',
+    sectionTitle: 'Meldinger',
+    empty: 'Ingen samtaler ennå.',
+    emptyUnread: 'Ingen uleste meldinger.',
+    tagNewOffer: 'Nytt tilbud',
+    tagOfferAccepted: 'Tilbud godtatt',
+  },
+
+  chat: {
+    activeNow: 'Aktiv nå',
+    inputPlaceholder: 'Skriv en melding …',
+    sendOffer: 'Send tilbud',
+    attach: 'Legg ved',
+    send: 'Send',
+    reportMenu: 'Rapportér eller blokkér',
+    offerLabel: 'TILBUD',
+    acceptOffer: 'Godta tilbud',
+    declineOffer: 'Avslå',
+    offerAccepted: 'Tilbud godtatt',
+    offerDeclined: 'Tilbud avslått',
+    offerWithdrawn: 'Tilbud trukket',
+    paymentNote:
+      'Betaling avtales og gjennomføres direkte mellom partene. MinNabo håndterer ikke betaling.',
+    systemOfferSent: 'sendte et tilbud',
   },
 } as const;
 

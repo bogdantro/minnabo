@@ -1,5 +1,15 @@
-import type { Listing, ListingFilter, ListingSort } from '@/domain/types';
+import type {
+  AgreementSnapshot,
+  Conversation,
+  Listing,
+  ListingFilter,
+  ListingSort,
+  Message,
+  Proposal,
+} from '@/domain/types';
+import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { repositories } from '@/data/repositories';
+import { chatRepository } from '@/data/chatRepository';
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -25,6 +35,68 @@ export class MockApiClient {
       throw new Error('Fant ikke oppføringen.');
     }
     return listing;
+  }
+
+  // --- conversations & messages ---
+
+  async listConversations(params: { unreadOnly?: boolean; query?: string } = {}): Promise<
+    Conversation[]
+  > {
+    await delay(200);
+    return chatRepository.listConversations(params);
+  }
+
+  async getConversation(id: string): Promise<Conversation> {
+    await delay(150);
+    const conv = chatRepository.getConversation(id);
+    if (!conv) throw new Error('Fant ikke samtalen.');
+    chatRepository.markRead(id);
+    return conv;
+  }
+
+  async listMessages(conversationId: string): Promise<Message[]> {
+    await delay(150);
+    return chatRepository.getMessages(conversationId);
+  }
+
+  async getProposal(id: string): Promise<Proposal> {
+    await delay(120);
+    const proposal = chatRepository.getProposal(id);
+    if (!proposal) throw new Error('Fant ikke tilbudet.');
+    return proposal;
+  }
+
+  async sendMessage(conversationId: string, text: string): Promise<Message> {
+    await delay(120);
+    return chatRepository.sendMessage(conversationId, text);
+  }
+
+  async sendProposal(input: {
+    conversationId: string;
+    listingId: string;
+    priceAmountMinor: number;
+    message?: string;
+    scheduledText?: string;
+    caveats?: string;
+  }): Promise<Proposal> {
+    await delay(150);
+    return chatRepository.sendProposal(input);
+  }
+
+  async respondToProposal(
+    proposalId: string,
+    event: ProposalEvent,
+    actor: Actor,
+  ): Promise<{ proposal: Proposal; agreement?: AgreementSnapshot }> {
+    await delay(150);
+    return chatRepository.respondToProposal(proposalId, event, actor);
+  }
+
+  async getAgreementForConversation(
+    conversationId: string,
+  ): Promise<AgreementSnapshot | null> {
+    await delay(100);
+    return chatRepository.getAgreementForConversation(conversationId) ?? null;
   }
 }
 

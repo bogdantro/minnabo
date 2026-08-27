@@ -1,6 +1,8 @@
 import type { Price } from './price';
+import type { ProposalStatus } from './proposalMachine';
 
 export type { Price } from './price';
+export type { ProposalStatus } from './proposalMachine';
 
 /**
  * A listing is always one of two explicit types. The type is a stored field
@@ -103,6 +105,70 @@ export type Listing = {
   task?: TaskDetails;
   offer?: ServiceOfferDetails;
   saved?: boolean;
+};
+
+// ---------------------------------------------------------------------------
+// Proposals (tilbud) and agreements
+// ---------------------------------------------------------------------------
+
+export type Proposal = {
+  id: string;
+  listingId: string;
+  conversationId: string;
+  /** who sent the proposal */
+  fromProfileId: string;
+  /** who can accept/decline it */
+  toProfileId: string;
+  price: Price;
+  message?: string;
+  scheduledText?: string;
+  caveats?: string;
+  status: ProposalStatus;
+  createdAt: string;
+};
+
+export type AgreementSnapshot = {
+  proposalId: string;
+  listingId: string;
+  price: Price;
+  scheduledText?: string;
+  description: string;
+  caveats?: string;
+  agreedAt: string;
+};
+
+// ---------------------------------------------------------------------------
+// Conversations and messages
+// ---------------------------------------------------------------------------
+
+export type ConversationStatusTag = 'NEW_OFFER' | 'OFFER_ACCEPTED' | null;
+
+export type MessageDelivery = 'SENT' | 'DELIVERED' | 'READ';
+
+export type Message = {
+  id: string;
+  conversationId: string;
+  authorProfileId: string;
+  /** plain text body; empty when kind !== 'TEXT' */
+  text: string;
+  kind: 'TEXT' | 'PROPOSAL' | 'SYSTEM';
+  proposalId?: string;
+  createdAt: string;
+  delivery: MessageDelivery;
+};
+
+export type Conversation = {
+  id: string;
+  listing: Pick<Listing, 'id' | 'title' | 'type'> & {
+    place: string;
+    imageUrl?: string;
+  };
+  /** the other participant, from the current user's point of view */
+  counterpart: PublicProfile & { online?: boolean };
+  lastMessagePreview: string;
+  lastMessageAt: string;
+  unread: boolean;
+  statusTag: ConversationStatusTag;
 };
 
 export type ListingFilter = {

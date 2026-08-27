@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
+import type { ListingType } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { homeCategories } from '@/data/seed';
@@ -12,13 +13,21 @@ import { SearchField } from '@/components/ui/SearchField';
 import { CategoryChip } from '@/components/ui/CategoryChip';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
+import { FilterTabs } from '@/components/FilterTabs';
 import { ListingCard } from '@/components/ListingCard';
 import type { IconName } from '@/components/ui/Icon';
+
+type TypeFilter = 'ALL' | ListingType;
 
 export function OppdragScreen() {
   const me = useCurrentUser();
   const [activeSlug, setActiveSlug] = useState('alle');
-  const { data, isLoading, isError, refetch } = useListings({ categorySlug: activeSlug });
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
+
+  const { data, isLoading, isError, refetch } = useListings({
+    categorySlug: activeSlug,
+    type: typeFilter === 'ALL' ? undefined : typeFilter,
+  });
 
   const listings = data ?? [];
 
@@ -26,6 +35,13 @@ export function OppdragScreen() {
   if (isLoading) status = 'loading';
   else if (isError) status = 'error';
   else if (listings.length === 0) status = 'empty';
+
+  const nearYouTitle =
+    typeFilter === 'TASK_REQUEST'
+      ? nb.home.nearYouNeed
+      : typeFilter === 'SERVICE_OFFER'
+        ? nb.home.nearYouOffer
+        : nb.home.nearYou;
 
   return (
     <View style={styles.wrap}>
@@ -67,7 +83,17 @@ export function OppdragScreen() {
           ))}
         </ScrollView>
 
-        <SectionHeader title={nb.home.nearYou} />
+        <FilterTabs<TypeFilter>
+          options={[
+            { value: 'ALL', label: nb.home.typeAll },
+            { value: 'TASK_REQUEST', label: nb.home.typeNeed },
+            { value: 'SERVICE_OFFER', label: nb.home.typeOffer },
+          ]}
+          value={typeFilter}
+          onChange={setTypeFilter}
+        />
+
+        <SectionHeader title={nearYouTitle} />
 
         {status === 'ready' ? (
           <View style={styles.list}>

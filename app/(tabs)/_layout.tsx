@@ -11,7 +11,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: nb.tabs.oppdrag }} />
       <Tabs.Screen name="fellesskap" options={{ title: nb.tabs.fellesskap }} />
       <Tabs.Screen name="innboks" options={{ title: nb.tabs.innboks }} />
-      <Tabs.Screen name="meny" options={{ title: nb.tabs.meny }} />
     </Tabs>
   );
 }
