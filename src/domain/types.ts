@@ -49,6 +49,10 @@ export type PublicProfile = {
   location: LocationInfo;
   verifications: Verification[];
   isBusiness: boolean;
+  presentation?: string;
+  services?: string[];
+  categorySlugs?: string[];
+  completedTasks?: number;
 };
 
 export type ListingImage = { id: string; url: string };
@@ -155,6 +159,50 @@ export type Message = {
   proposalId?: string;
   createdAt: string;
   delivery: MessageDelivery;
+};
+
+// ---------------------------------------------------------------------------
+// Reviews, completion, notifications
+// ---------------------------------------------------------------------------
+
+export type Review = {
+  id: string;
+  agreementProposalId: string;
+  listingId: string;
+  fromProfileId: string;
+  toProfileId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+};
+
+export type CompletionConfirmation = {
+  agreementProposalId: string;
+  byProfileId: string;
+  confirmedAt: string;
+};
+
+export type NotificationKind =
+  | 'NEW_MESSAGE'
+  | 'NEW_OFFER'
+  | 'OFFER_CHANGED'
+  | 'OFFER_WITHDRAWN'
+  | 'OFFER_ACCEPTED'
+  | 'OFFER_DECLINED'
+  | 'AGREED_TIME'
+  | 'COMPLETION_REQUESTED'
+  | 'REVIEW_RECEIVED'
+  | 'MODERATION';
+
+export type AppNotification = {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  createdAt: string;
+  read: boolean;
+  /** deep-link target within the app */
+  route?: string;
 };
 
 export type Conversation = {

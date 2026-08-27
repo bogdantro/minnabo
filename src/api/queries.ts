@@ -127,3 +127,89 @@ export function useAgreement(conversationId: string) {
     enabled: !!conversationId,
   });
 }
+
+export const profileKeys = {
+  profile: (id: string) => ['profile', id] as const,
+  notifications: ['notifications'] as const,
+  reviews: (id: string) => ['reviews', id] as const,
+  myListings: (type?: string) => ['myListings', type ?? 'all'] as const,
+  completion: (id: string) => ['completion', id] as const,
+};
+
+export function useProfile(id: string) {
+  return useQuery({
+    queryKey: profileKeys.profile(id),
+    queryFn: () => apiClient.getProfile(id),
+    enabled: !!id,
+  });
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: Parameters<typeof apiClient.updateProfile>[0]) =>
+      apiClient.updateProfile(patch),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: profileKeys.profile(data.id) });
+    },
+  });
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: profileKeys.notifications,
+    queryFn: () => apiClient.listNotifications(),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.markAllNotificationsRead(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: profileKeys.notifications }),
+  });
+}
+
+export function useReviews(profileId: string) {
+  return useQuery({
+    queryKey: profileKeys.reviews(profileId),
+    queryFn: () => apiClient.listReviews(profileId),
+    enabled: !!profileId,
+  });
+}
+
+export function useMyListings(type?: 'TASK_REQUEST' | 'SERVICE_OFFER') {
+  return useQuery({
+    queryKey: profileKeys.myListings(type),
+    queryFn: () => apiClient.listMyListings(type),
+  });
+}
+
+export function useCompletion(agreementProposalId: string) {
+  return useQuery({
+    queryKey: profileKeys.completion(agreementProposalId),
+    queryFn: () => apiClient.getCompletion(agreementProposalId),
+    enabled: !!agreementProposalId,
+  });
+}
+
+export function useConfirmCompletion(agreementProposalId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (byProfileId: string) =>
+      apiClient.confirmCompletion(agreementProposalId, byProfileId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: profileKeys.completion(agreementProposalId) }),
+  });
+}
+
+export function useSubmitReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof apiClient.submitReview>[0]) =>
+      apiClient.submitReview(input),
+    onSuccess: (review) => {
+      qc.invalidateQueries({ queryKey: profileKeys.reviews(review.toProfileId) });
+    },
+  });
+}

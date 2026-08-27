@@ -55,9 +55,17 @@ export const profiles: Record<string, PublicProfile> = {
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=60',
     memberSince: '2026',
     location: lillehammer,
-    verifications: [phoneVerified()],
+    verifications: [
+      phoneVerified(),
+      { kind: 'EMAIL', verified: true, explanation: 'E-postadressen er bekreftet.' },
+    ],
     isBusiness: false,
     rating: { average: 4.8, count: 6 },
+    presentation:
+      'Bor på Lillehammer og hjelper gjerne til med hagearbeid og enkel montering. Punktlig og ryddig.',
+    services: ['Hagearbeid', 'Montering', 'Bæring'],
+    categorySlugs: ['hage', 'montering', 'flytting'],
+    completedTasks: 6,
   },
   jonas: {
     id: 'u-jonas',

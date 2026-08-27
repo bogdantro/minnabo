@@ -1,5 +1,4 @@
-import { PlaceholderScreen } from '@/components/PlaceholderScreen';
-
+import { ProfileScreen } from '@/screens/ProfileScreen';
 export default function Route() {
-  return <PlaceholderScreen title="Min profil" icon="user" />;
+  return <ProfileScreen />;
 }

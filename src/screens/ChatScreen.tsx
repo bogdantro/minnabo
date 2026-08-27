@@ -17,6 +17,7 @@ import {
   useSendMessage,
   useSendProposal,
   useRespondToProposal,
+  useAgreement,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
@@ -76,6 +77,7 @@ export function ChatScreen({
   const me = useCurrentUser();
   const scrollRef = useRef<ScrollView>(null);
   const { data: messages, isLoading, isError, refetch } = useMessages(conversation.id);
+  const { data: agreement } = useAgreement(conversation.id);
   const sendMessage = useSendMessage(conversation.id);
   const sendProposal = useSendProposal(conversation.id);
 
@@ -157,6 +159,20 @@ export function ChatScreen({
         </ScrollView>
       )}
 
+      {agreement ? (
+        <Pressable
+          accessibilityRole="button"
+          style={styles.agreementBar}
+          onPress={() => safePush(`/fullfor/${agreement.proposalId}`)}
+        >
+          <Icon name="check-circle" size={16} color="lime" />
+          <AppText variant="meta" weight="bold" style={styles.agreementText}>
+            {nb.chat.offerAccepted} · {nb.completion.confirm}
+          </AppText>
+          <Icon name="chevron-right" size={16} color="navyMuted" />
+        </Pressable>
+      ) : null}
+
       <ChatComposer
         canSendOffer
         sending={sendMessage.isPending}
@@ -195,4 +211,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   offerWrap: { marginVertical: tokens.space.sm },
+  agreementBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.sm,
+    backgroundColor: tokens.color.limeTint,
+    paddingHorizontal: tokens.space.lg,
+    paddingVertical: tokens.space.sm,
+  },
+  agreementText: { flex: 1 },
 });
+

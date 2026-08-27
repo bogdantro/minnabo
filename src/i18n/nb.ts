@@ -166,6 +166,71 @@ const nb = {
     business: 'Bedrift verifisert',
   },
 
+  profile: {
+    title: 'Profil',
+    editTitle: 'Rediger profil',
+    edit: 'Rediger profil',
+    presentation: 'Presentasjon',
+    services: 'Tjenester',
+    categories: 'Kategorier',
+    completedTasks: 'Gjennomførte oppdrag',
+    reviews: 'Vurderinger',
+    memberSince: 'Medlem siden',
+    noReviews: 'Ingen vurderinger ennå.',
+    verificationCenter: 'Verifiseringssenter',
+    verified: 'Bekreftet',
+    notVerified: 'Ikke bekreftet',
+    verifyNow: 'Bekreft nå',
+    fieldName: 'Navn',
+    fieldArea: 'Område',
+    fieldPresentation: 'Presentasjon',
+    save: 'Lagre',
+    saved: 'Profilen er lagret.',
+  },
+
+  notifications: {
+    title: 'Varsler',
+    empty: 'Ingen varsler ennå.',
+    markAllRead: 'Merk alle som lest',
+  },
+
+  saved: {
+    title: 'Lagrede',
+    listingsTab: 'Oppføringer',
+    searchesTab: 'Søk',
+    emptyListings: 'Du har ikke lagret noen oppføringer ennå.',
+    emptySearches: 'Du har ikke lagret noen søk ennå.',
+  },
+
+  mine: {
+    title: 'Mine oppdrag og tjenester',
+    tasksTab: 'Mine oppdrag',
+    offersTab: 'Mine tjenester',
+    emptyTasks: 'Du har ikke lagt ut noen oppdrag ennå.',
+    emptyOffers: 'Du har ikke lagt ut noen tjenester ennå.',
+    newListing: 'Legg ut ny',
+  },
+
+  completion: {
+    title: 'Fullføring',
+    heading: 'Er oppdraget fullført?',
+    body: 'Begge parter må bekrefte at oppdraget er utført.',
+    confirm: 'Bekreft fullført',
+    waitingOther: 'Venter på at den andre parten bekrefter.',
+    bothConfirmed: 'Begge har bekreftet. Oppdraget er fullført.',
+    disagree: 'Noe stemmer ikke',
+    reviewCta: 'Gi en vurdering',
+  },
+
+  review: {
+    title: 'Gi en vurdering',
+    heading: 'Hvordan gikk det?',
+    ratingLabel: 'Din vurdering',
+    commentLabel: 'Kommentar (valgfritt)',
+    submit: 'Send vurdering',
+    submitted: 'Takk for vurderingen!',
+  },
+
   inbox: {
     title: 'Innboks',
     searchPlaceholder: 'Søk i meldinger',

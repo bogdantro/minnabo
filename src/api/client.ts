@@ -7,9 +7,16 @@ import type {
   Message,
   Proposal,
 } from '@/domain/types';
+import type {
+  AppNotification,
+  CompletionConfirmation,
+  PublicProfile,
+  Review,
+} from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { repositories } from '@/data/repositories';
 import { chatRepository } from '@/data/chatRepository';
+import { profileRepository } from '@/data/profileRepository';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const delay = (ms: number) =>
@@ -105,6 +112,62 @@ export class MockApiClient {
   ): Promise<AgreementSnapshot | null> {
     await delay(100);
     return chatRepository.getAgreementForConversation(conversationId) ?? null;
+  }
+
+  // --- profile, notifications, reviews, completion ---
+
+  async getProfile(id: string): Promise<PublicProfile> {
+    await delay(150);
+    const profile = profileRepository.getProfile(id);
+    if (!profile) throw new Error('Fant ikke profilen.');
+    return profile;
+  }
+
+  async updateProfile(
+    patch: Parameters<typeof profileRepository.updateProfile>[0],
+  ): Promise<PublicProfile> {
+    await delay(200);
+    return profileRepository.updateProfile(patch);
+  }
+
+  async listNotifications(): Promise<AppNotification[]> {
+    await delay(150);
+    return profileRepository.listNotifications();
+  }
+
+  async markAllNotificationsRead(): Promise<void> {
+    await delay(120);
+    profileRepository.markAllNotificationsRead();
+  }
+
+  async listReviews(profileId: string): Promise<Review[]> {
+    await delay(150);
+    return profileRepository.listReviewsForProfile(profileId);
+  }
+
+  async listMyListings(type?: 'TASK_REQUEST' | 'SERVICE_OFFER'): Promise<Listing[]> {
+    await delay(150);
+    return profileRepository.myListings(type);
+  }
+
+  async getCompletion(agreementProposalId: string): Promise<CompletionConfirmation[]> {
+    await delay(120);
+    return profileRepository.completionsFor(agreementProposalId);
+  }
+
+  async confirmCompletion(
+    agreementProposalId: string,
+    byProfileId: string,
+  ): Promise<CompletionConfirmation[]> {
+    await delay(150);
+    return profileRepository.confirmCompletion(agreementProposalId, byProfileId);
+  }
+
+  async submitReview(
+    input: Parameters<typeof profileRepository.submitReview>[0],
+  ): Promise<Review> {
+    await delay(200);
+    return profileRepository.submitReview(input);
   }
 }
 
