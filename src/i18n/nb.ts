@@ -59,6 +59,8 @@ const nb = {
 
   common: {
     km: 'km',
+    away: 'unna',
+    upTo: 'opptil',
     fixedPrice: 'Fastpris',
     budget: 'Budsjett',
     fromPrice: 'Fra-pris',

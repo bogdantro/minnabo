@@ -62,7 +62,16 @@ jest.mock('expo-router', () => {
   const React = require('react');
   const { View } = require('react-native');
   const passthrough = (props: any) => React.createElement(View, props, props.children);
-  const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), navigate: jest.fn() };
+  const router = {
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    navigate: jest.fn(),
+    canGoBack: jest.fn(() => true),
+    setParams: jest.fn(),
+    dismiss: jest.fn(),
+    dismissAll: jest.fn(),
+  };
   const Stack: any = passthrough;
   Stack.Screen = () => null;
   const Tabs: any = passthrough;
