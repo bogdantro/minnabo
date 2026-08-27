@@ -1,8 +1,7 @@
-import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { tokens } from '@/theme';
 import { useListing } from '@/api/queries';
-import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
+import { FallbackScreen } from '@/components/FallbackScreen';
+import type { ScreenStatus } from '@/components/ui/ScreenState';
 import { TaskDetailScreen } from '@/screens/TaskDetailScreen';
 import { ServiceOfferDetailScreen } from '@/screens/ServiceOfferDetailScreen';
 
@@ -26,8 +25,11 @@ export default function ListingDetailRoute() {
   else if (!isLoading) status = 'empty';
 
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenState status={status} onRetry={() => refetch()} emptyText="Fant ikke oppføringen." />
-    </View>
+    <FallbackScreen
+      status={status}
+      onRetry={() => refetch()}
+      emptyText="Fant ikke oppføringen."
+      title="Oppdragsdetaljer"
+    />
   );
 }

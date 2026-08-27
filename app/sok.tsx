@@ -1,5 +1,7 @@
-import { PlaceholderScreen } from '@/components/PlaceholderScreen';
+import { useLocalSearchParams } from 'expo-router';
+import { SearchScreen } from '@/screens/SearchScreen';
 
-export default function Route() {
-  return <PlaceholderScreen title="Søk" icon="search" />;
+export default function SearchRoute() {
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  return <SearchScreen initialQuery={typeof q === 'string' ? q : ''} />;
 }

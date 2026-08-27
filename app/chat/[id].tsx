@@ -1,8 +1,7 @@
-import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { tokens } from '@/theme';
 import { useConversation } from '@/api/queries';
-import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
+import { FallbackScreen } from '@/components/FallbackScreen';
+import type { ScreenStatus } from '@/components/ui/ScreenState';
 import { ChatScreen } from '@/screens/ChatScreen';
 
 export default function ChatRoute() {
@@ -21,8 +20,11 @@ export default function ChatRoute() {
   else if (!isLoading) status = 'empty';
 
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenState status={status} onRetry={() => refetch()} emptyText="Fant ikke samtalen." />
-    </View>
+    <FallbackScreen
+      status={status}
+      onRetry={() => refetch()}
+      emptyText="Fant ikke samtalen."
+      title="Melding"
+    />
   );
 }

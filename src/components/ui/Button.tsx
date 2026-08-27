@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import {
   Pressable,
   ActivityIndicator,
@@ -14,7 +14,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
 export type ButtonProps = {
   label: string;
-  onPress: () => void;
+  onPress: () => void | Promise<void>;
   variant?: ButtonVariant;
   disabled?: boolean;
   loading?: boolean;
@@ -22,8 +22,6 @@ export type ButtonProps = {
   testID?: string;
   style?: ViewStyle;
 };
-
-const DOUBLE_PRESS_MS = 600;
 
 export function Button({
   label,
@@ -35,16 +33,25 @@ export function Button({
   testID,
   style,
 }: ButtonProps) {
-  const lastPress = useRef(0);
-  const blocked = disabled || loading;
+  // Guard only against re-entrancy while an async onPress is still running,
+  // so a stuck network call cannot be fired twice. Distinct taps that each
+  // complete synchronously (wizard "Neste", filters) are never swallowed.
+  const inFlight = useRef(false);
+  const [, force] = useState(0);
+  const blocked = disabled || loading || inFlight.current;
 
   const handlePress = useCallback(() => {
-    if (blocked) return;
-    const now = Date.now();
-    if (now - lastPress.current < DOUBLE_PRESS_MS) return;
-    lastPress.current = now;
-    onPress();
-  }, [blocked, onPress]);
+    if (disabled || loading || inFlight.current) return;
+    const result = onPress();
+    if (result && typeof result.then === 'function') {
+      inFlight.current = true;
+      force((n) => n + 1);
+      result.finally(() => {
+        inFlight.current = false;
+        force((n) => n + 1);
+      });
+    }
+  }, [disabled, loading, onPress]);
 
   const labelColor = variant === 'ghost' ? 'cyan' : 'navy';
 
@@ -53,7 +60,13 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={tokens.color.navy} />
       ) : (
-        <AppText variant="cardTitle" weight="bold" color={labelColor}>
+        <AppText
+          variant="cardTitle"
+          weight="bold"
+          color={labelColor}
+          numberOfLines={1}
+          style={styles.label}
+        >
           {label}
         </AppText>
       )}
@@ -103,7 +116,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: tokens.space.sm,
-    paddingHorizontal: tokens.space.xl,
+    paddingHorizontal: tokens.space.md,
+  },
+  label: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
   secondary: {
     backgroundColor: tokens.color.surface,

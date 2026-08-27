@@ -4,13 +4,21 @@ import { AppText } from './ui/Text';
 
 const logoIcon = require('../../assets/logo-icon.png');
 
-export function BrandMark({ size = 28 }: { size?: number }) {
+export function BrandMark({
+  size = 28,
+  showWordmark = true,
+}: {
+  size?: number;
+  showWordmark?: boolean;
+}) {
   return (
     <View style={styles.row} accessibilityRole="header" accessibilityLabel="MinNabo">
       <Image source={logoIcon} style={{ width: size, height: size }} resizeMode="contain" />
-      <AppText variant="section" weight="extrabold">
-        MinNabo
-      </AppText>
+      {showWordmark ? (
+        <AppText variant="section" weight="extrabold">
+          MinNabo
+        </AppText>
+      ) : null}
     </View>
   );
 }

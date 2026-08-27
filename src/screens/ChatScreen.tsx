@@ -194,5 +194,5 @@ const styles = StyleSheet.create({
     padding: tokens.space.lg,
     gap: 2,
   },
-  offerWrap: { marginVertical: tokens.space.sm, alignSelf: 'flex-start', paddingLeft: 36 },
+  offerWrap: { marginVertical: tokens.space.sm },
 });

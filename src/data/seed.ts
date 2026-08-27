@@ -119,6 +119,14 @@ export const profiles: Record<string, PublicProfile> = {
   },
 };
 
+/** Profiles shown as "active now" on the tilbydere page. */
+export const activeProfiles: PublicProfile[] = [
+  profiles.andreas,
+  profiles.emma,
+  profiles.martin,
+  profiles.fjellbygg,
+];
+
 const img = (id: string, url: string) => ({ id, url });
 
 const mower =

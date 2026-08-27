@@ -11,7 +11,9 @@ import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { repositories } from '@/data/repositories';
 import { chatRepository } from '@/data/chatRepository';
 
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const IS_TEST = process.env.NODE_ENV === 'test';
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, IS_TEST ? 0 : ms));
 
 export type ListListingsParams = {
   filter?: ListingFilter;
@@ -34,6 +36,12 @@ export class MockApiClient {
     if (!listing) {
       throw new Error('Fant ikke oppføringen.');
     }
+    return listing;
+  }
+
+  async createListing(listing: Listing): Promise<Listing> {
+    await delay(300);
+    repositories.listings.add(listing);
     return listing;
   }
 

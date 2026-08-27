@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
 import { AppText } from './ui/Text';
@@ -9,7 +11,7 @@ import { BrandMark } from './BrandMark';
 
 type AvatarInfo = { uri?: string; initials: string };
 
-type CommonProps = {
+type RightClusterProps = {
   avatar: AvatarInfo;
   onProfilePress: () => void;
   onNotificationsPress: () => void;
@@ -23,7 +25,7 @@ function RightCluster({
   onNotificationsPress,
   unreadNotifications,
   testID,
-}: CommonProps) {
+}: RightClusterProps) {
   return (
     <View style={styles.right}>
       <Pressable
@@ -43,13 +45,14 @@ function RightCluster({
         accessibilityLabel={nb.a11y.openProfile}
         onPress={onProfilePress}
       >
-        <Avatar uri={avatar.uri} initials={avatar.initials} size={40} />
+        <Avatar uri={avatar.uri} initials={avatar.initials} size={38} />
       </Pressable>
     </View>
   );
 }
 
-export function HomeTopBar(props: CommonProps) {
+/** Header for the main tab screens: logo + wordmark left, bell + profile right. */
+export function HomeTopBar(props: RightClusterProps) {
   const insets = useSafeAreaInsets();
   return (
     <View testID={props.testID} style={[styles.bar, { paddingTop: insets.top + tokens.space.sm }]}>
@@ -59,29 +62,58 @@ export function HomeTopBar(props: CommonProps) {
   );
 }
 
-export type DetailTopBarProps = CommonProps & {
-  title: string;
-  onBack: () => void;
+export type PageHeaderProps = {
+  title?: string;
+  onBack?: () => void;
+  showBack?: boolean;
+  right?: ReactNode;
 };
 
-export function DetailTopBar({ title, onBack, ...rest }: DetailTopBarProps) {
+/**
+ * Header for every non-tab screen: back arrow + MinNabo logo, always.
+ * Optionally a centered title and a right-side node.
+ */
+export function PageHeader({ title, onBack, showBack = true, right }: PageHeaderProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
+
   return (
     <View style={[styles.bar, { paddingTop: insets.top + tokens.space.sm }]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={nb.a11y.back}
-        hitSlop={hitSlop}
-        onPress={onBack}
-      >
-        <Icon name="arrow-left" size={24} color="navy" />
-      </Pressable>
-      <AppText variant="cardTitle" weight="bold" numberOfLines={1} style={styles.title}>
-        {title}
-      </AppText>
-      <RightCluster {...rest} />
+      <View style={styles.leftGroup}>
+        {showBack ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.a11y.back}
+            hitSlop={hitSlop}
+            onPress={back}
+          >
+            <Icon name="arrow-left" size={24} color="navy" />
+          </Pressable>
+        ) : null}
+        <BrandMark size={24} showWordmark={!title} />
+      </View>
+
+      {title ? (
+        <AppText variant="cardTitle" weight="bold" numberOfLines={1} style={styles.title}>
+          {title}
+        </AppText>
+      ) : (
+        <View style={styles.title} />
+      )}
+
+      <View style={styles.rightSlot}>{right}</View>
     </View>
   );
+}
+
+/** Header for listing detail / offer detail: back + logo + title + bell + profile. */
+export function DetailTopBar({
+  title,
+  onBack,
+  ...rest
+}: PageHeaderProps & RightClusterProps) {
+  return <PageHeader title={title} onBack={onBack} right={<RightCluster {...rest} />} />;
 }
 
 const styles = StyleSheet.create({
@@ -92,15 +124,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.space.xl,
     paddingBottom: tokens.space.sm,
     backgroundColor: tokens.color.bg,
+    gap: tokens.space.md,
+  },
+  leftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.sm,
   },
   right: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.space.lg,
+    gap: tokens.space.md,
   },
-  bell: {
-    padding: 2,
+  rightSlot: {
+    minWidth: 24,
+    alignItems: 'flex-end',
   },
+  bell: { padding: 2 },
   dot: {
     position: 'absolute',
     top: 0,
@@ -115,6 +155,5 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'center',
-    marginHorizontal: tokens.space.md,
   },
 });

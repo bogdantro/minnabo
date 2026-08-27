@@ -40,6 +40,17 @@ export function useListing(id: string) {
   });
 }
 
+export function useCreateListing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (listing: Parameters<typeof apiClient.createListing>[0]) =>
+      apiClient.createListing(listing),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: listingKeys.all });
+    },
+  });
+}
+
 export function useConversations(unreadOnly?: boolean, query?: string) {
   return useQuery({
     queryKey: chatKeys.conversations(unreadOnly, query),

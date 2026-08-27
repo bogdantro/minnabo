@@ -1,5 +1,35 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import '@testing-library/react-native';
+import { cleanup } from '@testing-library/react-native';
+
+// Unmount any tree the previous test left behind (async render skips
+// RNTL's automatic afterEach cleanup in some cases).
+afterEach(async () => {
+  await cleanup();
+});
+
+// Reset in-memory mock stores between tests so state never leaks across suites.
+afterEach(() => {
+  try {
+    require('@/data/repositories').repositories.listings._reset();
+  } catch {
+    /* module not loaded in this test */
+  }
+  try {
+    require('@/data/chatRepository').chatRepository._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
+    require('@/data/savedStore').savedStore._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
+    require('@/data/draftStore').draftStore.clear();
+  } catch {
+    /* not loaded */
+  }
+});
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   let store: Record<string, string> = {};

@@ -6,7 +6,7 @@ import { useConversations } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
-import { AppText } from '@/components/ui/Text';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { SearchField } from '@/components/ui/SearchField';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
@@ -38,9 +38,7 @@ export function InnboksScreen() {
       />
 
       <View style={styles.header}>
-        <AppText variant="h1" weight="extrabold">
-          {nb.inbox.title}
-        </AppText>
+        <ScreenTitle>{nb.inbox.title}</ScreenTitle>
         <SearchField
           placeholder={nb.inbox.searchPlaceholder}
           value={query}

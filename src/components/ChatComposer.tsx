@@ -35,8 +35,10 @@ export function ChatComposer({
         <Pressable
           accessibilityRole="button"
           onPress={onSendOffer}
+          hitSlop={8}
           style={styles.offerLink}
         >
+          <Icon name="tag" size={14} color="cyan" />
           <AppText variant="meta" weight="bold" color="cyan">
             {nb.chat.sendOffer}
           </AppText>
@@ -50,7 +52,7 @@ export function ChatComposer({
           onPress={onAttach}
           style={styles.attach}
         >
-          <Icon name="plus" size={22} color="lime" />
+          <Icon name="plus" size={20} color="lime" />
         </Pressable>
 
         <TextInput
@@ -77,47 +79,63 @@ export function ChatComposer({
   );
 }
 
+const CONTROL = 42;
+
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: tokens.color.surface,
     borderTopWidth: 1,
     borderTopColor: tokens.color.line,
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: tokens.space.md,
     paddingTop: tokens.space.sm,
     gap: tokens.space.sm,
   },
-  offerLink: { alignSelf: 'flex-end', paddingVertical: 2 },
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: tokens.space.sm },
+  offerLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-end',
+    paddingVertical: 2,
+    paddingHorizontal: tokens.space.xs,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: tokens.space.sm,
+  },
   attach: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: CONTROL,
+    height: CONTROL,
+    borderRadius: CONTROL / 2,
     borderWidth: 1.5,
     borderColor: tokens.color.lime,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   input: {
     flex: 1,
-    minHeight: 44,
+    minWidth: 0,
+    minHeight: CONTROL,
     maxHeight: 120,
     borderRadius: tokens.radius.tile,
     borderWidth: 1,
     borderColor: tokens.color.line,
     paddingHorizontal: tokens.space.md,
-    paddingTop: tokens.space.sm,
-    paddingBottom: tokens.space.sm,
+    paddingTop: 10,
+    paddingBottom: 10,
     fontFamily: tokens.font.regular,
     fontSize: 15,
     color: tokens.color.navy,
   },
   send: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: CONTROL,
+    height: CONTROL,
+    borderRadius: CONTROL / 2,
     backgroundColor: tokens.color.cyan,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   sendDisabled: { opacity: 0.4 },
 });

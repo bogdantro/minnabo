@@ -10,9 +10,9 @@ import { ScreenState } from '@/components/ui/ScreenState';
 
 const flatten = (style: unknown): string => JSON.stringify(style);
 
-test('AppText applies the h1 font size', async () => {
-  await render(<AppText variant="h1">Hei</AppText>);
-  expect(flatten(screen.getByText('Hei').props.style)).toContain('"fontSize":32');
+test('AppText applies the variant font size', async () => {
+  await render(<AppText variant="question">Hei</AppText>);
+  expect(flatten(screen.getByText('Hei').props.style)).toContain('"fontSize":24');
 });
 
 test('Avatar shows initials with no uri and an online dot when online', async () => {
@@ -21,12 +21,22 @@ test('Avatar shows initials with no uri and an online dot when online', async ()
   expect(screen.getByTestId('av-online')).toBeTruthy();
 });
 
-test('Button fires onPress once on rapid double tap', async () => {
-  const fn = jest.fn();
+test('Button ignores re-taps while an async onPress is still running', async () => {
+  let resolve!: () => void;
+  const fn = jest.fn(() => new Promise<void>((r) => (resolve = r)));
   await render(<Button label="Gi tilbud" onPress={fn} />);
   await fireEvent.press(screen.getByText('Gi tilbud'));
   await fireEvent.press(screen.getByText('Gi tilbud'));
   expect(fn).toHaveBeenCalledTimes(1);
+  resolve();
+});
+
+test('Button fires a synchronous onPress on every tap', async () => {
+  const fn = jest.fn();
+  await render(<Button label="Neste" onPress={fn} />);
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Neste'));
+  expect(fn).toHaveBeenCalledTimes(2);
 });
 
 test('disabled Button does not fire', async () => {

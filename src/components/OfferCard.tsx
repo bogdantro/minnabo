@@ -37,12 +37,13 @@ export function OfferCard({
         : proposal.status === 'WITHDRAWN'
           ? nb.chat.offerWithdrawn
           : null;
+  const accepted = proposal.status === 'ACCEPTED';
 
   return (
     <View style={styles.card}>
       <View style={styles.labelRow}>
         <View style={styles.label}>
-          <AppText variant="meta" weight="extrabold" color="lime" style={styles.labelText}>
+          <AppText weight="extrabold" color="lime" style={styles.labelText}>
             {nb.chat.offerLabel}
           </AppText>
         </View>
@@ -53,11 +54,11 @@ export function OfferCard({
           <Image source={{ uri: listingImageUrl }} style={styles.thumb} />
         ) : (
           <View style={[styles.thumb, styles.thumbFallback]}>
-            <Icon name="image" size={18} color="navyMuted" />
+            <Icon name="image" size={20} color="navyMuted" />
           </View>
         )}
         <View style={styles.headBody}>
-          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
+          <AppText variant="cardTitle" weight="bold" numberOfLines={2}>
             {listingTitle}
           </AppText>
           <AppText variant="section" weight="extrabold" color="lime">
@@ -66,7 +67,7 @@ export function OfferCard({
           {proposal.scheduledText ? (
             <View style={styles.dateRow}>
               <Icon name="calendar" size={14} color="navyMuted" />
-              <AppText variant="meta" color="navyMuted">
+              <AppText variant="meta" color="navyMuted" numberOfLines={1}>
                 {proposal.scheduledText}
               </AppText>
             </View>
@@ -75,11 +76,10 @@ export function OfferCard({
       </View>
 
       {proposal.message ? (
-        <AppText variant="meta" color="navyMuted">
+        <AppText variant="body" color="navyMuted">
           {proposal.message}
         </AppText>
       ) : null}
-
       {proposal.caveats ? (
         <AppText variant="meta" color="navyMuted">
           {proposal.caveats}
@@ -88,15 +88,25 @@ export function OfferCard({
 
       {showButtons ? (
         <View style={styles.actions}>
-          <Button label={nb.chat.acceptOffer} onPress={onAccept} loading={pending} style={styles.accept} />
-          <Button label={nb.chat.declineOffer} variant="secondary" onPress={onDecline} style={styles.decline} />
+          <Button
+            label={nb.chat.acceptOffer}
+            onPress={onAccept}
+            loading={pending}
+            style={styles.actionBtn}
+          />
+          <Button
+            label={nb.chat.declineOffer}
+            variant="secondary"
+            onPress={onDecline}
+            style={styles.actionBtn}
+          />
         </View>
       ) : statusText ? (
-        <View style={styles.statusRow}>
+        <View style={[styles.statusBar, accepted ? styles.statusAccepted : styles.statusNeutral]}>
           <Icon
-            name={proposal.status === 'ACCEPTED' ? 'check-circle' : 'x-circle'}
+            name={accepted ? 'check-circle' : 'x-circle'}
             size={16}
-            color={proposal.status === 'ACCEPTED' ? 'lime' : 'navyMuted'}
+            color={accepted ? 'lime' : 'navyMuted'}
           />
           <AppText variant="meta" weight="bold">
             {statusText}
@@ -109,31 +119,45 @@ export function OfferCard({
 
 const styles = StyleSheet.create({
   card: {
+    width: '100%',
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.card,
     borderWidth: 1,
     borderColor: tokens.color.line,
-    padding: tokens.space.md,
-    gap: tokens.space.sm,
+    padding: tokens.space.lg,
+    gap: tokens.space.md,
     ...tokens.shadow.card,
-    maxWidth: '86%',
   },
   labelRow: { flexDirection: 'row' },
   label: {
     borderWidth: 1,
     borderColor: tokens.color.lime,
+    backgroundColor: tokens.color.limeTint,
     borderRadius: tokens.radius.pill,
-    paddingHorizontal: tokens.space.sm,
-    paddingVertical: 2,
+    paddingHorizontal: tokens.space.md,
+    paddingVertical: 3,
   },
-  labelText: { fontSize: 11, letterSpacing: 0.5 },
-  headRow: { flexDirection: 'row', gap: tokens.space.md },
-  thumb: { width: 64, height: 64, borderRadius: tokens.radius.md, backgroundColor: tokens.color.line },
+  labelText: { fontSize: 11, lineHeight: 14, letterSpacing: 1 },
+  headRow: { flexDirection: 'row', gap: tokens.space.md, alignItems: 'center' },
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: tokens.radius.md,
+    backgroundColor: tokens.color.line,
+  },
   thumbFallback: { alignItems: 'center', justifyContent: 'center' },
-  headBody: { flex: 1, gap: 2, justifyContent: 'center' },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actions: { flexDirection: 'row', gap: tokens.space.sm, marginTop: 2 },
-  accept: { flex: 1 },
-  decline: { flex: 1 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headBody: { flex: 1, gap: 4, justifyContent: 'center' },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  actions: { flexDirection: 'row', gap: tokens.space.md },
+  actionBtn: { flex: 1, height: 50 },
+  statusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: tokens.radius.tile,
+    paddingVertical: tokens.space.sm,
+  },
+  statusAccepted: { backgroundColor: tokens.color.limeTint },
+  statusNeutral: { backgroundColor: tokens.color.bg },
 });

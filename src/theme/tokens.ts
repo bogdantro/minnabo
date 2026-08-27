@@ -49,9 +49,10 @@ const radius = {
 } as const;
 
 const text = {
-  h1: { fontSize: 32, lineHeight: 38, fontFamily: font.extrabold },
-  question: { fontSize: 28, lineHeight: 34, fontFamily: font.bold },
-  section: { fontSize: 20, lineHeight: 26, fontFamily: font.bold },
+  h1: { fontSize: 26, lineHeight: 32, fontFamily: font.extrabold },
+  /** The single screen-title style. Every tab's first heading uses this. */
+  question: { fontSize: 24, lineHeight: 30, fontFamily: font.bold },
+  section: { fontSize: 19, lineHeight: 25, fontFamily: font.bold },
   cardTitle: { fontSize: 17, lineHeight: 23, fontFamily: font.bold },
   body: { fontSize: 15, lineHeight: 22, fontFamily: font.regular },
   meta: { fontSize: 13, lineHeight: 18, fontFamily: font.regular },

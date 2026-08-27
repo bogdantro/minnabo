@@ -20,7 +20,7 @@ import { Icon } from './ui/Icon';
 export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const sheetHeight = Math.min(height * 0.62, 560);
+  const sheetHeight = Math.min(height * 0.9, 780);
 
   const translateY = useRef(new Animated.Value(sheetHeight)).current;
   const backdrop = useRef(new Animated.Value(0)).current;

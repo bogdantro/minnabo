@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
-import type { ListingType } from '@/domain/types';
+import type { Listing } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { homeCategories } from '@/data/seed';
@@ -8,40 +8,23 @@ import { useListings } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
-import { AppText } from '@/components/ui/Text';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { SearchField } from '@/components/ui/SearchField';
 import { CategoryChip } from '@/components/ui/CategoryChip';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
-import { FilterTabs } from '@/components/FilterTabs';
+import { ScreenState } from '@/components/ui/ScreenState';
+import { Button } from '@/components/ui/Button';
 import { ListingCard } from '@/components/ListingCard';
 import type { IconName } from '@/components/ui/Icon';
 
-type TypeFilter = 'ALL' | ListingType;
+const PREVIEW_COUNT = 5;
 
 export function OppdragScreen() {
   const me = useCurrentUser();
   const [activeSlug, setActiveSlug] = useState('alle');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
 
-  const { data, isLoading, isError, refetch } = useListings({
-    categorySlug: activeSlug,
-    type: typeFilter === 'ALL' ? undefined : typeFilter,
-  });
-
-  const listings = data ?? [];
-
-  let status: ScreenStatus = 'ready';
-  if (isLoading) status = 'loading';
-  else if (isError) status = 'error';
-  else if (listings.length === 0) status = 'empty';
-
-  const nearYouTitle =
-    typeFilter === 'TASK_REQUEST'
-      ? nb.home.nearYouNeed
-      : typeFilter === 'SERVICE_OFFER'
-        ? nb.home.nearYouOffer
-        : nb.home.nearYou;
+  const tasks = useListings({ categorySlug: activeSlug, type: 'TASK_REQUEST' });
+  const offers = useListings({ categorySlug: activeSlug, type: 'SERVICE_OFFER' });
 
   return (
     <View style={styles.wrap}>
@@ -57,9 +40,7 @@ export function OppdragScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <AppText variant="question" weight="bold" style={styles.question}>
-          {nb.home.question}
-        </AppText>
+        <ScreenTitle style={styles.title}>{nb.home.question}</ScreenTitle>
 
         <SearchField
           placeholder={nb.home.searchPlaceholder}
@@ -83,58 +64,75 @@ export function OppdragScreen() {
           ))}
         </ScrollView>
 
-        <FilterTabs<TypeFilter>
-          options={[
-            { value: 'ALL', label: nb.home.typeAll },
-            { value: 'TASK_REQUEST', label: nb.home.typeNeed },
-            { value: 'SERVICE_OFFER', label: nb.home.typeOffer },
-          ]}
-          value={typeFilter}
-          onChange={setTypeFilter}
+        <ListingSection
+          title={nb.home.needHelpSection}
+          query={tasks}
+          onSeeAll={() => safePush('/oppdrag-liste')}
         />
 
-        <SectionHeader title={nearYouTitle} />
-
-        {status === 'ready' ? (
-          <View style={styles.list}>
-            {listings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                onPress={() => safePush(`/oppdrag/${listing.id}`)}
-              />
-            ))}
-          </View>
-        ) : (
-          <ScreenState
-            status={status}
-            onRetry={() => refetch()}
-            emptyText={nb.state.emptyListings}
-          />
-        )}
+        <ListingSection
+          title={nb.home.offerHelpSection}
+          query={offers}
+          onSeeAll={() => safePush('/tilbydere')}
+        />
       </ScrollView>
     </View>
   );
 }
 
+function ListingSection({
+  title,
+  query,
+  onSeeAll,
+}: {
+  title: string;
+  query: ReturnType<typeof useListings>;
+  onSeeAll: () => void;
+}) {
+  const items: Listing[] = query.data ?? [];
+  const preview = items.slice(0, PREVIEW_COUNT);
+  const hasMore = items.length > PREVIEW_COUNT;
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader
+        title={title}
+        actionLabel={hasMore ? nb.common.seeAll : undefined}
+        onAction={hasMore ? onSeeAll : undefined}
+      />
+
+      {query.isLoading || query.isError || preview.length === 0 ? (
+        <ScreenState
+          status={query.isLoading ? 'loading' : query.isError ? 'error' : 'empty'}
+          onRetry={() => query.refetch()}
+        />
+      ) : (
+        <View style={styles.list}>
+          {preview.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              onPress={() => safePush(`/oppdrag/${listing.id}`)}
+            />
+          ))}
+          {hasMore ? (
+            <Button label={nb.common.seeAll} variant="secondary" onPress={onSeeAll} />
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    backgroundColor: tokens.color.bg,
-  },
+  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   content: {
     paddingHorizontal: tokens.space.xl,
     paddingBottom: tokens.space.xxxl,
     gap: tokens.space.lg,
   },
-  question: {
-    marginTop: tokens.space.sm,
-  },
-  categories: {
-    gap: tokens.space.md,
-    paddingVertical: tokens.space.xs,
-  },
-  list: {
-    gap: tokens.space.lg,
-  },
+  title: { marginTop: tokens.space.sm },
+  categories: { gap: tokens.space.md, paddingVertical: tokens.space.xs },
+  section: { gap: tokens.space.sm },
+  list: { gap: tokens.space.lg },
 });
