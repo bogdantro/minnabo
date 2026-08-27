@@ -114,7 +114,7 @@ export function ServiceOfferDetailScreen({
 
       <StickyActions
         primaryLabel={nb.listingDetail.contact}
-        onPrimary={() => safePush(`/chat/ny?listing=${listing.id}`)}
+        onPrimary={() => safePush(`/chat/start?listing=${listing.id}`)}
         secondaryLabel={nb.listingDetail.requestOffer}
         onSecondary={() => safePush(`/tilbud/be-om?listing=${listing.id}`)}
         note={nb.listingDetail.priceNoteOffer}

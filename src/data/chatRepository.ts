@@ -7,6 +7,7 @@ import type {
 import { transition, type ProposalEvent, type Actor } from '@/domain/proposalMachine';
 import nb from '@/i18n/nb';
 import { safetyStore } from './safetyStore';
+import { repositories } from './repositories';
 import {
   conversations as seedConversations,
   messagesByConversation as seedMessages,
@@ -48,6 +49,34 @@ export const chatRepository = {
 
   getConversation(id: string): Conversation | undefined {
     return conversations.find((c) => c.id === id);
+  },
+
+  /** Open (or reuse) a conversation with the owner of a listing. */
+  findOrCreateConversationForListing(listingId: string): Conversation {
+    const existing = conversations.find((c) => c.listing.id === listingId);
+    if (existing) return existing;
+
+    const listing = repositories.listings.get(listingId);
+    if (!listing) throw new Error('Fant ikke oppføringen.');
+
+    const conv: Conversation = {
+      id: nextId('c'),
+      listing: {
+        id: listing.id,
+        title: listing.title,
+        type: listing.type,
+        place: listing.location.place,
+        imageUrl: listing.images[0]?.url,
+      },
+      counterpart: { ...listing.owner },
+      lastMessagePreview: '',
+      lastMessageAt: new Date().toISOString(),
+      unread: false,
+      statusTag: null,
+    };
+    conversations = [conv, ...conversations];
+    messages[conv.id] = [];
+    return conv;
   },
 
   getMessages(conversationId: string): Message[] {

@@ -94,6 +94,14 @@ export function useSendMessage(conversationId: string) {
   });
 }
 
+export function useStartConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (listingId: string) => apiClient.startConversationForListing(listingId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+  });
+}
+
 export function useSendProposal(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({

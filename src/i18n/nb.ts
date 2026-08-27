@@ -362,6 +362,22 @@ const nb = {
     anyDistance: 'Hele Innlandet',
   },
 
+  proposalForm: {
+    giveTitle: 'Gi tilbud',
+    requestTitle: 'Be om tilbud',
+    intro: 'Foreslå en pris og et tidspunkt. Prisen er kun informasjon – betaling avtales mellom dere.',
+    requestIntro: 'Be tilbyderen om et konkret tilbud. Skriv gjerne litt om jobben.',
+    priceLabel: 'Foreslått pris (kr)',
+    whenLabel: 'Dato og tid',
+    messageLabel: 'Melding',
+    caveatsLabel: 'Forbehold (valgfritt)',
+    send: 'Send tilbud',
+    sendRequest: 'Send forespørsel',
+    sent: 'Tilbudet er sendt.',
+    requestSent: 'Forespørselen er sendt.',
+    priceRequired: 'Skriv inn en pris.',
+  },
+
   chat: {
     activeNow: 'Aktiv nå',
     inputPlaceholder: 'Skriv en melding …',

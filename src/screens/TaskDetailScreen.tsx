@@ -90,7 +90,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
         primaryLabel={nb.listingDetail.giveOffer}
         onPrimary={() => safePush(`/tilbud/ny?listing=${listing.id}`)}
         secondaryLabel={nb.listingDetail.sendMessage}
-        onSecondary={() => safePush(`/chat/ny?listing=${listing.id}`)}
+        onSecondary={() => safePush(`/chat/start?listing=${listing.id}`)}
         note={nb.listingDetail.priceNoteTask}
       />
     </View>

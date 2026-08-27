@@ -69,6 +69,11 @@ export class MockApiClient {
     return conv;
   }
 
+  async startConversationForListing(listingId: string): Promise<Conversation> {
+    await delay(150);
+    return chatRepository.findOrCreateConversationForListing(listingId);
+  }
+
   async listMessages(conversationId: string): Promise<Message[]> {
     await delay(150);
     return chatRepository.getMessages(conversationId);
