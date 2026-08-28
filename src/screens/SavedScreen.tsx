@@ -9,7 +9,7 @@ import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { ScreenState } from '@/components/ui/ScreenState';
-import { ListingCard } from '@/components/ListingCard';
+import { ListingRowCard } from '@/components/ListingRowCard';
 
 export function SavedScreen() {
   const savedIds = useSyncExternalStore(
@@ -37,7 +37,7 @@ export function SavedScreen() {
           keyExtractor={(l) => l.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <ListingCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
+            <ListingRowCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
           )}
         />
       )}

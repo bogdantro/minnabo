@@ -13,9 +13,10 @@
   "dependencies": {
     "@expo-google-fonts/mulish": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",
-    "@react-native-async-storage/async-storage": "^3.1.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/slider": "5.2.0",
     "@tanstack/react-query": "^5.102.8",
-    "expo": "~57.0.17",
+    "expo": "~57.0.18",
     "expo-constants": "~57.0.15",
     "expo-font": "~57.0.1",
     "expo-image": "~57.0.3",

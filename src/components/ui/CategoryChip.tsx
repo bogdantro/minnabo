@@ -10,6 +10,7 @@ export type CategoryChipProps = {
   onPress: () => void;
 };
 
+/** 72×72 icon tile (homepage.png). Icons are always lime green. */
 export function CategoryChip({ label, icon, active = false, onPress }: CategoryChipProps) {
   return (
     <Pressable
@@ -19,7 +20,7 @@ export function CategoryChip({ label, icon, active = false, onPress }: CategoryC
       onPress={onPress}
       style={[styles.tile, active ? styles.active : styles.inactive]}
     >
-      <Icon name={icon} size={22} color={active ? 'lime' : 'navy'} />
+      <Icon name={icon} size={22} color="lime" />
       <AppText variant="meta" weight="bold" color={active ? 'lime' : 'navy'} numberOfLines={1}>
         {label}
       </AppText>
@@ -37,12 +38,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  active: {
-    borderColor: tokens.color.lime,
-    backgroundColor: tokens.color.limeTint,
-  },
-  inactive: {
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
-  },
+  active: { borderColor: tokens.color.lime, backgroundColor: tokens.color.limeTint },
+  inactive: { borderColor: tokens.color.line, backgroundColor: tokens.color.surface },
 });

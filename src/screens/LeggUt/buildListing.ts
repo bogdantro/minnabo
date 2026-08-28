@@ -6,84 +6,133 @@ const catBySlug = (slug: string) =>
   categories.find((c) => c.slug === slug) ?? categories[categories.length - 1];
 
 export type TaskForm = {
+  categorySlug: string;
   title: string;
   description: string;
-  categorySlug: string;
+  images: string[];
   place: string;
-  scheduledText: string;
-  durationText: string;
-  priceMode: 'FIXED' | 'BUDGET' | 'BY_AGREEMENT';
+  area: string;
+  dateMode: 'ASAP' | 'FLEXIBLE' | 'PICK';
+  dateText: string;
+  timeFrom: string;
+  timeTo: string;
+  duration: string;
+  priceMode: 'BUDGET' | 'WANT_OFFERS';
   amountKr: string;
-  equipment: string;
+  equipCanBorrow: boolean;
+  equipBringOwn: boolean;
+  equipExtra: string;
+  whoCanOffer: 'ALL_VERIFIED' | 'BUSINESS_ONLY';
+  confirmed: boolean;
 };
 
 export type OfferForm = {
+  categorySlug: string;
   title: string;
   about: string;
-  categorySlug: string;
+  images: string[];
   services: string[];
-  experienceYears: string;
-  completedJobs: string;
+  experience: string;
+  experienceText: string;
   place: string;
-  maxDistanceKm: string;
-  availabilityText: string;
-  equipmentText: string;
+  maxDistanceKm: number;
+  days: string[];
+  timeOfDay: string[];
+  timeFrom: string;
+  timeTo: string;
+  ownTransport: boolean;
   priceMode: 'FROM' | 'BY_AGREEMENT';
   amountKr: string;
+  priceUnit: 'per oppdrag' | 'per time';
+  whoCanContact: 'ALL_VERIFIED' | 'BUSINESS_ONLY';
+  confirmed: boolean;
 };
 
 const newId = () => `l-user-${Date.now()}`;
+const toImages = (urls: string[]) => urls.map((url, i) => ({ id: `ui-${i}-${Date.now()}`, url }));
 
-function priceFor(mode: PriceMode, amountKr: string) {
+function priceFrom(mode: PriceMode, amountKr: string) {
   if (mode === 'BY_AGREEMENT') return undefined;
   const n = Number(amountKr.replace(/\s/g, '').replace(',', '.'));
   return Number.isFinite(n) && n > 0 ? nok(n) : undefined;
 }
 
+const dateLabel = (f: TaskForm) =>
+  f.dateMode === 'ASAP'
+    ? 'Så snart som mulig'
+    : f.dateMode === 'FLEXIBLE'
+      ? 'Fleksibel dato'
+      : f.dateText.trim() || undefined;
+
+const timeLabel = (from: string, to: string) =>
+  from && to ? `${from}–${to}` : from || to || undefined;
+
 export function buildTaskListing(form: TaskForm): Listing {
+  const scheduledParts = [dateLabel(form), timeLabel(form.timeFrom, form.timeTo)]
+    .filter(Boolean)
+    .join(', ');
   return {
     id: newId(),
     type: 'TASK_REQUEST' as ListingType,
     title: form.title.trim(),
     category: catBySlug(form.categorySlug),
-    priceMode: form.priceMode,
-    price: priceFor(form.priceMode, form.amountKr),
-    location: { municipality: form.place.trim(), place: form.place.trim(), distanceKm: 0 },
-    images: [],
+    priceMode: form.priceMode === 'BUDGET' ? 'BUDGET' : 'BY_AGREEMENT',
+    price: form.priceMode === 'BUDGET' ? priceFrom('BUDGET', form.amountKr) : undefined,
+    location: {
+      municipality: form.place.trim(),
+      place: form.place.trim(),
+      distanceKm: 0,
+    },
+    images: toImages(form.images),
     owner: profiles.mb,
     createdAt: new Date().toISOString(),
     status: 'PUBLISHED',
     task: {
       description: form.description.trim(),
-      equipment: form.equipment.trim() || undefined,
+      equipment: form.equipCanBorrow
+        ? 'Kan lånes'
+        : form.equipBringOwn
+          ? 'Ta med eget utstyr'
+          : undefined,
       meetingNote: 'Adresse deles når tilbud er godtatt',
-      durationText: form.durationText.trim() || undefined,
-      scheduledText: form.scheduledText.trim() || undefined,
+      durationText: form.duration.trim() || undefined,
+      scheduledText: scheduledParts || undefined,
     },
   };
 }
 
 export function buildOfferListing(form: OfferForm): Listing {
+  const availability = [
+    form.days.length ? form.days.join(', ') : null,
+    timeLabel(form.timeFrom, form.timeTo),
+  ]
+    .filter(Boolean)
+    .join(' · ');
   return {
     id: newId(),
     type: 'SERVICE_OFFER' as ListingType,
     title: form.title.trim(),
     category: catBySlug(form.categorySlug),
-    priceMode: form.priceMode,
-    price: priceFor(form.priceMode, form.amountKr),
-    location: { municipality: form.place.trim(), place: form.place.trim(), distanceKm: 0 },
-    images: [],
+    priceMode: form.priceMode === 'FROM' ? 'FROM' : 'BY_AGREEMENT',
+    price: form.priceMode === 'FROM' ? priceFrom('FROM', form.amountKr) : undefined,
+    location: {
+      municipality: form.place.trim(),
+      place: form.place.trim(),
+      distanceKm: 0,
+    },
+    images: toImages(form.images),
     owner: profiles.mb,
     createdAt: new Date().toISOString(),
     status: 'ACTIVE',
     offer: {
       about: form.about.trim(),
       services: form.services,
-      experienceYears: form.experienceYears ? Number(form.experienceYears) : undefined,
-      completedJobs: form.completedJobs ? Number(form.completedJobs) : undefined,
-      availabilityText: form.availabilityText.trim() || undefined,
-      equipmentText: form.equipmentText.trim() || undefined,
-      maxDistanceKm: form.maxDistanceKm ? Number(form.maxDistanceKm) : undefined,
+      experienceYears: /(\d+)/.exec(form.experience)?.[1]
+        ? Number(/(\d+)/.exec(form.experience)![1])
+        : undefined,
+      availabilityText: availability || undefined,
+      equipmentText: form.ownTransport ? 'Har egen transport' : undefined,
+      maxDistanceKm: form.maxDistanceKm,
     },
   };
 }

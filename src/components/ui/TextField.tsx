@@ -11,6 +11,11 @@ export type TextFieldProps = {
   keyboardType?: 'default' | 'numeric';
   error?: string;
   hint?: string;
+  maxLength?: number;
+  /** render the label inside the field as a small floating caption */
+  floatingLabel?: boolean;
+  /** hide the label entirely (still used for accessibility) */
+  hideLabel?: boolean;
 };
 
 export function TextField({
@@ -22,48 +27,80 @@ export function TextField({
   keyboardType = 'default',
   error,
   hint,
+  maxLength,
+  floatingLabel = false,
+  hideLabel = false,
 }: TextFieldProps) {
   return (
     <View style={styles.wrap}>
-      <AppText variant="meta" weight="bold">
-        {label}
-      </AppText>
-      <TextInput
-        style={[styles.input, multiline && styles.multiline, error && styles.inputError]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={tokens.color.navyMuted}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        accessibilityLabel={label}
-      />
-      {error ? (
-        <AppText variant="meta" color="dangerText">
-          {error}
-        </AppText>
-      ) : hint ? (
-        <AppText variant="meta" color="navyMuted">
-          {hint}
+      {!floatingLabel && !hideLabel ? (
+        <AppText variant="meta" weight="bold">
+          {label}
         </AppText>
       ) : null}
+
+      <View style={[styles.field, multiline && styles.fieldMultiline, error && styles.fieldError]}>
+        {floatingLabel ? (
+          <AppText variant="meta" color="navyMuted" style={styles.floating}>
+            {label}
+          </AppText>
+        ) : null}
+        <TextInput
+          style={[styles.input, multiline && styles.inputMultiline]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={tokens.color.navyMuted}
+          multiline={multiline}
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          accessibilityLabel={label}
+        />
+      </View>
+
+      <View style={styles.footRow}>
+        <View style={styles.footLeft}>
+          {error ? (
+            <AppText variant="meta" color="dangerText">
+              {error}
+            </AppText>
+          ) : hint ? (
+            <AppText variant="meta" color="navyMuted">
+              {hint}
+            </AppText>
+          ) : null}
+        </View>
+        {maxLength ? (
+          <AppText variant="meta" color="navyMuted">
+            {value.length}/{maxLength}
+          </AppText>
+        ) : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { gap: 6 },
-  input: {
+  field: {
     borderWidth: 1,
     borderColor: tokens.color.line,
     borderRadius: tokens.radius.tile,
     paddingHorizontal: tokens.space.md,
-    paddingVertical: tokens.space.md,
+    paddingVertical: tokens.space.sm,
+    backgroundColor: tokens.color.surface,
+  },
+  fieldMultiline: { minHeight: 110 },
+  fieldError: { borderColor: tokens.color.dangerText },
+  floating: { marginBottom: 2 },
+  input: {
     fontFamily: tokens.font.regular,
     fontSize: 15,
     color: tokens.color.navy,
-    backgroundColor: tokens.color.surface,
+    padding: 0,
+    minHeight: 24,
   },
-  multiline: { minHeight: 96, textAlignVertical: 'top' },
-  inputError: { borderColor: tokens.color.dangerText },
+  inputMultiline: { textAlignVertical: 'top', minHeight: 84 },
+  footRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 2 },
+  footLeft: { flexShrink: 1 },
 });

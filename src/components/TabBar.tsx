@@ -104,7 +104,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
-            <Icon name="plus" size={28} color="navy" />
+            <Icon name="plus" size={28} color="white" />
           </View>
           <AppText variant="meta" color="navy">
             {nb.tabs.leggUt}

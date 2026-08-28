@@ -8,7 +8,7 @@ import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
-import { ListingCard } from '@/components/ListingCard';
+import { ListingRowCard } from '@/components/ListingRowCard';
 import { ActiveUsersRow } from '@/components/ActiveUsersRow';
 
 export function ListingListScreen({
@@ -52,7 +52,7 @@ export function ListingListScreen({
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <ListingCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
+            <ListingRowCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
           )}
         />
       ) : (

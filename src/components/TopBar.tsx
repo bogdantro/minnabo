@@ -67,13 +67,15 @@ export type PageHeaderProps = {
   onBack?: () => void;
   showBack?: boolean;
   right?: ReactNode;
+  /** show only the logo icon (no wordmark) */
+  logoOnly?: boolean;
 };
 
 /**
  * Header for every non-tab screen: back arrow + MinNabo logo, always.
  * Optionally a centered title and a right-side node.
  */
-export function PageHeader({ title, onBack, showBack = true, right }: PageHeaderProps) {
+export function PageHeader({ title, onBack, showBack = true, right, logoOnly = false }: PageHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
@@ -91,7 +93,7 @@ export function PageHeader({ title, onBack, showBack = true, right }: PageHeader
             <Icon name="arrow-left" size={24} color="navy" />
           </Pressable>
         ) : null}
-        <BrandMark size={24} showWordmark={!title} />
+        <BrandMark size={26} showWordmark={!title && !logoOnly} />
       </View>
 
       {title ? (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
-import type { Listing } from '@/domain/types';
+import type { Listing, PublicProfile } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { homeCategories } from '@/data/seed';
@@ -9,22 +9,42 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
-import { SearchField } from '@/components/ui/SearchField';
 import { CategoryChip } from '@/components/ui/CategoryChip';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ScreenState } from '@/components/ui/ScreenState';
-import { Button } from '@/components/ui/Button';
-import { ListingCard } from '@/components/ListingCard';
 import type { IconName } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { AppText } from '@/components/ui/Text';
+import { LocationBar } from '@/components/LocationBar';
+import { HomeSearchBar } from '@/components/HomeSearchBar';
+import { RichSectionHeader } from '@/components/RichSectionHeader';
+import { ActiveUsersRow } from '@/components/ActiveUsersRow';
+import { ListingRowCard } from '@/components/ListingRowCard';
 
-const PREVIEW_COUNT = 5;
+const PREVIEW = 4;
+
+const dedupeOwners = (listings: Listing[]): PublicProfile[] => {
+  const seen = new Set<string>();
+  const out: PublicProfile[] = [];
+  for (const l of listings) {
+    if (!seen.has(l.owner.id)) {
+      seen.add(l.owner.id);
+      out.push(l.owner);
+    }
+  }
+  return out;
+};
 
 export function OppdragScreen() {
   const me = useCurrentUser();
   const [activeSlug, setActiveSlug] = useState('alle');
 
-  const tasks = useListings({ categorySlug: activeSlug, type: 'TASK_REQUEST' });
   const offers = useListings({ categorySlug: activeSlug, type: 'SERVICE_OFFER' });
+  const tasks = useListings({ categorySlug: activeSlug, type: 'TASK_REQUEST' });
+
+  const offerItems = (offers.data ?? []).slice(0, PREVIEW);
+  const taskItems = (tasks.data ?? []).slice(0, PREVIEW);
+  const activeProviders = dedupeOwners(offers.data ?? []).slice(0, 8);
 
   return (
     <View style={styles.wrap}>
@@ -41,11 +61,10 @@ export function OppdragScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ScreenTitle style={styles.title}>{nb.home.question}</ScreenTitle>
-
-        <SearchField
-          placeholder={nb.home.searchPlaceholder}
-          editable={false}
-          onPress={() => safePush('/sok')}
+        <LocationBar />
+        <HomeSearchBar
+          onPressSearch={() => safePush('/sok')}
+          onPressFilter={() => safePush('/sok')}
         />
 
         <ScrollView
@@ -64,61 +83,106 @@ export function OppdragScreen() {
           ))}
         </ScrollView>
 
-        <ListingSection
-          title={nb.home.needHelpSection}
-          query={tasks}
-          onSeeAll={() => safePush('/oppdrag-liste')}
-        />
+        <View style={styles.rule} />
 
-        <ListingSection
-          title={nb.home.offerHelpSection}
+        <Section
+          icon="user"
+          iconColor="cyan"
+          title={nb.home.offerSectionTitle}
+          subtitle={nb.home.offerSectionSubtitle}
           query={offers}
           onSeeAll={() => safePush('/tilbydere')}
-        />
+        >
+          {activeProviders.length > 0 ? (
+            <View style={styles.activeRow}>
+              <ActiveUsersRow
+                profiles={activeProviders}
+                onPressUser={(id) => safePush(`/profil/${id}`)}
+              />
+            </View>
+          ) : null}
+          <View style={styles.list}>
+            {offerItems.map((listing) => (
+              <ListingRowCard
+                key={listing.id}
+                listing={listing}
+                onPress={() => safePush(`/oppdrag/${listing.id}`)}
+              />
+            ))}
+          </View>
+        </Section>
+
+        <View style={styles.rule} />
+
+        <Section
+          icon="clipboard"
+          iconColor="lime"
+          title={nb.home.taskSectionTitle}
+          subtitle={nb.home.taskSectionSubtitle}
+          query={tasks}
+          onSeeAll={() => safePush('/oppdrag-liste')}
+        >
+          <View style={styles.list}>
+            {taskItems.map((listing) => (
+              <ListingRowCard
+                key={listing.id}
+                listing={listing}
+                onPress={() => safePush(`/oppdrag/${listing.id}`)}
+              />
+            ))}
+          </View>
+        </Section>
+
+        <View style={styles.footerNote}>
+          <Icon name="zap" size={14} color="cyan" />
+          <AppText variant="meta" color="navyMuted">
+            {nb.home.freshDaily}
+          </AppText>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-function ListingSection({
+function Section({
+  icon,
+  iconColor,
   title,
+  subtitle,
   query,
   onSeeAll,
+  children,
 }: {
+  icon: 'user' | 'clipboard';
+  iconColor: 'lime' | 'cyan';
   title: string;
+  subtitle: string;
   query: ReturnType<typeof useListings>;
   onSeeAll: () => void;
+  children: React.ReactNode;
 }) {
-  const items: Listing[] = query.data ?? [];
-  const preview = items.slice(0, PREVIEW_COUNT);
-  const hasMore = items.length > PREVIEW_COUNT;
-
+  const items = query.data ?? [];
   return (
     <View style={styles.section}>
-      <SectionHeader
+      <RichSectionHeader
+        icon={icon}
+        iconColor={iconColor}
         title={title}
-        actionLabel={hasMore ? nb.common.seeAll : undefined}
-        onAction={hasMore ? onSeeAll : undefined}
+        subtitle={subtitle}
+        onSeeAll={onSeeAll}
       />
-
-      {query.isLoading || query.isError || preview.length === 0 ? (
+      {query.isLoading || query.isError || items.length === 0 ? (
         <ScreenState
           status={query.isLoading ? 'loading' : query.isError ? 'error' : 'empty'}
           onRetry={() => query.refetch()}
         />
       ) : (
-        <View style={styles.list}>
-          {preview.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              onPress={() => safePush(`/oppdrag/${listing.id}`)}
-            />
-          ))}
-          {hasMore ? (
-            <Button label={nb.common.seeAll} variant="secondary" onPress={onSeeAll} />
+        <>
+          {children}
+          {items.length > PREVIEW ? (
+            <Button label={nb.common.seeMore} variant="secondary" onPress={onSeeAll} />
           ) : null}
-        </View>
+        </>
       )}
     </View>
   );
@@ -129,10 +193,17 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: tokens.space.xl,
     paddingBottom: tokens.space.xxxl,
-    gap: tokens.space.lg,
+    gap: tokens.space.md,
   },
-  title: { marginTop: tokens.space.sm },
-  categories: { gap: tokens.space.md, paddingVertical: tokens.space.xs },
-  section: { gap: tokens.space.sm },
-  list: { gap: tokens.space.lg },
+  title: { paddingRight: 72 },
+  categories: { gap: tokens.space.sm, paddingVertical: tokens.space.xs },
+  rule: { height: 1, backgroundColor: tokens.color.line, marginVertical: tokens.space.xs },
+  section: { gap: tokens.space.md },
+  activeRow: {
+    marginHorizontal: -tokens.space.xl,
+    marginTop: tokens.space.xs,
+    marginBottom: tokens.space.sm,
+  },
+  list: { gap: tokens.space.md },
+  footerNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: tokens.space.sm },
 });

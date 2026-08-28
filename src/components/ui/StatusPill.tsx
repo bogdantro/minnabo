@@ -8,6 +8,8 @@ export type StatusPillProps = {
   label: string;
   tone?: PillTone;
   filled?: boolean;
+  /** tinted background, coloured text, no border */
+  soft?: boolean;
   style?: ViewStyle;
 };
 
@@ -23,7 +25,7 @@ const toneTint: Record<PillTone, ColorToken> = {
   neutral: 'line',
 };
 
-export function StatusPill({ label, tone = 'neutral', filled = false, style }: StatusPillProps) {
+export function StatusPill({ label, tone = 'neutral', filled = false, soft = false, style }: StatusPillProps) {
   const color = toneColor[tone];
 
   return (
@@ -32,14 +34,16 @@ export function StatusPill({ label, tone = 'neutral', filled = false, style }: S
         styles.pill,
         filled
           ? { backgroundColor: tokens.color[color] }
-          : { borderColor: tokens.color[color], borderWidth: 1, backgroundColor: tokens.color[toneTint[tone]] },
+          : soft
+            ? { backgroundColor: tokens.color[toneTint[tone]] }
+            : { borderColor: tokens.color[color], borderWidth: 1, backgroundColor: tokens.color[toneTint[tone]] },
         style,
       ]}
     >
       <AppText
         variant="meta"
         weight="bold"
-        color={filled ? (tone === 'cyan' ? 'white' : 'navy') : color}
+        color={filled ? 'white' : color}
         style={styles.text}
       >
         {label}

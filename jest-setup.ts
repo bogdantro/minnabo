@@ -84,6 +84,12 @@ jest.mock('expo-image', () => {
   return { Image: (props: any) => React.createElement(Image, props) };
 });
 
+jest.mock('@react-native-community/slider', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { __esModule: true, default: (props: any) => React.createElement(View, props) };
+});
+
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');
   const { Text } = require('react-native');
