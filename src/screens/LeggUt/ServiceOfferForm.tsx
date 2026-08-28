@@ -1,100 +1,353 @@
 import { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { categories } from '@/data/seed';
 import { draftStore } from '@/data/draftStore';
+import { safePush } from '@/lib/nav';
 import { Wizard, type WizardStep } from '@/components/Wizard';
 import { TextField } from '@/components/ui/TextField';
-import { ChipSelect } from '@/components/ui/ChipSelect';
-import { TagInput } from '@/components/ui/TagInput';
+import { SelectField } from '@/components/ui/SelectField';
+import { PickerPills } from '@/components/ui/PickerPills';
+import { ImagePickerField } from '@/components/ui/ImagePickerField';
+import { SelectionCard } from '@/components/ui/SelectionCard';
+import { ToggleCard, ToggleRow } from '@/components/ui/ToggleRow';
+import { DistanceSlider } from '@/components/ui/DistanceSlider';
+import { InfoBox } from '@/components/ui/InfoBox';
+import { Button } from '@/components/ui/Button';
+import { AppText } from '@/components/ui/Text';
 import { buildOfferListing, type OfferForm } from './buildListing';
+import { AmountInput, ConfirmRow } from './TaskRequestForm';
+import type { IconName } from '@/components/ui/Icon';
 
 const EMPTY: OfferForm = {
+  categorySlug: '',
   title: '',
   about: '',
-  categorySlug: '',
+  images: [],
   services: [],
-  experienceYears: '',
-  completedJobs: '',
-  place: '',
-  maxDistanceKm: '',
-  availabilityText: '',
-  equipmentText: '',
+  experience: '',
+  experienceText: '',
+  place: 'Lillehammer',
+  maxDistanceKm: 15,
+  days: ['Man', 'Ons', 'Fre'],
+  timeOfDay: [],
+  timeFrom: '',
+  timeTo: '',
+  ownTransport: true,
   priceMode: 'FROM',
   amountKr: '',
+  priceUnit: 'per oppdrag',
+  whoCanContact: 'ALL_VERIFIED',
+  confirmed: false,
 };
+
+const QUICK = ['hage', 'renhold', 'flytting', 'montering'];
+const SERVICE_OPTS = [
+  { value: 'Gressklipping', label: 'Gressklipping', icon: 'feather' as IconName },
+  { value: 'Kantklipping', label: 'Kantklipping', icon: 'feather' as IconName },
+  { value: 'Enkelt hagearbeid', label: 'Enkelt hagearbeid', icon: 'feather' as IconName },
+  { value: 'Rydding', label: 'Rydding', icon: 'trash-2' as IconName },
+  { value: 'Montering', label: 'Montering', icon: 'tool' as IconName },
+  { value: 'Rengjøring', label: 'Rengjøring', icon: 'droplet' as IconName },
+];
+const DAYS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+const TIME_OF_DAY = ['Morgen', 'Dagtid', 'Ettermiddag', 'Kveld'];
+const HOURS = Array.from({ length: 17 }, (_, i) => `${String(i + 6).padStart(2, '0')}:00`);
 
 export function ServiceOfferForm() {
   const router = useRouter();
   const [form, setForm] = useState<OfferForm>(EMPTY);
-  const set = <K extends keyof OfferForm>(key: K, value: OfferForm[K]) =>
-    setForm((f) => ({ ...f, [key]: value }));
+  const set = <K extends keyof OfferForm>(k: K, v: OfferForm[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const toggleIn = (key: 'services' | 'days' | 'timeOfDay', v: string) =>
+    set(
+      key,
+      form[key].includes(v) ? form[key].filter((x) => x !== v) : [...form[key], v],
+    );
 
   const steps: WizardStep[] = [
     {
-      title: nb.leggUt.stepAboutYou,
+      title: nb.leggUt.offerS1Title,
+      subtitle: nb.leggUt.offerS1Sub,
       validate: () =>
-        !form.title.trim()
-          ? nb.leggUt.errRequired
-          : !form.categorySlug
-            ? nb.leggUt.errCategory
+        !form.categorySlug
+          ? nb.leggUt.errCategory
+          : !form.title.trim()
+            ? nb.leggUt.errRequired
             : !form.about.trim()
               ? nb.leggUt.errRequired
               : null,
       render: () => (
         <>
-          <TextField label={nb.leggUt.fieldTitle} value={form.title} onChangeText={(t) => set('title', t)} placeholder="F.eks. Jeg kan klippe plenen din" />
-          <ChipSelect
+          <SelectField
             label={nb.leggUt.fieldCategory}
-            options={categories.map((c) => ({ value: c.slug, label: c.label }))}
+            placeholder={nb.leggUt.selectCategory}
+            icon="grid"
             value={form.categorySlug || undefined}
+            options={categories.map((c) => ({ value: c.slug, label: c.label }))}
             onChange={(v) => set('categorySlug', v)}
           />
-          <TextField label={nb.leggUt.fieldAbout} value={form.about} onChangeText={(t) => set('about', t)} multiline placeholder="Fortell hva du tilbyr" />
+          <PickerPills
+            scroll
+            options={QUICK.map((slug) => {
+              const c = categories.find((x) => x.slug === slug)!;
+              return { value: slug, label: c.label, icon: c.icon as IconName };
+            })}
+            selected={form.categorySlug ? [form.categorySlug] : []}
+            onToggle={(v) => set('categorySlug', v)}
+            showCheck
+          />
+          <TextField
+            label={nb.leggUt.offerHeadlineLabel}
+            value={form.title}
+            onChangeText={(t) => set('title', t)}
+            placeholder="Jeg kan klippe plenen din"
+            maxLength={60}
+            hint={nb.leggUt.offerHeadlineHint}
+          />
+          <TextField
+            label={nb.leggUt.offerAboutLabel}
+            value={form.about}
+            onChangeText={(t) => set('about', t)}
+            multiline
+            maxLength={500}
+            hint={nb.leggUt.offerAboutHint}
+          />
+          <InfoBox icon="user">{nb.leggUt.offerVisibilityNote}</InfoBox>
         </>
       ),
     },
     {
-      title: nb.leggUt.stepServices,
+      title: nb.leggUt.offerS2Title,
+      subtitle: nb.leggUt.offerS2Sub,
+      validate: () => (form.services.length === 0 ? nb.leggUt.errRequired : null),
       render: () => (
         <>
-          <TagInput
-            label={nb.leggUt.fieldServices}
-            placeholder="F.eks. Gressklipping"
-            values={form.services}
-            onChange={(v) => set('services', v)}
+          <AppText variant="meta" weight="bold">
+            Bilder
+          </AppText>
+          <ImagePickerField
+            compact
+            value={form.images}
+            onChange={(v) => set('images', v)}
+            uploadSub={nb.leggUt.offerUploadSub}
           />
-          <TextField label={nb.leggUt.fieldExperienceYears} value={form.experienceYears} onChangeText={(t) => set('experienceYears', t)} keyboardType="numeric" placeholder="2" />
-          <TextField label={nb.leggUt.fieldCompletedJobs} value={form.completedJobs} onChangeText={(t) => set('completedJobs', t)} keyboardType="numeric" placeholder="9" />
+
+          <AppText variant="meta" weight="bold">
+            {nb.leggUt.servicesLabel}
+          </AppText>
+          <PickerPills
+            options={SERVICE_OPTS}
+            selected={form.services}
+            onToggle={(v) => toggleIn('services', v)}
+            showCheck
+          />
+
+          <SelectField
+            label={nb.leggUt.experienceLabel}
+            placeholder="Velg erfaring"
+            value={form.experience || undefined}
+            options={['Under 1 år', '1 års erfaring', '2 års erfaring', '3–5 års erfaring', 'Mer enn 5 år'].map(
+              (v) => ({ value: v, label: v }),
+            )}
+            onChange={(v) => set('experience', v)}
+          />
+          <TextField
+            label={nb.leggUt.experienceTextLabel}
+            floatingLabel
+            value={form.experienceText}
+            onChangeText={(t) => set('experienceText', t)}
+            multiline
+            placeholder="Jeg har klippet plener for familie og naboer de siste to årene."
+          />
+          <InfoBox icon="shield">{nb.leggUt.offerRightsNote}</InfoBox>
         </>
       ),
     },
     {
-      title: nb.leggUt.stepAreaPrice,
+      title: nb.leggUt.offerS3Title,
+      subtitle: nb.leggUt.offerS3Sub,
+      validate: () => (!form.place.trim() ? nb.leggUt.errRequired : null),
+      render: () => (
+        <>
+          <SelectField
+            label={nb.leggUt.startPoint}
+            placeholder={nb.leggUt.startPoint}
+            icon="map-pin"
+            value={form.place || undefined}
+            options={['Lillehammer', 'Hamar', 'Gjøvik', 'Elverum', 'Otta'].map((v) => ({ value: v, label: v }))}
+            onChange={(v) => set('place', v)}
+          />
+          <DistanceSlider
+            label={nb.leggUt.travelDistance}
+            value={form.maxDistanceKm}
+            onChange={(v) => set('maxDistanceKm', v)}
+          />
+          <AppText variant="meta" color="navyMuted">
+            {nb.leggUt.areaApproxNote}
+          </AppText>
+
+          <AppText variant="meta" weight="bold">
+            {nb.leggUt.availableDays}
+          </AppText>
+          <PickerPills
+            options={DAYS.map((d) => ({ value: d, label: d }))}
+            selected={form.days}
+            onToggle={(v) => toggleIn('days', v)}
+          />
+
+          <AppText variant="meta" weight="bold">
+            {nb.leggUt.timeLabel}
+          </AppText>
+          <PickerPills
+            options={TIME_OF_DAY.map((t) => ({ value: t, label: t }))}
+            selected={form.timeOfDay}
+            onToggle={(v) => toggleIn('timeOfDay', v)}
+            tone="cyan"
+            showCheck
+          />
+          <View style={styles.timeRow}>
+            <View style={styles.timeCell}>
+              <SelectField
+                label={nb.leggUt.timeFrom}
+                placeholder={nb.leggUt.timeFrom}
+                showLabel={false}
+                value={form.timeFrom || undefined}
+                options={HOURS.map((h) => ({ value: h, label: `${nb.leggUt.timeFrom} ${h}` }))}
+                onChange={(v) => set('timeFrom', v)}
+              />
+            </View>
+            <View style={styles.timeCell}>
+              <SelectField
+                label={nb.leggUt.timeTo}
+                placeholder={nb.leggUt.timeTo}
+                showLabel={false}
+                value={form.timeTo || undefined}
+                options={HOURS.map((h) => ({ value: h, label: `${nb.leggUt.timeTo} ${h}` }))}
+                onChange={(v) => set('timeTo', v)}
+              />
+            </View>
+          </View>
+
+          <AppText variant="cardTitle" weight="bold">
+            {nb.leggUt.transportLabel}
+          </AppText>
+          <ToggleCard>
+            <ToggleRow
+              label={nb.leggUt.ownTransport}
+              hint={nb.leggUt.ownTransportHint}
+              value={form.ownTransport}
+              onValueChange={(v) => set('ownTransport', v)}
+              last
+            />
+          </ToggleCard>
+        </>
+      ),
+    },
+    {
+      title: nb.leggUt.offerS4Title,
+      subtitle: nb.leggUt.offerS4Sub,
       validate: () =>
-        !form.place.trim()
-          ? nb.leggUt.errRequired
-          : form.priceMode === 'FROM' && !form.amountKr.trim()
-            ? nb.leggUt.errPrice
+        form.priceMode === 'FROM' && !form.amountKr.trim()
+          ? nb.leggUt.errPrice
+          : !form.confirmed
+            ? nb.leggUt.errConfirm
             : null,
       render: () => (
         <>
-          <TextField label={nb.leggUt.fieldPlace} value={form.place} onChangeText={(t) => set('place', t)} placeholder="Kommune eller sted" />
-          <TextField label={nb.leggUt.fieldMaxDistance} value={form.maxDistanceKm} onChangeText={(t) => set('maxDistanceKm', t)} keyboardType="numeric" placeholder="15" />
-          <TextField label={nb.leggUt.fieldAvailability} value={form.availabilityText} onChangeText={(t) => set('availabilityText', t)} placeholder="F.eks. Ledig ettermiddager og helger" />
-          <TextField label={nb.leggUt.fieldEquipment} value={form.equipmentText} onChangeText={(t) => set('equipmentText', t)} placeholder="F.eks. Har egen gressklipper" />
-          <ChipSelect
-            label={nb.leggUt.fieldPriceMode}
-            options={[
-              { value: 'FROM', label: nb.leggUt.priceModeFrom },
-              { value: 'BY_AGREEMENT', label: nb.leggUt.priceModeByAgreement },
-            ]}
-            value={form.priceMode}
-            onChange={(v) => set('priceMode', v)}
-          />
+          <AppText variant="cardTitle" weight="bold">
+            {nb.leggUt.offerPriceQuestion}
+          </AppText>
+          <View style={styles.cardRow}>
+            <SelectionCard
+              label={nb.leggUt.priceModeFrom}
+              icon="tag"
+              tone="lime"
+              selected={form.priceMode === 'FROM'}
+              onPress={() => set('priceMode', 'FROM')}
+            />
+            <SelectionCard
+              label={nb.leggUt.priceModeByAgreement}
+              icon="message-circle"
+              tone="cyan"
+              selected={form.priceMode === 'BY_AGREEMENT'}
+              onPress={() => set('priceMode', 'BY_AGREEMENT')}
+            />
+          </View>
           {form.priceMode === 'FROM' ? (
-            <TextField label={nb.leggUt.fieldAmount} value={form.amountKr} onChangeText={(t) => set('amountKr', t)} keyboardType="numeric" placeholder="500" />
+            <>
+              <View style={styles.priceRow}>
+                <View style={styles.priceAmount}>
+                  <AmountInput value={form.amountKr} onChange={(v) => set('amountKr', v)} />
+                </View>
+                <View style={styles.priceUnit}>
+                  <SelectField
+                    label={nb.leggUt.perJob}
+                    showLabel={false}
+                    placeholder={nb.leggUt.perJob}
+                    value={form.priceUnit}
+                    options={[
+                      { value: 'per oppdrag', label: nb.leggUt.perJob },
+                      { value: 'per time', label: nb.leggUt.perHour },
+                    ]}
+                    onChange={(v) => set('priceUnit', v as OfferForm['priceUnit'])}
+                  />
+                </View>
+              </View>
+              <AppText variant="meta" color="navyMuted">
+                {nb.leggUt.fromPriceHint}
+              </AppText>
+            </>
           ) : null}
+
+          <AppText variant="cardTitle" weight="bold">
+            {nb.leggUt.offerEquipQuestion}
+          </AppText>
+          <ToggleCard>
+            <ToggleRow
+              icon="feather"
+              label="Egen gressklipper"
+              value={form.services.includes('Gressklipping')}
+              onValueChange={() => toggleIn('services', 'Gressklipping')}
+            />
+            <ToggleRow
+              icon="feather"
+              label="Kantklipper"
+              value={form.services.includes('Kantklipping')}
+              onValueChange={() => toggleIn('services', 'Kantklipping')}
+            />
+            <ToggleRow
+              icon="package"
+              label="Hageavfallssekker"
+              value={form.services.includes('Rydding')}
+              onValueChange={() => toggleIn('services', 'Rydding')}
+              last
+            />
+          </ToggleCard>
+          <Button label={nb.leggUt.addEquipment} variant="secondary" onPress={() => {}} />
+
+          <AppText variant="cardTitle" weight="bold">
+            {nb.leggUt.offerWhoQuestion}
+          </AppText>
+          <SelectField
+            label={nb.leggUt.offerWhoQuestion}
+            showLabel={false}
+            placeholder={nb.leggUt.whoAllVerified}
+            icon="users"
+            value={form.whoCanContact}
+            options={[
+              { value: 'ALL_VERIFIED', label: nb.leggUt.whoAllVerified },
+              { value: 'BUSINESS_ONLY', label: nb.leggUt.whoBusinessOnly },
+            ]}
+            onChange={(v) => set('whoCanContact', v as OfferForm['whoCanContact'])}
+          />
+          <AppText variant="meta" color="navyMuted">
+            {nb.leggUt.offerWhoHint}
+          </AppText>
+
+          <InfoBox icon="shield">{nb.leggUt.noPaymentNote}</InfoBox>
+          <ConfirmRow value={form.confirmed} onChange={(v) => set('confirmed', v)} />
         </>
       ),
     },
@@ -102,9 +355,15 @@ export function ServiceOfferForm() {
 
   return (
     <Wizard
-      heading={nb.leggUt.offerTitle}
+      heading={nb.leggUt.wizardOfferHeading}
+      badge={nb.leggUt.offerBadge}
+      badgeTone="cyan"
       steps={steps}
-      finalLabel={nb.leggUt.previewTitle}
+      finalLabel={nb.leggUt.previewOfferCta}
+      onSaveDraft={() => {
+        draftStore.set(buildOfferListing(form));
+        safePush('/mine');
+      }}
       onFinish={() => {
         draftStore.set(buildOfferListing(form));
         router.push('/legg-ut/forhandsvisning');
@@ -112,3 +371,12 @@ export function ServiceOfferForm() {
     />
   );
 }
+
+const styles = StyleSheet.create({
+  timeRow: { flexDirection: 'row', gap: tokens.space.md },
+  timeCell: { flex: 1 },
+  cardRow: { flexDirection: 'row', gap: tokens.space.md },
+  priceRow: { flexDirection: 'row', gap: tokens.space.md, alignItems: 'flex-start' },
+  priceAmount: { flex: 1 },
+  priceUnit: { flex: 1 },
+});

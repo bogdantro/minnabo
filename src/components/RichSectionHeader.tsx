@@ -36,13 +36,13 @@ export function RichSectionHeader({
       {onSeeAll ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={nb.common.seeAll}
+          accessibilityLabel={nb.common.seeMore}
           hitSlop={hitSlop}
           onPress={onSeeAll}
           style={styles.seeAll}
         >
           <AppText variant="meta" weight="bold" color="navy">
-            {nb.common.seeAll}
+            {nb.common.seeMore}
           </AppText>
           <Icon name="chevron-right" size={15} color="navy" />
         </Pressable>

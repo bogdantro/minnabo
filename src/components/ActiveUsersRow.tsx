@@ -46,7 +46,7 @@ export function ActiveUsersRow({
                     {p.rating.average.toLocaleString('nb-NO', { minimumFractionDigits: 1 })}
                   </AppText>
                   <AppText variant="meta" color="navyMuted">
-                    ·
+                    {' · '}
                   </AppText>
                 </>
               ) : null}
@@ -63,7 +63,12 @@ export function ActiveUsersRow({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: tokens.space.lg, paddingVertical: tokens.space.xs },
+  row: {
+    gap: tokens.space.xl,
+    paddingHorizontal: tokens.space.xl,
+    paddingTop: tokens.space.sm,
+    paddingBottom: tokens.space.md,
+  },
   item: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm },
   text: { gap: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },

@@ -14,6 +14,8 @@ export type TextFieldProps = {
   maxLength?: number;
   /** render the label inside the field as a small floating caption */
   floatingLabel?: boolean;
+  /** hide the label entirely (still used for accessibility) */
+  hideLabel?: boolean;
 };
 
 export function TextField({
@@ -27,10 +29,11 @@ export function TextField({
   hint,
   maxLength,
   floatingLabel = false,
+  hideLabel = false,
 }: TextFieldProps) {
   return (
     <View style={styles.wrap}>
-      {!floatingLabel ? (
+      {!floatingLabel && !hideLabel ? (
         <AppText variant="meta" weight="bold">
           {label}
         </AppText>

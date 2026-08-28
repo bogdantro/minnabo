@@ -169,7 +169,7 @@ function Section({
         iconColor={iconColor}
         title={title}
         subtitle={subtitle}
-        onSeeAll={items.length > PREVIEW ? onSeeAll : undefined}
+        onSeeAll={onSeeAll}
       />
       {query.isLoading || query.isError || items.length === 0 ? (
         <ScreenState
@@ -180,7 +180,7 @@ function Section({
         <>
           {children}
           {items.length > PREVIEW ? (
-            <Button label={nb.common.seeAll} variant="secondary" onPress={onSeeAll} />
+            <Button label={nb.common.seeMore} variant="secondary" onPress={onSeeAll} />
           ) : null}
         </>
       )}
@@ -199,7 +199,11 @@ const styles = StyleSheet.create({
   categories: { gap: tokens.space.sm, paddingVertical: tokens.space.xs },
   rule: { height: 1, backgroundColor: tokens.color.line, marginVertical: tokens.space.xs },
   section: { gap: tokens.space.md },
-  activeRow: { marginHorizontal: -tokens.space.xl },
+  activeRow: {
+    marginHorizontal: -tokens.space.xl,
+    marginTop: tokens.space.xs,
+    marginBottom: tokens.space.sm,
+  },
   list: { gap: tokens.space.md },
   footerNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: tokens.space.sm },
 });
