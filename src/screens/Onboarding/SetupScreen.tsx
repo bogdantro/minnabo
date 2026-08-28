@@ -6,6 +6,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { authStore, type Purpose } from '@/data/authStore';
 import { PageHeader } from '@/components/TopBar';
+import { OnboardingProgress } from '@/components/OnboardingProgress';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
@@ -40,6 +41,7 @@ export function SetupScreen() {
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
       <PageHeader title={nb.onboarding.setupTitle} />
+      <OnboardingProgress step={3} total={3} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ScreenTitle>{nb.onboarding.purposeQuestion}</ScreenTitle>
 

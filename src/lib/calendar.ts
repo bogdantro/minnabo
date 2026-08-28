@@ -53,3 +53,16 @@ export function monthGrid(year: number, month: number): Date[][] {
 }
 
 export const pad2 = (n: number) => String(n).padStart(2, '0');
+
+const WEEKDAYS_LONG_NB = [
+  'søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag',
+];
+
+/** Chat day-separator label: "I dag", "I går", "torsdag", or "29. august 2026". */
+export function formatDayLabel(d: Date, now: Date = new Date()): string {
+  if (isSameDay(d, now)) return 'I dag';
+  if (isSameDay(d, addDays(now, -1))) return 'I går';
+  const weekAgo = addDays(startOfDay(now), -6);
+  if (startOfDay(d) >= weekAgo) return WEEKDAYS_LONG_NB[d.getDay()];
+  return formatLongDate(d);
+}

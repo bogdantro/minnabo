@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { tokens } from '@/theme';
 import { savedStore } from '@/data/savedStore';
 import { savedSearchStore } from '@/data/savedSearchStore';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -54,6 +55,7 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: tokens.color.bg },
             }}
           />
+          <OfflineBanner />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

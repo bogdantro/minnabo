@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View, FlatList, Pressable, ScrollView, TextInput, StyleSheet } from 'react-native';
+import { View, FlatList, Pressable, ScrollView, TextInput, RefreshControl, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { ListingFilter, ListingSort, ListingType } from '@/domain/types';
 import { tokens, hitSlop } from '@/theme';
@@ -15,6 +15,7 @@ import { CategoryChip } from '@/components/ui/CategoryChip';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
+import { ListingListSkeleton } from '@/components/ui/Skeleton';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SortDropdown } from '@/components/ui/SortDropdown';
 import { DistanceSlider } from '@/components/ui/DistanceSlider';
@@ -54,7 +55,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
     [query, type, categorySlug, maxDistanceKm, verifiedOnly],
   );
 
-  const { data, isLoading, isError, refetch } = useListings(filter, sort);
+  const { data, isLoading, isError, isFetching, refetch } = useListings(filter, sort);
   const results = data ?? [];
 
   const activeFilterCount =
@@ -172,12 +173,24 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
         </View>
       </View>
 
-      {status === 'ready' ? (
+      {status === 'loading' ? (
+        <View style={styles.list}>
+          <ListingListSkeleton />
+        </View>
+      ) : status === 'ready' ? (
         <FlatList
           data={results}
           keyExtractor={(l) => l.id}
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching && !isLoading}
+              onRefresh={() => refetch()}
+              tintColor={tokens.color.cyan}
+              colors={[tokens.color.cyan]}
+            />
+          }
           renderItem={({ item }) => (
             <ListingRowCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
           )}

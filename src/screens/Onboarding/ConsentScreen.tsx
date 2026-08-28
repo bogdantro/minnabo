@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { authStore } from '@/data/authStore';
 import { PageHeader } from '@/components/TopBar';
+import { OnboardingProgress } from '@/components/OnboardingProgress';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
-import { Icon } from '@/components/ui/Icon';
+import { ConfirmCheckbox } from '@/components/ui/ConfirmCheckbox';
 import { Button } from '@/components/ui/Button';
 
 const ITEMS = [
@@ -36,30 +37,20 @@ export function ConsentScreen() {
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
       <PageHeader title={nb.onboarding.consentTitle} />
+      <OnboardingProgress step={2} total={3} />
       <View style={styles.body}>
         <ScreenTitle>{nb.onboarding.consentTitle}</ScreenTitle>
 
         <View style={styles.list}>
-          {ITEMS.map((item) => {
-            const on = checked[item.key];
-            return (
-              <Pressable
-                key={item.key}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: on }}
-                accessibilityLabel={item.label}
-                onPress={() => setChecked((c) => ({ ...c, [item.key]: !c[item.key] }))}
-                style={styles.row}
-              >
-                <View style={[styles.box, on && styles.boxOn]}>
-                  {on ? <Icon name="check" size={14} color="navy" /> : null}
-                </View>
-                <AppText variant="body" style={styles.rowLabel}>
-                  {item.label}
-                </AppText>
-              </Pressable>
-            );
-          })}
+          {ITEMS.map((item) => (
+            <ConfirmCheckbox
+              key={item.key}
+              value={checked[item.key]}
+              onChange={(v) => setChecked((c) => ({ ...c, [item.key]: v }))}
+            >
+              {item.label}
+            </ConfirmCheckbox>
+          ))}
         </View>
 
         {error && !all ? (
@@ -80,27 +71,6 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: tokens.color.bg },
   body: { flex: 1, padding: tokens.space.xl, gap: tokens.space.lg },
   list: { gap: tokens.space.sm },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.space.md,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.tile,
-    borderWidth: 1,
-    borderColor: tokens.color.line,
-    padding: tokens.space.md,
-  },
-  box: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: tokens.color.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  boxOn: { borderColor: tokens.color.lime, backgroundColor: tokens.color.limeTint },
-  rowLabel: { flex: 1 },
   footer: {
     padding: tokens.space.xl,
     borderTopWidth: 1,

@@ -22,6 +22,7 @@ import {
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
+import { formatDayLabel, isSameDay } from '@/lib/calendar';
 import { ChatHeader } from '@/components/ChatHeader';
 import { ChatBubble } from '@/components/ChatBubble';
 import { ChatComposer } from '@/components/ChatComposer';
@@ -90,29 +91,46 @@ export function ChatScreen({
   const list = messages ?? [];
 
   const renderMessage = (message: Message, index: number) => {
+    const prev = list[index - 1];
+    const newDay =
+      !prev || !isSameDay(new Date(prev.createdAt), new Date(message.createdAt));
+    const divider = newDay ? (
+      <View key={`day-${message.id}`} style={styles.dayRow}>
+        <View style={styles.dayLine} />
+        <AppText variant="meta" weight="bold" color="navyMuted">
+          {formatDayLabel(new Date(message.createdAt))}
+        </AppText>
+        <View style={styles.dayLine} />
+      </View>
+    ) : null;
+
     if (message.kind === 'PROPOSAL' && message.proposalId) {
       return (
-        <ProposalMessage
-          key={message.id}
-          proposalId={message.proposalId}
-          conversationId={conversation.id}
-          listingTitle={conversation.listing.title}
-          listingImageUrl={conversation.listing.imageUrl}
-        />
+        <View key={message.id}>
+          {divider}
+          <ProposalMessage
+            proposalId={message.proposalId}
+            conversationId={conversation.id}
+            listingTitle={conversation.listing.title}
+            listingImageUrl={conversation.listing.imageUrl}
+          />
+        </View>
       );
     }
     const mine = message.authorProfileId === me.id;
-    const prev = list[index - 1];
-    const showAvatar = !prev || prev.authorProfileId !== message.authorProfileId;
+    const showAvatar =
+      newDay || !prev || prev.authorProfileId !== message.authorProfileId;
     return (
-      <ChatBubble
-        key={message.id}
-        message={message}
-        mine={mine}
-        avatarUri={conversation.counterpart.avatarUrl}
-        avatarInitials={conversation.counterpart.initials}
-        showAvatar={showAvatar}
-      />
+      <View key={message.id}>
+        {divider}
+        <ChatBubble
+          message={message}
+          mine={mine}
+          avatarUri={conversation.counterpart.avatarUrl}
+          avatarInitials={conversation.counterpart.initials}
+          showAvatar={showAvatar}
+        />
+      </View>
     );
   };
 
@@ -234,6 +252,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   offerWrap: { marginVertical: tokens.space.sm },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.md,
+    marginVertical: tokens.space.md,
+  },
+  dayLine: { flex: 1, height: 1, backgroundColor: tokens.color.line },
   agreementBar: {
     flexDirection: 'row',
     alignItems: 'center',

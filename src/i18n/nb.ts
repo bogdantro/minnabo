@@ -67,6 +67,7 @@ const nb = {
     emptySearch: 'Fant ingen treff. Prøv et annet søk.',
     error: 'Noe gikk galt. Prøv igjen.',
     offline: 'Du er uten nettforbindelse.',
+    offlineBanner: 'Ingen nettforbindelse – viser lagret innhold',
     retry: 'Prøv igjen',
     noAccess: 'Du har ikke tilgang til dette.',
   },

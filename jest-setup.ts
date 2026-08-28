@@ -74,6 +74,15 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+jest.mock('expo-network', () => ({
+  __esModule: true,
+  useNetworkState: () => ({ isConnected: true, isInternetReachable: true, type: 'WIFI' }),
+  getNetworkStateAsync: () =>
+    Promise.resolve({ isConnected: true, isInternetReachable: true, type: 'WIFI' }),
+  addNetworkStateListener: () => ({ remove: () => undefined }),
+  NetworkStateType: { WIFI: 'WIFI', NONE: 'NONE', UNKNOWN: 'UNKNOWN' },
+}));
+
 jest.mock('expo-linear-gradient', () => {
   const React = require('react');
   const { View } = require('react-native');

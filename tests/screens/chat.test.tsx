@@ -60,6 +60,13 @@ test('the Send tilbud sheet sends a customised proposal', async () => {
   expect(proposal.price.amountMinor).toBe(85000);
 });
 
+test('chat shows a day separator above the first message of a day', async () => {
+  const conversation = chatRepository.getConversation('c-emma')!;
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+  // c-emma messages are all dated 2026-08-27 → a single "I går" divider.
+  await waitFor(() => expect(screen.getByText('I går')).toBeTruthy());
+});
+
 test('the attach sheet posts an image message', async () => {
   const conversation = chatRepository.getConversation('c-sara')!;
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);

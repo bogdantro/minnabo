@@ -6,6 +6,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { authStore } from '@/data/authStore';
 import { PageHeader } from '@/components/TopBar';
+import { OnboardingProgress } from '@/components/OnboardingProgress';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
@@ -39,6 +40,7 @@ export function LoginScreen() {
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
       <PageHeader title={nb.onboarding.loginTitle} />
+      <OnboardingProgress step={1} total={3} />
       <View style={styles.body}>
         <ScreenTitle>{nb.onboarding.loginTitle}</ScreenTitle>
         <AppText variant="body" color="navyMuted">

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Listing, ListingSort, ListingType } from '@/domain/types';
 import { tokens } from '@/theme';
@@ -13,6 +13,7 @@ import { StaticBottomNav } from '@/components/StaticBottomNav';
 import { AppText } from '@/components/ui/Text';
 import { CategoryChip } from '@/components/ui/CategoryChip';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
+import { ListingListSkeleton } from '@/components/ui/Skeleton';
 import { SortDropdown } from '@/components/ui/SortDropdown';
 import { HScrollFade } from '@/components/ui/HScrollFade';
 import { HomeSearchBar } from '@/components/HomeSearchBar';
@@ -49,7 +50,10 @@ export function ListingListScreen({ type }: { type: ListingType }) {
   const [activeSlug, setActiveSlug] = useState('alle');
   const [sort, setSort] = useState<ListingSort>('DISTANCE');
 
-  const { data, isLoading, isError, refetch } = useListings({ type, categorySlug: activeSlug }, sort);
+  const { data, isLoading, isError, isFetching, refetch } = useListings(
+    { type, categorySlug: activeSlug },
+    sort,
+  );
   const items = data ?? [];
 
   const recent = useMemo(
@@ -77,7 +81,18 @@ export function ListingListScreen({ type }: { type: ListingType }) {
         onNotificationsPress={() => safePush('/varsler')}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching && !isLoading}
+            onRefresh={() => refetch()}
+            tintColor={tokens.color.cyan}
+            colors={[tokens.color.cyan]}
+          />
+        }
+      >
         <View style={styles.sectionHead}>
           <RichSectionHeader
             icon={isTasks ? 'clock' : 'zap'}
@@ -135,7 +150,11 @@ export function ListingListScreen({ type }: { type: ListingType }) {
           <SortDropdown value={sort} options={SORTS} onChange={(v) => setSort(v as ListingSort)} />
         </View>
 
-        {status === 'ready' ? (
+        {status === 'loading' ? (
+          <View style={styles.list}>
+            <ListingListSkeleton />
+          </View>
+        ) : status === 'ready' ? (
           <View style={styles.list}>
             {items.map((l) => (
               <ListingRowCard key={l.id} listing={l} onPress={() => safePush(`/oppdrag/${l.id}`)} />

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
 import type { Listing, PublicProfile } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
@@ -11,6 +11,7 @@ import { HomeTopBar } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { CategoryChip } from '@/components/ui/CategoryChip';
 import { ScreenState } from '@/components/ui/ScreenState';
+import { ListingListSkeleton } from '@/components/ui/Skeleton';
 import type { IconName } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
@@ -47,6 +48,12 @@ export function OppdragScreen() {
   const taskItems = (tasks.data ?? []).slice(0, PREVIEW);
   const activeProviders = dedupeOwners(offers.data ?? []).slice(0, 8);
 
+  const refreshing = offers.isFetching || tasks.isFetching;
+  const onRefresh = useCallback(() => {
+    void offers.refetch();
+    void tasks.refetch();
+  }, [offers, tasks]);
+
   return (
     <View style={styles.wrap}>
       <HomeTopBar
@@ -60,6 +67,14 @@ export function OppdragScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={tokens.color.cyan}
+            colors={[tokens.color.cyan]}
+          />
+        }
       >
         <ScreenTitle style={styles.title}>{nb.home.question}</ScreenTitle>
         <LocationBar />
@@ -174,9 +189,11 @@ function Section({
         subtitle={subtitle}
         onSeeAll={onSeeAll}
       />
-      {query.isLoading || query.isError || items.length === 0 ? (
+      {query.isLoading ? (
+        <ListingListSkeleton count={3} />
+      ) : query.isError || items.length === 0 ? (
         <ScreenState
-          status={query.isLoading ? 'loading' : query.isError ? 'error' : 'empty'}
+          status={query.isError ? 'error' : 'empty'}
           onRetry={() => query.refetch()}
         />
       ) : (
