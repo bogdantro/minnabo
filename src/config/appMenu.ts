@@ -49,6 +49,7 @@ export const appMenu: AppMenuSection[] = [
       { label: 'Vilkår', icon: 'file-text', route: '/vilkar' },
       { label: 'Varslinger', icon: 'bell', route: '/varslinger' },
       { label: 'For bedrifter', icon: 'home', route: '/bedrift' },
+      { label: 'Adminpanel', icon: 'sliders', route: '/admin' },
     ],
   },
 ];

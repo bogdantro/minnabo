@@ -4,9 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEY = 'minnabo.savedListings';
 
 let saved = new Set<string>();
+let version = 0;
+let cachedList: string[] = [];
 const listeners = new Set<() => void>();
 
-const emit = () => listeners.forEach((l) => l());
+const emit = () => {
+  version += 1;
+  cachedList = [...saved];
+  listeners.forEach((l) => l());
+};
 
 const persist = () => {
   AsyncStorage.setItem(KEY, JSON.stringify([...saved])).catch(() => undefined);
@@ -31,7 +37,9 @@ export const savedStore = {
     persist();
     emit();
   },
-  list: () => [...saved],
+  /** Stable reference — only changes after emit(). Safe for useSyncExternalStore. */
+  list: () => cachedList,
+  version: () => version,
   subscribe: (fn: () => void) => {
     listeners.add(fn);
     return () => listeners.delete(fn);

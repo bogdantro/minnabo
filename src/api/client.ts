@@ -163,6 +163,11 @@ export class MockApiClient {
     return profileRepository.updateProfile(patch);
   }
 
+  async verify(kind: 'PHONE' | 'EMAIL' | 'BUSINESS'): Promise<PublicProfile> {
+    await delay(400);
+    return profileRepository.markVerified(kind);
+  }
+
   async listNotifications(): Promise<AppNotification[]> {
     await delay(150);
     return profileRepository.listNotifications();

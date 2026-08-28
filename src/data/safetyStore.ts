@@ -1,10 +1,35 @@
 import { useSyncExternalStore } from 'react';
 import type { Report } from '@/domain/types';
 
+const SEED_REPORTS: Report[] = [
+  {
+    id: 'rep-seed-1',
+    targetType: 'LISTING',
+    targetId: 'l-mur',
+    reason: 'Svindel eller falsk oppføring',
+    details: 'Prisen virker urealistisk lav og profilen er ny.',
+    byProfileId: 'u-emma',
+    createdAt: '2026-08-25T11:00:00Z',
+  },
+  {
+    id: 'rep-seed-2',
+    targetType: 'MESSAGE',
+    targetId: 'm-x',
+    reason: 'Upassende oppførsel',
+    byProfileId: 'u-martin',
+    createdAt: '2026-08-24T16:30:00Z',
+  },
+];
+
 let blocked = new Set<string>();
-let reports: Report[] = [];
+let reports: Report[] = [...SEED_REPORTS];
+let resolved = new Set<string>();
+let version = 0;
 const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
+const emit = () => {
+  version += 1;
+  listeners.forEach((l) => l());
+};
 
 export const safetyStore = {
   isBlocked: (profileId: string) => blocked.has(profileId),
@@ -22,13 +47,21 @@ export const safetyStore = {
     return report;
   },
   listReports: () => [...reports],
+  isResolved: (id: string) => resolved.has(id),
+  resolveReport: (id: string) => {
+    resolved = new Set(resolved).add(id);
+    emit();
+  },
+  openReportCount: () => reports.filter((r) => !resolved.has(r.id)).length,
+  version: () => version,
   subscribe: (fn: () => void) => {
     listeners.add(fn);
     return () => listeners.delete(fn);
   },
   _reset: () => {
     blocked = new Set();
-    reports = [];
+    reports = [...SEED_REPORTS];
+    resolved = new Set();
     emit();
   },
 };

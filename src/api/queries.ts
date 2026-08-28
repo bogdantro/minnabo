@@ -209,6 +209,16 @@ export function useUpdateProfile() {
   });
 }
 
+export function useVerify() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (kind: 'PHONE' | 'EMAIL' | 'BUSINESS') => apiClient.verify(kind),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: profileKeys.profile(data.id) });
+    },
+  });
+}
+
 export function useNotifications() {
   return useQuery({
     queryKey: profileKeys.notifications,

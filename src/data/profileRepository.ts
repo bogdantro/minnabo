@@ -4,6 +4,7 @@ import type {
   Listing,
   PublicProfile,
   Review,
+  VerificationKind,
 } from '@/domain/types';
 import { profiles } from './seed';
 import { notificationsSeed, reviewsSeed } from './seedProfile';
@@ -24,6 +25,24 @@ export const profileRepository = {
   getProfile(id: string): PublicProfile | undefined {
     if (id === CURRENT_USER_ID) return editableProfile;
     return Object.values(profiles).find((p) => p.id === id);
+  },
+
+  markVerified(kind: VerificationKind): PublicProfile {
+    const explanation =
+      kind === 'PHONE'
+        ? 'Telefonnummeret er bekreftet med engangskode.'
+        : kind === 'EMAIL'
+          ? 'E-postadressen er bekreftet.'
+          : 'Organisasjonsnummer og kontaktperson er kontrollert.';
+    const existing = editableProfile.verifications.find((v) => v.kind === kind);
+    if (existing) {
+      existing.verified = true;
+      existing.explanation = explanation;
+    } else {
+      editableProfile.verifications.push({ kind, verified: true, explanation });
+    }
+    if (kind === 'BUSINESS') editableProfile.isBusiness = true;
+    return clone(editableProfile);
   },
 
   updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation'>> & {
