@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
@@ -15,7 +15,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { InfoCard, InfoRow } from '@/components/ui/InfoCard';
 import { Gallery } from '@/components/Gallery';
 import { PriceHeadline } from '@/components/PriceHeadline';
-import { ConfirmRow } from './TaskRequestForm';
+import { ConfirmCheckbox } from '@/components/ui/ConfirmCheckbox';
 
 export function PreviewScreen() {
   const router = useRouter();
@@ -153,7 +153,9 @@ export function PreviewScreen() {
           <ChecklistRow text={nb.leggUt.checkPayment} />
         </View>
 
-        <ConfirmRow value={confirmed} onChange={setConfirmed} />
+        <ConfirmCheckbox value={confirmed} onChange={setConfirmed}>
+          {`${nb.leggUt.previewConfirm}${nb.leggUt.guidelines}.`}
+        </ConfirmCheckbox>
         {showErr && !confirmed ? (
           <AppText variant="meta" color="dangerText">
             {nb.leggUt.errConfirm}
@@ -171,8 +173,14 @@ export function PreviewScreen() {
           label={isTask ? nb.leggUt.publish : nb.leggUt.publishOffer}
           onPress={publish}
           loading={create.isPending}
+          iconRight="send"
         />
-        <Button label={nb.leggUt.backAndEdit} variant="secondary" onPress={goBack} />
+        <Button
+          label={nb.leggUt.backAndEdit}
+          variant="secondary"
+          onPress={goBack}
+          iconLeft="rotate-ccw"
+        />
       </View>
     </SafeAreaView>
   );
@@ -181,12 +189,21 @@ export function PreviewScreen() {
 function EditableRow({ title, onEdit, big }: { title: string; onEdit: () => void; big?: boolean }) {
   return (
     <View style={styles.editRow}>
-      <AppText variant={big ? 'section' : 'cardTitle'} weight={big ? 'extrabold' : 'bold'}>
+      <AppText variant={big ? 'section' : 'cardTitle'} weight={big ? 'extrabold' : 'bold'} style={styles.editTitle}>
         {title}
       </AppText>
-      <AppText variant="meta" weight="bold" color="cyan" onPress={onEdit}>
-        ✎ {nb.leggUt.edit}
-      </AppText>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={nb.leggUt.edit}
+        hitSlop={8}
+        onPress={onEdit}
+        style={styles.editBtn}
+      >
+        <Icon name="edit-2" size={13} color="cyan" />
+        <AppText variant="meta" weight="bold" color="cyan">
+          {nb.leggUt.edit}
+        </AppText>
+      </Pressable>
     </View>
   );
 }
@@ -234,7 +251,9 @@ const styles = StyleSheet.create({
     gap: tokens.space.sm,
     ...tokens.shadow.card,
   },
-  editRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: tokens.space.sm },
+  editRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: tokens.space.sm, marginTop: tokens.space.sm },
+  editTitle: { flexShrink: 1 },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.sm },
   rule: { height: 1, backgroundColor: tokens.color.line, marginVertical: tokens.space.xs },
   checklist: {

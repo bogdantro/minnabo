@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { safePush } from '@/lib/nav';
 import { AppText } from './ui/Text';
 import { ScreenTitle } from './ui/ScreenTitle';
 import { Button } from './ui/Button';
@@ -71,32 +72,44 @@ export function Wizard({
         onBack={back}
         avatar={{ uri: me.avatarUrl, initials: me.initials }}
         unreadNotifications
-        onProfilePress={() => {}}
-        onNotificationsPress={() => {}}
+        onProfilePress={() => safePush('/profil')}
+        onNotificationsPress={() => safePush('/varsler')}
       />
 
       <View style={styles.progressWrap}>
-        <StatusPill label={badge} tone={badgeTone} filled />
-        <AppText variant="meta" weight="bold" style={styles.stepLabel}>
-          {nb.leggUt.stepLabel} {index + 1} {nb.leggUt.stepOf} {steps.length}
-        </AppText>
+        <StatusPill label={badge} tone={badgeTone} soft />
+        <View style={styles.stepRow}>
+          <AppText variant="meta" weight="bold" color="navyMuted">
+            {nb.leggUt.stepLabel} {index + 1} {nb.leggUt.stepOf} {steps.length}
+          </AppText>
+          <AppText variant="meta" weight="bold" color={badgeTone}>
+            {Math.round(progress * 100)}%
+          </AppText>
+        </View>
         <View style={styles.track}>
           <View style={[styles.fill, { width: `${progress * 100}%` }]} />
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <ScreenTitle>{step.title}</ScreenTitle>
         {step.subtitle ? (
           <AppText variant="body" color="navyMuted" style={styles.subtitle}>
             {step.subtitle}
           </AppText>
         ) : null}
-        {step.render()}
+        <View style={styles.fields}>{step.render()}</View>
         {error ? (
-          <AppText variant="meta" color="dangerText">
-            {error}
-          </AppText>
+          <View style={styles.errorRow}>
+            <Icon name="alert-circle" size={15} color="dangerText" />
+            <AppText variant="meta" weight="bold" color="dangerText">
+              {error}
+            </AppText>
+          </View>
         ) : null}
       </ScrollView>
 
@@ -118,18 +131,23 @@ export function Wizard({
           {index > 0 ? (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={nb.leggUt.back}
               hitSlop={hitSlop}
               onPress={back}
               style={styles.backLink}
             >
-              <Icon name="chevron-left" size={16} color="navy" />
-              <AppText variant="body" weight="bold">
+              <Icon name="chevron-left" size={18} color="navy" />
+              <AppText variant="cardTitle" weight="bold">
                 {nb.leggUt.back}
               </AppText>
             </Pressable>
           ) : null}
           <View style={styles.nextWrap}>
-            <Button label={isLast ? finalLabel : nb.leggUt.next} onPress={next} />
+            <Button
+              label={isLast ? finalLabel : nb.leggUt.next}
+              onPress={next}
+              iconRight="chevron-right"
+            />
           </View>
         </View>
       </View>
@@ -144,26 +162,29 @@ const styles = StyleSheet.create({
     paddingTop: tokens.space.sm,
     gap: tokens.space.sm,
   },
-  stepLabel: {},
-  track: { height: 5, borderRadius: 3, backgroundColor: tokens.color.line, overflow: 'hidden' },
-  fill: { height: 5, borderRadius: 3, backgroundColor: tokens.color.lime },
+  stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  track: { height: 6, borderRadius: 3, backgroundColor: tokens.color.line, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3, backgroundColor: tokens.color.lime },
   content: {
     paddingHorizontal: tokens.space.xl,
-    paddingTop: tokens.space.md,
+    paddingTop: tokens.space.lg,
     paddingBottom: tokens.space.xxxl,
-    gap: tokens.space.md,
+    gap: tokens.space.sm,
   },
-  subtitle: { marginTop: -tokens.space.xs },
+  subtitle: { marginTop: -tokens.space.xs, marginBottom: tokens.space.sm },
+  fields: { gap: tokens.space.lg },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: tokens.space.md },
   footer: {
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.md,
+    paddingBottom: tokens.space.xs,
     borderTopWidth: 1,
     borderTopColor: tokens.color.line,
     backgroundColor: tokens.color.surface,
-    gap: tokens.space.sm,
+    gap: tokens.space.md,
   },
-  draftLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  navRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md },
+  draftLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  navRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.lg },
   backLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   nextWrap: { flex: 1 },
 });

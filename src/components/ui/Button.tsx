@@ -9,6 +9,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { tokens } from '@/theme';
 import { AppText } from './Text';
+import { Icon, type IconName } from './Icon';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -18,6 +19,8 @@ export type ButtonProps = {
   variant?: ButtonVariant;
   disabled?: boolean;
   loading?: boolean;
+  iconRight?: IconName;
+  iconLeft?: IconName;
   accessibilityLabel?: string;
   testID?: string;
   style?: ViewStyle;
@@ -29,6 +32,8 @@ export function Button({
   variant = 'primary',
   disabled = false,
   loading = false,
+  iconRight,
+  iconLeft,
   accessibilityLabel,
   testID,
   style,
@@ -61,15 +66,19 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? tokens.color.white : tokens.color.navy} />
       ) : (
-        <AppText
-          variant="cardTitle"
-          weight="bold"
-          color={labelColor}
-          numberOfLines={1}
-          style={styles.label}
-        >
-          {label}
-        </AppText>
+        <>
+          {iconLeft ? <Icon name={iconLeft} size={18} color={labelColor} /> : null}
+          <AppText
+            variant="cardTitle"
+            weight="bold"
+            color={labelColor}
+            numberOfLines={1}
+            style={styles.label}
+          >
+            {label}
+          </AppText>
+          {iconRight ? <Icon name={iconRight} size={18} color={labelColor} /> : null}
+        </>
       )}
     </View>
   );
