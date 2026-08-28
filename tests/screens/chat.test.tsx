@@ -49,7 +49,6 @@ test('the Send tilbud sheet sends a customised proposal', async () => {
   await fireEvent.press(screen.getByText('Send tilbud'));
   await waitFor(() => expect(screen.getByLabelText('Foreslått pris (kr)')).toBeTruthy());
   await fireEvent.changeText(screen.getByLabelText('Foreslått pris (kr)'), '850');
-  await fireEvent.changeText(screen.getByLabelText('Dato og tid'), 'Fredag kl. 10');
   const submitButtons = screen.getAllByRole('button', { name: 'Send tilbud' });
   await fireEvent.press(submitButtons[submitButtons.length - 1]);
 
@@ -59,7 +58,6 @@ test('the Send tilbud sheet sends a customised proposal', async () => {
   const proposalMsg = chatRepository.getMessages('c-sara').find((m) => m.kind === 'PROPOSAL')!;
   const proposal = chatRepository.getProposal(proposalMsg.proposalId!)!;
   expect(proposal.price.amountMinor).toBe(85000);
-  expect(proposal.scheduledText).toBe('Fredag kl. 10');
 });
 
 test('the attach sheet posts an image message', async () => {

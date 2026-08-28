@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { View, Image, ScrollView, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { formatFriendlyDate } from '@/lib/calendar';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 import { TextField } from './ui/TextField';
+import { DateField } from './ui/DateField';
+import { TimeField } from './ui/TimeField';
 import { Button } from './ui/Button';
 import { InfoBox } from './ui/InfoBox';
 import { BottomSheet } from './ui/BottomSheet';
@@ -32,7 +35,8 @@ export function SendOfferSheet({
   pending?: boolean;
 }) {
   const [price, setPrice] = useState('');
-  const [when, setWhen] = useState('');
+  const [date, setDate] = useState<Date | null>(null);
+  const [time, setTime] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [caveats, setCaveats] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +48,12 @@ export function SendOfferSheet({
       return;
     }
     setError(null);
+    const scheduledText = [date ? formatFriendlyDate(date) : null, time ? `kl. ${time}` : null]
+      .filter(Boolean)
+      .join(' ');
     onSubmit({
       priceAmountMinor: Math.round(kr * 100),
-      scheduledText: when.trim() || undefined,
+      scheduledText: scheduledText || undefined,
       message: message.trim() || undefined,
       caveats: caveats.trim() || undefined,
     });
@@ -79,12 +86,14 @@ export function SendOfferSheet({
           keyboardType="numeric"
           placeholder="600"
         />
-        <TextField
-          label={nb.sendOfferSheet.whenLabel}
-          value={when}
-          onChangeText={setWhen}
-          placeholder={nb.sendOfferSheet.whenPlaceholder}
-        />
+        <View style={styles.whenRow}>
+          <View style={styles.whenCell}>
+            <DateField label={nb.sendOfferSheet.whenLabel} value={date} onChange={setDate} />
+          </View>
+          <View style={styles.whenTime}>
+            <TimeField label="Tid" value={time} onChange={setTime} />
+          </View>
+        </View>
         <TextField
           label={nb.sendOfferSheet.messageLabel}
           value={message}
@@ -115,6 +124,9 @@ export function SendOfferSheet({
 const styles = StyleSheet.create({
   body: { gap: tokens.space.md, paddingBottom: tokens.space.md },
   listingRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md },
+  whenRow: { flexDirection: 'row', gap: tokens.space.md },
+  whenCell: { flex: 2 },
+  whenTime: { flex: 1 },
   thumb: { width: 48, height: 48, borderRadius: tokens.radius.sm, backgroundColor: tokens.color.line },
   thumbFallback: { alignItems: 'center', justifyContent: 'center' },
   listingTitle: { flex: 1 },

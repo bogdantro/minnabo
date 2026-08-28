@@ -1,6 +1,7 @@
 import type { Listing, ListingType, PriceMode } from '@/domain/types';
 import { nok } from '@/domain/price';
 import { categories, profiles } from '@/data/seed';
+import { formatFriendlyDate } from '@/lib/calendar';
 
 const catBySlug = (slug: string) =>
   categories.find((c) => c.slug === slug) ?? categories[categories.length - 1];
@@ -13,7 +14,7 @@ export type TaskForm = {
   place: string;
   area: string;
   dateMode: 'ASAP' | 'FLEXIBLE' | 'PICK';
-  dateText: string;
+  date: Date | null;
   timeFrom: string;
   timeTo: string;
   duration: string;
@@ -62,7 +63,9 @@ const dateLabel = (f: TaskForm) =>
     ? 'Så snart som mulig'
     : f.dateMode === 'FLEXIBLE'
       ? 'Fleksibel dato'
-      : f.dateText.trim() || undefined;
+      : f.date
+        ? formatFriendlyDate(f.date)
+        : undefined;
 
 const timeLabel = (from: string, to: string) =>
   from && to ? `${from}–${to}` : from || to || undefined;

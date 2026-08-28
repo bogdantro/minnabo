@@ -9,6 +9,8 @@ import { safePush } from '@/lib/nav';
 import { Wizard, type WizardStep } from '@/components/Wizard';
 import { TextField } from '@/components/ui/TextField';
 import { SelectField } from '@/components/ui/SelectField';
+import { DateField } from '@/components/ui/DateField';
+import { TimeField } from '@/components/ui/TimeField';
 import { PickerPills } from '@/components/ui/PickerPills';
 import { ImagePickerField } from '@/components/ui/ImagePickerField';
 import { SelectionCard } from '@/components/ui/SelectionCard';
@@ -29,7 +31,7 @@ const EMPTY: TaskForm = {
   place: 'Lillehammer',
   area: '',
   dateMode: 'ASAP',
-  dateText: '',
+  date: null,
   timeFrom: '',
   timeTo: '',
   duration: '',
@@ -43,7 +45,6 @@ const EMPTY: TaskForm = {
 };
 
 const QUICK = ['hage', 'renhold', 'flytting', 'montering'];
-const HOURS = Array.from({ length: 15 }, (_, i) => `${String(i + 7).padStart(2, '0')}:00`);
 const DURATIONS = ['Under 1 time', 'Omtrent 1–2 timer', 'Omtrent 2–4 timer', 'En hel dag', 'Flere dager'];
 
 export function TaskRequestForm() {
@@ -147,12 +148,11 @@ export function TaskRequestForm() {
               onToggle={(v) => set('dateMode', v as TaskForm['dateMode'])}
             />
             {form.dateMode === 'PICK' ? (
-              <TextField
+              <DateField
                 label={nb.leggUt.datePick}
-                floatingLabel
-                value={form.dateText}
-                onChangeText={(t) => set('dateText', t)}
-                placeholder="I morgen, 29. august 2026"
+                showLabel={false}
+                value={form.date}
+                onChange={(d) => set('date', d)}
               />
             ) : null}
           </FieldGroup>
@@ -160,24 +160,20 @@ export function TaskRequestForm() {
           <FieldGroup title={nb.leggUt.timeLabel}>
             <View style={styles.timeRow}>
               <View style={styles.timeCell}>
-                <SelectField
+                <TimeField
                   label={nb.leggUt.timeFrom}
-                  placeholder={nb.leggUt.timeFrom}
                   showLabel={false}
-                  icon="clock"
-                  value={form.timeFrom || undefined}
-                  options={HOURS.map((h) => ({ value: h, label: `${nb.leggUt.timeFrom} ${h}` }))}
+                  placeholder={nb.leggUt.timeFrom}
+                  value={form.timeFrom || null}
                   onChange={(v) => set('timeFrom', v)}
                 />
               </View>
               <View style={styles.timeCell}>
-                <SelectField
+                <TimeField
                   label={nb.leggUt.timeTo}
-                  placeholder={nb.leggUt.timeTo}
                   showLabel={false}
-                  icon="clock"
-                  value={form.timeTo || undefined}
-                  options={HOURS.map((h) => ({ value: h, label: `${nb.leggUt.timeTo} ${h}` }))}
+                  placeholder={nb.leggUt.timeTo}
+                  value={form.timeTo || null}
                   onChange={(v) => set('timeTo', v)}
                 />
               </View>

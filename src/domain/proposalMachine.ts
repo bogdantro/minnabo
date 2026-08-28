@@ -24,6 +24,7 @@ export type ProposalEvent =
   | 'DECLINE'
   | 'ACCEPT'
   | 'REQUEST_REVISION'
+  | 'SUBMIT_REVISION'
   | 'CONFIRM_REVISION';
 
 export type Actor = 'PROPOSER' | 'RECIPIENT';
@@ -43,7 +44,11 @@ const TABLE: Record<ProposalStatus, Partial<Record<ProposalEvent, Rule>>> = {
     REQUEST_REVISION: { to: 'REVISION_PENDING', actor: 'RECIPIENT' },
   },
   REVISION_PENDING: {
+    // proposer sends new terms -> back to the recipient for acceptance
+    SUBMIT_REVISION: { to: 'SENT', actor: 'PROPOSER' },
+    // or the proposer just confirms the requested change as-is
     CONFIRM_REVISION: { to: 'ACCEPTED', actor: 'PROPOSER' },
+    WITHDRAW: { to: 'WITHDRAWN', actor: 'PROPOSER' },
     DECLINE: { to: 'DECLINED', actor: 'RECIPIENT' },
   },
   WITHDRAWN: {},

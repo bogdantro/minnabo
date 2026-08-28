@@ -14,7 +14,7 @@ const TASK = {
   place: 'Hamar',
   area: '',
   dateMode: 'ASAP' as const,
-  dateText: '',
+  date: null,
   timeFrom: '',
   timeTo: '',
   duration: 'Under 1 time',

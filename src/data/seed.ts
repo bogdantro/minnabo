@@ -240,6 +240,27 @@ export const listings: Listing[] = [
     },
   },
   {
+    id: 'l-male-gjerdet',
+    type: 'TASK_REQUEST',
+    title: 'Male gjerdet',
+    category: bySlug('maling'),
+    price: nok(2500),
+    priceMode: 'BUDGET',
+    location: { ...lillehammer, distanceKm: 0 },
+    images: [img('i10', gardener)],
+    owner: profiles.mb,
+    createdAt: '2026-08-20T08:00:00Z',
+    status: 'RECEIVING_OFFERS',
+    task: {
+      description:
+        'Gjerdet rundt hagen skal males. Omtrent 25 meter, hvit maling. Maling og pensler kan lånes.',
+      equipment: 'Kan lånes',
+      meetingNote: 'Adresse deles når tilbud er godtatt',
+      durationText: 'Omtrent en dag',
+      scheduledText: 'Førstkommende helg',
+    },
+  },
+  {
     id: 'l-tilbyr-gressklipping',
     type: 'SERVICE_OFFER',
     title: 'Jeg kan klippe plenen din',

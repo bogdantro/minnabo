@@ -9,6 +9,7 @@ import { safePush } from '@/lib/nav';
 import { Wizard, type WizardStep } from '@/components/Wizard';
 import { TextField } from '@/components/ui/TextField';
 import { SelectField } from '@/components/ui/SelectField';
+import { TimeField } from '@/components/ui/TimeField';
 import { PickerPills } from '@/components/ui/PickerPills';
 import { ImagePickerField } from '@/components/ui/ImagePickerField';
 import { SelectionCard } from '@/components/ui/SelectionCard';
@@ -56,7 +57,6 @@ const SERVICE_OPTS: { value: string; label: string; icon: IconName }[] = [
 ];
 const DAYS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 const TIME_OF_DAY = ['Morgen', 'Dagtid', 'Ettermiddag', 'Kveld'];
-const HOURS = Array.from({ length: 17 }, (_, i) => `${String(i + 6).padStart(2, '0')}:00`);
 const EXPERIENCE = ['Under 1 år', '1 års erfaring', '2 års erfaring', '3–5 års erfaring', 'Mer enn 5 år'];
 
 export function ServiceOfferForm() {
@@ -198,22 +198,20 @@ export function ServiceOfferForm() {
             />
             <View style={styles.timeRow}>
               <View style={styles.timeCell}>
-                <SelectField
+                <TimeField
                   label={nb.leggUt.timeFrom}
-                  placeholder={nb.leggUt.timeFrom}
                   showLabel={false}
-                  value={form.timeFrom || undefined}
-                  options={HOURS.map((h) => ({ value: h, label: `${nb.leggUt.timeFrom} ${h}` }))}
+                  placeholder={nb.leggUt.timeFrom}
+                  value={form.timeFrom || null}
                   onChange={(v) => set('timeFrom', v)}
                 />
               </View>
               <View style={styles.timeCell}>
-                <SelectField
+                <TimeField
                   label={nb.leggUt.timeTo}
-                  placeholder={nb.leggUt.timeTo}
                   showLabel={false}
-                  value={form.timeTo || undefined}
-                  options={HOURS.map((h) => ({ value: h, label: `${nb.leggUt.timeTo} ${h}` }))}
+                  placeholder={nb.leggUt.timeTo}
+                  value={form.timeTo || null}
                   onChange={(v) => set('timeTo', v)}
                 />
               </View>

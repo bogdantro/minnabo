@@ -46,6 +46,45 @@ export const proposals: Proposal[] = [
     status: 'SENT',
     createdAt: '2026-08-24T09:00:00Z',
   },
+
+  // Three competing proposals on my own listing "Male gjerdet"
+  {
+    id: 'p-gjerde-andreas',
+    listingId: 'l-male-gjerdet',
+    conversationId: 'c-gjerde-andreas',
+    fromProfileId: profiles.andreas.id,
+    toProfileId: CURRENT_USER_ID,
+    price: nok(2200),
+    message: 'Jeg kan male gjerdet på lørdag. Har egen maling om ønskelig.',
+    scheduledText: 'Lørdag kl. 09:00',
+    caveats: 'Forutsetter tørt vær',
+    status: 'SENT',
+    createdAt: '2026-08-21T10:00:00Z',
+  },
+  {
+    id: 'p-gjerde-emma',
+    listingId: 'l-male-gjerdet',
+    conversationId: 'c-gjerde-emma',
+    fromProfileId: profiles.emma.id,
+    toProfileId: CURRENT_USER_ID,
+    price: nok(2600),
+    message: 'Grundig jobb, to strøk. Kan starte søndag morgen.',
+    scheduledText: 'Søndag kl. 08:00',
+    status: 'SENT',
+    createdAt: '2026-08-21T14:30:00Z',
+  },
+  {
+    id: 'p-gjerde-martin',
+    listingId: 'l-male-gjerdet',
+    conversationId: 'c-gjerde-martin',
+    fromProfileId: profiles.martin.id,
+    toProfileId: CURRENT_USER_ID,
+    price: nok(1900),
+    message: 'Rask og rimelig. Ett strøk hvis det holder.',
+    scheduledText: 'Fredag ettermiddag',
+    status: 'SENT',
+    createdAt: '2026-08-22T09:15:00Z',
+  },
 ];
 
 export const conversations: Conversation[] = [
