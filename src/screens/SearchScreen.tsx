@@ -1,27 +1,30 @@
 import { useMemo, useState } from 'react';
-import { View, FlatList, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, FlatList, Pressable, ScrollView, TextInput, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import type { ListingSort, ListingType } from '@/domain/types';
+import type { ListingFilter, ListingSort, ListingType } from '@/domain/types';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
-import { categories } from '@/data/seed';
+import { categories, homeCategories } from '@/data/seed';
 import { useListings } from '@/api/queries';
+import { savedSearchStore } from '@/data/savedSearchStore';
 import { safePush } from '@/lib/nav';
 import { AppText } from '@/components/ui/Text';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { BrandMark } from '@/components/BrandMark';
-import { SearchField } from '@/components/ui/SearchField';
+import { CategoryChip } from '@/components/ui/CategoryChip';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { SortDropdown } from '@/components/ui/SortDropdown';
+import { DistanceSlider } from '@/components/ui/DistanceSlider';
+import { HScrollFade } from '@/components/ui/HScrollFade';
+import { TextField } from '@/components/ui/TextField';
 import { ListingRowCard } from '@/components/ListingRowCard';
 
 type TypeChoice = 'ALL' | ListingType;
 
-const DISTANCES = [5, 10, 25, 50] as const;
-
-const SORTS: { value: ListingSort; label: string }[] = [
+const SORTS = [
   { value: 'RELEVANCE', label: nb.search.sortRelevance },
   { value: 'DISTANCE', label: nb.search.sortDistance },
   { value: 'NEWEST', label: nb.search.sortNewest },
@@ -32,17 +35,19 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [type, setType] = useState<TypeChoice>('ALL');
-  const [categorySlug, setCategorySlug] = useState<string | undefined>(undefined);
+  const [categorySlug, setCategorySlug] = useState('alle');
   const [maxDistanceKm, setMaxDistanceKm] = useState<number | undefined>(undefined);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState<ListingSort>('RELEVANCE');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [searchName, setSearchName] = useState('');
 
-  const filter = useMemo(
+  const filter: ListingFilter = useMemo(
     () => ({
       query: query.trim() || undefined,
       type: type === 'ALL' ? undefined : type,
-      categorySlug,
+      categorySlug: categorySlug === 'alle' ? undefined : categorySlug,
       maxDistanceKm,
       verifiedOnly: verifiedOnly || undefined,
     }),
@@ -54,7 +59,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
 
   const activeFilterCount =
     (type !== 'ALL' ? 1 : 0) +
-    (categorySlug ? 1 : 0) +
+    (categorySlug !== 'alle' ? 1 : 0) +
     (maxDistanceKm ? 1 : 0) +
     (verifiedOnly ? 1 : 0);
 
@@ -65,9 +70,19 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
 
   const clearFilters = () => {
     setType('ALL');
-    setCategorySlug(undefined);
+    setCategorySlug('alle');
     setMaxDistanceKm(undefined);
     setVerifiedOnly(false);
+  };
+
+  const saveSearch = () => {
+    savedSearchStore.add(
+      searchName.trim() || query.trim() || 'Lagret søk',
+      filter,
+      sort,
+    );
+    setSaveOpen(false);
+    setSearchName('');
   };
 
   return (
@@ -81,52 +96,81 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
         >
           <Icon name="arrow-left" size={24} color="navy" />
         </Pressable>
-        <BrandMark size={24} />
+        <BrandMark size={24} showWordmark={false} />
       </View>
 
-      <View style={styles.headerField}>
-        <SearchField
-          placeholder={nb.search.placeholder}
-          value={query}
-          onChangeText={setQuery}
-          autoFocus={!initialQuery}
-        />
-      </View>
-
-      <View style={styles.controls}>
+      <View style={styles.searchRow}>
+        <View style={styles.searchField}>
+          <View style={styles.searchCircle}>
+            <Icon name="search" size={18} color="white" />
+          </View>
+          <TextInput
+            style={styles.input}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={nb.search.placeholder}
+            placeholderTextColor={tokens.color.navyMuted}
+            autoFocus={!initialQuery}
+            returnKeyType="search"
+            accessibilityLabel={nb.search.placeholder}
+          />
+          {query.length > 0 ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Tøm" hitSlop={8} onPress={() => setQuery('')}>
+              <Icon name="x" size={16} color="navyMuted" />
+            </Pressable>
+          ) : null}
+        </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={nb.search.filters}
           onPress={() => setFiltersOpen(true)}
           style={styles.filterBtn}
         >
-          <Icon name="sliders" size={16} color="navy" />
-          <AppText variant="meta" weight="bold">
-            {nb.search.filters}
-            {activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-          </AppText>
-        </Pressable>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortRow}>
-          {SORTS.map((s) => (
-            <Pressable
-              key={s.value}
-              accessibilityRole="button"
-              accessibilityState={{ selected: sort === s.value }}
-              onPress={() => setSort(s.value)}
-              style={[styles.sortChip, sort === s.value && styles.sortChipActive]}
-            >
-              <AppText variant="meta" weight="bold" color={sort === s.value ? 'navy' : 'navyMuted'}>
-                {s.label}
+          <Icon name="sliders" size={20} color="navy" />
+          {activeFilterCount > 0 ? (
+            <View style={styles.filterDot}>
+              <AppText variant="meta" weight="bold" color="white" style={styles.filterDotText}>
+                {activeFilterCount}
               </AppText>
-            </Pressable>
-          ))}
-        </ScrollView>
+            </View>
+          ) : null}
+        </Pressable>
       </View>
 
-      <AppText variant="meta" color="navyMuted" style={styles.count}>
-        {results.length} {nb.search.results}
-      </AppText>
+      <HScrollFade>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {homeCategories.map((c) => (
+            <CategoryChip
+              key={c.id}
+              label={c.label}
+              icon={c.icon as IconName}
+              active={categorySlug === c.slug}
+              onPress={() => setCategorySlug(c.slug)}
+            />
+          ))}
+        </ScrollView>
+      </HScrollFade>
+
+      <View style={styles.resultsHead}>
+        <AppText variant="meta" color="navyMuted">
+          {results.length} {nb.search.results}
+        </AppText>
+        <View style={styles.resultsRight}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.savedSearch.saveCurrent}
+            hitSlop={8}
+            onPress={() => setSaveOpen(true)}
+            style={styles.saveLink}
+          >
+            <Icon name="bookmark" size={14} color="cyan" />
+            <AppText variant="meta" weight="bold" color="cyan">
+              {nb.savedSearch.saveCurrent}
+            </AppText>
+          </Pressable>
+          <SortDropdown value={sort} options={SORTS} onChange={(v) => setSort(v as ListingSort)} />
+        </View>
+      </View>
 
       {status === 'ready' ? (
         <FlatList
@@ -146,10 +190,10 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
         visible={filtersOpen}
         onClose={() => setFiltersOpen(false)}
         title={nb.search.filters}
-        heightRatio={0.72}
+        heightRatio={0.78}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <FilterGroup title={nb.search.filterType}>
+          <Group title={nb.search.filterType}>
             {(
               [
                 ['ALL', nb.search.typeAll],
@@ -157,49 +201,37 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
                 ['SERVICE_OFFER', nb.search.typeOffer],
               ] as [TypeChoice, string][]
             ).map(([value, label]) => (
-              <SelectPill key={value} label={label} selected={type === value} onPress={() => setType(value)} />
+              <Pill key={value} label={label} selected={type === value} onPress={() => setType(value)} />
             ))}
-          </FilterGroup>
+          </Group>
 
-          <FilterGroup title={nb.search.filterCategory}>
-            <SelectPill
-              label={nb.search.typeAll}
-              selected={!categorySlug}
-              onPress={() => setCategorySlug(undefined)}
-            />
+          <Group title={nb.search.filterCategory}>
+            <Pill label={nb.search.typeAll} selected={categorySlug === 'alle'} onPress={() => setCategorySlug('alle')} />
             {categories.map((c) => (
-              <SelectPill
+              <Pill
                 key={c.slug}
                 label={c.label}
                 selected={categorySlug === c.slug}
                 onPress={() => setCategorySlug(c.slug)}
               />
             ))}
-          </FilterGroup>
+          </Group>
 
-          <FilterGroup title={nb.search.filterDistance}>
-            <SelectPill
-              label={nb.search.anyDistance}
-              selected={!maxDistanceKm}
-              onPress={() => setMaxDistanceKm(undefined)}
+          <Group title={nb.search.filterDistance}>
+            <DistanceSlider
+              label={nb.search.filterDistance}
+              value={maxDistanceKm ?? 50}
+              onChange={(v) => setMaxDistanceKm(v >= 50 ? undefined : v)}
             />
-            {DISTANCES.map((d) => (
-              <SelectPill
-                key={d}
-                label={`${d} ${nb.common.km}`}
-                selected={maxDistanceKm === d}
-                onPress={() => setMaxDistanceKm(d)}
-              />
-            ))}
-          </FilterGroup>
+          </Group>
 
-          <FilterGroup title={nb.search.filterVerified}>
-            <SelectPill
+          <Group title={nb.search.filterVerified}>
+            <Pill
               label={nb.search.filterVerified}
               selected={verifiedOnly}
               onPress={() => setVerifiedOnly((v) => !v)}
             />
-          </FilterGroup>
+          </Group>
         </ScrollView>
 
         <View style={styles.sheetActions}>
@@ -207,11 +239,28 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
           <Button label={nb.search.apply} onPress={() => setFiltersOpen(false)} style={styles.sheetBtn} />
         </View>
       </BottomSheet>
+
+      <BottomSheet
+        visible={saveOpen}
+        onClose={() => setSaveOpen(false)}
+        title={nb.savedSearch.saveCurrent}
+        heightRatio={0.45}
+      >
+        <TextField
+          label={nb.savedSearch.named}
+          value={searchName}
+          onChangeText={setSearchName}
+          placeholder={nb.savedSearch.namePlaceholder}
+        />
+        <View style={styles.saveActions}>
+          <Button label={nb.savedSearch.save} onPress={saveSearch} iconRight="bookmark" />
+        </View>
+      </BottomSheet>
     </View>
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.group}>
       <AppText variant="cardTitle" weight="bold">
@@ -222,21 +271,15 @@ function FilterGroup({ title, children }: { title: string; children: React.React
   );
 }
 
-function SelectPill({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
+function Pill({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress}>
-      <StatusPill label={label} tone={selected ? 'lime' : 'neutral'} filled={selected} />
+      <StatusPill label={label} tone={selected ? 'lime' : 'neutral'} filled={selected} soft={!selected} />
     </Pressable>
   );
 }
+
+const CONTROL = 52;
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: tokens.color.bg },
@@ -248,37 +291,75 @@ const styles = StyleSheet.create({
     paddingTop: tokens.space.xxl,
     paddingBottom: tokens.space.sm,
   },
-  headerField: { paddingHorizontal: tokens.space.xl, paddingBottom: tokens.space.sm },
-  controls: {
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.sm,
+    paddingHorizontal: tokens.space.xl,
+    paddingBottom: tokens.space.sm,
+  },
+  searchField: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.space.md,
-    paddingHorizontal: tokens.space.xl,
-    paddingVertical: tokens.space.sm,
+    backgroundColor: tokens.color.surface,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    paddingRight: tokens.space.lg,
+    paddingVertical: 6,
+    paddingLeft: 6,
+    ...tokens.shadow.card,
   },
+  searchCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: tokens.color.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  input: { flex: 1, fontFamily: tokens.font.regular, fontSize: 15, color: tokens.color.navy, padding: 0 },
   filterBtn: {
+    width: CONTROL,
+    height: CONTROL,
+    borderRadius: tokens.radius.tile,
+    backgroundColor: tokens.color.surface,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...tokens.shadow.card,
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: tokens.color.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  filterDotText: { fontSize: 10 },
+  chips: { gap: tokens.space.sm, paddingHorizontal: tokens.space.xl, paddingVertical: tokens.space.xs },
+  resultsHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: tokens.color.line,
-    borderRadius: tokens.radius.pill,
-    paddingHorizontal: tokens.space.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: tokens.space.xl,
     paddingVertical: tokens.space.sm,
+    gap: tokens.space.md,
   },
-  sortRow: { gap: tokens.space.sm, alignItems: 'center' },
-  sortChip: {
-    borderRadius: tokens.radius.pill,
-    paddingHorizontal: tokens.space.md,
-    paddingVertical: 6,
-    borderWidth: 1.5,
-    borderColor: tokens.color.line,
-  },
-  sortChipActive: { borderColor: tokens.color.lime, backgroundColor: tokens.color.limeTint },
-  count: { paddingHorizontal: tokens.space.xl, paddingBottom: tokens.space.sm },
-  list: { paddingHorizontal: tokens.space.xl, paddingBottom: tokens.space.xxxl, gap: tokens.space.lg },
+  resultsRight: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md },
+  saveLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  list: { paddingHorizontal: tokens.space.xl, paddingBottom: tokens.space.xxxl, gap: tokens.space.md },
   group: { gap: tokens.space.sm, marginBottom: tokens.space.lg },
   groupPills: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.sm },
   sheetActions: { flexDirection: 'row', gap: tokens.space.md, paddingTop: tokens.space.md },
   sheetBtn: { flex: 1 },
+  saveActions: { marginTop: tokens.space.md },
 });

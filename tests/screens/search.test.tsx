@@ -21,7 +21,7 @@ test('the type filter narrows results to offers', async () => {
   await renderWithProviders(<SearchScreen initialQuery="plen" />);
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
 
-  fireEvent.press(screen.getByText('Filtre'));
+  fireEvent.press(screen.getByLabelText('Filtre'));
   await waitFor(() => expect(screen.getByText('Type')).toBeTruthy());
   fireEvent.press(screen.getByRole('button', { name: 'Tilbyr hjelp' }));
   fireEvent.press(screen.getByText('Vis resultater'));

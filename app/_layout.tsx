@@ -12,6 +12,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { tokens } from '@/theme';
+import { savedStore } from '@/data/savedStore';
+import { savedSearchStore } from '@/data/savedSearchStore';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -31,6 +33,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => undefined);
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    void savedStore.hydrate();
+    void savedSearchStore.hydrate();
+  }, []);
 
   if (!fontsLoaded) {
     return null;

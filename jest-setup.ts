@@ -30,6 +30,11 @@ afterEach(() => {
     /* not loaded */
   }
   try {
+    require('@/data/savedSearchStore').savedSearchStore._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
     require('@/data/profileRepository').profileRepository._reset();
   } catch {
     /* not loaded */
