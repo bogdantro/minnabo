@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
@@ -6,8 +7,10 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { HomeTopBar } from '@/components/TopBar';
 import { StaticBottomNav } from '@/components/StaticBottomNav';
 import { AppText } from '@/components/ui/Text';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
+import { Icon } from '@/components/ui/Icon';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { NeedHelpIcon, OfferHelpIcon } from '@/components/icons/ChoiceIcons';
 import { safePush } from '@/lib/nav';
 
 export function ChoiceScreen() {
@@ -24,15 +27,13 @@ export function ChoiceScreen() {
       />
 
       <View style={styles.body}>
-        <AppText variant="h1" weight="extrabold" style={styles.title}>
-          {nb.leggUt.choiceHeading}
-        </AppText>
+        <ScreenTitle>{nb.leggUt.choiceHeading}</ScreenTitle>
         <AppText variant="body" color="navyMuted" style={styles.subtitle}>
           {nb.leggUt.choiceSubtitle}
         </AppText>
 
         <Choice
-          icon="clipboard"
+          Art={NeedHelpIcon}
           tone="lime"
           badge={nb.leggUt.needBadge}
           title={nb.leggUt.needTitle}
@@ -40,7 +41,7 @@ export function ChoiceScreen() {
           onPress={() => router.push('/legg-ut/trenger-jobb')}
         />
         <Choice
-          icon="tool"
+          Art={OfferHelpIcon}
           tone="cyan"
           badge={nb.leggUt.offerBadge}
           title={nb.leggUt.offerTitle}
@@ -62,14 +63,14 @@ export function ChoiceScreen() {
 }
 
 function Choice({
-  icon,
+  Art,
   tone,
   badge,
   title,
   subtitle,
   onPress,
 }: {
-  icon: IconName;
+  Art: (p: { size?: number; color?: 'lime' | 'cyan' }) => ReactElement;
   tone: 'lime' | 'cyan';
   badge: string;
   title: string;
@@ -91,7 +92,7 @@ function Choice({
       ]}
     >
       <View style={styles.choiceIcon}>
-        <Icon name={icon} size={52} color={tone} />
+        <Art size={60} color={tone} />
       </View>
       <View style={styles.choiceRule} />
       <View style={styles.choiceText}>
@@ -111,8 +112,7 @@ function Choice({
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: tokens.color.bg },
   body: { flex: 1, paddingHorizontal: tokens.space.xl, paddingTop: tokens.space.sm },
-  title: { fontSize: 30, lineHeight: 36, paddingRight: 48 },
-  subtitle: { marginTop: tokens.space.sm, marginBottom: tokens.space.xl },
+  subtitle: { marginTop: tokens.space.xs, marginBottom: tokens.space.xl },
   choice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     ...tokens.shadow.card,
   },
   choicePressed: { opacity: 0.92 },
-  choiceIcon: { width: 56, alignItems: 'center' },
+  choiceIcon: { width: 60, alignItems: 'center' },
   choiceRule: { width: 1, alignSelf: 'stretch', backgroundColor: tokens.color.line },
   choiceText: { flex: 1, gap: tokens.space.xs },
   footer: {
