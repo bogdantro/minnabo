@@ -91,6 +91,11 @@ export class MockApiClient {
     return chatRepository.sendMessage(conversationId, text);
   }
 
+  async sendAttachment(conversationId: string, attachmentUrl: string): Promise<Message> {
+    await delay(150);
+    return chatRepository.sendAttachment(conversationId, attachmentUrl);
+  }
+
   async sendProposal(input: {
     conversationId: string;
     listingId: string;

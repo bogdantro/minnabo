@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 import type { Message } from '@/domain/types';
 import { tokens } from '@/theme';
 import { formatTime } from '@/lib/datetime';
@@ -38,11 +38,21 @@ export function ChatBubble({ message, mine, avatarUri, avatarInitials, showAvata
         </View>
       ) : null}
 
-      <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-        <AppText variant="body" color="navy">
-          {message.text}
-        </AppText>
-        <View style={styles.meta}>
+      <View
+        style={[
+          styles.bubble,
+          mine ? styles.mine : styles.theirs,
+          message.kind === 'IMAGE' && styles.imageBubble,
+        ]}
+      >
+        {message.kind === 'IMAGE' && message.attachmentUrl ? (
+          <Image source={{ uri: message.attachmentUrl }} style={styles.image} />
+        ) : (
+          <AppText variant="body" color="navy">
+            {message.text}
+          </AppText>
+        )}
+        <View style={[styles.meta, message.kind === 'IMAGE' && styles.imageMeta]}>
           <AppText variant="meta" color="navyMuted">
             {formatTime(message.createdAt)}
           </AppText>
@@ -73,7 +83,10 @@ const styles = StyleSheet.create({
   },
   mine: { backgroundColor: tokens.color.bubbleOut, borderBottomRightRadius: 6 },
   theirs: { backgroundColor: tokens.color.bubbleIn, borderBottomLeftRadius: 6 },
+  imageBubble: { padding: 4, gap: 0 },
+  image: { width: 200, height: 150, borderRadius: 14 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
+  imageMeta: { position: 'absolute', right: 10, bottom: 10 },
   systemRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md, marginVertical: tokens.space.md },
   systemLine: { flex: 1, height: 1, backgroundColor: tokens.color.line },
   systemPill: { flexDirection: 'row', alignItems: 'center', gap: 6 },

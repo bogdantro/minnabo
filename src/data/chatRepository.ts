@@ -110,6 +110,22 @@ export const chatRepository = {
     return msg;
   },
 
+  sendAttachment(conversationId: string, attachmentUrl: string): Message {
+    const msg: Message = {
+      id: nextId('m'),
+      conversationId,
+      authorProfileId: CURRENT_USER_ID,
+      text: '',
+      kind: 'IMAGE',
+      attachmentUrl,
+      createdAt: new Date().toISOString(),
+      delivery: 'SENT',
+    };
+    messages[conversationId] = [...(messages[conversationId] ?? []), msg];
+    touchConversation(conversationId, '📷 Bilde');
+    return msg;
+  },
+
   sendProposal(input: {
     conversationId: string;
     listingId: string;

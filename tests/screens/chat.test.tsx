@@ -40,3 +40,38 @@ test('chat never shows payment actions', async () => {
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
   expect(screen.queryByText(/Vipps|Betal nå|Betal no/i)).toBeNull();
 });
+
+test('the Send tilbud sheet sends a customised proposal', async () => {
+  const conversation = chatRepository.getConversation('c-sara')!;
+  const before = chatRepository.getMessages('c-sara').length;
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  await fireEvent.press(screen.getByText('Send tilbud'));
+  await waitFor(() => expect(screen.getByLabelText('Foreslått pris (kr)')).toBeTruthy());
+  await fireEvent.changeText(screen.getByLabelText('Foreslått pris (kr)'), '850');
+  await fireEvent.changeText(screen.getByLabelText('Dato og tid'), 'Fredag kl. 10');
+  const submitButtons = screen.getAllByRole('button', { name: 'Send tilbud' });
+  await fireEvent.press(submitButtons[submitButtons.length - 1]);
+
+  await waitFor(() =>
+    expect(chatRepository.getMessages('c-sara').length).toBeGreaterThan(before),
+  );
+  const proposalMsg = chatRepository.getMessages('c-sara').find((m) => m.kind === 'PROPOSAL')!;
+  const proposal = chatRepository.getProposal(proposalMsg.proposalId!)!;
+  expect(proposal.price.amountMinor).toBe(85000);
+  expect(proposal.scheduledText).toBe('Fredag kl. 10');
+});
+
+test('the attach sheet posts an image message', async () => {
+  const conversation = chatRepository.getConversation('c-sara')!;
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  await fireEvent.press(screen.getByLabelText('Legg ved'));
+  await waitFor(() => expect(screen.getByText('Legg ved bilde')).toBeTruthy());
+  const pickers = screen.getAllByLabelText('Velg fra bibliotek');
+  await fireEvent.press(pickers[pickers.length - 1]);
+
+  await waitFor(() =>
+    expect(chatRepository.getMessages('c-sara').some((m) => m.kind === 'IMAGE')).toBe(true),
+  );
+});

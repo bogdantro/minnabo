@@ -22,6 +22,11 @@ const nb = {
     searchPlaceholder: 'Søk etter hjelp eller oppdrag',
     locationSuffix: 'innen',
     changeLocation: 'Endre sted og avstand',
+    useMyLocation: 'Bruk posisjonen min',
+    locating: 'Finner posisjonen din …',
+    placeOrPostal: 'Sted eller postnummer',
+    postalResolved: 'Sted:',
+    postalUnknown: 'Fant ikke dette postnummeret.',
     offerSectionTitle: 'Folk som tilbyr hjelp',
     offerSectionSubtitle: 'Finn personer som kan hjelpe deg',
     taskSectionTitle: 'Folk som trenger hjelp',
@@ -529,6 +534,25 @@ const nb = {
     sent: 'Tilbudet er sendt.',
     requestSent: 'Forespørselen er sendt.',
     priceRequired: 'Skriv inn en pris.',
+  },
+
+  sendOfferSheet: {
+    title: 'Send tilbud',
+    intro: 'Foreslå pris og tidspunkt. Prisen er kun informasjon – betaling avtales mellom dere.',
+    priceLabel: 'Foreslått pris (kr)',
+    whenLabel: 'Dato og tid',
+    whenPlaceholder: 'F.eks. I morgen kl. 17:00',
+    messageLabel: 'Melding (valgfritt)',
+    caveatsLabel: 'Forbehold (valgfritt)',
+    caveatsPlaceholder: 'F.eks. gjelder tørt vær',
+    submit: 'Send tilbud',
+    priceRequired: 'Skriv inn en pris.',
+  },
+  attachSheet: {
+    title: 'Legg ved bilde',
+    intro: 'Velg et bilde å sende i samtalen.',
+    take: 'Ta bilde',
+    library: 'Velg fra bibliotek',
   },
 
   chat: {

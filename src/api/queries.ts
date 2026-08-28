@@ -94,6 +94,17 @@ export function useSendMessage(conversationId: string) {
   });
 }
 
+export function useSendAttachment(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (url: string) => apiClient.sendAttachment(conversationId, url),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
 export function useStartConversation() {
   const qc = useQueryClient();
   return useMutation({

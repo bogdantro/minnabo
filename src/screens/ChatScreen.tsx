@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -16,6 +16,7 @@ import {
   useProposal,
   useSendMessage,
   useSendProposal,
+  useSendAttachment,
   useRespondToProposal,
   useAgreement,
 } from '@/api/queries';
@@ -25,6 +26,8 @@ import { ChatHeader } from '@/components/ChatHeader';
 import { ChatBubble } from '@/components/ChatBubble';
 import { ChatComposer } from '@/components/ChatComposer';
 import { OfferCard } from '@/components/OfferCard';
+import { SendOfferSheet } from '@/components/SendOfferSheet';
+import { AttachSheet } from '@/components/AttachSheet';
 import { AppText } from '@/components/ui/Text';
 import { Icon } from '@/components/ui/Icon';
 import { ScreenState } from '@/components/ui/ScreenState';
@@ -80,6 +83,9 @@ export function ChatScreen({
   const { data: agreement } = useAgreement(conversation.id);
   const sendMessage = useSendMessage(conversation.id);
   const sendProposal = useSendProposal(conversation.id);
+  const sendAttachment = useSendAttachment(conversation.id);
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
 
   const list = messages ?? [];
 
@@ -177,15 +183,32 @@ export function ChatScreen({
         canSendOffer
         sending={sendMessage.isPending}
         onSend={(text) => sendMessage.mutate(text)}
-        onAttach={() => safePush(`/chat/${conversation.id}/vedlegg`)}
-        onSendOffer={() =>
-          sendProposal.mutate({
-            conversationId: conversation.id,
-            listingId: conversation.listing.id,
-            priceAmountMinor: 50000,
-            message: 'Forslag til pris – vi kan justere.',
-          })
-        }
+        onAttach={() => setAttachOpen(true)}
+        onSendOffer={() => setOfferOpen(true)}
+      />
+
+      <SendOfferSheet
+        visible={offerOpen}
+        onClose={() => setOfferOpen(false)}
+        listingTitle={conversation.listing.title}
+        listingImageUrl={conversation.listing.imageUrl}
+        pending={sendProposal.isPending}
+        onSubmit={(draft) => {
+          sendProposal.mutate(
+            {
+              conversationId: conversation.id,
+              listingId: conversation.listing.id,
+              ...draft,
+            },
+            { onSuccess: () => setOfferOpen(false) },
+          );
+        }}
+      />
+
+      <AttachSheet
+        visible={attachOpen}
+        onClose={() => setAttachOpen(false)}
+        onPick={(url) => sendAttachment.mutate(url)}
       />
     </KeyboardAvoidingView>
   );

@@ -30,7 +30,7 @@ export function ChatComposer({
   };
 
   return (
-    <View style={[styles.wrap, { paddingBottom: insets.bottom + tokens.space.sm }]}>
+    <View style={[styles.wrap, { paddingBottom: insets.bottom + tokens.space.lg }]}>
       {canSendOffer ? (
         <Pressable
           accessibilityRole="button"
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: tokens.space.sm,
   },
   attach: {

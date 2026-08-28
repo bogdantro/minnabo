@@ -155,8 +155,10 @@ export type Message = {
   authorProfileId: string;
   /** plain text body; empty when kind !== 'TEXT' */
   text: string;
-  kind: 'TEXT' | 'PROPOSAL' | 'SYSTEM';
+  kind: 'TEXT' | 'PROPOSAL' | 'SYSTEM' | 'IMAGE';
   proposalId?: string;
+  /** image url when kind === 'IMAGE' */
+  attachmentUrl?: string;
   createdAt: string;
   delivery: MessageDelivery;
 };

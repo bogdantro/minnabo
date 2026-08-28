@@ -78,10 +78,6 @@ export function ListingListScreen({ type }: { type: ListingType }) {
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <AppText variant="meta" color="navyMuted" align="center" style={styles.subtitle}>
-          {copy.subtitle}
-        </AppText>
-
         <View style={styles.sectionHead}>
           <RichSectionHeader
             icon={isTasks ? 'clock' : 'zap'}
@@ -157,8 +153,7 @@ export function ListingListScreen({ type }: { type: ListingType }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: tokens.color.bg },
-  content: { paddingBottom: tokens.space.xxxl, gap: tokens.space.md },
-  subtitle: { paddingHorizontal: tokens.space.xl, marginTop: -tokens.space.xs },
+  content: { paddingBottom: tokens.space.xxxl, gap: tokens.space.md, paddingTop: tokens.space.sm },
   sectionHead: { paddingHorizontal: tokens.space.xl },
   pad: { paddingHorizontal: tokens.space.xl },
   strip: { gap: tokens.space.md, paddingHorizontal: tokens.space.xl, paddingBottom: tokens.space.xs },
