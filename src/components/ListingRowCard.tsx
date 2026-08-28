@@ -143,8 +143,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: tokens.color.surface,
   },
-  body: { flex: 1, gap: 4, justifyContent: 'center', paddingRight: tokens.space.lg },
-  title: { alignSelf: 'flex-start' },
+  body: { flex: 1, gap: 4, justifyContent: 'center' },
+  title: { alignSelf: 'flex-start', paddingRight: 40 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
   bottomRow: {
     flexDirection: 'row',
