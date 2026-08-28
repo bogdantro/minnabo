@@ -87,7 +87,6 @@ export function ListingListScreen({ type }: { type: ListingType }) {
             icon={isTasks ? 'clock' : 'zap'}
             iconColor={isTasks ? 'lime' : 'cyan'}
             title={copy.recentTitle}
-            onSeeAll={() => {}}
           />
         </View>
         <HScrollFade>
