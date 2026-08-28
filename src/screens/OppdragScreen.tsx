@@ -86,8 +86,6 @@ export function OppdragScreen() {
           </ScrollView>
         </HScrollFade>
 
-        <View style={styles.rule} />
-
         <Section
           icon="user"
           iconColor="cyan"
@@ -117,7 +115,7 @@ export function OppdragScreen() {
           </View>
         </Section>
 
-        <View style={styles.rule} />
+        <View style={styles.sectionGap} />
 
         <Section
           icon="clipboard"
@@ -202,7 +200,7 @@ const styles = StyleSheet.create({
   },
   title: { paddingRight: 72 },
   categories: { gap: tokens.space.sm, paddingVertical: tokens.space.xs },
-  rule: { height: 1, backgroundColor: tokens.color.line, marginVertical: tokens.space.xs },
+  sectionGap: { height: tokens.space.xxl },
   section: { gap: tokens.space.md },
   activeRow: {
     marginHorizontal: -tokens.space.xl,

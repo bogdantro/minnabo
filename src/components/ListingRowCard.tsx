@@ -81,21 +81,24 @@ export function ListingRowCard({
             </AppText>
           </View>
 
-          <View style={styles.bottomRow}>
-            {time ? (
-              <View style={styles.metaRow}>
-                <Icon name="clock" size={13} color="cyan" />
-                <AppText variant="meta" color="navyMuted" numberOfLines={1}>
-                  {time}
-                </AppText>
-              </View>
-            ) : (
-              <View style={styles.metaRow} />
-            )}
-            <AppText variant="section" weight="extrabold" color="lime">
-              {priceLabel(listing)}
-            </AppText>
-          </View>
+          {time ? (
+            <View style={styles.metaRow}>
+              <Icon name="clock" size={13} color="cyan" />
+              <AppText variant="meta" color="navyMuted" numberOfLines={1}>
+                {time}
+              </AppText>
+            </View>
+          ) : null}
+
+          <AppText
+            variant="section"
+            weight="extrabold"
+            color="lime"
+            numberOfLines={1}
+            style={styles.price}
+          >
+            {priceLabel(listing)}
+          </AppText>
         </View>
       </Pressable>
 
@@ -146,12 +149,6 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: 4, justifyContent: 'center' },
   title: { alignSelf: 'flex-start', paddingRight: 40 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: tokens.space.sm,
-    marginTop: 2,
-  },
+  price: { alignSelf: 'flex-end', marginTop: 2 },
   heart: { position: 'absolute', top: tokens.space.md, right: tokens.space.md, padding: 2 },
 });
