@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { ListingCard } from '@/components/ListingCard';
+import { ListingRowCard } from '@/components/ListingRowCard';
 
 type TypeChoice = 'ALL' | ListingType;
 
@@ -135,7 +135,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
-            <ListingCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
+            <ListingRowCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
           )}
         />
       ) : (

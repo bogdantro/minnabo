@@ -53,12 +53,13 @@ export function Button({
     }
   }, [disabled, loading, onPress]);
 
-  const labelColor = variant === 'ghost' ? 'cyan' : 'navy';
+  // Text on a green (lime) background is always white; secondary/ghost keep colour.
+  const labelColor = variant === 'primary' ? 'white' : variant === 'ghost' ? 'cyan' : 'navy';
 
   const content = (
     <View style={styles.inner}>
       {loading ? (
-        <ActivityIndicator color={tokens.color.navy} />
+        <ActivityIndicator color={variant === 'primary' ? tokens.color.white : tokens.color.navy} />
       ) : (
         <AppText
           variant="cardTitle"

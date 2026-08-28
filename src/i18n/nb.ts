@@ -18,9 +18,16 @@ const nb = {
   },
 
   home: {
-    question: 'Hva trenger du hjelp med?',
-    searchPlaceholder: 'Søk etter småjobber',
-    nearYou: 'Jobber nær deg',
+    question: 'Finn hjelp eller en småjobb nær deg',
+    searchPlaceholder: 'Søk etter hjelp eller oppdrag',
+    locationSuffix: 'innen',
+    changeLocation: 'Endre sted og avstand',
+    offerSectionTitle: 'Folk som tilbyr hjelp',
+    offerSectionSubtitle: 'Finn personer som kan hjelpe deg',
+    taskSectionTitle: 'Folk som trenger hjelp',
+    taskSectionSubtitle: 'Se åpne småjobber i nærheten',
+    freshDaily: 'Nye oppdrag og tilbydere legges ut hver dag.',
+    // legacy keys still referenced by list pages
     needHelpSection: 'Folk som trenger hjelp',
     offerHelpSection: 'Folk som tilbyr hjelp',
   },

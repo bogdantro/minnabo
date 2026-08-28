@@ -39,7 +39,7 @@ export function StatusPill({ label, tone = 'neutral', filled = false, style }: S
       <AppText
         variant="meta"
         weight="bold"
-        color={filled ? (tone === 'cyan' ? 'white' : 'navy') : color}
+        color={filled ? 'white' : color}
         style={styles.text}
       >
         {label}

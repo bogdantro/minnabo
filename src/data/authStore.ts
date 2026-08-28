@@ -14,10 +14,16 @@ export type OnboardingState = {
 
 // Default onboarded so the app opens on Oppdrag. Onboarding is reachable via
 // "Logg ut" / "Slett konto". (Reversible assumption — see README.)
-let state: OnboardingState = {
+const DEFAULT_STATE: OnboardingState = {
   isOnboarded: true,
+  purpose: 'BOTH',
+  municipality: 'Lillehammer',
+  place: 'Lillehammer',
+  maxDistanceKm: 15,
   consents: { terms: false, privacy: false, age: false },
 };
+
+let state: OnboardingState = { ...DEFAULT_STATE };
 
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -41,7 +47,7 @@ export const authStore = {
     return () => listeners.delete(fn);
   },
   _reset: () => {
-    state = { isOnboarded: true, consents: { terms: false, privacy: false, age: false } };
+    state = { ...DEFAULT_STATE };
     emit();
   },
 };

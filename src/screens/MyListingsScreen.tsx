@@ -11,7 +11,7 @@ import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { FilterTabs } from '@/components/FilterTabs';
 import { Button } from '@/components/ui/Button';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
-import { ListingCard } from '@/components/ListingCard';
+import { ListingRowCard } from '@/components/ListingRowCard';
 
 export function MyListingsScreen() {
   const [tab, setTab] = useState<ListingType>('TASK_REQUEST');
@@ -44,7 +44,7 @@ export function MyListingsScreen() {
           keyExtractor={(l) => l.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <ListingCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
+            <ListingRowCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
           )}
         />
       ) : (
