@@ -39,6 +39,7 @@ const TABLE: Record<ProposalStatus, Partial<Record<ProposalEvent, Rule>>> = {
     WITHDRAW: { to: 'WITHDRAWN', actor: 'PROPOSER' },
     DECLINE: { to: 'DECLINED', actor: 'RECIPIENT' },
     ACCEPT: { to: 'ACCEPTED', actor: 'RECIPIENT' },
+    REQUEST_REVISION: { to: 'REVISION_PENDING', actor: 'RECIPIENT' },
   },
   ACCEPTED: {
     REQUEST_REVISION: { to: 'REVISION_PENDING', actor: 'RECIPIENT' },

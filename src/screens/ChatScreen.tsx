@@ -169,11 +169,11 @@ export function ChatScreen({
         <Pressable
           accessibilityRole="button"
           style={styles.agreementBar}
-          onPress={() => safePush(`/fullfor/${agreement.proposalId}`)}
+          onPress={() => safePush(`/avtale/${agreement.proposalId}`)}
         >
-          <Icon name="check-circle" size={16} color="lime" />
+          <Icon name="file-text" size={16} color="lime" />
           <AppText variant="meta" weight="bold" style={styles.agreementText}>
-            {nb.chat.offerAccepted} · {nb.completion.confirm}
+            {nb.chat.offerAccepted} · {nb.avtale.title}
           </AppText>
           <Icon name="chevron-right" size={16} color="navyMuted" />
         </Pressable>

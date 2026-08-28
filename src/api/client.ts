@@ -86,6 +86,29 @@ export class MockApiClient {
     return proposal;
   }
 
+  async listReceivedProposals(): Promise<Proposal[]> {
+    await delay(150);
+    return chatRepository.listReceivedProposals();
+  }
+
+  async listProposalsForListing(listingId: string): Promise<Proposal[]> {
+    await delay(150);
+    return chatRepository.proposalsForListing(listingId);
+  }
+
+  async reviseProposal(
+    proposalId: string,
+    patch: Parameters<typeof chatRepository.reviseProposal>[1],
+  ): Promise<Proposal> {
+    await delay(150);
+    return chatRepository.reviseProposal(proposalId, patch);
+  }
+
+  async getAgreement(proposalId: string): Promise<AgreementSnapshot | null> {
+    await delay(120);
+    return chatRepository.getAgreement(proposalId) ?? null;
+  }
+
   async sendMessage(conversationId: string, text: string): Promise<Message> {
     await delay(120);
     return chatRepository.sendMessage(conversationId, text);

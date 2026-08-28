@@ -89,6 +89,43 @@ export const chatRepository = {
     return proposals.find((p) => p.id === id);
   },
 
+  /** Proposals sent to the current user, newest first, grouped-friendly. */
+  listReceivedProposals(): Proposal[] {
+    return proposals
+      .filter((p) => p.toProfileId === CURRENT_USER_ID)
+      .filter((p) => p.status === 'SENT' || p.status === 'REVISION_PENDING' || p.status === 'ACCEPTED')
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  },
+
+  proposalsForListing(listingId: string): Proposal[] {
+    return proposals
+      .filter((p) => p.listingId === listingId)
+      .sort((a, b) => a.price.amountMinor - b.price.amountMinor);
+  },
+
+  /** Proposer submits revised terms after the recipient asked for a change. */
+  reviseProposal(
+    proposalId: string,
+    patch: { priceAmountMinor?: number; scheduledText?: string; message?: string; caveats?: string },
+  ): Proposal {
+    const existing = chatRepository.getProposal(proposalId);
+    if (!existing) throw new Error('Fant ikke tilbudet.');
+    const nextStatus = transition(existing.status, 'SUBMIT_REVISION', 'PROPOSER');
+    const updated: Proposal = {
+      ...existing,
+      status: nextStatus,
+      price: patch.priceAmountMinor
+        ? { amountMinor: patch.priceAmountMinor, currency: 'NOK' }
+        : existing.price,
+      scheduledText: patch.scheduledText ?? existing.scheduledText,
+      message: patch.message ?? existing.message,
+      caveats: patch.caveats ?? existing.caveats,
+    };
+    proposals = proposals.map((p) => (p.id === proposalId ? updated : p));
+    pushSystem(updated.conversationId, nb.tilbud.revisionSent);
+    return updated;
+  },
+
   markRead(conversationId: string): void {
     conversations = conversations.map((c) =>
       c.id === conversationId ? { ...c, unread: false } : c,
@@ -224,6 +261,10 @@ export const chatRepository = {
     return accepted ? agreements.find((a) => a.proposalId === accepted.id) : undefined;
   },
 
+  getAgreement(proposalId: string): AgreementSnapshot | undefined {
+    return agreements.find((a) => a.proposalId === proposalId);
+  },
+
   _reset(): void {
     conversations = clone(seedConversations);
     messages = clone(seedMessages);
@@ -238,6 +279,20 @@ function touchConversation(conversationId: string, preview: string): void {
       ? { ...c, lastMessagePreview: preview, lastMessageAt: new Date().toISOString() }
       : c,
   );
+}
+
+function pushSystem(conversationId: string, text: string): void {
+  const sys: Message = {
+    id: nextId('m'),
+    conversationId,
+    authorProfileId: 'system',
+    text,
+    kind: 'SYSTEM',
+    createdAt: new Date().toISOString(),
+    delivery: 'READ',
+  };
+  messages[conversationId] = [...(messages[conversationId] ?? []), sys];
+  touchConversation(conversationId, text);
 }
 
 function setStatusTag(

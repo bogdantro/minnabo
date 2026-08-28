@@ -83,6 +83,41 @@ export function useProposal(id: string | undefined) {
   });
 }
 
+export function useReceivedProposals() {
+  return useQuery({
+    queryKey: ['proposals', 'received'] as const,
+    queryFn: () => apiClient.listReceivedProposals(),
+  });
+}
+
+export function useProposalsForListing(listingId: string) {
+  return useQuery({
+    queryKey: ['proposals', 'listing', listingId] as const,
+    queryFn: () => apiClient.listProposalsForListing(listingId),
+    enabled: !!listingId,
+  });
+}
+
+export function useAgreementByProposal(proposalId: string) {
+  return useQuery({
+    queryKey: ['agreement', 'proposal', proposalId] as const,
+    queryFn: () => apiClient.getAgreement(proposalId),
+    enabled: !!proposalId,
+  });
+}
+
+export function useReviseProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { proposalId: string; patch: Parameters<typeof apiClient.reviseProposal>[1] }) =>
+      apiClient.reviseProposal(vars.proposalId, vars.patch),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: chatKeys.proposal(vars.proposalId) });
+      qc.invalidateQueries({ queryKey: ['proposals'] });
+    },
+  });
+}
+
 export function useSendMessage(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
