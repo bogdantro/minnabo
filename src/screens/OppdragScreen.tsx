@@ -20,6 +20,7 @@ import { HomeSearchBar } from '@/components/HomeSearchBar';
 import { RichSectionHeader } from '@/components/RichSectionHeader';
 import { ActiveUsersRow } from '@/components/ActiveUsersRow';
 import { ListingRowCard } from '@/components/ListingRowCard';
+import { HScrollFade } from '@/components/ui/HScrollFade';
 
 const PREVIEW = 4;
 
@@ -67,21 +68,23 @@ export function OppdragScreen() {
           onPressFilter={() => safePush('/sok')}
         />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categories}
-        >
-          {homeCategories.map((c) => (
-            <CategoryChip
-              key={c.id}
-              label={c.label}
-              icon={c.icon as IconName}
-              active={activeSlug === c.slug}
-              onPress={() => setActiveSlug(c.slug)}
-            />
-          ))}
-        </ScrollView>
+        <HScrollFade>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categories}
+          >
+            {homeCategories.map((c) => (
+              <CategoryChip
+                key={c.id}
+                label={c.label}
+                icon={c.icon as IconName}
+                active={activeSlug === c.slug}
+                onPress={() => setActiveSlug(c.slug)}
+              />
+            ))}
+          </ScrollView>
+        </HScrollFade>
 
         <View style={styles.rule} />
 
@@ -95,10 +98,12 @@ export function OppdragScreen() {
         >
           {activeProviders.length > 0 ? (
             <View style={styles.activeRow}>
-              <ActiveUsersRow
-                profiles={activeProviders}
-                onPressUser={(id) => safePush(`/profil/${id}`)}
-              />
+              <HScrollFade>
+                <ActiveUsersRow
+                  profiles={activeProviders}
+                  onPressUser={(id) => safePush(`/profil/${id}`)}
+                />
+              </HScrollFade>
             </View>
           ) : null}
           <View style={styles.list}>

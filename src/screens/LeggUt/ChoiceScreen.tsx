@@ -1,26 +1,32 @@
 import { View, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { PageHeader } from '@/components/TopBar';
-import { ScreenTitle } from '@/components/ui/ScreenTitle';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { HomeTopBar } from '@/components/TopBar';
+import { StaticBottomNav } from '@/components/StaticBottomNav';
 import { AppText } from '@/components/ui/Text';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { safePush } from '@/lib/nav';
 
 export function ChoiceScreen() {
   const router = useRouter();
+  const me = useCurrentUser();
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
-      <PageHeader
-        logoOnly
-        onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+    <View style={styles.wrap}>
+      <HomeTopBar
+        avatar={{ uri: me.avatarUrl, initials: me.initials }}
+        unreadNotifications
+        onProfilePress={() => safePush('/profil')}
+        onNotificationsPress={() => safePush('/varsler')}
       />
 
       <View style={styles.body}>
-        <ScreenTitle style={styles.title}>{nb.leggUt.choiceHeading}</ScreenTitle>
+        <AppText variant="h1" weight="extrabold" style={styles.title}>
+          {nb.leggUt.choiceHeading}
+        </AppText>
         <AppText variant="body" color="navyMuted" style={styles.subtitle}>
           {nb.leggUt.choiceSubtitle}
         </AppText>
@@ -43,13 +49,15 @@ export function ChoiceScreen() {
         />
 
         <View style={styles.footer}>
-          <Icon name="shield" size={18} color="cyan" />
+          <Icon name="shield" size={20} color="cyan" />
           <AppText variant="meta" color="navyMuted" style={styles.footerText}>
             {nb.leggUt.choiceFooter}
           </AppText>
         </View>
       </View>
-    </SafeAreaView>
+
+      <StaticBottomNav active="leggUt" />
+    </View>
   );
 }
 
@@ -75,22 +83,27 @@ function Choice({
       onPress={onPress}
       style={({ pressed }) => [
         styles.choice,
-        { borderLeftColor: tokens.color[tone] },
+        {
+          borderColor: tone === 'lime' ? tokens.color.limeTint : tokens.color.cyanTint,
+          borderLeftColor: tokens.color[tone],
+        },
         pressed && styles.choicePressed,
       ]}
     >
-      <Icon name={icon} size={44} color={tone} />
+      <View style={styles.choiceIcon}>
+        <Icon name={icon} size={52} color={tone} />
+      </View>
       <View style={styles.choiceRule} />
       <View style={styles.choiceText}>
         <StatusPill label={badge} tone={tone} soft />
-        <AppText variant="cardTitle" weight="bold">
+        <AppText variant="section" weight="extrabold">
           {title}
         </AppText>
         <AppText variant="meta" color="navyMuted">
           {subtitle}
         </AppText>
       </View>
-      <Icon name="chevron-right" size={24} color={tone} />
+      <Icon name="chevron-right" size={26} color={tone} />
     </Pressable>
   );
 }
@@ -98,8 +111,8 @@ function Choice({
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: tokens.color.bg },
   body: { flex: 1, paddingHorizontal: tokens.space.xl, paddingTop: tokens.space.sm },
-  title: { paddingRight: 56 },
-  subtitle: { marginTop: tokens.space.xs, marginBottom: tokens.space.xl },
+  title: { fontSize: 30, lineHeight: 36, paddingRight: 48 },
+  subtitle: { marginTop: tokens.space.sm, marginBottom: tokens.space.xl },
   choice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -107,14 +120,14 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.card,
     borderWidth: 1,
-    borderColor: tokens.color.line,
     borderLeftWidth: 4,
     paddingVertical: tokens.space.xl,
     paddingHorizontal: tokens.space.lg,
-    marginBottom: tokens.space.lg,
+    marginBottom: tokens.space.xl,
     ...tokens.shadow.card,
   },
   choicePressed: { opacity: 0.92 },
+  choiceIcon: { width: 56, alignItems: 'center' },
   choiceRule: { width: 1, alignSelf: 'stretch', backgroundColor: tokens.color.line },
   choiceText: { flex: 1, gap: tokens.space.xs },
   footer: {
