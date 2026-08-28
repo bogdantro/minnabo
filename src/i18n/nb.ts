@@ -91,10 +91,27 @@ const nb = {
 
   offersPage: {
     title: 'Folk som tilbyr hjelp',
-    activeHeading: 'Aktive tilbydere',
+    subtitle: 'Finn personer som kan hjelpe deg i nærheten.',
+    recentTitle: 'Nylig aktive',
+    searchPlaceholder: 'Søk blant tilbydere',
+    allTitle: 'Alle tilbydere',
+    countUnit: 'personer',
   },
   tasksPage: {
-    title: 'Folk som trenger hjelp',
+    title: 'Oppdrag som trenger hjelp',
+    subtitle: 'Finn åpne småjobber i nærheten.',
+    recentTitle: 'Nylig publisert',
+    searchPlaceholder: 'Søk blant åpne oppdrag',
+    allTitle: 'Alle åpne oppdrag',
+    countUnit: 'oppdrag',
+    newBadge: 'Ny',
+    now: 'Nå',
+  },
+  listSort: {
+    nearest: 'Nærmest',
+    newest: 'Nyeste',
+    priceLow: 'Lavest pris',
+    rating: 'Best vurdert',
   },
 
   leggUt: {

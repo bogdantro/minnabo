@@ -90,6 +90,24 @@ jest.mock('@react-native-community/slider', () => {
   return { __esModule: true, default: (props: any) => React.createElement(View, props) };
 });
 
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const make = () => (props: any) => React.createElement(View, props, props.children);
+  return {
+    __esModule: true,
+    default: make(),
+    Svg: make(),
+    Path: make(),
+    Circle: make(),
+    Rect: make(),
+    Line: make(),
+    G: make(),
+    Polyline: make(),
+    Polygon: make(),
+  };
+});
+
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');
   const { Text } = require('react-native');
