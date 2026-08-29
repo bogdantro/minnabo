@@ -46,6 +46,7 @@ Migration files live in `supabase/migrations/` and are the source of truth:
 | `0002_rls.sql` | RLS on every table + `is_participant()` / `is_admin()` / `owns_listing()` |
 | `0003_rpc_realtime.sql` | RPC functions (proposal state machine, agreements, completion, reviews, reports, verification, business profile), message rate-limit trigger, realtime publication |
 | `0004_storage.sql` | Storage buckets (`avatars`, `listing-images`, `chat-attachments`) + object policies |
+| `0005_dev_otp.sql` | **dev/test only** — `dev_otp_codes` table + `get_dev_otp` / `set_dev_otp` so the login screen can show the email code (see §5a) |
 
 Apply everything and regenerate the TS types:
 
@@ -110,6 +111,26 @@ npx supabase functions deploy delete-account
 `delete-account` verifies the caller's JWT and hard-deletes their `auth.users`
 row (FK cascade removes the profile and everything it owns). Called from
 **Innstillinger → Slett konto**.
+
+### 5a. Dev OTP — show the login code on screen (TEST ONLY)
+
+Supabase's free tier only sends a handful of auth emails per hour, and it
+hashes the OTP so the client can never read it. For testing, register the
+`auth-email` **Send Email Hook**: it intercepts the code, stores it in
+`dev_otp_codes`, and sends no email. The login screen then polls `get_dev_otp`
+and shows the code (only in `__DEV__` builds, only when a code turns up).
+
+```bash
+npx supabase functions deploy auth-email --no-verify-jwt
+```
+
+Then Dashboard → **Authentication → Hooks → Send Email Hook** → enable →
+point at the deployed `auth-email` function.
+
+> ⚠️ **Never register the `auth-email` hook on a production project.** With it
+> off, `dev_otp_codes` stays empty and `get_dev_otp` returns null, so the
+> on-screen code never appears in production. To turn testing off again: disable
+> the hook in the dashboard.
 
 ---
 

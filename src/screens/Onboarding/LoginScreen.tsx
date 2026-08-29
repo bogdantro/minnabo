@@ -11,6 +11,7 @@ import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
+import { DevOtpHint } from '@/components/DevOtpHint';
 
 export function LoginScreen() {
   const router = useRouter();
@@ -41,8 +42,9 @@ export function LoginScreen() {
     setStep('code');
   };
 
-  const verify = async () => {
-    if (code.trim().length < 6) {
+  const verify = async (withCode?: string) => {
+    const token = (withCode ?? code).trim();
+    if (token.length < 6) {
       setError(nb.onboarding.wrongCode);
       return;
     }
@@ -50,7 +52,7 @@ export function LoginScreen() {
     setBusy(true);
     const { error: err } = await supabase.auth.verifyOtp({
       email: contact.trim(),
-      token: code.trim(),
+      token,
       type: 'email',
     });
     setBusy(false);
@@ -79,13 +81,22 @@ export function LoginScreen() {
             keyboardType="email-address"
           />
         ) : (
-          <TextField
-            label={nb.onboarding.codeLabel}
-            value={code}
-            onChangeText={setCode}
-            keyboardType="numeric"
-            maxLength={6}
-          />
+          <>
+            <TextField
+              label={nb.onboarding.codeLabel}
+              value={code}
+              onChangeText={setCode}
+              keyboardType="numeric"
+              maxLength={6}
+            />
+            <DevOtpHint
+              email={contact.trim()}
+              onUse={(c) => {
+                setCode(c);
+                void verify(c);
+              }}
+            />
+          </>
         )}
 
         {error ? (
@@ -103,7 +114,7 @@ export function LoginScreen() {
         {step === 'contact' ? (
           <Button label={nb.onboarding.sendCode} onPress={sendCode} loading={busy} />
         ) : (
-          <Button label={nb.onboarding.verify} onPress={verify} loading={busy} />
+          <Button label={nb.onboarding.verify} onPress={() => verify()} loading={busy} />
         )}
       </View>
     </SafeAreaView>
