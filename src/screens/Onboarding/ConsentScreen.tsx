@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { supabase } from '@/lib/supabase';
+import { ENV } from '@/lib/env';
 import { PageHeader } from '@/components/TopBar';
 import { OnboardingProgress } from '@/components/OnboardingProgress';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -29,6 +30,10 @@ export function ConsentScreen() {
   const next = async () => {
     if (!all) {
       setError(true);
+      return;
+    }
+    if (ENV.useMocks) {
+      router.replace('/');
       return;
     }
     setBusy(true);

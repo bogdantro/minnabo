@@ -45,7 +45,7 @@ const queryClient = new QueryClient({
 
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'minnabo.queryCache',
+  key: 'minnabo.queryCache.v2',
 });
 
 export default function RootLayout() {

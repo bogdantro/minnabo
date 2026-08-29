@@ -7,6 +7,7 @@ import nb from '@/i18n/nb';
 import type { Purpose } from '@/domain/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { ENV } from '@/lib/env';
 import { useSession } from '@/auth/session';
 import { profileKeys } from '@/api/queries';
 import { PageHeader } from '@/components/TopBar';
@@ -41,6 +42,10 @@ export function SetupScreen() {
       .toUpperCase() || 'N';
 
   const finish = async () => {
+    if (ENV.useMocks) {
+      router.replace('/');
+      return;
+    }
     if (!name.trim() || !municipality.trim() || !place.trim()) {
       setError(nb.leggUt.errRequired);
       return;
