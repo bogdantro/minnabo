@@ -10,12 +10,16 @@ import {
   Mulish_700Bold,
   Mulish_800ExtraBold,
 } from '@expo-google-fonts/mulish';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { tokens } from '@/theme';
 import { savedStore } from '@/data/savedStore';
 import { savedSearchStore } from '@/data/savedSearchStore';
+import { InboxRealtime } from '@/api/realtime';
 import { OfflineBanner } from '@/components/OfflineBanner';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -31,7 +35,19 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 }
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 0, staleTime: 30_000 } },
+  defaultOptions: {
+    queries: {
+      retry: 0,
+      staleTime: 30_000,
+      gcTime: 1000 * 60 * 60 * 24, // keep for a day so the app opens with cached data
+      networkMode: 'offlineFirst',
+    },
+  },
+});
+
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: 'minnabo.queryCache',
 });
 
 export default function RootLayout() {
@@ -60,7 +76,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
           <StatusBar style="dark" />
           <Stack
             screenOptions={{
@@ -68,8 +84,9 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: tokens.color.bg },
             }}
           />
+          <InboxRealtime />
           <OfflineBanner />
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

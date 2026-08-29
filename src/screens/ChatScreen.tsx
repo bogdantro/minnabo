@@ -21,6 +21,8 @@ import {
   useAgreement,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useConversationChannel } from '@/api/realtime';
+import { usePresence } from '@/api/realtime';
 import { safePush } from '@/lib/nav';
 import { formatDayLabel, isSameDay } from '@/lib/calendar';
 import { ChatHeader } from '@/components/ChatHeader';
@@ -80,6 +82,8 @@ export function ChatScreen({
 }) {
   const me = useCurrentUser();
   const scrollRef = useRef<ScrollView>(null);
+  useConversationChannel(conversation.id);
+  const online = usePresence();
   const { data: messages, isLoading, isError, refetch } = useMessages(conversation.id);
   const { data: agreement } = useAgreement(conversation.id);
   const sendMessage = useSendMessage(conversation.id);
@@ -143,7 +147,7 @@ export function ChatScreen({
         name={conversation.counterpart.displayName}
         avatarUri={conversation.counterpart.avatarUrl}
         initials={conversation.counterpart.initials}
-        online={conversation.counterpart.online}
+        online={online.has(conversation.counterpart.id)}
         onBack={onBack}
         onMenu={() => safePush(`/rapporter?profil=${conversation.counterpart.id}`)}
       />
