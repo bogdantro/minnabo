@@ -201,6 +201,7 @@ export type Report = {
   details?: string;
   byProfileId: string;
   createdAt: string;
+  status?: 'OPEN' | 'RESOLVED';
 };
 
 export type Block = {

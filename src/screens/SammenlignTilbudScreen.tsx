@@ -3,10 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import type { Proposal } from '@/domain/types';
 import { formatPrice } from '@/domain/price';
-import { repositories } from '@/data/repositories';
-import { profileRepository } from '@/data/profileRepository';
-import { useProposalsForListing } from '@/api/queries';
+import { useListing, useProfile, useProposalsForListing } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { DetailTopBar } from '@/components/TopBar';
@@ -20,7 +19,7 @@ import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
 export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
   const router = useRouter();
   const me = useCurrentUser();
-  const listing = repositories.listings.get(listingId);
+  const { data: listing } = useListing(listingId);
   const { data, isLoading, isError, refetch } = useProposalsForListing(listingId);
   const proposals = data ?? [];
   const cheapest = proposals[0]?.id;
@@ -48,57 +47,60 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
         </AppText>
 
         {status === 'ready' ? (
-          proposals.map((p) => {
-            const from = profileRepository.getProfile(p.fromProfileId);
-            const isCheap = p.id === cheapest;
-            return (
-              <View key={p.id} style={[styles.row, isCheap && styles.rowCheap]}>
-                <View style={styles.rowHead}>
-                  <Avatar uri={from?.avatarUrl} initials={from?.initials ?? '?'} size={40} />
-                  <View style={styles.rowWho}>
-                    <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
-                      {from?.displayName ?? 'Tilbyder'}
-                    </AppText>
-                    {from?.rating ? (
-                      <View style={styles.ratingRow}>
-                        <Icon name="star" size={12} color="star" />
-                        <AppText variant="meta" color="navyMuted">
-                          {from.rating.average.toLocaleString('nb-NO', { minimumFractionDigits: 1 })} ({from.rating.count})
-                        </AppText>
-                      </View>
-                    ) : null}
-                  </View>
-                  {isCheap ? <StatusPill label={nb.tilbud.lowest} tone="lime" soft /> : null}
-                </View>
-
-                <View style={styles.grid}>
-                  <Cell label={nb.tilbud.proposedPrice} value={formatPrice(p.price)} strong />
-                  <Cell label={nb.tilbud.when} value={p.scheduledText ?? '–'} />
-                </View>
-                {p.caveats ? <Cell label={nb.tilbud.caveats} value={p.caveats} /> : null}
-                {p.message ? (
-                  <AppText variant="meta" color="navyMuted">
-                    “{p.message}”
-                  </AppText>
-                ) : null}
-
-                <AppText
-                  variant="meta"
-                  weight="bold"
-                  color="cyan"
-                  style={styles.open}
-                  onPress={() => safePush(`/tilbud/${p.id}`)}
-                >
-                  {nb.tilbud.detailTitle} ›
-                </AppText>
-              </View>
-            );
-          })
+          proposals.map((p) => (
+            <CompareRow key={p.id} proposal={p} isCheap={p.id === cheapest} />
+          ))
         ) : (
           <ScreenState status={status} onRetry={() => refetch()} emptyText={nb.tilbud.empty} />
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function CompareRow({ proposal: p, isCheap }: { proposal: Proposal; isCheap: boolean }) {
+  const { data: from } = useProfile(p.fromProfileId);
+  return (
+    <View style={[styles.row, isCheap && styles.rowCheap]}>
+      <View style={styles.rowHead}>
+        <Avatar uri={from?.avatarUrl} initials={from?.initials ?? '?'} size={40} />
+        <View style={styles.rowWho}>
+          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
+            {from?.displayName ?? 'Tilbyder'}
+          </AppText>
+          {from?.rating ? (
+            <View style={styles.ratingRow}>
+              <Icon name="star" size={12} color="star" />
+              <AppText variant="meta" color="navyMuted">
+                {from.rating.average.toLocaleString('nb-NO', { minimumFractionDigits: 1 })} ({from.rating.count})
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+        {isCheap ? <StatusPill label={nb.tilbud.lowest} tone="lime" soft /> : null}
+      </View>
+
+      <View style={styles.grid}>
+        <Cell label={nb.tilbud.proposedPrice} value={formatPrice(p.price)} strong />
+        <Cell label={nb.tilbud.when} value={p.scheduledText ?? '–'} />
+      </View>
+      {p.caveats ? <Cell label={nb.tilbud.caveats} value={p.caveats} /> : null}
+      {p.message ? (
+        <AppText variant="meta" color="navyMuted">
+          “{p.message}”
+        </AppText>
+      ) : null}
+
+      <AppText
+        variant="meta"
+        weight="bold"
+        color="cyan"
+        style={styles.open}
+        onPress={() => safePush(`/tilbud/${p.id}`)}
+      >
+        {nb.tilbud.detailTitle} ›
+      </AppText>
+    </View>
   );
 }
 

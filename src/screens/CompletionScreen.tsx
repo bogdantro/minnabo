@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useCompletion, useConfirmCompletion } from '@/api/queries';
-import { profileRepository } from '@/data/profileRepository';
+import { useSession } from '@/auth/session';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 
 export function CompletionScreen({ proposalId }: { proposalId: string }) {
   const router = useRouter();
-  const me = profileRepository.currentUserId;
+  const me = useSession().userId ?? '';
   const { data: confirmations } = useCompletion(proposalId);
   const confirm = useConfirmCompletion(proposalId);
 

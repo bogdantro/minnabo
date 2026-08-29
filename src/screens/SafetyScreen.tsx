@@ -2,11 +2,18 @@ import { useState } from 'react';
 import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useQueries } from '@tanstack/react-query';
 import type { ReportTargetType } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { safetyStore, useIsBlocked } from '@/data/safetyStore';
-import { profileRepository } from '@/data/profileRepository';
+import {
+  profileKeys,
+  useBlockedProfileIds,
+  useProfile,
+  useSubmitReport,
+  useToggleBlock,
+} from '@/api/queries';
+import { apiClient } from '@/api/client';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -30,23 +37,35 @@ export function SafetyScreen({
   const [sent, setSent] = useState(false);
 
   const profileId = targetProfileId ?? '';
-  const [isBlocked, toggleBlock] = useIsBlocked(profileId);
-  const target = profileId ? profileRepository.getProfile(profileId) : undefined;
-  const blockedList = safetyStore
-    .listBlocked()
-    .map((id) => profileRepository.getProfile(id))
+  const { data: target } = useProfile(profileId);
+  const { data: blockedIds = [] } = useBlockedProfileIds();
+  const toggle = useToggleBlock();
+  const report = useSubmitReport();
+
+  const isBlocked = blockedIds.includes(profileId);
+  const toggleBlock = () => toggle.mutate(profileId);
+
+  const blockedProfiles = useQueries({
+    queries: blockedIds.map((id) => ({
+      queryKey: profileKeys.profile(id),
+      queryFn: () => apiClient.getProfile(id),
+    })),
+  });
+  const blockedList = blockedProfiles
+    .map((q) => q.data)
     .filter((p): p is NonNullable<typeof p> => !!p);
 
   const submit = () => {
     if (!reason) return;
-    safetyStore.submitReport({
-      targetType,
-      targetId: targetId ?? profileId,
-      reason,
-      details: details.trim() || undefined,
-      byProfileId: profileRepository.currentUserId,
-    });
-    setSent(true);
+    report.mutate(
+      {
+        targetType,
+        targetId: targetId ?? profileId,
+        reason,
+        details: details.trim() || undefined,
+      },
+      { onSuccess: () => setSent(true) },
+    );
   };
 
   return (
@@ -130,7 +149,7 @@ export function SafetyScreen({
                 <AppText variant="body">{p.displayName}</AppText>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => safetyStore.toggleBlock(p.id)}
+                  onPress={() => toggle.mutate(p.id)}
                 >
                   <AppText variant="meta" weight="bold" color="cyan">
                     {nb.safety.unblock}

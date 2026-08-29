@@ -17,8 +17,6 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { tokens } from '@/theme';
-import { savedStore } from '@/data/savedStore';
-import { savedSearchStore } from '@/data/savedSearchStore';
 import { InboxRealtime } from '@/api/realtime';
 import { OfflineBanner } from '@/components/OfflineBanner';
 
@@ -63,11 +61,6 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => undefined);
     }
   }, [fontsLoaded]);
-
-  useEffect(() => {
-    void savedStore.hydrate();
-    void savedSearchStore.hydrate();
-  }, []);
 
   if (!fontsLoaded) {
     return null;

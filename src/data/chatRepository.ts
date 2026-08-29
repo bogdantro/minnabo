@@ -103,26 +103,39 @@ export const chatRepository = {
       .sort((a, b) => a.price.amountMinor - b.price.amountMinor);
   },
 
-  /** Proposer submits revised terms after the recipient asked for a change. */
+  /**
+   * Revision flow. If the current user is the recipient this is a
+   * "request a change" (→ REVISION_PENDING); if they are the proposer it is
+   * "submit revised terms" (→ SENT). Mirrors the `revise_proposal` RPC.
+   */
   reviseProposal(
     proposalId: string,
     patch: { priceAmountMinor?: number; scheduledText?: string; message?: string; caveats?: string },
   ): Proposal {
     const existing = chatRepository.getProposal(proposalId);
     if (!existing) throw new Error('Fant ikke tilbudet.');
-    const nextStatus = transition(existing.status, 'SUBMIT_REVISION', 'PROPOSER');
+
+    const isRecipient = existing.toProfileId === CURRENT_USER_ID;
+    const nextStatus = isRecipient
+      ? transition(existing.status, 'REQUEST_REVISION', 'RECIPIENT')
+      : transition(existing.status, 'SUBMIT_REVISION', 'PROPOSER');
+
     const updated: Proposal = {
       ...existing,
       status: nextStatus,
-      price: patch.priceAmountMinor
-        ? { amountMinor: patch.priceAmountMinor, currency: 'NOK' }
-        : existing.price,
-      scheduledText: patch.scheduledText ?? existing.scheduledText,
-      message: patch.message ?? existing.message,
-      caveats: patch.caveats ?? existing.caveats,
+      price:
+        !isRecipient && patch.priceAmountMinor
+          ? { amountMinor: patch.priceAmountMinor, currency: 'NOK' }
+          : existing.price,
+      scheduledText: !isRecipient ? patch.scheduledText ?? existing.scheduledText : existing.scheduledText,
+      caveats: !isRecipient ? patch.caveats ?? existing.caveats : existing.caveats,
     };
     proposals = proposals.map((p) => (p.id === proposalId ? updated : p));
-    pushSystem(updated.conversationId, nb.tilbud.revisionSent);
+    if (isRecipient && patch.message?.trim()) {
+      chatRepository.sendMessage(updated.conversationId, patch.message.trim());
+    } else {
+      pushSystem(updated.conversationId, nb.tilbud.revisionSent);
+    }
     return updated;
   },
 

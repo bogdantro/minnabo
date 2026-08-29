@@ -5,9 +5,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatPrice } from '@/domain/price';
 import { formatRelative } from '@/lib/datetime';
-import { profileRepository } from '@/data/profileRepository';
-import { repositories } from '@/data/repositories';
-import { useProposal, useAgreementByProposal } from '@/api/queries';
+import { useProposal, useAgreementByProposal, useListing, useProfile } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { DetailTopBar } from '@/components/TopBar';
@@ -25,6 +23,13 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const me = useCurrentUser();
   const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
   const { data: agreement } = useAgreementByProposal(proposalId);
+  const { data: listing } = useListing(proposal?.listingId ?? '');
+  const otherId = proposal
+    ? proposal.fromProfileId === me.id
+      ? proposal.toProfileId
+      : proposal.fromProfileId
+    : '';
+  const { data: other } = useProfile(otherId);
 
   if (!proposal) {
     return (
@@ -35,11 +40,6 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
       />
     );
   }
-
-  const listing = repositories.listings.get(proposal.listingId);
-  const other = profileRepository.getProfile(
-    proposal.fromProfileId === me.id ? proposal.toProfileId : proposal.fromProfileId,
-  );
   const price = agreement?.price ?? proposal.price;
   const when = agreement?.scheduledText ?? proposal.scheduledText;
   const description = agreement?.description || proposal.message || listing?.task?.description || '';

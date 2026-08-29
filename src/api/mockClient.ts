@@ -12,16 +12,22 @@ import type {
   VerificationKind,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
+import type { Report } from '@/domain/types';
 import { repositories } from '@/data/repositories';
 import { chatRepository } from '@/data/chatRepository';
 import { profileRepository } from '@/data/profileRepository';
+import { savedStore } from '@/data/savedStore';
+import { savedSearchStore } from '@/data/savedSearchStore';
+import { safetyStore } from '@/data/safetyStore';
 import type {
   ApiClient,
   ListConversationsParams,
   ListListingsParams,
   ReviseProposalPatch,
   RespondToProposalResult,
+  SavedSearchRecord,
   SendProposalInput,
+  SubmitReportInput,
   SubmitReviewInput,
   UpdateProfilePatch,
 } from './ApiClient';
@@ -186,5 +192,78 @@ export class MockApiClient implements ApiClient {
   async submitReview(input: SubmitReviewInput): Promise<Review> {
     await delay(200);
     return profileRepository.submitReview(input);
+  }
+
+  // --- saved listings & searches ---
+
+  async listSavedListingIds(): Promise<string[]> {
+    await delay(60);
+    return savedStore.list();
+  }
+
+  async toggleSavedListing(listingId: string): Promise<string[]> {
+    await delay(60);
+    savedStore.toggle(listingId);
+    return savedStore.list();
+  }
+
+  async listSavedSearches(): Promise<SavedSearchRecord[]> {
+    await delay(60);
+    return savedSearchStore.list();
+  }
+
+  async addSavedSearch(
+    input: Omit<SavedSearchRecord, 'id' | 'createdAt'>,
+  ): Promise<SavedSearchRecord> {
+    await delay(60);
+    return savedSearchStore.add(input.name, input.filter, input.sort);
+  }
+
+  async removeSavedSearch(id: string): Promise<void> {
+    await delay(60);
+    savedSearchStore.remove(id);
+  }
+
+  // --- safety ---
+
+  async listReports(): Promise<Report[]> {
+    await delay(120);
+    return safetyStore
+      .listReports()
+      .map((r) => ({ ...r, status: safetyStore.isResolved(r.id) ? 'RESOLVED' : 'OPEN' }));
+  }
+
+  async submitReport(input: SubmitReportInput): Promise<Report> {
+    await delay(150);
+    return safetyStore.submitReport({
+      targetType: input.targetType,
+      targetId: input.targetId,
+      reason: input.reason,
+      details: input.details,
+      byProfileId: profileRepository.currentUserId,
+    });
+  }
+
+  async resolveReport(reportId: string): Promise<Report> {
+    await delay(120);
+    safetyStore.resolveReport(reportId);
+    const r = safetyStore.listReports().find((x) => x.id === reportId)!;
+    return { ...r, status: 'RESOLVED' };
+  }
+
+  async listBlockedProfileIds(): Promise<string[]> {
+    await delay(60);
+    return safetyStore.listBlocked();
+  }
+
+  async toggleBlock(profileId: string): Promise<string[]> {
+    await delay(60);
+    safetyStore.toggleBlock(profileId);
+    return safetyStore.listBlocked();
+  }
+
+  async submitBusinessProfile(): Promise<void> {
+    await delay(200);
+    profileRepository.markVerified('BUSINESS');
   }
 }

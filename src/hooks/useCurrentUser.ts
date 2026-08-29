@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useSession } from '@/auth/session';
 import { useProfile } from '@/api/queries';
 
@@ -20,12 +21,15 @@ export function useCurrentUser(): CurrentUser {
   const { userId, status } = useSession();
   const { data, isLoading } = useProfile(userId ?? '');
 
-  return {
-    id: userId ?? '',
-    displayName: data?.displayName ?? '',
-    initials: data?.initials ?? 'N',
-    avatarUrl: data?.avatarUrl,
-    onboardedAt: data?.onboardedAt,
-    isLoading: status === 'loading' || (!!userId && isLoading),
-  };
+  return useMemo(
+    () => ({
+      id: userId ?? '',
+      displayName: data?.displayName ?? '',
+      initials: data?.initials ?? 'N',
+      avatarUrl: data?.avatarUrl,
+      onboardedAt: data?.onboardedAt,
+      isLoading: status === 'loading' || (!!userId && isLoading),
+    }),
+    [userId, status, isLoading, data?.displayName, data?.initials, data?.avatarUrl, data?.onboardedAt],
+  );
 }

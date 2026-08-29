@@ -4,9 +4,8 @@ import { useRouter } from 'expo-router';
 import type { ListingFilter, ListingSort, ListingType } from '@/domain/types';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
-import { categories, homeCategories } from '@/data/seed';
-import { useListings } from '@/api/queries';
-import { savedSearchStore } from '@/data/savedSearchStore';
+import { CATEGORIES as categories, HOME_CATEGORIES as homeCategories } from '@/domain/categories';
+import { useAddSavedSearch, useListings } from '@/api/queries';
 import { safePush } from '@/lib/nav';
 import { AppText } from '@/components/ui/Text';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -57,6 +56,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
 
   const { data, isLoading, isError, isFetching, refetch } = useListings(filter, sort);
   const results = data ?? [];
+  const addSearch = useAddSavedSearch();
 
   const activeFilterCount =
     (type !== 'ALL' ? 1 : 0) +
@@ -77,11 +77,11 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
   };
 
   const saveSearch = () => {
-    savedSearchStore.add(
-      searchName.trim() || query.trim() || 'Lagret søk',
+    addSearch.mutate({
+      name: searchName.trim() || query.trim() || 'Lagret søk',
       filter,
       sort,
-    );
+    });
     setSaveOpen(false);
     setSearchName('');
   };

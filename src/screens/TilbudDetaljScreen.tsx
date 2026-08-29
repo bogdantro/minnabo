@@ -5,9 +5,7 @@ import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatPrice } from '@/domain/price';
-import { profileRepository } from '@/data/profileRepository';
-import { chatRepository } from '@/data/chatRepository';
-import { useProposal, useRespondToProposal } from '@/api/queries';
+import { useProfile, useProposal, useReviseProposal, useRespondToProposal } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { DetailTopBar } from '@/components/TopBar';
@@ -27,6 +25,8 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
   const me = useCurrentUser();
   const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
   const respond = useRespondToProposal(proposal?.conversationId ?? '');
+  const revise = useReviseProposal();
+  const { data: from } = useProfile(proposal?.fromProfileId ?? '');
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionNote, setRevisionNote] = useState('');
 
@@ -40,7 +40,6 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
     );
   }
 
-  const from = profileRepository.getProfile(proposal.fromProfileId);
   const isRecipient = proposal.toProfileId === me.id;
   const canAct = isRecipient && (proposal.status === 'SENT' || proposal.status === 'REVISION_PENDING');
 
@@ -57,16 +56,10 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
     );
 
   const requestRevision = () => {
-    respond.mutate(
-      { proposalId, event: 'REQUEST_REVISION', actor: 'RECIPIENT' },
+    revise.mutate(
+      { proposalId, patch: { message: revisionNote.trim() || undefined } },
       {
         onSuccess: () => {
-          if (revisionNote.trim()) {
-            chatRepository.sendMessage(
-              proposal.conversationId,
-              `${nb.tilbud.revisionRequested}: ${revisionNote.trim()}`,
-            );
-          }
           setRevisionOpen(false);
           router.replace(`/chat/${proposal.conversationId}`);
         },
@@ -181,7 +174,7 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
         <Button
           label={nb.tilbud.sendRevisionRequest}
           onPress={requestRevision}
-          loading={respond.isPending}
+          loading={revise.isPending}
         />
       </BottomSheet>
     </SafeAreaView>

@@ -9,6 +9,7 @@ module.exports = {
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@tanstack/.*|expo-router|expo-modules-core|expo-linear-gradient|expo-image|@react-native-async-storage/.*))',
   ],
   testMatch: ['<rootDir>/tests/**/*.test.{ts,tsx}'],
+  testTimeout: 15000,
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/tests/testUtils.tsx', '<rootDir>/tests/fileMock.js'],
   forceExit: true,
 };

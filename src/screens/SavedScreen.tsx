@@ -1,12 +1,18 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { FlatList, View, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueries } from '@tanstack/react-query';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
-import { savedStore } from '@/data/savedStore';
-import { savedSearchStore, useSavedSearches, type SavedSearch } from '@/data/savedSearchStore';
-import { repositories } from '@/data/repositories';
-import { categories } from '@/data/seed';
+import {
+  listingKeys,
+  useRemoveSavedSearch,
+  useSavedListingIds,
+  useSavedSearches,
+} from '@/api/queries';
+import { apiClient } from '@/api/client';
+import type { SavedSearchRecord } from '@/api/ApiClient';
+import { categoryBySlug } from '@/domain/categories';
 import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -22,11 +28,17 @@ type Tab = 'listings' | 'searches';
 export function SavedScreen() {
   const [tab, setTab] = useState<Tab>('listings');
 
-  const savedIds = useSyncExternalStore(savedStore.subscribe, savedStore.list, savedStore.list);
-  const searches = useSavedSearches();
+  const { data: savedIds = [] } = useSavedListingIds();
+  const { data: searches = [] } = useSavedSearches();
 
-  const listings = savedIds
-    .map((id) => repositories.listings.get(id))
+  const listingQueries = useQueries({
+    queries: savedIds.map((id) => ({
+      queryKey: listingKeys.detail(id),
+      queryFn: () => apiClient.getListing(id),
+    })),
+  });
+  const listings = listingQueries
+    .map((q) => q.data)
     .filter((l): l is NonNullable<typeof l> => !!l);
 
   return (
@@ -71,20 +83,18 @@ export function SavedScreen() {
   );
 }
 
-function summarize(search: SavedSearch): string[] {
+function summarize(search: SavedSearchRecord): string[] {
   const parts: string[] = [];
   if (search.filter.type === 'TASK_REQUEST') parts.push(nb.search.typeTask);
   else if (search.filter.type === 'SERVICE_OFFER') parts.push(nb.search.typeOffer);
-  if (search.filter.categorySlug) {
-    const cat = categories.find((c) => c.slug === search.filter.categorySlug);
-    if (cat) parts.push(cat.label);
-  }
+  if (search.filter.categorySlug) parts.push(categoryBySlug(search.filter.categorySlug).label);
   if (search.filter.maxDistanceKm) parts.push(`≤ ${search.filter.maxDistanceKm} km`);
   if (search.filter.verifiedOnly) parts.push(nb.search.filterVerified);
   return parts;
 }
 
-function SavedSearchCard({ search }: { search: SavedSearch }) {
+function SavedSearchCard({ search }: { search: SavedSearchRecord }) {
+  const remove = useRemoveSavedSearch();
   const tags = summarize(search);
   return (
     <Pressable
@@ -104,7 +114,7 @@ function SavedSearchCard({ search }: { search: SavedSearch }) {
           accessibilityRole="button"
           accessibilityLabel={nb.savedSearch.remove}
           hitSlop={hitSlop}
-          onPress={() => savedSearchStore.remove(search.id)}
+          onPress={() => remove.mutate(search.id)}
         >
           <Icon name="trash-2" size={16} color="navyMuted" />
         </Pressable>

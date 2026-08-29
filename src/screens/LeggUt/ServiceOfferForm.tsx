@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { categories } from '@/data/seed';
+import { CATEGORIES as categories } from '@/domain/categories';
 import { draftStore } from '@/data/draftStore';
 import { safePush } from '@/lib/nav';
 import { Wizard, type WizardStep } from '@/components/Wizard';

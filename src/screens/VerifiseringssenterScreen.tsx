@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import type { VerificationKind } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { profileRepository } from '@/data/profileRepository';
+import { useSession } from '@/auth/session';
 import { useProfile, useVerify } from '@/api/queries';
 import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
@@ -31,8 +31,8 @@ const ROWS: Row[] = [
 
 export function VerifiseringssenterScreen() {
   const router = useRouter();
-  const id = profileRepository.currentUserId;
-  const { data: profile } = useProfile(id);
+  const { userId } = useSession();
+  const { data: profile } = useProfile(userId ?? '');
   const verify = useVerify();
 
   const verifiedCount = (profile?.verifications ?? []).filter((v) => v.verified).length;

@@ -2,7 +2,7 @@ import { View, StyleSheet } from 'react-native';
 import type { Review } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { profileRepository } from '@/data/profileRepository';
+import { useProfile } from '@/api/queries';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 
@@ -27,24 +27,28 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
 
   return (
     <View style={styles.list}>
-      {reviews.map((r) => {
-        const author = profileRepository.getProfile(r.fromProfileId);
-        return (
-          <View key={r.id} style={styles.item}>
-            <View style={styles.itemHead}>
-              <AppText variant="meta" weight="bold">
-                {author?.displayName ?? 'Bruker'}
-              </AppText>
-              <Stars value={r.rating} />
-            </View>
-            {r.comment ? (
-              <AppText variant="body" color="navyMuted">
-                {r.comment}
-              </AppText>
-            ) : null}
-          </View>
-        );
-      })}
+      {reviews.map((r) => (
+        <ReviewItem key={r.id} review={r} />
+      ))}
+    </View>
+  );
+}
+
+function ReviewItem({ review: r }: { review: Review }) {
+  const { data: author } = useProfile(r.fromProfileId);
+  return (
+    <View style={styles.item}>
+      <View style={styles.itemHead}>
+        <AppText variant="meta" weight="bold">
+          {author?.displayName ?? 'Bruker'}
+        </AppText>
+        <Stars value={r.rating} />
+      </View>
+      {r.comment ? (
+        <AppText variant="body" color="navyMuted">
+          {r.comment}
+        </AppText>
+      ) : null}
     </View>
   );
 }

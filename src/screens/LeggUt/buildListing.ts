@@ -1,10 +1,21 @@
-import type { Listing, ListingType, PriceMode } from '@/domain/types';
+import type { Listing, ListingType, PriceMode, PublicProfile } from '@/domain/types';
 import { nok } from '@/domain/price';
-import { categories, profiles } from '@/data/seed';
+import { categoryBySlug } from '@/domain/categories';
 import { formatFriendlyDate } from '@/lib/calendar';
 
-const catBySlug = (slug: string) =>
-  categories.find((c) => c.slug === slug) ?? categories[categories.length - 1];
+const catBySlug = categoryBySlug;
+
+// The owner is assigned server-side from the auth session on createListing;
+// this placeholder only satisfies the local `Listing` shape for the preview.
+const placeholderOwner: PublicProfile = {
+  id: 'me',
+  displayName: 'Deg',
+  initials: 'D',
+  memberSince: '',
+  location: { municipality: '', place: '' },
+  isBusiness: false,
+  verifications: [],
+};
 
 export type TaskForm = {
   categorySlug: string;
@@ -87,7 +98,7 @@ export function buildTaskListing(form: TaskForm): Listing {
       distanceKm: 0,
     },
     images: toImages(form.images),
-    owner: profiles.mb,
+    owner: placeholderOwner,
     createdAt: new Date().toISOString(),
     status: 'PUBLISHED',
     task: {
@@ -124,7 +135,7 @@ export function buildOfferListing(form: OfferForm): Listing {
       distanceKm: 0,
     },
     images: toImages(form.images),
-    owner: profiles.mb,
+    owner: placeholderOwner,
     createdAt: new Date().toISOString(),
     status: 'ACTIVE',
     offer: {

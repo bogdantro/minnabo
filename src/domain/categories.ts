@@ -23,3 +23,12 @@ const FALLBACK = CATEGORIES[CATEGORIES.length - 1];
 export function categoryBySlug(slug: string): Category {
   return CATEGORIES.find((c) => c.slug === slug) ?? FALLBACK;
 }
+
+/** The 5 chips on the Oppdrag front page (homepage.png). */
+export const HOME_CATEGORIES: Category[] = [
+  { id: 'c-alle', slug: 'alle', label: 'Alle', icon: 'grid' },
+  categoryBySlug('hage'),
+  { id: 'c-renhold-home', slug: 'renhold', label: 'Renhold', icon: 'droplet' },
+  { id: 'c-transport-home', slug: 'transport', label: 'Transport', icon: 'truck' },
+  categoryBySlug('montering'),
+];

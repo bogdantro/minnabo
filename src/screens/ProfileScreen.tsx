@@ -2,9 +2,9 @@ import { ScrollView, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { categories } from '@/data/seed';
+import { CATEGORIES as categories } from '@/domain/categories';
 import { useProfile, useReviews } from '@/api/queries';
-import { profileRepository } from '@/data/profileRepository';
+import { useSession } from '@/auth/session';
 import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
 import { AppText } from '@/components/ui/Text';
@@ -21,8 +21,9 @@ import { FallbackScreen } from '@/components/FallbackScreen';
 import { ReviewList } from '@/components/ReviewList';
 
 export function ProfileScreen({ profileId }: { profileId?: string }) {
-  const id = profileId ?? profileRepository.currentUserId;
-  const isSelf = id === profileRepository.currentUserId;
+  const myId = useSession().userId ?? '';
+  const id = profileId ?? myId;
+  const isSelf = id === myId;
   const { data: profile, isLoading, isError, refetch } = useProfile(id);
   const { data: reviews } = useReviews(id);
 

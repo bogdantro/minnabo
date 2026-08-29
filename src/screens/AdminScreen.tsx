@@ -1,15 +1,13 @@
-import { useSyncExternalStore, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { Report } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatPrice, nok } from '@/domain/price';
 import { formatRelative } from '@/lib/datetime';
-import { safetyStore } from '@/data/safetyStore';
-import { repositories } from '@/data/repositories';
-import { profiles } from '@/data/seed';
 import { documentedDonations } from '@/data/seedCommunity';
-import { profileRepository } from '@/data/profileRepository';
+import { useListings, useProfile, useReports, useResolveReport } from '@/api/queries';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -17,21 +15,19 @@ import { Icon } from '@/components/ui/Icon';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Button } from '@/components/ui/Button';
 
-type Tab = 'reports' | 'listings' | 'users' | 'donations';
+type Tab = 'reports' | 'listings' | 'donations';
 
 export function AdminScreen() {
   const [tab, setTab] = useState<Tab>('reports');
-  useSyncExternalStore(safetyStore.subscribe, safetyStore.version, safetyStore.version);
-  const reports = safetyStore.listReports();
+  const { data: reports = [] } = useReports();
+  const { data: listings = [] } = useListings({});
+  const resolve = useResolveReport();
 
-  const listings = repositories.listings.list();
-  const users = Object.values(profiles);
-
+  const openCount = reports.filter((r) => r.status !== 'RESOLVED').length;
   const stats = [
-    { label: nb.admin.statTotalUsers, value: String(users.length) },
     { label: nb.admin.statActiveListings, value: String(listings.length) },
-    { label: nb.admin.statOpenReports, value: String(safetyStore.openReportCount()) },
-    { label: nb.admin.statCompleted, value: '37' },
+    { label: nb.admin.statOpenReports, value: String(openCount) },
+    { label: nb.admin.statCompleted, value: String(listings.filter((l) => l.status === 'COMPLETED' || l.status === 'REVIEWED').length) },
   ];
 
   return (
@@ -61,7 +57,6 @@ export function AdminScreen() {
             [
               ['reports', nb.admin.reports],
               ['listings', nb.admin.listings],
-              ['users', nb.admin.users],
               ['donations', nb.admin.donations],
             ] as [Tab, string][]
           ).map(([value, label]) => (
@@ -85,46 +80,19 @@ export function AdminScreen() {
               {nb.admin.noReports}
             </AppText>
           ) : (
-            reports.map((r) => {
-              const done = safetyStore.isResolved(r.id);
-              const by = profileRepository.getProfile(r.byProfileId);
-              return (
-                <View key={r.id} style={styles.card}>
-                  <View style={styles.cardHead}>
-                    <StatusPill label={r.targetType} tone="neutral" />
-                    <AppText variant="meta" color="navyMuted">
-                      {formatRelative(r.createdAt)}
-                    </AppText>
-                  </View>
-                  <AppText variant="cardTitle" weight="bold">
-                    {r.reason}
-                  </AppText>
-                  {r.details ? (
-                    <AppText variant="meta" color="navyMuted">
-                      {r.details}
-                    </AppText>
-                  ) : null}
-                  <AppText variant="meta" color="navyMuted">
-                    Rapportert av {by?.displayName ?? r.byProfileId}
-                  </AppText>
-                  {done ? (
-                    <StatusPill label={nb.admin.resolved} tone="lime" soft />
-                  ) : (
-                    <Button
-                      label={nb.admin.resolve}
-                      variant="secondary"
-                      onPress={() => safetyStore.resolveReport(r.id)}
-                      style={styles.cardBtn}
-                    />
-                  )}
-                </View>
-              );
-            })
+            reports.map((r) => (
+              <ReportCard
+                key={r.id}
+                report={r}
+                pending={resolve.isPending}
+                onResolve={() => resolve.mutate(r.id)}
+              />
+            ))
           )
         ) : null}
 
         {tab === 'listings'
-          ? listings.slice(0, 12).map((l) => (
+          ? listings.slice(0, 20).map((l) => (
               <View key={l.id} style={styles.rowCard}>
                 <Icon name={l.type === 'TASK_REQUEST' ? 'clipboard' : 'user'} size={16} color="cyan" />
                 <View style={styles.rowBody}>
@@ -135,26 +103,11 @@ export function AdminScreen() {
                     {l.owner.displayName} · {l.status}
                   </AppText>
                 </View>
-                <StatusPill label={l.type === 'TASK_REQUEST' ? nb.badge.needsHelp : nb.badge.offersHelp} tone={l.type === 'TASK_REQUEST' ? 'lime' : 'cyan'} soft />
-              </View>
-            ))
-          : null}
-
-        {tab === 'users'
-          ? users.map((u) => (
-              <View key={u.id} style={styles.rowCard}>
-                <Icon name={u.isBusiness ? 'home' : 'user'} size={16} color="navy" />
-                <View style={styles.rowBody}>
-                  <AppText variant="meta" weight="bold">
-                    {u.displayName}
-                  </AppText>
-                  <AppText variant="meta" color="navyMuted">
-                    {u.location.place} · medlem siden {u.memberSince}
-                  </AppText>
-                </View>
-                {u.verifications.some((v) => v.verified) ? (
-                  <Icon name="shield" size={15} color="shieldGreen" />
-                ) : null}
+                <StatusPill
+                  label={l.type === 'TASK_REQUEST' ? nb.badge.needsHelp : nb.badge.offersHelp}
+                  tone={l.type === 'TASK_REQUEST' ? 'lime' : 'cyan'}
+                  soft
+                />
               </View>
             ))
           : null}
@@ -177,6 +130,51 @@ export function AdminScreen() {
           : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ReportCard({
+  report: r,
+  pending,
+  onResolve,
+}: {
+  report: Report;
+  pending: boolean;
+  onResolve: () => void;
+}) {
+  const { data: by } = useProfile(r.byProfileId);
+  const done = r.status === 'RESOLVED';
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHead}>
+        <StatusPill label={r.targetType} tone="neutral" />
+        <AppText variant="meta" color="navyMuted">
+          {formatRelative(r.createdAt)}
+        </AppText>
+      </View>
+      <AppText variant="cardTitle" weight="bold">
+        {r.reason}
+      </AppText>
+      {r.details ? (
+        <AppText variant="meta" color="navyMuted">
+          {r.details}
+        </AppText>
+      ) : null}
+      <AppText variant="meta" color="navyMuted">
+        Rapportert av {by?.displayName ?? r.byProfileId}
+      </AppText>
+      {done ? (
+        <StatusPill label={nb.admin.resolved} tone="lime" soft />
+      ) : (
+        <Button
+          label={nb.admin.resolve}
+          variant="secondary"
+          loading={pending}
+          onPress={onResolve}
+          style={styles.cardBtn}
+        />
+      )}
+    </View>
   );
 }
 

@@ -3,7 +3,7 @@ import type { Proposal } from '@/domain/types';
 import { formatPrice } from '@/domain/price';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { profileRepository } from '@/data/profileRepository';
+import { useProfile } from '@/api/queries';
 import { AppText } from './ui/Text';
 import { Avatar } from './ui/Avatar';
 import { Icon } from './ui/Icon';
@@ -31,7 +31,7 @@ export function ProposalCard({
   onPress: () => void;
   cheapest?: boolean;
 }) {
-  const from = profileRepository.getProfile(proposal.fromProfileId);
+  const { data: from } = useProfile(proposal.fromProfileId);
   const pill = statusPill(proposal);
 
   return (

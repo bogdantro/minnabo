@@ -3,7 +3,7 @@ import type { Listing } from '@/domain/types';
 import { formatPrice, formatFromPrice } from '@/domain/price';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
-import { useIsSaved } from '@/data/savedStore';
+import { useIsSaved } from '@/api/queries';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 import { StatusPill } from './ui/StatusPill';

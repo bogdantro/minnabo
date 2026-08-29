@@ -4,9 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { useSubmitReview } from '@/api/queries';
-import { chatRepository } from '@/data/chatRepository';
-import { profileRepository } from '@/data/profileRepository';
+import { useProposal, useSubmitReview } from '@/api/queries';
+import { useSession } from '@/auth/session';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -21,8 +20,8 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
   const [comment, setComment] = useState('');
   const [done, setDone] = useState(false);
 
-  const proposal = chatRepository.getProposal(proposalId);
-  const me = profileRepository.currentUserId;
+  const { data: proposal } = useProposal(proposalId);
+  const me = useSession().userId ?? '';
   const counterpartId =
     proposal?.fromProfileId === me ? proposal?.toProfileId : proposal?.fromProfileId;
 

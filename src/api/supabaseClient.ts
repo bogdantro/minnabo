@@ -9,6 +9,7 @@ import type {
   Message,
   Proposal,
   PublicProfile,
+  Report,
   Review,
   VerificationKind,
 } from '@/domain/types';
@@ -19,7 +20,9 @@ import type {
   ListListingsParams,
   ReviseProposalPatch,
   RespondToProposalResult,
+  SavedSearchRecord,
   SendProposalInput,
+  SubmitReportInput,
   SubmitReviewInput,
   UpdateProfilePatch,
 } from './ApiClient';
@@ -468,5 +471,192 @@ export class SupabaseApiClient implements ApiClient {
     });
     if (error) fail(error.message);
     return toReview(data as unknown as ReviewRow);
+  }
+
+  // --- saved listings & searches ---
+
+  async listSavedListingIds(): Promise<string[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('saved_listings')
+      .select('listing_id')
+      .eq('profile_id', me);
+    if (error) fail(error.message);
+    return (data as { listing_id: string }[]).map((r) => r.listing_id);
+  }
+
+  async toggleSavedListing(listingId: string): Promise<string[]> {
+    const me = await myId();
+    const { data: existing } = await supabase
+      .from('saved_listings')
+      .select('listing_id')
+      .eq('profile_id', me)
+      .eq('listing_id', listingId)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from('saved_listings').delete().eq('profile_id', me).eq('listing_id', listingId);
+    } else {
+      await supabase.from('saved_listings').insert({ profile_id: me, listing_id: listingId });
+    }
+    return this.listSavedListingIds();
+  }
+
+  async listSavedSearches(): Promise<SavedSearchRecord[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('saved_searches')
+      .select('*')
+      .eq('profile_id', me)
+      .order('created_at', { ascending: false });
+    if (error) fail(error.message);
+    return (data as { id: string; name: string; filter: unknown; sort: string; created_at: string }[]).map(
+      (r) => ({
+        id: r.id,
+        name: r.name,
+        filter: r.filter as SavedSearchRecord['filter'],
+        sort: r.sort as SavedSearchRecord['sort'],
+        createdAt: r.created_at,
+      }),
+    );
+  }
+
+  async addSavedSearch(
+    input: Omit<SavedSearchRecord, 'id' | 'createdAt'>,
+  ): Promise<SavedSearchRecord> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('saved_searches')
+      .insert({ profile_id: me, name: input.name, filter: input.filter, sort: input.sort })
+      .select('*')
+      .single();
+    if (error) fail(error.message);
+    const r = data as { id: string; name: string; filter: unknown; sort: string; created_at: string };
+    return {
+      id: r.id,
+      name: r.name,
+      filter: r.filter as SavedSearchRecord['filter'],
+      sort: r.sort as SavedSearchRecord['sort'],
+      createdAt: r.created_at,
+    };
+  }
+
+  async removeSavedSearch(id: string): Promise<void> {
+    const { error } = await supabase.from('saved_searches').delete().eq('id', id);
+    if (error) fail(error.message);
+  }
+
+  // --- safety ---
+
+  async listReports(): Promise<Report[]> {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) fail(error.message);
+    return (data as {
+      id: string;
+      target_type: Report['targetType'];
+      target_id: string;
+      reason: string;
+      details: string | null;
+      by_profile_id: string;
+      created_at: string;
+      status: 'OPEN' | 'RESOLVED';
+    }[]).map((r) => ({
+      id: r.id,
+      targetType: r.target_type,
+      targetId: r.target_id,
+      reason: r.reason,
+      details: r.details ?? undefined,
+      byProfileId: r.by_profile_id,
+      createdAt: r.created_at,
+      status: r.status,
+    }));
+  }
+
+  async submitReport(input: SubmitReportInput): Promise<Report> {
+    const { data, error } = await supabase.rpc('submit_report', {
+      p_target_type: input.targetType,
+      p_target_id: input.targetId,
+      p_reason: input.reason,
+      p_details: input.details ?? '',
+    });
+    if (error) fail(error.message);
+    const r = data as {
+      id: string;
+      target_type: Report['targetType'];
+      target_id: string;
+      reason: string;
+      details: string | null;
+      by_profile_id: string;
+      created_at: string;
+      status: 'OPEN' | 'RESOLVED';
+    };
+    return {
+      id: r.id,
+      targetType: r.target_type,
+      targetId: r.target_id,
+      reason: r.reason,
+      details: r.details ?? undefined,
+      byProfileId: r.by_profile_id,
+      createdAt: r.created_at,
+      status: r.status,
+    };
+  }
+
+  async resolveReport(reportId: string): Promise<Report> {
+    const { error } = await supabase.rpc('resolve_report', { p_report_id: reportId });
+    if (error) fail(error.message);
+    const all = await this.listReports();
+    return all.find((r) => r.id === reportId)!;
+  }
+
+  async listBlockedProfileIds(): Promise<string[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('blocked_profile_id')
+      .eq('by_profile_id', me);
+    if (error) fail(error.message);
+    return (data as { blocked_profile_id: string }[]).map((r) => r.blocked_profile_id);
+  }
+
+  async toggleBlock(profileId: string): Promise<string[]> {
+    const me = await myId();
+    const { data: existing } = await supabase
+      .from('blocks')
+      .select('blocked_profile_id')
+      .eq('by_profile_id', me)
+      .eq('blocked_profile_id', profileId)
+      .maybeSingle();
+    if (existing) {
+      await supabase
+        .from('blocks')
+        .delete()
+        .eq('by_profile_id', me)
+        .eq('blocked_profile_id', profileId);
+    } else {
+      await supabase.from('blocks').insert({ by_profile_id: me, blocked_profile_id: profileId });
+    }
+    return this.listBlockedProfileIds();
+  }
+
+  async submitBusinessProfile(input: {
+    orgNr: string;
+    companyName: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+    categorySlugs: string[];
+  }): Promise<void> {
+    const { error } = await supabase.rpc('submit_business_profile', {
+      p_org_nr: input.orgNr,
+      p_company_name: input.companyName,
+      p_contact_person: input.contactPerson,
+      p_email: input.email,
+      p_phone: input.phone,
+      p_category_slugs: input.categorySlugs,
+    });
+    if (error) fail(error.message);
   }
 }

@@ -10,10 +10,27 @@ import type {
   Message,
   Proposal,
   PublicProfile,
+  Report,
+  ReportTargetType,
   Review,
   VerificationKind,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
+
+export type SavedSearchRecord = {
+  id: string;
+  name: string;
+  filter: ListingFilter;
+  sort: ListingSort;
+  createdAt: string;
+};
+
+export type SubmitReportInput = {
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: string;
+  details?: string;
+};
 
 export type ListListingsParams = {
   filter?: ListingFilter;
@@ -112,4 +129,26 @@ export interface ApiClient {
     byProfileId: string,
   ): Promise<CompletionConfirmation[]>;
   submitReview(input: SubmitReviewInput): Promise<Review>;
+
+  // saved listings & searches
+  listSavedListingIds(): Promise<string[]>;
+  toggleSavedListing(listingId: string): Promise<string[]>;
+  listSavedSearches(): Promise<SavedSearchRecord[]>;
+  addSavedSearch(input: Omit<SavedSearchRecord, 'id' | 'createdAt'>): Promise<SavedSearchRecord>;
+  removeSavedSearch(id: string): Promise<void>;
+
+  // safety
+  listReports(): Promise<Report[]>;
+  submitReport(input: SubmitReportInput): Promise<Report>;
+  resolveReport(reportId: string): Promise<Report>;
+  listBlockedProfileIds(): Promise<string[]>;
+  toggleBlock(profileId: string): Promise<string[]>;
+  submitBusinessProfile(input: {
+    orgNr: string;
+    companyName: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+    categorySlugs: string[];
+  }): Promise<void>;
 }

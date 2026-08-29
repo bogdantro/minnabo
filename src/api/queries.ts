@@ -277,3 +277,89 @@ export function useSubmitReview() {
     },
   });
 }
+
+// --- saved listings & searches ---------------------------------------------
+
+export const savedKeys = {
+  listings: ['saved', 'listings'] as const,
+  searches: ['saved', 'searches'] as const,
+};
+
+export function useSavedListingIds() {
+  return useQuery({ queryKey: savedKeys.listings, queryFn: () => apiClient.listSavedListingIds() });
+}
+
+export function useToggleSavedListing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (listingId: string) => apiClient.toggleSavedListing(listingId),
+    onSuccess: (ids) => qc.setQueryData(savedKeys.listings, ids),
+  });
+}
+
+/** [isSaved, toggle] for one listing — drop-in for the old savedStore hook. */
+export function useIsSaved(listingId: string): [boolean, () => void] {
+  const { data } = useSavedListingIds();
+  const toggle = useToggleSavedListing();
+  const isSaved = (data ?? []).includes(listingId);
+  return [isSaved, () => toggle.mutate(listingId)];
+}
+
+export function useSavedSearches() {
+  return useQuery({ queryKey: savedKeys.searches, queryFn: () => apiClient.listSavedSearches() });
+}
+
+export function useAddSavedSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof apiClient.addSavedSearch>[0]) =>
+      apiClient.addSavedSearch(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: savedKeys.searches }),
+  });
+}
+
+export function useRemoveSavedSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.removeSavedSearch(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: savedKeys.searches }),
+  });
+}
+
+// --- safety ---------------------------------------------------------------
+
+export const safetyKeys = {
+  reports: ['reports'] as const,
+  blocked: ['blocked'] as const,
+};
+
+export function useReports() {
+  return useQuery({ queryKey: safetyKeys.reports, queryFn: () => apiClient.listReports() });
+}
+
+export function useResolveReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.resolveReport(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: safetyKeys.reports }),
+  });
+}
+
+export function useSubmitReport() {
+  return useMutation({
+    mutationFn: (input: Parameters<typeof apiClient.submitReport>[0]) =>
+      apiClient.submitReport(input),
+  });
+}
+
+export function useBlockedProfileIds() {
+  return useQuery({ queryKey: safetyKeys.blocked, queryFn: () => apiClient.listBlockedProfileIds() });
+}
+
+export function useToggleBlock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => apiClient.toggleBlock(profileId),
+    onSuccess: (ids) => qc.setQueryData(safetyKeys.blocked, ids),
+  });
+}

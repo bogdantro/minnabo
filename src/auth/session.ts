@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -35,7 +35,10 @@ export function useSession(): SessionState {
     };
   }, []);
 
-  return { session, userId: session?.user?.id ?? null, status };
+  return useMemo(
+    () => ({ session, userId: session?.user?.id ?? null, status }),
+    [session, status],
+  );
 }
 
 /** Sign out everywhere. */

@@ -5,8 +5,7 @@ import { useRouter } from 'expo-router';
 import type { Proposal } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { repositories } from '@/data/repositories';
-import { useReceivedProposals } from '@/api/queries';
+import { useListing, useReceivedProposals } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { DetailTopBar } from '@/components/TopBar';
@@ -28,7 +27,6 @@ export function MottatteTilbudScreen() {
     }
     return [...byListing.entries()].map(([listingId, proposals]) => ({
       listingId,
-      listing: repositories.listings.get(listingId),
       proposals: [...proposals].sort((a, b) => a.price.amountMinor - b.price.amountMinor),
     }));
   }, [data]);
@@ -53,42 +51,9 @@ export function MottatteTilbudScreen() {
         <ScreenTitle>{nb.tilbud.title}</ScreenTitle>
 
         {status === 'ready' ? (
-          groups.map((g) => {
-            const cheapestId = g.proposals[0]?.id;
-            return (
-              <View key={g.listingId} style={styles.group}>
-                <View style={styles.groupHead}>
-                  <View style={styles.groupTitle}>
-                    <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
-                      {g.listing?.title ?? 'Oppdrag'}
-                    </AppText>
-                    <AppText variant="meta" color="navyMuted">
-                      {g.proposals.length} {nb.tilbud.compareSub}
-                    </AppText>
-                  </View>
-                  {g.proposals.length > 1 ? (
-                    <AppText
-                      variant="meta"
-                      weight="bold"
-                      color="cyan"
-                      onPress={() => safePush(`/tilbud/sammenlign/${g.listingId}`)}
-                    >
-                      {nb.tilbud.compareTitle} ›
-                    </AppText>
-                  ) : null}
-                </View>
-
-                {g.proposals.map((p) => (
-                  <ProposalCard
-                    key={p.id}
-                    proposal={p}
-                    cheapest={g.proposals.length > 1 && p.id === cheapestId}
-                    onPress={() => safePush(`/tilbud/${p.id}`)}
-                  />
-                ))}
-              </View>
-            );
-          })
+          groups.map((g) => (
+            <ProposalGroup key={g.listingId} listingId={g.listingId} proposals={g.proposals} />
+          ))
         ) : (
           <ScreenState status={status} onRetry={() => refetch()} emptyText={nb.tilbud.empty} />
         )}
@@ -101,6 +66,44 @@ export function MottatteTilbudScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ProposalGroup({ listingId, proposals }: { listingId: string; proposals: Proposal[] }) {
+  const { data: listing } = useListing(listingId);
+  const cheapestId = proposals[0]?.id;
+  return (
+    <View style={styles.group}>
+      <View style={styles.groupHead}>
+        <View style={styles.groupTitle}>
+          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
+            {listing?.title ?? 'Oppdrag'}
+          </AppText>
+          <AppText variant="meta" color="navyMuted">
+            {proposals.length} {nb.tilbud.compareSub}
+          </AppText>
+        </View>
+        {proposals.length > 1 ? (
+          <AppText
+            variant="meta"
+            weight="bold"
+            color="cyan"
+            onPress={() => safePush(`/tilbud/sammenlign/${listingId}`)}
+          >
+            {nb.tilbud.compareTitle} ›
+          </AppText>
+        ) : null}
+      </View>
+
+      {proposals.map((p) => (
+        <ProposalCard
+          key={p.id}
+          proposal={p}
+          cheapest={proposals.length > 1 && p.id === cheapestId}
+          onPress={() => safePush(`/tilbud/${p.id}`)}
+        />
+      ))}
+    </View>
   );
 }
 

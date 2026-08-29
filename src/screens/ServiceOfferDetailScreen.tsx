@@ -2,7 +2,7 @@ import { ScrollView, View, StyleSheet } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { useIsSaved } from '@/data/savedStore';
+import { useIsSaved } from '@/api/queries';
 import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
 import { Gallery } from '@/components/Gallery';

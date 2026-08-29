@@ -3,7 +3,7 @@ import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
 import type { Listing, PublicProfile } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { homeCategories } from '@/data/seed';
+import { HOME_CATEGORIES as homeCategories } from '@/domain/categories';
 import { useListings } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
