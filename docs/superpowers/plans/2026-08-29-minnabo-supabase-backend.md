@@ -2,6 +2,21 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+## Status (2026-08-29)
+
+All code for Tasks 1–12 is written, committed to `main`, typechecks, and
+passes the full Jest suite (106 tests); the iOS bundle exports. What still
+needs a human with the project credentials in `.env`:
+
+- `supabase link` + `npm run db:push` (apply the four migrations)
+- `npm run db:types` (regenerate `src/lib/database.types.ts`; then re-add the
+  `<Database>` generic in `src/lib/supabase.ts`)
+- `psql … supabase/seed_static.sql` + `npm run seed:demo`
+- `npx supabase functions deploy delete-account`
+- `npm run test:backend` (the live RLS/RPC integration check)
+
+See `BACKEND.md` for the exact commands.
+
 **Goal:** Replace MinNabo's in-memory mock data layer with a real Supabase backend so every function (auth, profiles, verification, listings, search, saved items, proposals, agreements, chat, completion, reviews, reports, blocks, notifications, image uploads) persists server-side and works end-to-end across two accounts.
 
 **Architecture:** Supabase (Postgres + Auth + Storage + Realtime + RLS). The app keeps the `apiClient` method surface and the `queries.ts` React Query hook signatures unchanged — a new `SupabaseApiClient` implements the same interface, and `MockApiClient` is retained for Jest. Reads use RLS-guarded table access; rules-heavy mutations (proposal state machine, agreement snapshot, completion, reviews, reports) are Postgres `SECURITY DEFINER` RPC functions. Realtime subscriptions invalidate React Query keys.

@@ -7,14 +7,19 @@ mellom partene.
 
 > Småjobber nær deg. Enkelt, trygt og lokalt.
 
-Dette repoet er **Fase 1 – MVP**, bygget frontend-først mot et mock-datalag. Alt kjører
-uten server; brukergenererte data lagres i minne (og `AsyncStorage` der det gir mening).
+**Fase 2** kobler appen til et ekte **Supabase**-backend (Postgres + Auth +
+Storage + Realtime + RLS). Alt – innlogging, profiler, oppføringer, tilbud,
+chat, fullføring, vurderinger, rapporter, bilder – lagres nå server-side.
+Testene kjører fortsatt mot et in-memory mock-lag (`MockApiClient`).
+
+Backend-oppsett, migrasjoner, seeding og QA-sjekkliste: **[`BACKEND.md`](BACKEND.md)**.
 
 ## Kom i gang
 
 ```bash
 npm install
-npm start          # åpner Expo – trykk i (iOS), a (Android) eller w (web)
+cp .env.example .env   # fyll inn Supabase-nøkler – se BACKEND.md
+npm start              # åpner Expo – trykk i (iOS), a (Android) eller w (web)
 ```
 
 Krever Node 20+. Enklest: installer **Expo Go** på telefonen og skann QR-koden.
