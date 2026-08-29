@@ -1,6 +1,44 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { cleanup } from '@testing-library/react-native';
 
+// The app must never hit the network in tests — it always uses MockApiClient.
+// These mocks keep any accidental import of the supabase client harmless.
+jest.mock('@/lib/env', () => ({
+  ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key' },
+}));
+
+jest.mock('@/lib/supabase', () => {
+  const channel = {
+    on: jest.fn().mockReturnThis(),
+    subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
+    track: jest.fn().mockResolvedValue(undefined),
+    presenceState: jest.fn().mockReturnValue({}),
+    unsubscribe: jest.fn(),
+  };
+  return {
+    supabase: {
+      auth: {
+        getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        onAuthStateChange: jest
+          .fn()
+          .mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } }),
+        signInWithOtp: jest.fn().mockResolvedValue({ data: {}, error: null }),
+        verifyOtp: jest.fn().mockResolvedValue({ data: { session: {} }, error: null }),
+        signInWithPassword: jest.fn().mockResolvedValue({ data: { session: {} }, error: null }),
+        signOut: jest.fn().mockResolvedValue({ error: null }),
+        startAutoRefresh: jest.fn(),
+        stopAutoRefresh: jest.fn(),
+      },
+      from: jest.fn(),
+      rpc: jest.fn(),
+      channel: jest.fn().mockReturnValue(channel),
+      removeChannel: jest.fn(),
+      storage: { from: jest.fn() },
+      functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
+    },
+  };
+});
+
 // Unmount any tree the previous test left behind (async render skips
 // RNTL's automatic afterEach cleanup in some cases).
 afterEach(async () => {
