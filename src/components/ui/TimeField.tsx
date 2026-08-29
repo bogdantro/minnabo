@@ -1,26 +1,32 @@
 import { useEffect, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import { pad2 } from '@/lib/calendar';
 import { AppText } from './Text';
 import { Icon } from './Icon';
 import { Button } from './Button';
 import { BottomSheet } from './BottomSheet';
+import { WheelPicker, WHEEL_ITEM_HEIGHT, WHEEL_VISIBLE, WHEEL_PAD } from './WheelPicker';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = [0, 15, 30, 45];
-const PRESETS = ['08:00', '12:00', '15:00', '18:00'];
+const MINUTE_STEP = 5;
+const MINUTES = Array.from({ length: 60 / MINUTE_STEP }, (_, i) => i * MINUTE_STEP);
+
+const nearestMinute = (m: number) => {
+  const snapped = Math.round(m / MINUTE_STEP) * MINUTE_STEP;
+  return snapped >= 60 ? 0 : snapped;
+};
 
 const parse = (v: string | null): { h: number; m: number } => {
   if (!v) return { h: 9, m: 0 };
   const [h, m] = v.split(':').map((n) => parseInt(n, 10));
   return {
     h: Number.isFinite(h) ? Math.min(23, Math.max(0, h)) : 9,
-    m: MINUTES.includes(m) ? m : 0,
+    m: Number.isFinite(m) ? nearestMinute(m) : 0,
   };
 };
 
-/** Fully custom time picker — a tappable hour grid + minute row, no scrolling wheels. */
+/** Fully custom time picker — two draggable wheels for hour and minute. */
 export function TimeField({
   label,
   value,
@@ -38,7 +44,6 @@ export function TimeField({
   const [hour, setHour] = useState(() => parse(value).h);
   const [minute, setMinute] = useState(() => parse(value).m);
 
-  // Keep the draft in sync with the incoming value whenever it changes or the sheet opens.
   useEffect(() => {
     if (open) {
       const p = parse(value);
@@ -80,98 +85,40 @@ export function TimeField({
         visible={open}
         onClose={() => setOpen(false)}
         title={label}
-        heightRatio={0.72}
-        maxHeight={640}
+        heightRatio={0.6}
+        maxHeight={520}
       >
-        <ScrollView
-          style={styles.body}
-          contentContainerStyle={styles.bodyContent}
-          showsVerticalScrollIndicator={false}
-        >
-        <View style={styles.preview}>
-          <AppText variant="h1" weight="extrabold">
-            {draft}
+        <View style={styles.headerRow}>
+          <AppText variant="meta" weight="bold" color="navyMuted" style={styles.colHead}>
+            Time
+          </AppText>
+          <AppText variant="meta" weight="bold" color="navyMuted" style={styles.colHead}>
+            Minutt
           </AppText>
         </View>
 
-        <View style={styles.presetRow}>
-          {PRESETS.map((p) => {
-            const active = draft === p;
-            return (
-              <Pressable
-                key={p}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`Klokken ${p}`}
-                onPress={() => {
-                  const parsed = parse(p);
-                  setHour(parsed.h);
-                  setMinute(parsed.m);
-                }}
-                style={[styles.preset, active && styles.presetActive]}
-              >
-                <AppText variant="meta" weight="bold" color={active ? 'white' : 'navy'}>
-                  {p}
-                </AppText>
-              </Pressable>
-            );
-          })}
+        <View style={styles.wheels}>
+          <View pointerEvents="none" style={styles.band} />
+          <View style={styles.row}>
+            <WheelPicker
+              values={HOURS}
+              value={hour}
+              onChange={setHour}
+              format={pad2}
+              accessibilityLabel="Time"
+            />
+            <AppText variant="h1" weight="extrabold" style={styles.colon}>
+              :
+            </AppText>
+            <WheelPicker
+              values={MINUTES}
+              value={minute}
+              onChange={setMinute}
+              format={pad2}
+              accessibilityLabel="Minutt"
+            />
+          </View>
         </View>
-
-        <AppText variant="meta" weight="bold" color="navyMuted" style={styles.groupLabel}>
-          Time
-        </AppText>
-        <View style={styles.hourGrid}>
-          {HOURS.map((v) => {
-            const active = v === hour;
-            return (
-              <Pressable
-                key={v}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`Klokken ${pad2(v)}`}
-                onPress={() => setHour(v)}
-                style={[styles.hourCell, active && styles.cellActive]}
-              >
-                <AppText
-                  variant="body"
-                  weight={active ? 'bold' : 'regular'}
-                  color={active ? 'white' : 'navy'}
-                >
-                  {pad2(v)}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <AppText variant="meta" weight="bold" color="navyMuted" style={styles.groupLabel}>
-          Minutt
-        </AppText>
-        <View style={styles.minuteRow}>
-          {MINUTES.map((v) => {
-            const active = v === minute;
-            return (
-              <Pressable
-                key={v}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`${pad2(v)} minutter`}
-                onPress={() => setMinute(v)}
-                style={[styles.minuteCell, active && styles.cellActive]}
-              >
-                <AppText
-                  variant="body"
-                  weight={active ? 'bold' : 'regular'}
-                  color={active ? 'white' : 'navy'}
-                >
-                  {pad2(v)}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-        </ScrollView>
 
         <Button label={`Velg ${draft}`} onPress={confirm} iconRight="check" style={styles.confirm} />
       </BottomSheet>
@@ -194,58 +141,34 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   value: { flex: 1 },
-  body: { flex: 1 },
-  bodyContent: { paddingBottom: tokens.space.md },
-  preview: {
-    alignItems: 'center',
-    paddingBottom: tokens.space.md,
-  },
-  presetRow: {
+  headerRow: {
     flexDirection: 'row',
-    gap: tokens.space.sm,
-    marginBottom: tokens.space.lg,
+    justifyContent: 'center',
+    gap: 64,
+    marginBottom: tokens.space.xs,
   },
-  preset: {
-    flex: 1,
-    alignItems: 'center',
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1.5,
-    borderColor: tokens.color.line,
-    paddingVertical: tokens.space.sm,
-  },
-  presetActive: { backgroundColor: tokens.color.lime, borderColor: tokens.color.lime },
-  groupLabel: { marginBottom: tokens.space.sm },
-  hourGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.space.sm,
-    marginBottom: tokens.space.lg,
-  },
-  hourCell: {
-    flexBasis: '14%',
-    flexGrow: 1,
-    height: 44,
-    borderRadius: tokens.radius.md,
-    borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
-    alignItems: 'center',
+  colHead: { width: 72, textAlign: 'center' },
+  wheels: {
+    height: WHEEL_ITEM_HEIGHT * WHEEL_VISIBLE,
     justifyContent: 'center',
   },
-  minuteRow: {
-    flexDirection: 'row',
-    gap: tokens.space.sm,
-  },
-  minuteCell: {
-    flex: 1,
-    height: 48,
+  band: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: WHEEL_PAD,
+    height: WHEEL_ITEM_HEIGHT,
     borderRadius: tokens.radius.md,
+    backgroundColor: tokens.color.limeTint,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: tokens.color.lime,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: tokens.space.lg,
   },
-  cellActive: { backgroundColor: tokens.color.lime, borderColor: tokens.color.lime },
-  confirm: { marginTop: tokens.space.md },
+  colon: { marginBottom: 2 },
+  confirm: { marginTop: tokens.space.xl },
 });
