@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: tokens.space.xl,
-    paddingBottom: tokens.space.sm,
+    paddingBottom: tokens.space.lg,
     backgroundColor: tokens.color.bg,
     gap: tokens.space.md,
   },

@@ -2,6 +2,7 @@ import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { InnboksScreen } from '@/screens/InnboksScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { chatRepository } from '@/data/chatRepository';
+import { formatDayLabel } from '@/lib/calendar';
 import { renderWithProviders } from '../testUtils';
 
 beforeEach(() => chatRepository._reset());
@@ -62,9 +63,10 @@ test('the Send tilbud sheet sends a customised proposal', async () => {
 
 test('chat shows a day separator above the first message of a day', async () => {
   const conversation = chatRepository.getConversation('c-emma')!;
+  const firstDayLabel = formatDayLabel(new Date('2026-08-27T12:42:00Z'));
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
-  // c-emma messages are all dated 2026-08-27 → a single "I går" divider.
-  await waitFor(() => expect(screen.getByText('I går')).toBeTruthy());
+  // c-emma messages are all dated 2026-08-27 → exactly one divider.
+  await waitFor(() => expect(screen.getByText(firstDayLabel)).toBeTruthy());
 });
 
 test('the attach sheet posts an image message', async () => {
