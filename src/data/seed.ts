@@ -5,6 +5,7 @@ import type {
   Verification,
 } from '@/domain/types';
 import { nok } from '@/domain/price';
+import { CATEGORIES } from '@/domain/categories';
 
 const phoneVerified = (): Verification => ({
   kind: 'PHONE',
@@ -18,19 +19,7 @@ const businessVerified = (): Verification => ({
   explanation: 'Organisasjonsnummer og kontaktperson er kontrollert.',
 });
 
-export const categories: Category[] = [
-  { id: 'c-hage', slug: 'hage', label: 'Hage', icon: 'feather' },
-  { id: 'c-renhold', slug: 'renhold', label: 'Rengjøring', icon: 'droplet' },
-  { id: 'c-flytting', slug: 'flytting', label: 'Flytting/bæring', icon: 'package' },
-  { id: 'c-transport', slug: 'transport', label: 'Transport/levering', icon: 'truck' },
-  { id: 'c-montering', slug: 'montering', label: 'Montering', icon: 'tool' },
-  { id: 'c-snomaking', slug: 'snomaking', label: 'Snømåking', icon: 'cloud-snow' },
-  { id: 'c-maling', slug: 'maling', label: 'Maling/vedlikehold', icon: 'edit-3' },
-  { id: 'c-dyrepass', slug: 'dyrepass', label: 'Dyrepass', icon: 'heart' },
-  { id: 'c-datahjelp', slug: 'datahjelp', label: 'Datahjelp', icon: 'monitor' },
-  { id: 'c-arrangement', slug: 'arrangement', label: 'Arrangementshjelp', icon: 'calendar' },
-  { id: 'c-annet', slug: 'annet', label: 'Annet', icon: 'more-horizontal' },
-];
+export const categories: Category[] = CATEGORIES;
 
 const bySlug = (slug: string): Category =>
   categories.find((c) => c.slug === slug) ?? categories[categories.length - 1];

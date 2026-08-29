@@ -3,9 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import { ENV } from './env';
-import type { Database } from './database.types';
 
-export const supabase = createClient<Database>(ENV.supabaseUrl, ENV.supabaseAnonKey, {
+// NOTE: once `npm run db:types` has run against the live DB, re-add the generic:
+//   import type { Database } from './database.types';
+//   createClient<Database>(...)
+export const supabase = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
