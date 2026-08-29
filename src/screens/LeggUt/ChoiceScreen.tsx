@@ -3,28 +3,20 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { HomeTopBar } from '@/components/TopBar';
+import { PageHeader } from '@/components/TopBar';
 import { StaticBottomNav } from '@/components/StaticBottomNav';
 import { AppText } from '@/components/ui/Text';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Icon } from '@/components/ui/Icon';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { NeedHelpIcon, OfferHelpIcon } from '@/components/icons/ChoiceIcons';
-import { safePush } from '@/lib/nav';
 
 export function ChoiceScreen() {
   const router = useRouter();
-  const me = useCurrentUser();
 
   return (
     <View style={styles.wrap}>
-      <HomeTopBar
-        avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
-        onProfilePress={() => safePush('/profil')}
-        onNotificationsPress={() => safePush('/varsler')}
-      />
+      <PageHeader showBack={false} />
 
       <View style={styles.body}>
         <ScreenTitle>{nb.leggUt.choiceHeading}</ScreenTitle>

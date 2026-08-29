@@ -6,8 +6,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
 import { useCreateListing } from '@/api/queries';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { DetailTopBar } from '@/components/TopBar';
+import { PageHeader } from '@/components/TopBar';
 import { AppText } from '@/components/ui/Text';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
@@ -19,7 +18,6 @@ import { ConfirmCheckbox } from '@/components/ui/ConfirmCheckbox';
 
 export function PreviewScreen() {
   const router = useRouter();
-  const me = useCurrentUser();
   const listing = draftStore.get();
   const create = useCreateListing();
   const [confirmed, setConfirmed] = useState(false);
@@ -30,13 +28,7 @@ export function PreviewScreen() {
   if (!listing) {
     return (
       <SafeAreaView style={styles.wrap} edges={['bottom']}>
-        <DetailTopBar
-          title={nb.leggUt.previewTitle}
-          onBack={goBack}
-          avatar={{ uri: me.avatarUrl, initials: me.initials }}
-          onProfilePress={() => {}}
-          onNotificationsPress={() => {}}
-        />
+        <PageHeader title={nb.leggUt.previewTitle} onBack={goBack} />
         <View style={styles.empty}>
           <AppText variant="body" color="navyMuted">
             Fant ikke utkastet. Start på nytt.
@@ -63,14 +55,7 @@ export function PreviewScreen() {
 
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
-      <DetailTopBar
-        title={nb.leggUt.previewTitle}
-        onBack={goBack}
-        avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
-        onProfilePress={() => {}}
-        onNotificationsPress={() => {}}
-      />
+      <PageHeader title={nb.leggUt.previewTitle} onBack={goBack} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headingRow}>

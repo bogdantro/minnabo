@@ -4,14 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { safePush } from '@/lib/nav';
 import { AppText } from './ui/Text';
 import { ScreenTitle } from './ui/ScreenTitle';
 import { Button } from './ui/Button';
 import { Icon } from './ui/Icon';
 import { StatusPill } from './ui/StatusPill';
-import { DetailTopBar } from './TopBar';
+import { PageHeader } from './TopBar';
 
 export type WizardStep = {
   title: string;
@@ -38,7 +36,6 @@ export function Wizard({
   onSaveDraft?: () => void;
 }) {
   const router = useRouter();
-  const me = useCurrentUser();
   const [index, setIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const step = steps[index];
@@ -67,14 +64,7 @@ export function Wizard({
 
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
-      <DetailTopBar
-        title={heading}
-        onBack={back}
-        avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
-        onProfilePress={() => safePush('/profil')}
-        onNotificationsPress={() => safePush('/varsler')}
-      />
+      <PageHeader title={heading} onBack={back} />
 
       <View style={styles.progressWrap}>
         <StatusPill label={badge} tone={badgeTone} soft />

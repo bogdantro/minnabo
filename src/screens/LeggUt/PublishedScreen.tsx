@@ -5,14 +5,12 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatPrice, formatFromPrice } from '@/domain/price';
 import { draftStore } from '@/data/draftStore';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { HomeTopBar } from '@/components/TopBar';
+import { PageHeader } from '@/components/TopBar';
 import { AppText } from '@/components/ui/Text';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { InfoBox } from '@/components/ui/InfoBox';
-import { safePush } from '@/lib/nav';
 
 const CONFETTI = [
   { top: 8, left: 30, color: tokens.color.lime, rot: '20deg' },
@@ -25,7 +23,6 @@ const CONFETTI = [
 
 export function PublishedScreen({ listingId }: { listingId?: string }) {
   const router = useRouter();
-  const me = useCurrentUser();
   const listing = draftStore.get();
   const isTask = listing?.type !== 'SERVICE_OFFER';
 
@@ -42,11 +39,7 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
 
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
-      <HomeTopBar
-        avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        onProfilePress={() => safePush('/profil')}
-        onNotificationsPress={() => safePush('/varsler')}
-      />
+      <PageHeader showBack={false} />
 
       <View style={styles.body}>
         <View style={styles.hero}>
