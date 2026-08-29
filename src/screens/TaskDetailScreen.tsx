@@ -2,10 +2,9 @@ import { ScrollView, View, StyleSheet } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useIsSaved } from '@/data/savedStore';
 import { safePush } from '@/lib/nav';
-import { DetailTopBar } from '@/components/TopBar';
+import { PageHeader } from '@/components/TopBar';
 import { Gallery } from '@/components/Gallery';
 import { AppText } from '@/components/ui/Text';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -16,7 +15,6 @@ import { ProfileCard } from '@/components/ProfileCard';
 import { StickyActions } from '@/components/StickyActions';
 
 export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack: () => void }) {
-  const me = useCurrentUser();
   const [saved, toggleSaved] = useIsSaved(listing.id);
   const task = listing.task;
 
@@ -27,14 +25,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
 
   return (
     <View style={styles.wrap}>
-      <DetailTopBar
-        title={nb.listingDetail.taskTitle}
-        onBack={onBack}
-        avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
-        onProfilePress={() => safePush('/profil')}
-        onNotificationsPress={() => safePush('/varsler')}
-      />
+      <PageHeader title={nb.listingDetail.taskTitle} onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Gallery images={listing.images} saved={saved} onToggleSave={toggleSaved} height={240} />

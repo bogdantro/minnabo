@@ -26,6 +26,8 @@ export function AmountField({
         keyboardType="numeric"
         placeholder={placeholder}
         placeholderTextColor={tokens.color.navyMuted}
+        spellCheck={false}
+        autoCorrect={false}
         accessibilityLabel={accessibilityLabel ?? nb.leggUt.amountLabel}
       />
       <AppText variant="cardTitle" weight="bold" color="navyMuted">

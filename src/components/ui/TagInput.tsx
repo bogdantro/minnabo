@@ -40,6 +40,8 @@ export function TagInput({
           placeholderTextColor={tokens.color.navyMuted}
           accessibilityLabel={label}
           returnKeyType="done"
+          spellCheck={false}
+          autoCorrect={false}
         />
         <Pressable accessibilityRole="button" accessibilityLabel="Legg til" onPress={add} style={styles.addBtn}>
           <Icon name="plus" size={18} color="navy" />

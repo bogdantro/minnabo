@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -18,6 +19,16 @@ import { savedSearchStore } from '@/data/savedSearchStore';
 import { OfflineBanner } from '@/components/OfflineBanner';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+// Web only: strip the browser focus ring / outline from inputs and buttons
+// so the web preview matches the native look.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent =
+    '*{outline:none!important;-webkit-tap-highlight-color:transparent}' +
+    'input,textarea,select,button,[role="button"],[contenteditable]{outline:none!important}';
+  document.head.appendChild(style);
+}
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 0, staleTime: 30_000 } },

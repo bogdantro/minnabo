@@ -54,6 +54,8 @@ export function TextField({
           multiline={multiline}
           keyboardType={keyboardType}
           maxLength={maxLength}
+          spellCheck={false}
+          autoCorrect={false}
           accessibilityLabel={label}
         />
       </View>

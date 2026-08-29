@@ -113,6 +113,8 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
             placeholderTextColor={tokens.color.navyMuted}
             autoFocus={!initialQuery}
             returnKeyType="search"
+            spellCheck={false}
+            autoCorrect={false}
             accessibilityLabel={nb.search.placeholder}
           />
           {query.length > 0 ? (

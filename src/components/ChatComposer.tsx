@@ -62,6 +62,7 @@ export function ChatComposer({
           value={text}
           onChangeText={setText}
           multiline
+          spellCheck={false}
           accessibilityLabel={nb.chat.inputPlaceholder}
         />
 

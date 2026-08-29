@@ -2,10 +2,9 @@ import { ScrollView, View, StyleSheet } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useIsSaved } from '@/data/savedStore';
 import { safePush } from '@/lib/nav';
-import { DetailTopBar } from '@/components/TopBar';
+import { PageHeader } from '@/components/TopBar';
 import { Gallery } from '@/components/Gallery';
 import { AppText } from '@/components/ui/Text';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -24,7 +23,6 @@ export function ServiceOfferDetailScreen({
   listing: Listing;
   onBack: () => void;
 }) {
-  const me = useCurrentUser();
   const [saved, toggleSaved] = useIsSaved(listing.id);
   const offer = listing.offer;
   const phoneVerification = listing.owner.verifications.find((v) => v.verified);
@@ -43,14 +41,7 @@ export function ServiceOfferDetailScreen({
 
   return (
     <View style={styles.wrap}>
-      <DetailTopBar
-        title={nb.listingDetail.offerTitle}
-        onBack={onBack}
-        avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
-        onProfilePress={() => safePush('/profil')}
-        onNotificationsPress={() => safePush('/varsler')}
-      />
+      <PageHeader title={nb.listingDetail.offerTitle} onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Gallery

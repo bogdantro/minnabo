@@ -51,6 +51,8 @@ export function SearchField({
         editable={editable}
         autoFocus={autoFocus}
         returnKeyType="search"
+        spellCheck={false}
+        autoCorrect={false}
         accessibilityLabel={placeholder}
       />
     </View>
