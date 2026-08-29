@@ -30,6 +30,9 @@ export type ProfileRow = {
   municipality: string | null;
   place: string | null;
   is_business: boolean;
+  onboarded_at?: string | null;
+  max_distance_km?: number | null;
+  purpose?: string | null;
   verifications?: { kind: string; verified: boolean; explanation: string }[] | null;
   profile_ratings?: RatingsRow;
 };
@@ -156,6 +159,9 @@ export function toProfile(row: ProfileRow): PublicProfile {
       place: row.place ?? '',
     },
     isBusiness: row.is_business,
+    onboardedAt: row.onboarded_at ?? undefined,
+    maxDistanceKm: row.max_distance_km ?? undefined,
+    purpose: (row.purpose as PublicProfile['purpose']) ?? undefined,
     verifications: (row.verifications ?? []).map(
       (v): Verification => ({
         kind: v.kind as Verification['kind'],

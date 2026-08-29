@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { authStore } from '@/data/authStore';
+import { supabase } from '@/lib/supabase';
 import { PageHeader } from '@/components/TopBar';
 import { OnboardingProgress } from '@/components/OnboardingProgress';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -18,23 +18,47 @@ export function LoginScreen() {
   const [contact, setContact] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const sendCode = () => {
-    if (!contact.trim()) {
+  const isEmail = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim());
+
+  const sendCode = async () => {
+    if (!isEmail(contact)) {
+      setError(nb.onboarding.invalidEmail);
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    const { error: err } = await supabase.auth.signInWithOtp({
+      email: contact.trim(),
+      options: { shouldCreateUser: true },
+    });
+    setBusy(false);
+    if (err) {
+      setError(nb.onboarding.otpSendFailed);
+      return;
+    }
+    setStep('code');
+  };
+
+  const verify = async () => {
+    if (code.trim().length < 6) {
       setError(nb.onboarding.wrongCode);
       return;
     }
     setError(null);
-    setStep('code');
-  };
-
-  const verify = () => {
-    if (code.trim() !== '0000') {
+    setBusy(true);
+    const { error: err } = await supabase.auth.verifyOtp({
+      email: contact.trim(),
+      token: code.trim(),
+      type: 'email',
+    });
+    setBusy(false);
+    if (err) {
       setError(nb.onboarding.wrongCode);
       return;
     }
-    authStore.patch({ contact: contact.trim() });
-    router.push('/samtykker');
+    router.replace('/samtykker');
   };
 
   return (
@@ -52,6 +76,7 @@ export function LoginScreen() {
             label={nb.onboarding.contactLabel}
             value={contact}
             onChangeText={setContact}
+            keyboardType="email-address"
           />
         ) : (
           <TextField
@@ -59,6 +84,7 @@ export function LoginScreen() {
             value={code}
             onChangeText={setCode}
             keyboardType="numeric"
+            maxLength={6}
           />
         )}
 
@@ -75,9 +101,9 @@ export function LoginScreen() {
 
       <View style={styles.footer}>
         {step === 'contact' ? (
-          <Button label={nb.onboarding.sendCode} onPress={sendCode} />
+          <Button label={nb.onboarding.sendCode} onPress={sendCode} loading={busy} />
         ) : (
-          <Button label={nb.onboarding.verify} onPress={verify} />
+          <Button label={nb.onboarding.verify} onPress={verify} loading={busy} />
         )}
       </View>
     </SafeAreaView>

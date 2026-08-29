@@ -7,7 +7,10 @@ jest.mock('@/lib/env', () => ({
   ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key' },
 }));
 
+// The seeded "current user" — tests run as this profile (see src/data/seed.ts).
+// Inlined (not a shared const) so jest's mock-factory hoisting can't see a TDZ.
 jest.mock('@/lib/supabase', () => {
+  const session = { user: { id: 'u-mb', email: 'me@minnabo.test' } };
   const channel = {
     on: jest.fn().mockReturnThis(),
     subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
@@ -18,19 +21,37 @@ jest.mock('@/lib/supabase', () => {
   return {
     supabase: {
       auth: {
-        getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        getSession: jest.fn().mockResolvedValue({ data: { session }, error: null }),
+        getUser: jest.fn().mockResolvedValue({ data: { user: session.user }, error: null }),
         onAuthStateChange: jest
           .fn()
           .mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } }),
         signInWithOtp: jest.fn().mockResolvedValue({ data: {}, error: null }),
-        verifyOtp: jest.fn().mockResolvedValue({ data: { session: {} }, error: null }),
-        signInWithPassword: jest.fn().mockResolvedValue({ data: { session: {} }, error: null }),
+        verifyOtp: jest.fn().mockResolvedValue({ data: { session }, error: null }),
+        signInWithPassword: jest.fn().mockResolvedValue({ data: { session }, error: null }),
         signOut: jest.fn().mockResolvedValue({ error: null }),
         startAutoRefresh: jest.fn(),
         stopAutoRefresh: jest.fn(),
       },
-      from: jest.fn(),
-      rpc: jest.fn(),
+      // Chainable query-builder stub: every method returns the builder, and it
+      // resolves to an empty result when awaited. Screens that read data in
+      // tests go through MockApiClient, not this — this only covers the few
+      // screens that call supabase.from(...) directly (onboarding writes).
+      from: jest.fn(() => {
+        const builder: Record<string, jest.Mock> = {};
+        const chain = () => builder;
+        for (const m of [
+          'select', 'insert', 'update', 'upsert', 'delete', 'eq', 'neq', 'in',
+          'order', 'limit', 'maybeSingle', 'single', 'textSearch',
+        ]) {
+          builder[m] = jest.fn(chain);
+        }
+        // make the builder awaitable
+        (builder as unknown as { then: unknown }).then = (resolve: (v: unknown) => void) =>
+          resolve({ data: [], error: null });
+        return builder;
+      }),
+      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
       channel: jest.fn().mockReturnValue(channel),
       removeChannel: jest.fn(),
       storage: { from: jest.fn() },
@@ -43,6 +64,21 @@ jest.mock('@/lib/supabase', () => {
 // RNTL's automatic afterEach cleanup in some cases).
 afterEach(async () => {
   await cleanup();
+});
+
+// Re-assert the supabase auth mock implementations before every test so mock
+// call-state clearing can't drop them. Tests run as the seeded "current user".
+beforeEach(() => {
+  const { supabase } = require('@/lib/supabase');
+  const session = { user: { id: 'u-mb', email: 'me@minnabo.test' } };
+  supabase.auth.getSession.mockClear().mockResolvedValue({ data: { session }, error: null });
+  supabase.auth.getUser.mockClear().mockResolvedValue({ data: { user: session.user }, error: null });
+  supabase.auth.signInWithOtp.mockClear().mockResolvedValue({ data: {}, error: null });
+  supabase.auth.verifyOtp.mockClear().mockResolvedValue({ data: { session }, error: null });
+  supabase.auth.signInWithPassword.mockClear().mockResolvedValue({ data: { session }, error: null });
+  supabase.auth.signOut.mockClear().mockResolvedValue({ error: null });
+  supabase.from.mockClear();
+  supabase.rpc.mockClear().mockResolvedValue({ data: null, error: null });
 });
 
 // Reset in-memory mock stores between tests so state never leaks across suites.
@@ -79,11 +115,6 @@ afterEach(() => {
   }
   try {
     require('@/data/safetyStore').safetyStore._reset();
-  } catch {
-    /* not loaded */
-  }
-  try {
-    require('@/data/authStore').authStore._reset();
   } catch {
     /* not loaded */
   }

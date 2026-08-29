@@ -377,6 +377,7 @@ export class SupabaseApiClient implements ApiClient {
       row.municipality = patch.place;
     }
     if (patch.avatarPath !== undefined) row.avatar_path = patch.avatarPath;
+    if (patch.maxDistanceKm !== undefined) row.max_distance_km = patch.maxDistanceKm;
 
     const { data, error } = await supabase
       .from('profiles')

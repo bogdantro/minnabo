@@ -47,9 +47,13 @@ export const profileRepository = {
 
   updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation'>> & {
     place?: string;
+    avatarPath?: string;
+    maxDistanceKm?: number;
   }): PublicProfile {
     if (patch.displayName !== undefined) editableProfile.displayName = patch.displayName;
     if (patch.presentation !== undefined) editableProfile.presentation = patch.presentation;
+    if (patch.avatarPath !== undefined) editableProfile.avatarUrl = patch.avatarPath;
+    if (patch.maxDistanceKm !== undefined) editableProfile.maxDistanceKm = patch.maxDistanceKm;
     if (patch.place !== undefined) {
       editableProfile.location = {
         ...editableProfile.location,

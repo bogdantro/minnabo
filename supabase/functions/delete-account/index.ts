@@ -1,0 +1,44 @@
+// Supabase Edge Function: permanently delete the calling user's account.
+// The DB has ON DELETE CASCADE from auth.users, so removing the auth user
+// removes their profile and everything owned by it.
+//
+// Deploy: npx supabase functions deploy delete-account
+// deno-lint-ignore-file no-explicit-any
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+
+Deno.serve(async (req: Request) => {
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+
+  try {
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const jwt = authHeader.replace(/^Bearer\s+/i, '');
+    if (!jwt) return json({ error: 'Ikke innlogget.' }, 401, cors);
+
+    const url = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const admin = createClient(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+    if (userErr || !userData.user) return json({ error: 'Ugyldig økt.' }, 401, cors);
+
+    const { error: delErr } = await admin.auth.admin.deleteUser(userData.user.id);
+    if (delErr) return json({ error: delErr.message }, 500, cors);
+
+    return json({ ok: true }, 200, cors);
+  } catch (e) {
+    return json({ error: (e as any)?.message ?? 'Ukjent feil.' }, 500, cors);
+  }
+});
+
+function json(body: unknown, status: number, cors: Record<string, string>) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  });
+}

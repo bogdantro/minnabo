@@ -29,6 +29,7 @@ test('business registration validates the org number', async () => {
 
   await fireEvent.changeText(screen.getByLabelText('Organisasjonsnummer'), '123456789');
   await fireEvent.changeText(screen.getByLabelText('Firmanavn'), 'Testbedrift AS');
+  await fireEvent.changeText(screen.getByLabelText('Kontaktperson'), 'Ola Nordmann');
   await fireEvent.changeText(screen.getByLabelText('E-post'), 'post@test.no');
   await fireEvent.press(screen.getByText('Send til verifisering'));
   await waitFor(() => expect(screen.getByText('Sendt inn!')).toBeTruthy());

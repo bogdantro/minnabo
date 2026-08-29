@@ -10,6 +10,9 @@ export type { ProposalStatus } from './proposalMachine';
  */
 export type ListingType = 'TASK_REQUEST' | 'SERVICE_OFFER';
 
+/** What the user wants to use MinNabo for (onboarding + profile). */
+export type Purpose = 'NEED_HELP' | 'WANT_JOBS' | 'BOTH';
+
 export type PriceMode = 'FIXED' | 'BUDGET' | 'FROM' | 'BY_AGREEMENT';
 
 export type Category = {
@@ -53,6 +56,11 @@ export type PublicProfile = {
   services?: string[];
   categorySlugs?: string[];
   completedTasks?: number;
+  /** ISO timestamp when onboarding was completed; undefined = not yet onboarded */
+  onboardedAt?: string;
+  /** the user's own search radius preference (own profile only) */
+  maxDistanceKm?: number;
+  purpose?: Purpose;
 };
 
 export type ListingImage = { id: string; url: string };

@@ -1,16 +1,24 @@
 import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { safePush } from '@/lib/nav';
+import { signOut } from '@/auth/session';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
 import { Icon, type IconName } from '@/components/ui/Icon';
 
-type Row = { label: string; icon: IconName; route?: string; danger?: boolean };
+type Row = {
+  label: string;
+  icon: IconName;
+  route?: string;
+  action?: () => void | Promise<void>;
+  danger?: boolean;
+};
 
-const GROUPS: { title: string; rows: Row[] }[] = [
+const BASE_GROUPS: { title: string; rows: Row[] }[] = [
   {
     title: nb.settings.account,
     rows: [
@@ -32,24 +40,38 @@ const GROUPS: { title: string; rows: Row[] }[] = [
       { label: nb.settings.exportData, icon: 'download', route: '/personvern' },
     ],
   },
-  {
-    title: nb.settings.about,
-    rows: [
-      { label: nb.settings.language, icon: 'globe' },
-      { label: nb.settings.logOut, icon: 'log-out', route: '/velkommen' },
-      { label: nb.settings.deleteAccount, icon: 'trash-2', route: '/slett-konto', danger: true },
-    ],
-  },
 ];
 
 export function SettingsScreen() {
+  const router = useRouter();
+
+  const logOut = async () => {
+    await signOut();
+    router.replace('/velkommen');
+  };
+
+  const groups: { title: string; rows: Row[] }[] = [
+    ...BASE_GROUPS,
+    {
+      title: nb.settings.about,
+      rows: [
+        { label: nb.settings.language, icon: 'globe' },
+        ...(__DEV__
+          ? [{ label: 'Bytt testbruker', icon: 'users' as IconName, route: '/dev-switch' }]
+          : []),
+        { label: nb.settings.logOut, icon: 'log-out', action: logOut },
+        { label: nb.settings.deleteAccount, icon: 'trash-2', route: '/slett-konto', danger: true },
+      ],
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
       <PageHeader title={nb.settings.title} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ScreenTitle>{nb.settings.title}</ScreenTitle>
 
-        {GROUPS.map((group) => (
+        {groups.map((group) => (
           <View key={group.title} style={styles.group}>
             <AppText variant="meta" weight="bold" color="navyMuted" style={styles.groupTitle}>
               {group.title.toUpperCase()}
@@ -60,8 +82,11 @@ export function SettingsScreen() {
                   key={row.label + i}
                   accessibilityRole="button"
                   accessibilityLabel={row.label}
-                  disabled={!row.route}
-                  onPress={() => row.route && safePush(row.route)}
+                  disabled={!row.route && !row.action}
+                  onPress={() => {
+                    if (row.action) void row.action();
+                    else if (row.route) safePush(row.route);
+                  }}
                   style={[styles.row, i < group.rows.length - 1 && styles.rowBorder]}
                 >
                   <Icon name={row.icon} size={18} color={row.danger ? 'dangerText' : 'navy'} />
@@ -72,7 +97,9 @@ export function SettingsScreen() {
                   >
                     {row.label}
                   </AppText>
-                  {row.route ? <Icon name="chevron-right" size={16} color="navyMuted" /> : null}
+                  {row.route || row.action ? (
+                    <Icon name="chevron-right" size={16} color="navyMuted" />
+                  ) : null}
                 </Pressable>
               ))}
             </View>

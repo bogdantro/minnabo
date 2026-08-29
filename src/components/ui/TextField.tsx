@@ -8,7 +8,7 @@ export type TextFieldProps = {
   onChangeText: (text: string) => void;
   placeholder?: string;
   multiline?: boolean;
-  keyboardType?: 'default' | 'numeric';
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
   error?: string;
   hint?: string;
   maxLength?: number;

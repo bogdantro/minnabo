@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { supabase } from '@/lib/supabase';
+import { signOut } from '@/auth/session';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -13,6 +15,21 @@ import { Button } from '@/components/ui/Button';
 export function DeleteAccountScreen() {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const del = async () => {
+    setBusy(true);
+    setError(null);
+    const { error: err } = await supabase.functions.invoke('delete-account');
+    if (err) {
+      setBusy(false);
+      setError(nb.state.error);
+      return;
+    }
+    await signOut();
+    router.replace('/velkommen');
+  };
 
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
@@ -25,16 +42,18 @@ export function DeleteAccountScreen() {
         <AppText variant="body" color="navyMuted" align="center">
           {nb.settings.deleteWarning}
         </AppText>
+        {error ? (
+          <AppText variant="meta" color="dangerText">
+            {error}
+          </AppText>
+        ) : null}
       </View>
 
       <View style={styles.footer}>
         {!confirming ? (
           <Button label={nb.settings.deleteAccount} variant="secondary" onPress={() => setConfirming(true)} />
         ) : (
-          <Button
-            label={nb.settings.deleteConfirm}
-            onPress={() => router.replace('/velkommen')}
-          />
+          <Button label={nb.settings.deleteConfirm} onPress={del} loading={busy} />
         )}
         <Button label={nb.common.cancel} variant="ghost" onPress={() => router.back()} />
       </View>

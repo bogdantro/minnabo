@@ -46,6 +46,7 @@ export type UpdateProfilePatch = {
   presentation?: string;
   place?: string;
   avatarPath?: string;
+  maxDistanceKm?: number;
 };
 
 export type SubmitReviewInput = {

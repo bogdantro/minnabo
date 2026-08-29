@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
-import { authStore, useAuth } from '@/data/authStore';
+import { useSession } from '@/auth/session';
+import { useProfile, useUpdateProfile } from '@/api/queries';
 import { lookupPostalCode, isPostalCode } from '@/data/postalCodes';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
@@ -19,10 +20,16 @@ function detectLocation(): Promise<string> {
 }
 
 export function LocationBar() {
-  const auth = useAuth();
+  const { userId } = useSession();
+  const { data: profile } = useProfile(userId ?? '');
+  const update = useUpdateProfile();
+
+  const currentPlace = profile?.location.place || 'Lillehammer';
+  const currentDistance = profile?.maxDistanceKm ?? 15;
+
   const [open, setOpen] = useState(false);
-  const [input, setInput] = useState(auth.place ?? 'Lillehammer');
-  const [distance, setDistance] = useState(auth.maxDistanceKm ?? 15);
+  const [input, setInput] = useState(currentPlace);
+  const [distance, setDistance] = useState(currentDistance);
   const [locating, setLocating] = useState(false);
 
   const asPostal = isPostalCode(input);
@@ -30,8 +37,8 @@ export function LocationBar() {
   const place = resolved ?? input;
 
   const openSheet = () => {
-    setInput(auth.place ?? 'Lillehammer');
-    setDistance(auth.maxDistanceKm ?? 15);
+    setInput(currentPlace);
+    setDistance(currentDistance);
     setOpen(true);
   };
 
@@ -47,7 +54,7 @@ export function LocationBar() {
 
   const save = () => {
     const finalPlace = place.trim() || 'Lillehammer';
-    authStore.patch({ place: finalPlace, municipality: finalPlace, maxDistanceKm: distance });
+    update.mutate({ place: finalPlace, maxDistanceKm: distance });
     setOpen(false);
   };
 
@@ -62,10 +69,10 @@ export function LocationBar() {
       >
         <Icon name="map-pin" size={16} color="cyan" />
         <AppText variant="body" weight="bold">
-          {auth.place}
+          {currentPlace}
         </AppText>
         <AppText variant="body" color="navyMuted">
-          · {nb.home.locationSuffix} {auth.maxDistanceKm} {nb.common.km}
+          · {nb.home.locationSuffix} {currentDistance} {nb.common.km}
         </AppText>
         <Icon name="chevron-right" size={16} color="cyan" />
       </Pressable>

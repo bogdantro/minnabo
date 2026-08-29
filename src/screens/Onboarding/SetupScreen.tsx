@@ -4,7 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { authStore, type Purpose } from '@/data/authStore';
+import type { Purpose } from '@/domain/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useSession } from '@/auth/session';
+import { profileKeys } from '@/api/queries';
 import { PageHeader } from '@/components/TopBar';
 import { OnboardingProgress } from '@/components/OnboardingProgress';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -17,24 +21,50 @@ const DISTANCES = [5, 10, 25, 50] as const;
 
 export function SetupScreen() {
   const router = useRouter();
+  const { userId } = useSession();
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
   const [purpose, setPurpose] = useState<Purpose>('BOTH');
   const [municipality, setMunicipality] = useState('');
   const [place, setPlace] = useState('');
   const [distance, setDistance] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const finish = () => {
-    if (!municipality.trim() || !place.trim()) {
+  const initials = (n: string) =>
+    n
+      .trim()
+      .split(/\s+/)
+      .map((p) => p[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'N';
+
+  const finish = async () => {
+    if (!name.trim() || !municipality.trim() || !place.trim()) {
       setError(nb.leggUt.errRequired);
       return;
     }
-    authStore.patch({
-      purpose,
-      municipality: municipality.trim(),
-      place: place.trim(),
-      maxDistanceKm: distance,
-    });
-    authStore.completeOnboarding();
+    setError(null);
+    setBusy(true);
+    const { error: err } = await supabase
+      .from('profiles')
+      .update({
+        display_name: name.trim(),
+        initials: initials(name),
+        purpose,
+        municipality: municipality.trim(),
+        place: place.trim(),
+        max_distance_km: distance,
+        onboarded_at: new Date().toISOString(),
+      })
+      .eq('id', userId ?? '');
+    setBusy(false);
+    if (err) {
+      setError(nb.state.error);
+      return;
+    }
+    if (userId) queryClient.invalidateQueries({ queryKey: profileKeys.profile(userId) });
     router.replace('/');
   };
 
@@ -44,6 +74,8 @@ export function SetupScreen() {
       <OnboardingProgress step={3} total={3} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ScreenTitle>{nb.onboarding.purposeQuestion}</ScreenTitle>
+
+        <TextField label={nb.onboarding.nameLabel} value={name} onChangeText={setName} />
 
         <ChipSelect<Purpose>
           label={nb.onboarding.purposeQuestion}
@@ -77,7 +109,7 @@ export function SetupScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label={nb.onboarding.finish} onPress={finish} />
+        <Button label={nb.onboarding.finish} onPress={finish} loading={busy} />
       </View>
     </SafeAreaView>
   );
