@@ -6,6 +6,15 @@ Plan: `docs/superpowers/plans/2026-08-29-minnabo-supabase-backend.md`.
 
 Project ref: **`hvxuzvhzsaocsnwznsai`** — `https://hvxuzvhzsaocsnwznsai.supabase.co`
 
+## 0. Mock mode (run the app with no backend / no login)
+
+`.env` ships with **`EXPO_PUBLIC_USE_MOCKS=true`**. In this mode the app runs
+entirely against the in-memory mock layer, auto-"signed in" as the demo user
+**Marius B.** — the login screen is skipped and nothing hits Supabase.
+
+Set it to `false` and restart the Expo server once you have completed steps 1–4
+below (link + migrate + seed). Everything then runs against the real project.
+
 ---
 
 ## 1. Environment

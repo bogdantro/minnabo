@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { CATEGORIES as categories } from '@/domain/categories';
-import { supabase } from '@/lib/supabase';
+import { useSubmitBusinessProfile } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -26,14 +26,14 @@ export function BedriftRegistreringScreen() {
   const [phone, setPhone] = useState('');
   const [cats, setCats] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const submitBiz = useSubmitBusinessProfile();
 
   useEffect(() => {
     if (me.displayName) setContact((c) => c || me.displayName);
   }, [me.displayName]);
 
-  const submit = async () => {
+  const submit = () => {
     if (!/^\d{9}$/.test(orgNr.replace(/\s/g, ''))) {
       setError(nb.bedrift.errOrgNr);
       return;
@@ -43,21 +43,20 @@ export function BedriftRegistreringScreen() {
       return;
     }
     setError(null);
-    setBusy(true);
-    const { error: err } = await supabase.rpc('submit_business_profile', {
-      p_org_nr: orgNr.replace(/\s/g, ''),
-      p_company_name: name.trim(),
-      p_contact_person: contact.trim(),
-      p_email: email.trim(),
-      p_phone: phone.trim(),
-      p_category_slugs: cats,
-    });
-    setBusy(false);
-    if (err) {
-      setError(nb.state.error);
-      return;
-    }
-    setDone(true);
+    submitBiz.mutate(
+      {
+        orgNr: orgNr.replace(/\s/g, ''),
+        companyName: name.trim(),
+        contactPerson: contact.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        categorySlugs: cats,
+      },
+      {
+        onSuccess: () => setDone(true),
+        onError: () => setError(nb.state.error),
+      },
+    );
   };
 
   if (done) {
@@ -124,7 +123,7 @@ export function BedriftRegistreringScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label={nb.bedrift.submit} onPress={submit} iconRight="send" loading={busy} />
+        <Button label={nb.bedrift.submit} onPress={submit} iconRight="send" loading={submitBiz.isPending} />
       </View>
     </SafeAreaView>
   );

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import { supabase } from '@/lib/supabase';
+import { ENV } from '@/lib/env';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 
@@ -22,7 +23,7 @@ export function DevOtpHint({
   const tries = useRef(0);
 
   useEffect(() => {
-    if (!__DEV__ || !email) return;
+    if (!__DEV__ || ENV.useMocks || !email) return;
     setCode(null);
     tries.current = 0;
     let stopped = false;

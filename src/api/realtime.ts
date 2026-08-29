@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { ENV } from '@/lib/env';
 import { useSession } from '@/auth/session';
 import { chatKeys, profileKeys } from './queries';
 
@@ -12,7 +13,7 @@ export function useConversationChannel(conversationId: string): void {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (ENV.useMocks || !conversationId) return;
     const channel = supabase
       .channel(`conv:${conversationId}`)
       .on(
@@ -61,7 +62,7 @@ export function useInboxRealtime(): void {
   const { userId } = useSession();
 
   useEffect(() => {
-    if (!userId) return;
+    if (ENV.useMocks || !userId) return;
     const channel = supabase
       .channel(`inbox:${userId}`)
       .on(
@@ -102,7 +103,7 @@ export function usePresence(): Set<string> {
   const [online, setOnline] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    if (!userId) return;
+    if (ENV.useMocks || !userId) return;
     const channel = supabase.channel('presence:lobby', {
       config: { presence: { key: userId } },
     });

@@ -352,6 +352,15 @@ export function useSubmitReport() {
   });
 }
 
+export function useSubmitBusinessProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof apiClient.submitBusinessProfile>[0]) =>
+      apiClient.submitBusinessProfile(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+  });
+}
+
 export function useBlockedProfileIds() {
   return useQuery({ queryKey: safetyKeys.blocked, queryFn: () => apiClient.listBlockedProfileIds() });
 }
