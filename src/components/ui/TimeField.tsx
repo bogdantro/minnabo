@@ -120,7 +120,7 @@ export function TimeField({
           </View>
         </View>
 
-        <Button label={`Velg ${draft}`} onPress={confirm} iconRight="check" style={styles.confirm} />
+        <Button label={`Velg ${draft}`} onPress={confirm} style={styles.confirm} />
       </BottomSheet>
     </View>
   );

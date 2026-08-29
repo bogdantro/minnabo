@@ -6,6 +6,7 @@
 
 const font = {
   regular: 'Mulish_400Regular',
+  medium: 'Mulish_500Medium',
   bold: 'Mulish_700Bold',
   extrabold: 'Mulish_800ExtraBold',
 } as const;

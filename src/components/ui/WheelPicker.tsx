@@ -106,7 +106,7 @@ export function WheelPicker({
             onPress={() => selectIndex(i)}
           >
             <AppText
-              weight={active ? 'extrabold' : 'regular'}
+              weight="medium"
               color={active ? 'navy' : 'navyMuted'}
               style={[styles.label, active ? styles.labelActive : styles.labelIdle]}
             >

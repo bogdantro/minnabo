@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
   Mulish_400Regular,
+  Mulish_500Medium,
   Mulish_700Bold,
   Mulish_800ExtraBold,
 } from '@expo-google-fonts/mulish';
@@ -25,6 +26,7 @@ const queryClient = new QueryClient({
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Mulish_400Regular,
+    Mulish_500Medium,
     Mulish_700Bold,
     Mulish_800ExtraBold,
   });
