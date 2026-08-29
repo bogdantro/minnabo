@@ -230,6 +230,7 @@ export function ChatScreen({
       <AttachSheet
         visible={attachOpen}
         onClose={() => setAttachOpen(false)}
+        folder={me.id}
         onPick={(url) => sendAttachment.mutate(url)}
       />
     </KeyboardAvoidingView>

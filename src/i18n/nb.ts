@@ -209,6 +209,7 @@ const nb = {
     pickPhotos: 'Velg bilder',
     yourPhotos: 'Dine bilder',
     photosCount: 'bilder',
+    uploading: 'Laster opp …',
     mainPhoto: 'Hovedbilde',
     photoTipsTitle: 'Tips til gode bilder',
     photoTipsBody: 'Vis hele området og detaljer som kan være viktige for den som skal utføre jobben.',
@@ -467,6 +468,7 @@ const nb = {
     fieldName: 'Navn',
     fieldArea: 'Område',
     fieldPresentation: 'Presentasjon',
+    changePhoto: 'Endre profilbilde',
     save: 'Lagre',
     saved: 'Profilen er lagret.',
   },
@@ -681,6 +683,7 @@ const nb = {
     intro: 'Velg et bilde å sende i samtalen.',
     take: 'Ta bilde',
     library: 'Velg fra bibliotek',
+    examples: 'Eller velg et eksempelbilde:',
   },
 
   chat: {

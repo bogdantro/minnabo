@@ -1,0 +1,87 @@
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { supabase } from './supabase';
+import { publicUrl } from './storage';
+
+export type UploadBucket = 'avatars' | 'listing-images' | 'chat-attachments';
+
+const MAX_BYTES = 8 * 1024 * 1024;
+const OK_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+type Asset = { mimeType?: string | null; fileSize?: number | null; uri?: string };
+
+/** Returns a Norwegian error string, or null when the asset is acceptable. */
+export function validateImage(asset: Asset): string | null {
+  const mime = (asset.mimeType ?? '').toLowerCase();
+  if (mime && !OK_MIME.includes(mime)) {
+    return 'Filen må være et bilde (JPG, PNG eller WEBP).';
+  }
+  if (asset.fileSize && asset.fileSize > MAX_BYTES) {
+    return 'Bildet er for stort. Maks 8 MB.';
+  }
+  return null;
+}
+
+const rand = () => Math.random().toString(36).slice(2, 10);
+
+async function compress(uri: string): Promise<string> {
+  const out = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 1600 } }], {
+    compress: 0.8,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+  return out.uri;
+}
+
+async function uploadUri(
+  bucket: UploadBucket,
+  folder: string,
+  uri: string,
+): Promise<{ path: string; publicUrl: string }> {
+  const compressed = await compress(uri);
+  const res = await fetch(compressed);
+  const bytes = await res.arrayBuffer();
+  const path = `${folder}/${Date.now()}-${rand()}.jpg`;
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+  if (error) throw new Error(error.message);
+  return { path, publicUrl: publicUrl(bucket, path)! };
+}
+
+export type PickResult = { path: string; publicUrl: string };
+
+/**
+ * Ask for permission, open the camera or library, validate + compress, and
+ * upload to Storage under `{folder}/…`. Returns null if the user cancels.
+ * Throws with a Norwegian message on a real failure.
+ */
+export async function pickAndUpload(opts: {
+  bucket: UploadBucket;
+  folder: string;
+  source: 'camera' | 'library';
+}): Promise<PickResult | null> {
+  const { bucket, folder, source } = opts;
+
+  if (source === 'camera') {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) throw new Error('MinNabo trenger tilgang til kameraet.');
+    const r = await ImagePicker.launchCameraAsync({ quality: 0.9 });
+    if (r.canceled) return null;
+    const asset = r.assets[0];
+    const err = validateImage(asset);
+    if (err) throw new Error(err);
+    return uploadUri(bucket, folder, asset.uri);
+  }
+
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) throw new Error('MinNabo trenger tilgang til bildene dine.');
+  const r = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 0.9,
+  });
+  if (r.canceled) return null;
+  const asset = r.assets[0];
+  const err = validateImage(asset);
+  if (err) throw new Error(err);
+  return uploadUri(bucket, folder, asset.uri);
+}

@@ -1,22 +1,17 @@
-import { View, Image, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Image, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { useSession } from '@/auth/session';
+import { pickAndUpload } from '@/lib/uploads';
 import { AppText } from './Text';
 import { Icon } from './Icon';
-
-const STOCK = [
-  'https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?auto=format&fit=crop&w=600&q=60',
-  'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=600&q=60',
-  'https://images.unsplash.com/photo-1558904541-efa843a96f01?auto=format&fit=crop&w=600&q=60',
-  'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=600&q=60',
-  'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=60',
-];
 
 const MAX = 5;
 
 /**
- * Mock image picker (steg2). "Velg bilder" adds a stock image; real capture /
- * library access arrives in a later phase.
+ * Real device image picker for listings. Captures / picks a photo, compresses
+ * it and uploads it to Storage; `value` holds the resulting public URLs.
  */
 export function ImagePickerField({
   value,
@@ -30,10 +25,22 @@ export function ImagePickerField({
   compact?: boolean;
   uploadSub?: string;
 }) {
-  const add = () => {
-    if (value.length >= MAX) return;
-    const next = STOCK.find((u) => !value.includes(u)) ?? STOCK[value.length % STOCK.length];
-    onChange([...value, next]);
+  const { userId } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const add = (source: 'camera' | 'library' = 'library') => async () => {
+    if (value.length >= MAX || busy || !userId) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await pickAndUpload({ bucket: 'listing-images', folder: userId, source });
+      if (res) onChange([...value, res.publicUrl]);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
   const remove = (url: string) => onChange(value.filter((u) => u !== url));
 
@@ -41,7 +48,7 @@ export function ImagePickerField({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={nb.leggUt.pickPhotos}
-      onPress={add}
+      onPress={add('library')}
       style={[styles.dropzone, compact && styles.dropzoneCompact]}
     >
       <Icon name="camera" size={compact ? 24 : 30} color="cyan" />
@@ -111,12 +118,30 @@ export function ImagePickerField({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={nb.leggUt.pickPhotos}
-        onPress={add}
+        onPress={add('library')}
         style={styles.addTile}
       >
         <Icon name="plus" size={22} color="cyan" />
       </Pressable>
     ) : null;
+
+  const status = (
+    <>
+      {busy ? (
+        <View style={styles.statusRow}>
+          <ActivityIndicator color={tokens.color.cyan} size="small" />
+          <AppText variant="meta" color="navyMuted">
+            {nb.leggUt.uploading}
+          </AppText>
+        </View>
+      ) : null}
+      {error ? (
+        <AppText variant="meta" color="dangerText">
+          {error}
+        </AppText>
+      ) : null}
+    </>
+  );
 
   if (compact) {
     return (
@@ -126,6 +151,7 @@ export function ImagePickerField({
           {thumbs}
           {addTile}
         </ScrollView>
+        {status}
         <AppText variant="meta" color="navyMuted">
           {value.length} {nb.leggUt.stepOf} {MAX} {nb.leggUt.photosCount}
         </AppText>
@@ -136,6 +162,7 @@ export function ImagePickerField({
   return (
     <View style={styles.wrap}>
       {Dropzone}
+      {status}
       {value.length > 0 ? (
         <>
           <View style={styles.dineHead}>
@@ -161,6 +188,7 @@ const TILE = 88;
 const styles = StyleSheet.create({
   wrap: { gap: tokens.space.md },
   compactWrap: { gap: tokens.space.sm },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm },
   dropzone: {
     borderWidth: 1.5,
     borderColor: tokens.color.line,

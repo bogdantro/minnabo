@@ -143,6 +143,22 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+jest.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  launchCameraAsync: jest
+    .fn()
+    .mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cam.jpg', mimeType: 'image/jpeg', fileSize: 1000 }] }),
+  launchImageLibraryAsync: jest
+    .fn()
+    .mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///lib.jpg', mimeType: 'image/jpeg', fileSize: 1000 }] }),
+}));
+
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: jest.fn().mockResolvedValue({ uri: 'file:///out.jpg' }),
+  SaveFormat: { JPEG: 'jpeg' },
+}));
+
 jest.mock('expo-network', () => ({
   __esModule: true,
   useNetworkState: () => ({ isConnected: true, isInternetReachable: true, type: 'WIFI' }),

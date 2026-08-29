@@ -30,7 +30,14 @@
       "expo-router",
       "expo-font",
       "expo-splash-screen",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MinNabo trenger tilgang til bildene dine for å legge ved bilder i oppdrag og samtaler.",
+          "cameraPermission": "MinNabo trenger tilgang til kameraet for å ta bilder til oppdrag og samtaler."
+        }
+      ]
     ]
   }
 }

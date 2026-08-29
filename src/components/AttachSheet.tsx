@@ -1,6 +1,8 @@
-import { View, Image, Pressable, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Image, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { pickAndUpload } from '@/lib/uploads';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 import { BottomSheet } from './ui/BottomSheet';
@@ -14,16 +16,37 @@ const STOCK = [
   'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=60',
 ];
 
-/** Mock attach picker — real camera / library access arrives in a later phase. */
 export function AttachSheet({
   visible,
   onClose,
   onPick,
+  folder,
 }: {
   visible: boolean;
   onClose: () => void;
   onPick: (url: string) => void;
+  /** storage folder — must start with the current user id */
+  folder: string;
 }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (source: 'camera' | 'library') => {
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await pickAndUpload({ bucket: 'chat-attachments', folder, source });
+      if (res) {
+        onPick(res.publicUrl);
+        onClose();
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <BottomSheet visible={visible} onClose={onClose} title={nb.attachSheet.title} heightRatio={0.62}>
       <AppText variant="meta" color="navyMuted" style={styles.intro}>
@@ -31,21 +54,43 @@ export function AttachSheet({
       </AppText>
 
       <View style={styles.actions}>
-        <View style={styles.action}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={nb.attachSheet.take}
+          disabled={busy}
+          onPress={() => run('camera')}
+          style={styles.action}
+        >
           <Icon name="camera" size={16} color="cyan" />
           <AppText variant="meta" weight="bold" color="cyan">
             {nb.attachSheet.take}
           </AppText>
-        </View>
+        </Pressable>
         <View style={styles.divider} />
-        <View style={styles.action}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={nb.attachSheet.library}
+          disabled={busy}
+          onPress={() => run('library')}
+          style={styles.action}
+        >
           <Icon name="image" size={16} color="cyan" />
           <AppText variant="meta" weight="bold" color="cyan">
             {nb.attachSheet.library}
           </AppText>
-        </View>
+        </Pressable>
       </View>
 
+      {busy ? <ActivityIndicator color={tokens.color.cyan} style={styles.spin} /> : null}
+      {error ? (
+        <AppText variant="meta" color="dangerText" style={styles.intro}>
+          {error}
+        </AppText>
+      ) : null}
+
+      <AppText variant="meta" color="navyMuted" style={styles.intro}>
+        {nb.attachSheet.examples}
+      </AppText>
       <View style={styles.grid}>
         {STOCK.map((url) => (
           <Pressable
@@ -68,6 +113,7 @@ export function AttachSheet({
 
 const styles = StyleSheet.create({
   intro: { marginBottom: tokens.space.md },
+  spin: { marginBottom: tokens.space.md },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
