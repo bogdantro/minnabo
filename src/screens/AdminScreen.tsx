@@ -8,6 +8,10 @@ import { formatPrice, nok } from '@/domain/price';
 import { formatRelative } from '@/lib/datetime';
 import { documentedDonations } from '@/data/seedCommunity';
 import { useListings, useProfile, useReports, useResolveReport } from '@/api/queries';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { toast } from '@/lib/toast';
+import { confirm } from '@/lib/confirm';
+import { FallbackScreen } from '@/components/FallbackScreen';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -18,10 +22,27 @@ import { Button } from '@/components/ui/Button';
 type Tab = 'reports' | 'listings' | 'donations';
 
 export function AdminScreen() {
+  const me = useCurrentUser();
   const [tab, setTab] = useState<Tab>('reports');
   const { data: reports = [] } = useReports();
   const { data: listings = [] } = useListings({});
   const resolve = useResolveReport();
+
+  if (!me.isLoading && !me.isAdmin) {
+    return <FallbackScreen status="noAccess" title={nb.admin.title} />;
+  }
+
+  const resolveReport = async (id: string) => {
+    const ok = await confirm({
+      title: nb.admin.resolveConfirm,
+      confirmLabel: nb.admin.resolve,
+    });
+    if (!ok) return;
+    resolve.mutate(id, {
+      onSuccess: () => toast.success(nb.admin.resolvedToast),
+      onError: () => toast.error(nb.toast.genericError),
+    });
+  };
 
   const openCount = reports.filter((r) => r.status !== 'RESOLVED').length;
   const stats = [
@@ -85,7 +106,7 @@ export function AdminScreen() {
                 key={r.id}
                 report={r}
                 pending={resolve.isPending}
-                onResolve={() => resolve.mutate(r.id)}
+                onResolve={() => resolveReport(r.id)}
               />
             ))
           )

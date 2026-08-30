@@ -6,6 +6,9 @@ import nb from '@/i18n/nb';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { useProposal, useSubmitReview } from '@/api/queries';
 import { useSession } from '@/auth/session';
+import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
+import { FallbackScreen } from '@/components/FallbackScreen';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -20,7 +23,7 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
   const [comment, setComment] = useState('');
   const [done, setDone] = useState(false);
 
-  const { data: proposal } = useProposal(proposalId);
+  const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
   const me = useSession().userId ?? '';
   const counterpartId =
     proposal?.fromProfileId === me ? proposal?.toProfileId : proposal?.fromProfileId;
@@ -36,9 +39,25 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
         rating,
         comment: comment.trim() || undefined,
       },
-      { onSuccess: () => setDone(true) },
+      {
+        onSuccess: () => {
+          haptics.success();
+          setDone(true);
+        },
+        onError: () => toast.error(nb.toast.genericError),
+      },
     );
   };
+
+  if (!proposal && !done) {
+    return (
+      <FallbackScreen
+        status={isError ? 'error' : isLoading ? 'loading' : 'empty'}
+        onRetry={() => refetch()}
+        title={nb.review.title}
+      />
+    );
+  }
 
   if (done) {
     return (

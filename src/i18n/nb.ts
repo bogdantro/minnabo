@@ -467,6 +467,8 @@ const nb = {
     donations: 'Donasjoner',
     openReport: 'Åpne',
     resolve: 'Marker som håndtert',
+    resolveConfirm: 'Marker denne rapporten som håndtert?',
+    resolvedToast: 'Rapporten er markert som håndtert.',
     resolved: 'Håndtert',
     noReports: 'Ingen åpne rapporter.',
     removeListing: 'Fjern oppføring',

@@ -40,6 +40,7 @@ export const profiles: Record<string, PublicProfile> = {
     id: 'u-mb',
     displayName: 'Marius B.',
     initials: 'MB',
+    role: 'admin',
     onboardedAt: '2026-01-15T09:00:00Z',
     avatarUrl:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=60',

@@ -135,6 +135,17 @@ afterEach(() => {
   }
 });
 
+// Auto-confirm Alert dialogs so confirm() flows are testable — presses the
+// last non-cancel button (our confirm action).
+jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(
+  (...args: unknown[]) => {
+    const buttons = args[2] as { text?: string; style?: string; onPress?: () => void }[] | undefined;
+    if (!buttons?.length) return;
+    const action = [...buttons].reverse().find((b) => b.style !== 'cancel') ?? buttons[buttons.length - 1];
+    action?.onPress?.();
+  },
+);
+
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),

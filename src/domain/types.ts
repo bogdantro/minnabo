@@ -52,6 +52,8 @@ export type PublicProfile = {
   location: LocationInfo;
   verifications: Verification[];
   isBusiness: boolean;
+  /** 'admin' unlocks the moderation panel; server-enforced regardless */
+  role?: 'user' | 'admin';
   presentation?: string;
   services?: string[];
   categorySlugs?: string[];
