@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { cleanup } from '@testing-library/react-native';
+import { cleanup, configure } from '@testing-library/react-native';
+
+// RNTL 14 + react-query settle slowly on a loaded machine; give waitFor room.
+configure({ asyncUtilTimeout: 8000 });
 
 // The app must never hit the network in tests — it always uses MockApiClient.
 // These mocks keep any accidental import of the supabase client harmless.

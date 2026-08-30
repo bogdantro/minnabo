@@ -622,6 +622,8 @@ const nb = {
     blockBody: 'Blokkerte brukere kan ikke kontakte deg, og du ser ikke oppføringene deres.',
     block: 'Blokkér bruker',
     unblock: 'Opphev blokkering',
+    blockConfirmTitle: 'Blokkér denne brukeren?',
+    blockConfirmBody: 'Dere kan ikke lenger kontakte hverandre, og du ser ikke oppføringene deres.',
     blocked: 'Brukeren er blokkert.',
     blockedListTitle: 'Blokkerte brukere',
     noBlocked: 'Du har ikke blokkert noen.',

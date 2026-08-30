@@ -14,6 +14,8 @@ import {
   useToggleBlock,
 } from '@/api/queries';
 import { apiClient } from '@/api/client';
+import { toast } from '@/lib/toast';
+import { confirm } from '@/lib/confirm';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -43,7 +45,21 @@ export function SafetyScreen({
   const report = useSubmitReport();
 
   const isBlocked = blockedIds.includes(profileId);
-  const toggleBlock = () => toggle.mutate(profileId);
+  const toggleBlock = async () => {
+    if (!isBlocked) {
+      const ok = await confirm({
+        title: nb.safety.blockConfirmTitle,
+        message: nb.safety.blockConfirmBody,
+        confirmLabel: nb.safety.block,
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    toggle.mutate(profileId, {
+      onSuccess: () => toast.success(isBlocked ? nb.toast.unblocked : nb.toast.blocked),
+      onError: () => toast.error(nb.toast.genericError),
+    });
+  };
 
   const blockedProfiles = useQueries({
     queries: blockedIds.map((id) => ({
@@ -64,9 +80,17 @@ export function SafetyScreen({
         reason,
         details: details.trim() || undefined,
       },
-      { onSuccess: () => setSent(true) },
+      {
+        onSuccess: () => {
+          setSent(true);
+          toast.success(nb.toast.reported);
+        },
+        onError: () => toast.error(nb.toast.genericError),
+      },
     );
   };
+
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/innstillinger'));
 
   return (
     <KeyboardAvoider>
@@ -160,7 +184,7 @@ export function SafetyScreen({
           )}
         </View>
 
-        <Button label={nb.common.close} variant="ghost" onPress={() => router.back()} />
+        <Button label={nb.common.close} variant="ghost" onPress={goBack} />
       </ScrollView>
     </KeyboardAvoider>
   );
