@@ -68,7 +68,14 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
             variant="secondary"
             onPress={() => safePush('/profil/rediger')}
           />
-        ) : null}
+        ) : (
+          <Button
+            label={nb.profile.reportOrBlock}
+            variant="ghost"
+            iconLeft="flag"
+            onPress={() => safePush(`/rapporter?profil=${id}`)}
+          />
+        )}
 
         {profile.verifications.some((v) => v.verified) ? (
           <InfoCard>
