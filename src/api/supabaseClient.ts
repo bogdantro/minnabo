@@ -419,6 +419,11 @@ export class SupabaseApiClient implements ApiClient {
     if (error) fail(error.message);
   }
 
+  async markNotificationRead(id: string): Promise<void> {
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+    if (error) fail(error.message);
+  }
+
   async listReviews(profileId: string): Promise<Review[]> {
     const { data, error } = await supabase
       .from('reviews')

@@ -120,6 +120,7 @@ export interface ApiClient {
   verify(kind: VerificationKind): Promise<PublicProfile>;
   listNotifications(): Promise<AppNotification[]>;
   markAllNotificationsRead(): Promise<void>;
+  markNotificationRead(id: string): Promise<void>;
   listReviews(profileId: string): Promise<Review[]>;
 
   // completion & review

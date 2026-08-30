@@ -82,7 +82,6 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
         title={nb.tilbud.detailTitle}
         onBack={() => (router.canGoBack() ? router.back() : router.replace('/tilbud'))}
         avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
         onProfilePress={() => safePush('/profil')}
         onNotificationsPress={() => safePush('/varsler')}
       />

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { useUnreadConversationCount } from '@/api/queries';
 import { AppText } from './ui/Text';
 import { Icon, type IconName } from './ui/Icon';
 import { MenySheet } from './MenySheet';
@@ -33,19 +34,30 @@ export function BottomNav({
 }) {
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
+  const unreadInbox = useUnreadConversationCount();
 
   const slot = (s: { target: NavTarget; label: string; icon: IconName }) => {
     const isActive = active === s.target;
+    const badge = s.target === 'innboks' ? unreadInbox : 0;
     return (
       <Pressable
         key={s.target}
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
-        accessibilityLabel={s.label}
+        accessibilityLabel={badge > 0 ? `${s.label}, ${badge} ulest` : s.label}
         style={styles.slot}
         onPress={() => onNavigate(s.target)}
       >
-        <Icon name={s.icon} size={22} color={isActive ? 'lime' : 'navy'} />
+        <View>
+          <Icon name={s.icon} size={22} color={isActive ? 'lime' : 'navy'} />
+          {badge > 0 ? (
+            <View style={styles.badge}>
+              <AppText variant="meta" weight="bold" color="white" style={styles.badgeText}>
+                {badge > 9 ? '9+' : badge}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
         <AppText variant="meta" weight={isActive ? 'bold' : 'regular'} color={isActive ? 'lime' : 'navy'}>
           {s.label}
         </AppText>
@@ -114,6 +126,19 @@ const styles = StyleSheet.create({
     paddingTop: tokens.space.sm,
   },
   slot: { flex: 1, alignItems: 'center', gap: 3 },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -9,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: tokens.color.cyan,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { fontSize: 9, lineHeight: 11 },
   fab: {
     width: 62,
     height: 62,

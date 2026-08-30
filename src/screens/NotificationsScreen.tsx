@@ -3,7 +3,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { AppNotification, NotificationKind } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { useNotifications, useMarkAllNotificationsRead } from '@/api/queries';
+import {
+  useNotifications,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+} from '@/api/queries';
 import { formatRelative } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
@@ -25,9 +29,12 @@ const iconFor: Record<NotificationKind, IconName> = {
   MODERATION: 'shield',
 };
 
+const notificationIcon = (kind: NotificationKind): IconName => iconFor[kind] ?? 'bell';
+
 export function NotificationsScreen() {
   const { data, isLoading, isError, refetch } = useNotifications();
   const markAll = useMarkAllNotificationsRead();
+  const markOne = useMarkNotificationRead();
   const items = data ?? [];
 
   let status: ScreenStatus = 'ready';
@@ -59,7 +66,15 @@ export function NotificationsScreen() {
           data={items}
           keyExtractor={(n) => n.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => <Row notification={item} />}
+          renderItem={({ item }) => (
+            <Row
+              notification={item}
+              onOpen={() => {
+                if (!item.read) markOne.mutate(item.id);
+                if (item.route) safePush(item.route);
+              }}
+            />
+          )}
         />
       ) : (
         <ScreenState status={status} onRetry={() => refetch()} emptyText={nb.notifications.empty} />
@@ -68,16 +83,22 @@ export function NotificationsScreen() {
   );
 }
 
-function Row({ notification }: { notification: AppNotification }) {
+function Row({
+  notification,
+  onOpen,
+}: {
+  notification: AppNotification;
+  onOpen: () => void;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={notification.title}
-      onPress={() => notification.route && safePush(notification.route)}
+      onPress={onOpen}
       style={[styles.row, !notification.read && styles.unread]}
     >
       <View style={styles.iconWrap}>
-        <Icon name={iconFor[notification.kind]} size={18} color="navy" />
+        <Icon name={notificationIcon(notification.kind)} size={18} color="navy" />
       </View>
       <View style={styles.body}>
         <AppText variant="body" weight={notification.read ? 'regular' : 'bold'}>

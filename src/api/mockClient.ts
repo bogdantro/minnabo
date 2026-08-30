@@ -171,6 +171,11 @@ export class MockApiClient implements ApiClient {
     profileRepository.markAllNotificationsRead();
   }
 
+  async markNotificationRead(id: string): Promise<void> {
+    await delay(40);
+    profileRepository.markNotificationRead(id);
+  }
+
   async listReviews(profileId: string): Promise<Review[]> {
     await delay(150);
     return profileRepository.listReviewsForProfile(profileId);

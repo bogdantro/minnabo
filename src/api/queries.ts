@@ -59,6 +59,16 @@ export function useConversations(unreadOnly?: boolean, query?: string) {
   });
 }
 
+/** Count of conversations with unread messages — drives the Innboks tab badge. */
+export function useUnreadConversationCount(): number {
+  const { data } = useQuery({
+    queryKey: chatKeys.conversations(false, ''),
+    queryFn: () => apiClient.listConversations({}),
+    staleTime: 15_000,
+  });
+  return (data ?? []).filter((c) => c.unread).length;
+}
+
 export function useConversation(id: string) {
   return useQuery({
     queryKey: chatKeys.conversation(id),
@@ -226,10 +236,28 @@ export function useNotifications() {
   });
 }
 
+/** Count of unread notifications — drives the bell dot in every header. */
+export function useUnreadNotificationCount(): number {
+  const { data } = useQuery({
+    queryKey: profileKeys.notifications,
+    queryFn: () => apiClient.listNotifications(),
+    staleTime: 15_000,
+  });
+  return (data ?? []).filter((n) => !n.read).length;
+}
+
 export function useMarkAllNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => apiClient.markAllNotificationsRead(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: profileKeys.notifications }),
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.markNotificationRead(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: profileKeys.notifications }),
   });
 }

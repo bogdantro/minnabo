@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
+import { useUnreadNotificationCount } from '@/api/queries';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 import { Avatar } from './ui/Avatar';
@@ -15,6 +16,7 @@ type RightClusterProps = {
   avatar: AvatarInfo;
   onProfilePress: () => void;
   onNotificationsPress: () => void;
+  /** override the live unread count (tests only) */
   unreadNotifications?: boolean;
   testID?: string;
 };
@@ -26,18 +28,27 @@ function RightCluster({
   unreadNotifications,
   testID,
 }: RightClusterProps) {
+  const liveCount = useUnreadNotificationCount();
+  const count = unreadNotifications === undefined ? liveCount : unreadNotifications ? 1 : 0;
+
   return (
     <View style={styles.right}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={nb.a11y.notifications}
+        accessibilityLabel={
+          count > 0 ? `${nb.a11y.notifications}, ${count} ulest` : nb.a11y.notifications
+        }
         hitSlop={hitSlop}
         onPress={onNotificationsPress}
         style={styles.bell}
       >
         <Icon name="bell" size={24} color="navy" />
-        {unreadNotifications ? (
-          <View testID={testID ? `${testID}-noti-dot` : 'noti-dot'} style={styles.dot} />
+        {count > 0 ? (
+          <View testID={testID ? `${testID}-noti-dot` : 'noti-dot'} style={styles.badge}>
+            <AppText variant="meta" weight="bold" color="white" style={styles.badgeText}>
+              {count > 9 ? '9+' : count}
+            </AppText>
+          </View>
         ) : null}
       </Pressable>
       <Pressable
@@ -143,17 +154,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   bell: { padding: 2 },
-  dot: {
+  badge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
+    top: -3,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
     backgroundColor: tokens.color.cyan,
     borderWidth: 1.5,
     borderColor: tokens.color.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  badgeText: { fontSize: 9, lineHeight: 11 },
   title: {
     flex: 1,
     textAlign: 'center',

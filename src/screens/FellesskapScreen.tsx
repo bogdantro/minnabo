@@ -24,7 +24,6 @@ export function FellesskapScreen() {
     <View style={styles.wrap}>
       <HomeTopBar
         avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
         onProfilePress={() => safePush('/profil')}
         onNotificationsPress={() => safePush('/varsler')}
       />

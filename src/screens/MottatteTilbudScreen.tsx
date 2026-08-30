@@ -42,7 +42,6 @@ export function MottatteTilbudScreen() {
         title={nb.tilbud.title}
         onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
         avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
         onProfilePress={() => safePush('/profil')}
         onNotificationsPress={() => safePush('/varsler')}
       />

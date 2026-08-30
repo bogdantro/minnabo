@@ -76,7 +76,6 @@ export function ListingListScreen({ type }: { type: ListingType }) {
         title={copy.title}
         onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
         avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        unreadNotifications
         onProfilePress={() => safePush('/profil')}
         onNotificationsPress={() => safePush('/varsler')}
       />
