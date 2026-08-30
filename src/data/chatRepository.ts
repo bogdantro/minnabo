@@ -275,9 +275,11 @@ export const chatRepository = {
   },
 
   getAgreementForConversation(conversationId: string): AgreementSnapshot | undefined {
-    const convProposals = proposals.filter((p) => p.conversationId === conversationId);
-    const accepted = convProposals.find((p) => p.status === 'ACCEPTED');
-    return accepted ? agreements.find((a) => a.proposalId === accepted.id) : undefined;
+    const convProposalIds = new Set(
+      proposals.filter((p) => p.conversationId === conversationId).map((p) => p.id),
+    );
+    // Any proposal in this conversation that has a snapshot (survives revision churn).
+    return agreements.find((a) => convProposalIds.has(a.proposalId));
   },
 
   getAgreement(proposalId: string): AgreementSnapshot | undefined {

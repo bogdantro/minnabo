@@ -1,17 +1,15 @@
 import { router } from 'expo-router';
+import { reportError } from './reporting';
 
 /**
- * Push a route, swallowing "route does not exist yet" errors so screens
- * built in an earlier slice can link to routes that arrive in a later one.
+ * Push a route. expo-router's typed routes are compile-time only, so this
+ * helper keeps call sites loose. A genuinely bad path surfaces the router's
+ * not-found screen; we also log it so it doesn't fail silently.
  */
 export function safePush(path: string): void {
   try {
-    // expo-router's typed routes are strict; this helper is intentionally loose.
     router.push(path as never);
-  } catch {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.warn(`[nav] route not available yet: ${path}`);
-    }
+  } catch (e) {
+    reportError(e, { where: 'safePush', path });
   }
 }

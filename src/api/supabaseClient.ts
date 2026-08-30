@@ -130,6 +130,13 @@ export class SupabaseApiClient implements ApiClient {
     if (error) fail(error.message);
     const listingId = (row as { id: string }).id;
 
+    // Details + images are separate inserts; on any failure remove the orphan
+    // listing row so a half-published draft doesn't linger.
+    const rollback = async (message: string): Promise<never> => {
+      await supabase.from('listings').delete().eq('id', listingId);
+      return fail(message);
+    };
+
     if (listing.task) {
       const { error: e } = await supabase.from('task_details').insert({
         listing_id: listingId,
@@ -139,7 +146,7 @@ export class SupabaseApiClient implements ApiClient {
         duration_text: listing.task.durationText ?? null,
         scheduled_text: listing.task.scheduledText ?? null,
       });
-      if (e) fail(e.message);
+      if (e) await rollback(e.message);
     }
     if (listing.offer) {
       const { error: e } = await supabase.from('service_offer_details').insert({
@@ -152,7 +159,7 @@ export class SupabaseApiClient implements ApiClient {
         equipment_text: listing.offer.equipmentText ?? null,
         max_distance_km: listing.offer.maxDistanceKm ?? null,
       });
-      if (e) fail(e.message);
+      if (e) await rollback(e.message);
     }
     if (listing.images.length) {
       const { error: e } = await supabase.from('listing_images').insert(
@@ -162,7 +169,7 @@ export class SupabaseApiClient implements ApiClient {
           ord,
         })),
       );
-      if (e) fail(e.message);
+      if (e) await rollback(e.message);
     }
     return this.getListing(listingId);
   }
