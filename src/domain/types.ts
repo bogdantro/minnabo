@@ -169,6 +169,10 @@ export type Message = {
   attachmentUrl?: string;
   createdAt: string;
   delivery: MessageDelivery;
+  /** client-side only: an optimistic message still in flight */
+  pending?: boolean;
+  /** client-side only: the send failed and can be retried */
+  failed?: boolean;
 };
 
 // ---------------------------------------------------------------------------

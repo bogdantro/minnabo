@@ -3,6 +3,7 @@ import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 
@@ -11,26 +12,29 @@ export function ChatComposer({
   onAttach,
   onSendOffer,
   canSendOffer,
-  sending,
 }: {
   onSend: (text: string) => void;
   onAttach: () => void;
   onSendOffer: () => void;
   canSendOffer: boolean;
-  sending?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const keyboardOpen = useKeyboardVisible();
   const [text, setText] = useState('');
 
   const submit = () => {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed) return;
     onSend(trimmed);
     setText('');
   };
 
+  // When the keyboard is up the KeyboardAvoidingView already lifts us — don't
+  // also add the home-indicator inset or the composer floats above the keyboard.
+  const pad = keyboardOpen ? tokens.space.sm : insets.bottom + tokens.space.sm;
+
   return (
-    <View style={[styles.wrap, { paddingBottom: insets.bottom + tokens.space.lg }]}>
+    <View style={[styles.wrap, { paddingBottom: pad }]}>
       {canSendOffer ? (
         <Pressable
           accessibilityRole="button"

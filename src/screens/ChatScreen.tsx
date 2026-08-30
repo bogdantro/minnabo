@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -7,7 +7,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
+import { useNetworkState } from 'expo-network';
 import type { Conversation, Message } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
@@ -21,9 +24,12 @@ import {
   useAgreement,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useConversationChannel } from '@/api/realtime';
-import { usePresence } from '@/api/realtime';
+import { useConversationChannel, usePresence } from '@/api/realtime';
 import { safePush } from '@/lib/nav';
+import { toast } from '@/lib/toast';
+import { haptics } from '@/lib/haptics';
+import { confirm } from '@/lib/confirm';
+import { outbox } from '@/lib/outbox';
 import { formatDayLabel, isSameDay } from '@/lib/calendar';
 import { ChatHeader } from '@/components/ChatHeader';
 import { ChatBubble } from '@/components/ChatBubble';
@@ -52,7 +58,21 @@ function ProposalMessage({
 
   if (!proposal) return null;
 
-  const canRespond = proposal.toProfileId === me.id;
+  const canRespond = proposal.toProfileId === me.id && proposal.status === 'SENT';
+
+  const accept = () => {
+    haptics.success();
+    respond.mutate({ proposalId, event: 'ACCEPT', actor: 'RECIPIENT' });
+  };
+  const decline = async () => {
+    const ok = await confirm({
+      title: nb.chat.declineConfirmTitle,
+      message: nb.chat.declineConfirmBody,
+      confirmLabel: nb.chat.declineOffer,
+      destructive: true,
+    });
+    if (ok) respond.mutate({ proposalId, event: 'DECLINE', actor: 'RECIPIENT' });
+  };
 
   return (
     <View style={styles.offerWrap}>
@@ -62,12 +82,8 @@ function ProposalMessage({
         listingImageUrl={listingImageUrl}
         canRespond={canRespond}
         pending={respond.isPending}
-        onAccept={() =>
-          respond.mutate({ proposalId, event: 'ACCEPT', actor: 'RECIPIENT' })
-        }
-        onDecline={() =>
-          respond.mutate({ proposalId, event: 'DECLINE', actor: 'RECIPIENT' })
-        }
+        onAccept={accept}
+        onDecline={decline}
       />
     </View>
   );
@@ -82,24 +98,72 @@ export function ChatScreen({
 }) {
   const me = useCurrentUser();
   const scrollRef = useRef<ScrollView>(null);
+  const atBottom = useRef(true);
+  const [showJump, setShowJump] = useState(false);
+
+  const net = useNetworkState();
+  const online = net.isConnected !== false && net.isInternetReachable !== false;
+
   useConversationChannel(conversation.id);
-  const online = usePresence();
+  const presence = usePresence();
   const { data: messages, isLoading, isError, refetch } = useMessages(conversation.id);
   const { data: agreement } = useAgreement(conversation.id);
-  const sendMessage = useSendMessage(conversation.id);
+  const sendMessage = useSendMessage(conversation.id, me.id);
   const sendProposal = useSendProposal(conversation.id);
-  const sendAttachment = useSendAttachment(conversation.id);
+  const sendAttachment = useSendAttachment(conversation.id, me.id);
   const [offerOpen, setOfferOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
 
   const list = messages ?? [];
+
+  const scrollToEnd = useCallback((animated = true) => {
+    scrollRef.current?.scrollToEnd({ animated });
+    setShowJump(false);
+  }, []);
+
+  const onContentSizeChange = () => {
+    // Only follow new content if the user is already reading the latest.
+    if (atBottom.current) scrollToEnd(false);
+    else setShowJump(true);
+  };
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const distanceFromBottom =
+      contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    atBottom.current = distanceFromBottom < 80;
+    if (atBottom.current && showJump) setShowJump(false);
+  };
+
+  const send = (text: string) => {
+    atBottom.current = true;
+    if (!online) {
+      outbox.enqueue({ kind: 'message', conversationId: conversation.id, text });
+      return;
+    }
+    sendMessage.mutate(text, { onError: () => toast.error(nb.toast.genericError) });
+  };
+
+  const attach = (url: string) => {
+    atBottom.current = true;
+    if (!online) {
+      outbox.enqueue({ kind: 'attachment', conversationId: conversation.id, url });
+      return;
+    }
+    sendAttachment.mutate(url, { onError: () => toast.error(nb.toast.genericError) });
+  };
+
+  const retry = (m: Message) => {
+    if (m.kind === 'IMAGE' && m.attachmentUrl) sendAttachment.mutate(m.attachmentUrl);
+    else sendMessage.mutate(m.text);
+  };
 
   const renderMessage = (message: Message, index: number) => {
     const prev = list[index - 1];
     const newDay =
       !prev || !isSameDay(new Date(prev.createdAt), new Date(message.createdAt));
     const divider = newDay ? (
-      <View key={`day-${message.id}`} style={styles.dayRow}>
+      <View style={styles.dayRow}>
         <View style={styles.dayLine} />
         <AppText variant="meta" weight="bold" color="navyMuted">
           {formatDayLabel(new Date(message.createdAt))}
@@ -133,6 +197,7 @@ export function ChatScreen({
           avatarUri={conversation.counterpart.avatarUrl}
           avatarInitials={conversation.counterpart.initials}
           showAvatar={showAvatar}
+          onRetry={() => retry(message)}
         />
       </View>
     );
@@ -147,7 +212,7 @@ export function ChatScreen({
         name={conversation.counterpart.displayName}
         avatarUri={conversation.counterpart.avatarUrl}
         initials={conversation.counterpart.initials}
-        online={online.has(conversation.counterpart.id)}
+        online={presence.has(conversation.counterpart.id)}
         onBack={onBack}
         onMenu={() => safePush(`/rapporter?profil=${conversation.counterpart.id}`)}
       />
@@ -178,13 +243,32 @@ export function ChatScreen({
       {isLoading || isError ? (
         <ScreenState status={isError ? 'error' : 'loading'} onRetry={() => refetch()} />
       ) : (
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.messages}
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
-        >
-          {list.map(renderMessage)}
-        </ScrollView>
+        <View style={styles.messagesWrap}>
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.messages}
+            onContentSizeChange={onContentSizeChange}
+            onScroll={onScroll}
+            scrollEventThrottle={80}
+            keyboardDismissMode="interactive"
+          >
+            {list.map(renderMessage)}
+          </ScrollView>
+
+          {showJump ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={nb.chat.newMessages}
+              onPress={() => scrollToEnd(true)}
+              style={styles.jump}
+            >
+              <Icon name="arrow-down" size={16} color="white" />
+              <AppText variant="meta" weight="bold" color="white">
+                {nb.chat.newMessages}
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
       )}
 
       {agreement ? (
@@ -203,8 +287,7 @@ export function ChatScreen({
 
       <ChatComposer
         canSendOffer
-        sending={sendMessage.isPending}
-        onSend={(text) => sendMessage.mutate(text)}
+        onSend={send}
         onAttach={() => setAttachOpen(true)}
         onSendOffer={() => setOfferOpen(true)}
       />
@@ -222,7 +305,14 @@ export function ChatScreen({
               listingId: conversation.listing.id,
               ...draft,
             },
-            { onSuccess: () => setOfferOpen(false) },
+            {
+              onSuccess: () => {
+                setOfferOpen(false);
+                haptics.success();
+                toast.success(nb.toast.offerSent);
+              },
+              onError: () => toast.error(nb.toast.genericError),
+            },
           );
         }}
       />
@@ -231,7 +321,7 @@ export function ChatScreen({
         visible={attachOpen}
         onClose={() => setAttachOpen(false)}
         folder={me.id}
-        onPick={(url) => sendAttachment.mutate(url)}
+        onPick={attach}
       />
     </KeyboardAvoidingView>
   );
@@ -252,9 +342,20 @@ const styles = StyleSheet.create({
   listingThumb: { width: 44, height: 44, borderRadius: tokens.radius.sm, backgroundColor: tokens.color.line },
   listingThumbFallback: { alignItems: 'center', justifyContent: 'center' },
   listingBody: { flex: 1, gap: 2 },
-  messages: {
-    padding: tokens.space.lg,
-    gap: 2,
+  messagesWrap: { flex: 1 },
+  messages: { padding: tokens.space.lg, gap: 2 },
+  jump: {
+    position: 'absolute',
+    alignSelf: 'center',
+    bottom: tokens.space.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: tokens.color.navy,
+    borderRadius: tokens.radius.pill,
+    paddingVertical: tokens.space.sm,
+    paddingHorizontal: tokens.space.lg,
+    ...tokens.shadow.fab,
   },
   offerWrap: { marginVertical: tokens.space.sm },
   dayRow: {
@@ -274,4 +375,3 @@ const styles = StyleSheet.create({
   },
   agreementText: { flex: 1 },
 });
-

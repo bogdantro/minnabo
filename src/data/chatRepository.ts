@@ -58,6 +58,9 @@ export const chatRepository = {
 
     const listing = repositories.listings.get(listingId);
     if (!listing) throw new Error('Fant ikke oppføringen.');
+    if (listing.owner.id === CURRENT_USER_ID) {
+      throw new Error('Du kan ikke kontakte deg selv.');
+    }
 
     const conv: Conversation = {
       id: nextId('c'),

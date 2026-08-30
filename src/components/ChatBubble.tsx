@@ -1,6 +1,7 @@
-import { View, Image, StyleSheet } from 'react-native';
+import { View, Image, Pressable, StyleSheet } from 'react-native';
 import type { Message } from '@/domain/types';
 import { tokens } from '@/theme';
+import nb from '@/i18n/nb';
 import { formatTime } from '@/lib/datetime';
 import { AppText } from './ui/Text';
 import { Avatar } from './ui/Avatar';
@@ -12,9 +13,10 @@ type Props = {
   avatarUri?: string;
   avatarInitials: string;
   showAvatar: boolean;
+  onRetry?: () => void;
 };
 
-export function ChatBubble({ message, mine, avatarUri, avatarInitials, showAvatar }: Props) {
+export function ChatBubble({ message, mine, avatarUri, avatarInitials, showAvatar, onRetry }: Props) {
   if (message.kind === 'SYSTEM') {
     return (
       <View style={styles.systemRow}>
@@ -56,23 +58,51 @@ export function ChatBubble({ message, mine, avatarUri, avatarInitials, showAvata
           <AppText variant="meta" color="navyMuted">
             {formatTime(message.createdAt)}
           </AppText>
-          {mine ? (
+          {mine && !message.failed ? (
             <Icon
-              name={message.delivery === 'READ' ? 'check-circle' : 'check'}
+              name={
+                message.pending
+                  ? 'clock'
+                  : message.delivery === 'READ'
+                    ? 'check-circle'
+                    : 'check'
+              }
               size={13}
               color={message.delivery === 'READ' ? 'cyan' : 'navyMuted'}
             />
           ) : null}
         </View>
       </View>
+
+      {message.failed ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={nb.chat.retrySend}
+          onPress={onRetry}
+          style={styles.failedRow}
+        >
+          <Icon name="alert-circle" size={12} color="dangerText" />
+          <AppText variant="meta" weight="bold" color="dangerText">
+            {nb.chat.retrySend}
+          </AppText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: tokens.space.sm, marginVertical: 4 },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: tokens.space.sm, marginVertical: 4, flexWrap: 'wrap' },
   rowMine: { justifyContent: 'flex-end' },
   rowTheirs: { justifyContent: 'flex-start' },
+  failedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    width: '100%',
+    justifyContent: 'flex-end',
+    paddingTop: 2,
+  },
   avatarSlot: { width: 28 },
   bubble: {
     maxWidth: '78%',

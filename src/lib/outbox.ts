@@ -13,6 +13,9 @@ export type OutboxItem =
   | { id: string; kind: 'message'; conversationId: string; text: string }
   | { id: string; kind: 'attachment'; conversationId: string; url: string };
 
+type DistributiveOmit<T, K extends keyof any> = T extends unknown ? Omit<T, K> : never;
+export type OutboxInput = DistributiveOmit<OutboxItem, 'id'>;
+
 let queue: OutboxItem[] = [];
 let hydrated = false;
 const listeners = new Set<() => void>();
@@ -32,8 +35,11 @@ export const outbox = {
     }
     emit();
   },
-  enqueue(item: Omit<OutboxItem, 'id'>) {
-    queue = [...queue, { ...item, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` } as OutboxItem];
+  enqueue(item: OutboxInput) {
+    queue = [
+      ...queue,
+      { ...item, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` } as OutboxItem,
+    ];
     void persist();
     emit();
     toast.info(nb.toast.offlineQueued);

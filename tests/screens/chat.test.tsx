@@ -82,3 +82,26 @@ test('the attach sheet posts an image message', async () => {
     expect(chatRepository.getMessages('c-sara').some((m) => m.kind === 'IMAGE')).toBe(true),
   );
 });
+
+test('sending a message optimistically appends it then persists', async () => {
+  const conversation = chatRepository.getConversation('c-sara')!;
+  const before = chatRepository.getMessages('c-sara').length;
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  await fireEvent.changeText(screen.getByLabelText('Skriv en melding …'), 'Hei der!');
+  await fireEvent.press(screen.getByLabelText('Send'));
+
+  // optimistic bubble shows immediately
+  expect(screen.getByText('Hei der!')).toBeTruthy();
+  await waitFor(() =>
+    expect(chatRepository.getMessages('c-sara').length).toBe(before + 1),
+  );
+});
+
+test('cannot open a conversation about your own listing', async () => {
+  const { chatRepository: repo } = require('@/data/chatRepository');
+  // l-male-gjerdet is owned by the current user (profiles.mb)
+  expect(() => repo.findOrCreateConversationForListing('l-male-gjerdet')).toThrow(
+    /kontakte deg selv/i,
+  );
+});

@@ -4,7 +4,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query';
-import type { ListingFilter, ListingSort } from '@/domain/types';
+import type { ListingFilter, ListingSort, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { apiClient } from './client';
 
@@ -128,24 +128,80 @@ export function useReviseProposal() {
   });
 }
 
-export function useSendMessage(conversationId: string) {
+function optimisticMessage(
+  conversationId: string,
+  authorProfileId: string,
+  patch: Partial<Message>,
+): Message {
+  return {
+    id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    conversationId,
+    authorProfileId,
+    text: '',
+    kind: 'TEXT',
+    createdAt: new Date().toISOString(),
+    delivery: 'SENT',
+    pending: true,
+    ...patch,
+  };
+}
+
+/** Adds the optimistic message to the cache; returns a rollback + the temp id. */
+function useOptimisticSend(conversationId: string) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (text: string) => apiClient.sendMessage(conversationId, text),
-    onSuccess: () => {
+  return {
+    add(msg: Message) {
+      qc.setQueryData<Message[]>(chatKeys.messages(conversationId), (old = []) => [...old, msg]);
+    },
+    markFailed(id: string) {
+      qc.setQueryData<Message[]>(chatKeys.messages(conversationId), (old = []) =>
+        old.map((m) => (m.id === id ? { ...m, pending: false, failed: true } : m)),
+      );
+    },
+    remove(id: string) {
+      qc.setQueryData<Message[]>(chatKeys.messages(conversationId), (old = []) =>
+        old.filter((m) => m.id !== id),
+      );
+    },
+    settle() {
       qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
       qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  };
+}
+
+export function useSendMessage(conversationId: string, meId: string) {
+  const opt = useOptimisticSend(conversationId);
+  return useMutation({
+    mutationFn: async (text: string) => {
+      const temp = optimisticMessage(conversationId, meId, { text });
+      opt.add(temp);
+      try {
+        await apiClient.sendMessage(conversationId, text);
+        opt.remove(temp.id);
+        opt.settle();
+      } catch (e) {
+        opt.markFailed(temp.id);
+        throw e;
+      }
     },
   });
 }
 
-export function useSendAttachment(conversationId: string) {
-  const qc = useQueryClient();
+export function useSendAttachment(conversationId: string, meId: string) {
+  const opt = useOptimisticSend(conversationId);
   return useMutation({
-    mutationFn: (url: string) => apiClient.sendAttachment(conversationId, url),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
-      qc.invalidateQueries({ queryKey: ['conversations'] });
+    mutationFn: async (url: string) => {
+      const temp = optimisticMessage(conversationId, meId, { kind: 'IMAGE', attachmentUrl: url });
+      opt.add(temp);
+      try {
+        await apiClient.sendAttachment(conversationId, url);
+        opt.remove(temp.id);
+        opt.settle();
+      } catch (e) {
+        opt.markFailed(temp.id);
+        throw e;
+      }
     },
   });
 }

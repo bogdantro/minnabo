@@ -733,6 +733,10 @@ const nb = {
     paymentNote:
       'Betaling avtales og gjennomføres direkte mellom partene. MinNabo håndterer ikke betaling.',
     systemOfferSent: 'sendte et tilbud',
+    retrySend: 'Ikke sendt – trykk for å prøve igjen',
+    newMessages: 'Nye meldinger',
+    declineConfirmTitle: 'Avslå tilbudet?',
+    declineConfirmBody: 'Tilbyderen får beskjed om at du takket nei.',
   },
 } as const;
 
