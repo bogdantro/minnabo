@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, RefreshControl, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useConversations } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -19,7 +20,11 @@ export function InnboksScreen() {
   const me = useCurrentUser();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
-  const { data, isLoading, isError, refetch } = useConversations(filter === 'unread', query);
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const { data, isLoading, isError, isFetching, refetch } = useConversations(
+    filter === 'unread',
+    debouncedQuery,
+  );
 
   const conversations = data ?? [];
 
@@ -66,6 +71,14 @@ export function InnboksScreen() {
             />
           )}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching && !isLoading}
+              onRefresh={() => refetch()}
+              tintColor={tokens.color.cyan}
+              colors={[tokens.color.cyan]}
+            />
+          }
         />
       ) : (
         <ScreenState

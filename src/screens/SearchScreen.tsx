@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, FlatList, Pressable, ScrollView, TextInput, RefreshControl, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import type { ListingFilter, ListingSort, ListingType } from '@/domain/types';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
 import { CATEGORIES as categories, HOME_CATEGORIES as homeCategories } from '@/domain/categories';
 import { useAddSavedSearch, useListings } from '@/api/queries';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useRecentSearches } from '@/lib/recentSearches';
+import { toast } from '@/lib/toast';
 import { safePush } from '@/lib/nav';
 import { AppText } from '@/components/ui/Text';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -43,20 +47,32 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
   const [saveOpen, setSaveOpen] = useState(false);
   const [searchName, setSearchName] = useState('');
 
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const recent = useRecentSearches();
+
   const filter: ListingFilter = useMemo(
     () => ({
-      query: query.trim() || undefined,
+      query: debouncedQuery.trim() || undefined,
       type: type === 'ALL' ? undefined : type,
       categorySlug: categorySlug === 'alle' ? undefined : categorySlug,
       maxDistanceKm,
       verifiedOnly: verifiedOnly || undefined,
     }),
-    [query, type, categorySlug, maxDistanceKm, verifiedOnly],
+    [debouncedQuery, type, categorySlug, maxDistanceKm, verifiedOnly],
   );
 
   const { data, isLoading, isError, isFetching, refetch } = useListings(filter, sort);
   const results = data ?? [];
   const addSearch = useAddSavedSearch();
+  const typingBehind = query.trim() !== debouncedQuery.trim();
+
+  // Remember non-trivial searches once they settle and return something.
+  useEffect(() => {
+    if (debouncedQuery.trim().length >= 2 && !isLoading && results.length > 0) {
+      recent.add(debouncedQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, isLoading, results.length]);
 
   const activeFilterCount =
     (type !== 'ALL' ? 1 : 0) +
@@ -65,9 +81,17 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
     (verifiedOnly ? 1 : 0);
 
   let status: ScreenStatus = 'ready';
-  if (isLoading) status = 'loading';
+  if (isLoading || typingBehind) status = 'loading';
   else if (isError) status = 'error';
   else if (results.length === 0) status = 'empty';
+
+  const showDiscovery =
+    debouncedQuery.trim().length === 0 && activeFilterCount === 0 && results.length === 0 && !isLoading;
+
+  const runRecent = (term: string) => {
+    setQuery(term);
+    recent.add(term);
+  };
 
   const clearFilters = () => {
     setType('ALL');
@@ -77,17 +101,19 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
   };
 
   const saveSearch = () => {
-    addSearch.mutate({
-      name: searchName.trim() || query.trim() || 'Lagret søk',
-      filter,
-      sort,
-    });
+    addSearch.mutate(
+      { name: searchName.trim() || query.trim() || 'Lagret søk', filter, sort },
+      {
+        onSuccess: () => toast.success(nb.toast.savedSearch),
+        onError: () => toast.error(nb.toast.genericError),
+      },
+    );
     setSaveOpen(false);
     setSearchName('');
   };
 
   return (
-    <View style={styles.wrap}>
+    <SafeAreaView style={styles.wrap} edges={['top', 'bottom']}>
       <View style={styles.headerTop}>
         <Pressable
           accessibilityRole="button"
@@ -156,7 +182,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
 
       <View style={styles.resultsHead}>
         <AppText variant="meta" color="navyMuted">
-          {results.length} {nb.search.results}
+          {typingBehind ? nb.common.searching : `${results.length} ${nb.search.results}`}
         </AppText>
         <View style={styles.resultsRight}>
           <Pressable
@@ -175,7 +201,68 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
         </View>
       </View>
 
-      {status === 'loading' ? (
+      {showDiscovery ? (
+        <ScrollView contentContainerStyle={styles.discovery} keyboardShouldPersistTaps="handled">
+          {recent.items.length > 0 ? (
+            <View style={styles.discSection}>
+              <View style={styles.discHead}>
+                <AppText variant="cardTitle" weight="bold">
+                  {nb.search.recent}
+                </AppText>
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={recent.clear}>
+                  <AppText variant="meta" weight="bold" color="cyan">
+                    {nb.search.clearRecent}
+                  </AppText>
+                </Pressable>
+              </View>
+              {recent.items.map((term) => (
+                <Pressable
+                  key={term}
+                  accessibilityRole="button"
+                  accessibilityLabel={term}
+                  onPress={() => runRecent(term)}
+                  style={styles.recentRow}
+                >
+                  <Icon name="clock" size={15} color="navyMuted" />
+                  <AppText variant="body" style={styles.recentText}>
+                    {term}
+                  </AppText>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Fjern"
+                    hitSlop={8}
+                    onPress={() => recent.remove(term)}
+                  >
+                    <Icon name="x" size={14} color="navyMuted" />
+                  </Pressable>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
+          <View style={styles.discSection}>
+            <AppText variant="cardTitle" weight="bold">
+              {nb.search.browseCategories}
+            </AppText>
+            <View style={styles.tileGrid}>
+              {categories.map((c) => (
+                <Pressable
+                  key={c.slug}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.label}
+                  onPress={() => setCategorySlug(c.slug)}
+                  style={styles.tile}
+                >
+                  <Icon name={c.icon as IconName} size={20} color="lime" />
+                  <AppText variant="meta" weight="bold" numberOfLines={1}>
+                    {c.label}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      ) : status === 'loading' ? (
         <View style={styles.list}>
           <ListingListSkeleton />
         </View>
@@ -271,7 +358,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
           <Button label={nb.savedSearch.save} onPress={saveSearch} iconRight="bookmark" />
         </View>
       </BottomSheet>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -303,8 +390,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: tokens.space.md,
     paddingHorizontal: tokens.space.xl,
-    paddingTop: tokens.space.xxl,
+    paddingTop: tokens.space.sm,
     paddingBottom: tokens.space.sm,
+  },
+  discovery: { padding: tokens.space.xl, gap: tokens.space.xl, paddingBottom: tokens.space.xxxl },
+  discSection: { gap: tokens.space.sm },
+  discHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  recentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.md,
+    paddingVertical: tokens.space.sm,
+  },
+  recentText: { flex: 1 },
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.sm },
+  tile: {
+    width: '47%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.sm,
+    backgroundColor: tokens.color.surface,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    borderRadius: tokens.radius.tile,
+    padding: tokens.space.md,
   },
   searchRow: {
     flexDirection: 'row',

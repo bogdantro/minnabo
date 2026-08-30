@@ -123,6 +123,11 @@ afterEach(() => {
   } catch {
     /* not loaded */
   }
+  try {
+    require('@/lib/recentSearches').recentSearches._reset();
+  } catch {
+    /* not loaded */
+  }
 });
 
 jest.mock('expo-haptics', () => ({

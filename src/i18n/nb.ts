@@ -676,6 +676,9 @@ const nb = {
     typeTask: 'Trenger hjelp',
     typeOffer: 'Tilbyr hjelp',
     anyDistance: 'Hele Innlandet',
+    recent: 'Nylige søk',
+    clearRecent: 'Tøm',
+    browseCategories: 'Bla i kategorier',
   },
 
   proposalForm: {
