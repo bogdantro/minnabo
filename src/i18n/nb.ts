@@ -415,6 +415,7 @@ const nb = {
     notVerified: 'Ikke bekreftet',
     verifyNow: 'Bekreft nå',
     verifying: 'Bekrefter …',
+    verifiedToast: 'Bekreftet! Merket vises nå på profilen din.',
     phoneName: 'Telefonnummer',
     phoneWhat: 'Bekreftet med engangskode på SMS.',
     emailName: 'E-postadresse',

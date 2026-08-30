@@ -7,6 +7,8 @@ import nb from '@/i18n/nb';
 import { useSession } from '@/auth/session';
 import { useProfile, useVerify } from '@/api/queries';
 import { safePush } from '@/lib/nav';
+import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -35,7 +37,12 @@ export function VerifiseringssenterScreen() {
   const { data: profile } = useProfile(userId ?? '');
   const verify = useVerify();
 
-  const verifiedCount = (profile?.verifications ?? []).filter((v) => v.verified).length;
+  // Score = verified count over the methods a user can actually complete today
+  // (PHONE, EMAIL, BUSINESS) — BankID is excluded until it ships.
+  const scorable: Array<'PHONE' | 'EMAIL' | 'BUSINESS'> = ['PHONE', 'EMAIL', 'BUSINESS'];
+  const verifiedCount = scorable.filter((k) =>
+    (profile?.verifications ?? []).some((v) => v.kind === k && v.verified),
+  ).length;
 
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
@@ -55,7 +62,7 @@ export function VerifiseringssenterScreen() {
               {nb.verificationCenter.scoreLabel}
             </AppText>
             <AppText variant="meta" color="navyMuted">
-              {verifiedCount} / {ROWS.length - 1} {nb.verificationCenter.verified.toLowerCase()}
+              {verifiedCount} / {scorable.length} {nb.verificationCenter.verified.toLowerCase()}
             </AppText>
           </View>
         </View>
@@ -101,7 +108,15 @@ export function VerifiseringssenterScreen() {
                     <Button
                       label={verify.isPending ? nb.verificationCenter.verifying : nb.verificationCenter.verifyNow}
                       variant="secondary"
-                      onPress={() => verify.mutate(row.kind as 'PHONE' | 'EMAIL')}
+                      onPress={() =>
+                        verify.mutate(row.kind as 'PHONE' | 'EMAIL', {
+                          onSuccess: () => {
+                            haptics.success();
+                            toast.success(nb.verificationCenter.verifiedToast);
+                          },
+                          onError: () => toast.error(nb.toast.genericError),
+                        })
+                      }
                       loading={verify.isPending && verify.variables === row.kind}
                       style={styles.rowBtn}
                     />
