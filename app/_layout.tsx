@@ -19,6 +19,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { tokens } from '@/theme';
 import { InboxRealtime } from '@/api/realtime';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { ToastHost } from '@/components/ToastHost';
+import { AppErrorBoundary } from '@/components/AppErrorBoundary';
+import { OfflineOutbox } from '@/lib/outbox';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -45,8 +48,12 @@ const queryClient = new QueryClient({
 
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'minnabo.queryCache.v2',
+  key: 'minnabo.queryCache.v3',
 });
+
+// Bump when the cached shape changes; drops any older persisted cache on start.
+const CACHE_BUSTER = '3';
+const CACHE_MAX_AGE = 1000 * 60 * 60 * 12; // 12h
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -69,16 +76,23 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <SafeAreaProvider>
-        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-          <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: tokens.color.bg },
-            }}
-          />
-          <InboxRealtime />
-          <OfflineBanner />
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister, buster: CACHE_BUSTER, maxAge: CACHE_MAX_AGE }}
+        >
+          <AppErrorBoundary>
+            <StatusBar style="dark" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: tokens.color.bg },
+              }}
+            />
+            <InboxRealtime />
+            <OfflineOutbox />
+            <OfflineBanner />
+            <ToastHost />
+          </AppErrorBoundary>
         </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -93,6 +93,34 @@ const nb = {
     seeMore: 'Se flere',
     activeNow: 'Aktiv nå',
     activeUsers: 'Aktive nå',
+    time: 'Tid',
+    retry: 'Prøv igjen',
+    save: 'Lagre',
+    share: 'Del',
+    searching: 'Søker …',
+  },
+
+  errorBoundary: {
+    title: 'Noe gikk galt',
+    body: 'Appen støtte på en uventet feil. Prøv igjen – hvis det fortsetter, send oss en rapport.',
+    retry: 'Prøv igjen',
+    report: 'Send feilrapport',
+    reported: 'Takk! Feilrapporten er sendt.',
+  },
+
+  toast: {
+    savedSearch: 'Søket er lagret.',
+    offerSent: 'Tilbudet er sendt.',
+    requestSent: 'Forespørselen er sendt.',
+    profileSaved: 'Profilen er oppdatert.',
+    savedListing: 'Lagret.',
+    unsavedListing: 'Fjernet fra lagrede.',
+    reported: 'Takk for rapporten. Vi ser på den.',
+    blocked: 'Brukeren er blokkert.',
+    unblocked: 'Blokkeringen er opphevet.',
+    listingRemoved: 'Oppføringen er fjernet.',
+    genericError: 'Noe gikk galt. Prøv igjen.',
+    offlineQueued: 'Ingen nett – sendes når du er tilkoblet igjen.',
   },
 
   offersPage: {

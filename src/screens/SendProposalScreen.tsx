@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { formatFriendlyDate } from '@/lib/calendar';
 import { useListing, useStartConversation } from '@/api/queries';
 import { apiClient } from '@/api/client';
+import { toast } from '@/lib/toast';
+import { haptics } from '@/lib/haptics';
 import { PageHeader } from '@/components/TopBar';
+import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
+import { AmountField } from '@/components/ui/AmountField';
+import { DateField } from '@/components/ui/DateField';
+import { TimeField } from '@/components/ui/TimeField';
 import { Button } from '@/components/ui/Button';
 import { FallbackScreen } from '@/components/FallbackScreen';
 
@@ -25,24 +31,28 @@ export function SendProposalScreen({
   const startConversation = useStartConversation();
 
   const [price, setPrice] = useState('');
-  const [when, setWhen] = useState('');
+  const [date, setDate] = useState<Date | null>(null);
+  const [time, setTime] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [caveats, setCaveats] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const isGive = mode === 'give';
 
   if (!listing) {
     return (
       <FallbackScreen
         status={isError ? 'error' : isLoading ? 'loading' : 'empty'}
         onRetry={() => refetch()}
-        title={mode === 'give' ? nb.proposalForm.giveTitle : nb.proposalForm.requestTitle}
+        title={isGive ? nb.proposalForm.giveTitle : nb.proposalForm.requestTitle}
       />
     );
   }
 
   const submit = async () => {
-    if (mode === 'give' && !price.trim()) {
+    const kroner = Number(price.replace(/\s/g, '').replace(',', '.'));
+    if (isGive && (!Number.isFinite(kroner) || kroner <= 0)) {
       setError(nb.proposalForm.priceRequired);
       return;
     }
@@ -50,32 +60,40 @@ export function SendProposalScreen({
     setBusy(true);
     try {
       const conv = await apiClient.startConversationForListing(listing.id);
-      if (mode === 'give') {
-        const kroner = Number(price.replace(/\s/g, '').replace(',', '.'));
+      if (isGive) {
+        const scheduledText = [
+          date ? formatFriendlyDate(date) : null,
+          time ? `kl. ${time}` : null,
+        ]
+          .filter(Boolean)
+          .join(' ');
         await apiClient.sendProposal({
           conversationId: conv.id,
           listingId: listing.id,
           priceAmountMinor: Math.round(kroner * 100),
           message: message.trim() || undefined,
-          scheduledText: when.trim() || undefined,
+          scheduledText: scheduledText || undefined,
           caveats: caveats.trim() || undefined,
         });
+        haptics.success();
+        toast.success(nb.proposalForm.sent);
       } else {
         await apiClient.sendMessage(
           conv.id,
           message.trim() || 'Hei! Kan du sende meg et konkret tilbud på denne jobben?',
         );
+        toast.success(nb.proposalForm.requestSent);
       }
       router.replace(`/chat/${conv.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : nb.state.error);
     } finally {
       setBusy(false);
     }
   };
 
-  const isGive = mode === 'give';
-
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={isGive ? nb.proposalForm.giveTitle : nb.proposalForm.requestTitle} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenTitle>{isGive ? nb.proposalForm.giveTitle : nb.proposalForm.requestTitle}</ScreenTitle>
@@ -88,13 +106,24 @@ export function SendProposalScreen({
 
         {isGive ? (
           <>
-            <TextField
-              label={nb.proposalForm.priceLabel}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="numeric"
-            />
-            <TextField label={nb.proposalForm.whenLabel} value={when} onChangeText={setWhen} />
+            <View style={styles.field}>
+              <AppText variant="meta" weight="bold">
+                {nb.proposalForm.priceLabel}
+              </AppText>
+              <AmountField
+                value={price}
+                onChange={setPrice}
+                accessibilityLabel={nb.proposalForm.priceLabel}
+              />
+            </View>
+            <View style={styles.whenRow}>
+              <View style={styles.whenDate}>
+                <DateField label={nb.proposalForm.whenLabel} value={date} onChange={setDate} />
+              </View>
+              <View style={styles.whenTime}>
+                <TimeField label={nb.common.time} value={time} onChange={setTime} />
+              </View>
+            </View>
           </>
         ) : null}
 
@@ -131,13 +160,16 @@ export function SendProposalScreen({
           {nb.listingDetail.priceNoteTask}
         </AppText>
       </View>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   content: { padding: tokens.space.xl, gap: tokens.space.md, paddingBottom: tokens.space.xxl },
+  field: { gap: 6 },
+  whenRow: { flexDirection: 'row', gap: tokens.space.md },
+  whenDate: { flex: 2 },
+  whenTime: { flex: 1 },
   footer: {
     padding: tokens.space.xl,
     gap: tokens.space.sm,
