@@ -10,6 +10,7 @@ import { toast } from '@/lib/toast';
 import { haptics } from '@/lib/haptics';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { PageHeader } from '@/components/TopBar';
+import { FallbackScreen } from '@/components/FallbackScreen';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
@@ -20,7 +21,7 @@ import { Icon } from '@/components/ui/Icon';
 export function EditProfileScreen() {
   const router = useRouter();
   const { userId } = useSession();
-  const { data: profile } = useProfile(userId ?? '');
+  const { data: profile, isLoading, isError, refetch } = useProfile(userId ?? '');
   const update = useUpdateProfile();
 
   const [name, setName] = useState('');
@@ -29,6 +30,7 @@ export function EditProfileScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; place?: string }>({});
 
   useEffect(() => {
     if (profile && !hydrated) {
@@ -40,25 +42,55 @@ export function EditProfileScreen() {
     }
   }, [profile, hydrated]);
 
+  // Don't render the form over a profile we couldn't load — saving it would
+  // overwrite the real profile with empty strings.
+  if (!hydrated && (isLoading || isError || !profile)) {
+    return (
+      <FallbackScreen
+        status={isError ? 'error' : 'loading'}
+        onRetry={() => refetch()}
+        title={nb.profile.editTitle}
+      />
+    );
+  }
+
   const changeAvatar = async () => {
     if (!userId) return;
+    const previous = avatarUrl;
     setAvatarBusy(true);
     try {
       const res = await pickAndUpload({ bucket: 'avatars', folder: userId, source: 'library' });
-      if (res) {
-        setAvatarUrl(res.publicUrl);
-        update.mutate({ avatarPath: res.path });
+      if (!res) return; // user cancelled
+      setAvatarUrl(res.publicUrl);
+      try {
+        await update.mutateAsync({ avatarPath: res.path });
+        haptics.success();
+        toast.success(nb.toast.avatarUpdated);
+      } catch {
+        setAvatarUrl(previous); // roll back the preview — it wasn't saved
+        toast.error(nb.toast.avatarFailed);
       }
     } catch {
-      // surfaced via update.isError / ignored on cancel
+      toast.error(nb.toast.avatarFailed);
     } finally {
       setAvatarBusy(false);
     }
   };
 
   const save = () => {
+    const trimmedName = name.trim();
+    const trimmedPlace = place.trim();
+    const nextErrors: { name?: string; place?: string } = {};
+    if (!trimmedName) nextErrors.name = nb.profile.nameRequired;
+    if (!trimmedPlace) nextErrors.place = nb.profile.areaRequired;
+    setErrors(nextErrors);
+    if (nextErrors.name || nextErrors.place) {
+      haptics.warning();
+      return;
+    }
+
     update.mutate(
-      { displayName: name.trim(), place: place.trim(), presentation: presentation.trim() },
+      { displayName: trimmedName, place: trimmedPlace, presentation: presentation.trim() },
       {
         onSuccess: () => {
           haptics.success();
@@ -80,6 +112,7 @@ export function EditProfileScreen() {
           accessibilityRole="button"
           accessibilityLabel={nb.profile.changePhoto}
           onPress={changeAvatar}
+          disabled={avatarBusy}
           style={styles.avatarRow}
         >
           <Avatar uri={avatarUrl} initials={profile?.initials ?? 'N'} size={64} />
@@ -98,12 +131,24 @@ export function EditProfileScreen() {
           )}
         </Pressable>
 
-        <TextField label={nb.profile.fieldName} value={name} onChangeText={setName} />
+        <TextField
+          label={nb.profile.fieldName}
+          value={name}
+          onChangeText={(t) => {
+            setName(t);
+            if (errors.name) setErrors((e) => ({ ...e, name: undefined }));
+          }}
+          error={errors.name}
+        />
         <TextField
           label={nb.profile.fieldArea}
           value={place}
-          onChangeText={setPlace}
-          hint="Vis bare omtrentlig sted offentlig."
+          onChangeText={(t) => {
+            setPlace(t);
+            if (errors.place) setErrors((e) => ({ ...e, place: undefined }));
+          }}
+          error={errors.place}
+          hint={errors.place ? undefined : 'Vis bare omtrentlig sted offentlig.'}
         />
         <TextField
           label={nb.profile.fieldPresentation}

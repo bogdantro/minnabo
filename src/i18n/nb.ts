@@ -114,6 +114,8 @@ const nb = {
     offerSent: 'Tilbudet er sendt.',
     requestSent: 'Forespørselen er sendt.',
     profileSaved: 'Profilen er oppdatert.',
+    avatarUpdated: 'Profilbildet er oppdatert.',
+    avatarFailed: 'Kunne ikke lagre profilbildet. Prøv igjen.',
     savedListing: 'Lagret.',
     unsavedListing: 'Fjernet fra lagrede.',
     reported: 'Takk for rapporten. Vi ser på den.',
@@ -508,6 +510,8 @@ const nb = {
     changePhoto: 'Endre profilbilde',
     save: 'Lagre',
     saved: 'Profilen er lagret.',
+    nameRequired: 'Skriv inn navnet ditt.',
+    areaRequired: 'Skriv inn hvilket område du holder til i.',
   },
 
   notifications: {

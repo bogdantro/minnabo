@@ -1,5 +1,6 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { ProfileScreen } from '@/screens/ProfileScreen';
+import { EditProfileScreen } from '@/screens/EditProfileScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { CompletionScreen } from '@/screens/CompletionScreen';
 import { ReviewScreen } from '@/screens/ReviewScreen';
@@ -12,6 +13,24 @@ test('own profile shows presentation, verifications and reviews', async () => {
   expect(screen.getByText('Rediger profil')).toBeTruthy();
   expect(screen.getByText('Telefon verifisert')).toBeTruthy();
   expect(screen.getByText(/Ryddig og punktlig/)).toBeTruthy();
+});
+
+test('edit profile hydrates with the current values', async () => {
+  await renderWithProviders(<EditProfileScreen />);
+  await waitFor(() => expect(screen.getByDisplayValue('Marius B.')).toBeTruthy());
+});
+
+test('edit profile blocks saving a blank name', async () => {
+  const meId = profileRepository.currentUserId;
+  const before = profileRepository.getProfile(meId)?.displayName;
+  await renderWithProviders(<EditProfileScreen />);
+  await waitFor(() => expect(screen.getByDisplayValue('Marius B.')).toBeTruthy());
+
+  await fireEvent.changeText(screen.getByDisplayValue('Marius B.'), '   ');
+  await fireEvent.press(screen.getByText('Lagre'));
+
+  await waitFor(() => expect(screen.getByText('Skriv inn navnet ditt.')).toBeTruthy());
+  expect(profileRepository.getProfile(meId)?.displayName).toBe(before);
 });
 
 test('notifications list can be marked all read', async () => {
