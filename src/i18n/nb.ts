@@ -530,9 +530,12 @@ const nb = {
     body: 'Begge parter må bekrefte at oppdraget er utført.',
     confirm: 'Bekreft fullført',
     waitingOther: 'Venter på at den andre parten bekrefter.',
-    bothConfirmed: 'Begge har bekreftet. Oppdraget er fullført.',
+    bothConfirmed: 'Oppdraget er fullført',
+    bothConfirmedBody: 'Begge parter har bekreftet. Legg gjerne igjen en vurdering.',
     disagree: 'Noe stemmer ikke',
+    disagreeBody: 'Er dere uenige om hva som er gjort? Ta kontakt med oss – vi hjelper til.',
     reviewCta: 'Gi en vurdering',
+    contactSupport: 'Kontakt support',
   },
 
   review: {

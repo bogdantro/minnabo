@@ -12,9 +12,19 @@ import { repositories } from './repositories';
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
+// The counterpart on the seeded agreement has already marked it done, so the
+// current user can confirm once and reach the review flow.
+const completionsSeed: CompletionConfirmation[] = [
+  {
+    agreementProposalId: 'p-martin-flytting',
+    byProfileId: profiles.martin.id,
+    confirmedAt: '2026-08-27T09:00:00Z',
+  },
+];
+
 let notifications: AppNotification[] = clone(notificationsSeed);
 let reviews: Review[] = clone(reviewsSeed);
-let completions: CompletionConfirmation[] = [];
+let completions: CompletionConfirmation[] = clone(completionsSeed);
 const editableProfile: PublicProfile = clone(profiles.mb);
 
 const CURRENT_USER_ID = profiles.mb.id;
@@ -129,7 +139,7 @@ export const profileRepository = {
   _reset(): void {
     notifications = clone(notificationsSeed);
     reviews = clone(reviewsSeed);
-    completions = [];
+    completions = clone(completionsSeed);
     Object.assign(editableProfile, clone(profiles.mb));
   },
 };

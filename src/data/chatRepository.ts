@@ -12,13 +12,14 @@ import {
   conversations as seedConversations,
   messagesByConversation as seedMessages,
   proposals as seedProposals,
+  agreements as seedAgreements,
   CURRENT_USER_ID,
 } from './seedChat';
 
 let conversations: Conversation[] = clone(seedConversations);
 let messages: Record<string, Message[]> = clone(seedMessages);
 let proposals: Proposal[] = clone(seedProposals);
-let agreements: AgreementSnapshot[] = [];
+let agreements: AgreementSnapshot[] = clone(seedAgreements);
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
@@ -234,12 +235,14 @@ export const chatRepository = {
 
     if (nextStatus === 'ACCEPTED') {
       systemText = nb.chat.offerAccepted;
+      const listing = repositories.listings.get(updated.listingId);
       agreement = {
         proposalId,
         listingId: updated.listingId,
         price: updated.price,
         scheduledText: updated.scheduledText,
-        description: updated.message ?? '',
+        description:
+          listing?.task?.description ?? listing?.offer?.about ?? updated.message ?? '',
         caveats: updated.caveats,
         agreedAt: new Date().toISOString(),
       };
@@ -285,7 +288,7 @@ export const chatRepository = {
     conversations = clone(seedConversations);
     messages = clone(seedMessages);
     proposals = clone(seedProposals);
-    agreements = [];
+    agreements = clone(seedAgreements);
   },
 };
 

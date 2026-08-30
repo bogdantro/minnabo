@@ -42,7 +42,12 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   }
   const price = agreement?.price ?? proposal.price;
   const when = agreement?.scheduledText ?? proposal.scheduledText;
-  const description = agreement?.description || proposal.message || listing?.task?.description || '';
+  const description =
+    agreement?.description ||
+    listing?.task?.description ||
+    listing?.offer?.about ||
+    proposal.message ||
+    '';
   const caveats = agreement?.caveats ?? proposal.caveats;
 
   return (

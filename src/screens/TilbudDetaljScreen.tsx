@@ -8,6 +8,9 @@ import { formatPrice } from '@/domain/price';
 import { useProfile, useProposal, useReviseProposal, useRespondToProposal } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
+import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
+import { confirm } from '@/lib/confirm';
 import { DetailTopBar } from '@/components/TopBar';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -43,17 +46,36 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
   const isRecipient = proposal.toProfileId === me.id;
   const canAct = isRecipient && (proposal.status === 'SENT' || proposal.status === 'REVISION_PENDING');
 
+  const goBackSafe = () => (router.canGoBack() ? router.back() : router.replace('/tilbud'));
+
   const accept = () =>
     respond.mutate(
       { proposalId, event: 'ACCEPT', actor: 'RECIPIENT' },
-      { onSuccess: () => router.replace(`/avtale/${proposalId}`) },
+      {
+        onSuccess: () => {
+          haptics.success();
+          router.replace(`/avtale/${proposalId}`);
+        },
+        onError: () => toast.error(nb.toast.genericError),
+      },
     );
 
-  const decline = () =>
+  const decline = async () => {
+    const ok = await confirm({
+      title: nb.chat.declineConfirmTitle,
+      message: nb.chat.declineConfirmBody,
+      confirmLabel: nb.tilbud.decline,
+      destructive: true,
+    });
+    if (!ok) return;
     respond.mutate(
       { proposalId, event: 'DECLINE', actor: 'RECIPIENT' },
-      { onSuccess: () => router.back() },
+      {
+        onSuccess: goBackSafe,
+        onError: () => toast.error(nb.toast.genericError),
+      },
     );
+  };
 
   const requestRevision = () => {
     revise.mutate(
@@ -61,8 +83,10 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
       {
         onSuccess: () => {
           setRevisionOpen(false);
+          toast.info(nb.tilbud.revisionSent);
           router.replace(`/chat/${proposal.conversationId}`);
         },
+        onError: () => toast.error(nb.toast.genericError),
       },
     );
   };

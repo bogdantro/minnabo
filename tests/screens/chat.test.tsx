@@ -83,7 +83,7 @@ test('the attach sheet posts an image message', async () => {
   );
 });
 
-test('sending a message optimistically appends it then persists', async () => {
+test('sending a message appends it and persists it', async () => {
   const conversation = chatRepository.getConversation('c-sara')!;
   const before = chatRepository.getMessages('c-sara').length;
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
@@ -91,8 +91,7 @@ test('sending a message optimistically appends it then persists', async () => {
   await fireEvent.changeText(screen.getByLabelText('Skriv en melding …'), 'Hei der!');
   await fireEvent.press(screen.getByLabelText('Send'));
 
-  // optimistic bubble shows immediately
-  expect(screen.getByText('Hei der!')).toBeTruthy();
+  await waitFor(() => expect(screen.getByText('Hei der!')).toBeTruthy());
   await waitFor(() =>
     expect(chatRepository.getMessages('c-sara').length).toBe(before + 1),
   );

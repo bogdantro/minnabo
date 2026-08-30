@@ -5,6 +5,9 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useCompletion, useConfirmCompletion } from '@/api/queries';
 import { useSession } from '@/auth/session';
+import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
+import { confirm as confirmDialog } from '@/lib/confirm';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -21,6 +24,26 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
   const iConfirmed = list.some((c) => c.byProfileId === me);
   const bothConfirmed = list.length >= 2;
 
+  const doConfirm = () => {
+    if (!me) return;
+    confirm.mutate(me, {
+      onSuccess: (next) => {
+        haptics.success();
+        if (next.length >= 2) toast.success(nb.completion.bothConfirmed);
+      },
+      onError: () => toast.error(nb.toast.genericError),
+    });
+  };
+
+  const openSupport = async () => {
+    const ok = await confirmDialog({
+      title: nb.completion.disagree,
+      message: nb.completion.disagreeBody,
+      confirmLabel: nb.completion.contactSupport,
+    });
+    if (ok) router.push('/sikkerhet');
+  };
+
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
       <PageHeader title={nb.completion.title} />
@@ -33,7 +56,7 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
         <ScreenTitle>{bothConfirmed ? nb.completion.bothConfirmed : nb.completion.heading}</ScreenTitle>
         <AppText variant="body" color="navyMuted" align="center">
           {bothConfirmed
-            ? nb.completion.bothConfirmed
+            ? nb.completion.bothConfirmedBody
             : iConfirmed
               ? nb.completion.waitingOther
               : nb.completion.body}
@@ -43,7 +66,7 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
           {!iConfirmed && !bothConfirmed ? (
             <Button
               label={nb.completion.confirm}
-              onPress={() => confirm.mutate(me)}
+              onPress={doConfirm}
               loading={confirm.isPending}
             />
           ) : null}
@@ -58,7 +81,7 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
           <Button
             label={nb.completion.disagree}
             variant="secondary"
-            onPress={() => router.push('/sikkerhet')}
+            onPress={openSupport}
           />
         </View>
       </View>

@@ -1,4 +1,4 @@
-import type { Conversation, Message, Proposal } from '@/domain/types';
+import type { AgreementSnapshot, Conversation, Message, Proposal } from '@/domain/types';
 import { nok } from '@/domain/price';
 import { profiles, listings } from './seed';
 
@@ -84,6 +84,18 @@ export const proposals: Proposal[] = [
     scheduledText: 'Fredag ettermiddag',
     status: 'SENT',
     createdAt: '2026-08-22T09:15:00Z',
+  },
+];
+
+/** The accepted proposal already has an agreement snapshot (demoable completion flow). */
+export const agreements: AgreementSnapshot[] = [
+  {
+    proposalId: 'p-martin-flytting',
+    listingId: flytting.id,
+    price: nok(1500),
+    scheduledText: 'Lørdag kl. 10:00',
+    description: flytting.task?.description ?? 'Flyttehjelp',
+    agreedAt: '2026-08-26T18:31:00Z',
   },
 ];
 
