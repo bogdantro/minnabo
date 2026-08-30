@@ -1,10 +1,12 @@
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useIsSaved } from '@/api/queries';
 import { safePush } from '@/lib/nav';
+import { shareListing } from '@/lib/share';
 import { PageHeader } from '@/components/TopBar';
+import { Icon } from '@/components/ui/Icon';
 import { Gallery } from '@/components/Gallery';
 import { AppText } from '@/components/ui/Text';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -25,7 +27,20 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
 
   return (
     <View style={styles.wrap}>
-      <PageHeader title={nb.listingDetail.taskTitle} onBack={onBack} />
+      <PageHeader
+        title={nb.listingDetail.taskTitle}
+        onBack={onBack}
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.common.share}
+            hitSlop={8}
+            onPress={() => shareListing(listing.id, listing.title)}
+          >
+            <Icon name="share-2" size={22} color="navy" />
+          </Pressable>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Gallery images={listing.images} saved={saved} onToggleSave={toggleSaved} height={240} />
