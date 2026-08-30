@@ -193,6 +193,7 @@ function Section({
         iconColor={iconColor}
         title={title}
         subtitle={subtitle}
+        onSeeAll={onSeeAll}
       />
       {query.isLoading ? (
         <ListingListSkeleton count={3} />

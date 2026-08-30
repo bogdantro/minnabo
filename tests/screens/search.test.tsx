@@ -17,14 +17,11 @@ test('typing a query shows matches of both listing types', async () => {
   });
 });
 
-test('the type filter narrows results to offers', async () => {
+test('the type toggle narrows results to offers', async () => {
   await renderWithProviders(<SearchScreen initialQuery="plen" />);
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
 
-  fireEvent.press(screen.getByLabelText('Filtre'));
-  await waitFor(() => expect(screen.getByText('Type')).toBeTruthy());
-  fireEvent.press(screen.getByRole('button', { name: 'Tilbyr hjelp' }));
-  fireEvent.press(screen.getByText('Vis resultater'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Tilbyr hjelp' }));
 
   await waitFor(() => {
     expect(screen.getByText('Jeg kan klippe plenen din')).toBeTruthy();

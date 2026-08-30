@@ -166,6 +166,29 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
         </Pressable>
       </View>
 
+      <View style={styles.typeRow}>
+        {(
+          [
+            ['ALL', nb.search.typeAll],
+            ['SERVICE_OFFER', nb.search.typeOffer],
+            ['TASK_REQUEST', nb.search.typeTask],
+          ] as [TypeChoice, string][]
+        ).map(([value, label]) => (
+          <Pressable
+            key={value}
+            accessibilityRole="button"
+            accessibilityState={{ selected: type === value }}
+            accessibilityLabel={label}
+            onPress={() => setType(value)}
+            style={[styles.typeTab, type === value ? styles.typeTabActive : styles.typeTabInactive]}
+          >
+            <AppText variant="meta" weight="bold" color={type === value ? 'lime' : 'navy'} numberOfLines={1}>
+              {label}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+
       <HScrollFade>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {homeCategories.map((c) => (
@@ -295,18 +318,6 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
         heightRatio={0.78}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <Group title={nb.search.filterType}>
-            {(
-              [
-                ['ALL', nb.search.typeAll],
-                ['TASK_REQUEST', nb.search.typeTask],
-                ['SERVICE_OFFER', nb.search.typeOffer],
-              ] as [TypeChoice, string][]
-            ).map(([value, label]) => (
-              <Pill key={value} label={label} selected={type === value} onPress={() => setType(value)} />
-            ))}
-          </Group>
-
           <Group title={nb.search.filterCategory}>
             <Pill label={nb.search.typeAll} selected={categorySlug === 'alle'} onPress={() => setCategorySlug('alle')} />
             {categories.map((c) => (
@@ -391,7 +402,7 @@ const styles = StyleSheet.create({
     gap: tokens.space.md,
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.sm,
-    paddingBottom: tokens.space.sm,
+    paddingBottom: tokens.space.lg,
   },
   discovery: { padding: tokens.space.xl, gap: tokens.space.xl, paddingBottom: tokens.space.xxxl },
   discSection: { gap: tokens.space.sm },
@@ -470,6 +481,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   filterDotText: { fontSize: 10 },
+  typeRow: {
+    flexDirection: 'row',
+    gap: tokens.space.sm,
+    paddingHorizontal: tokens.space.xl,
+    paddingBottom: tokens.space.sm,
+  },
+  typeTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: tokens.radius.tile,
+    borderWidth: 1.5,
+  },
+  typeTabActive: { borderColor: tokens.color.lime, backgroundColor: tokens.color.limeTint },
+  typeTabInactive: { borderColor: tokens.color.line, backgroundColor: tokens.color.surface },
   chips: { gap: tokens.space.sm, paddingHorizontal: tokens.space.xl, paddingVertical: tokens.space.xs },
   resultsHead: {
     flexDirection: 'row',
