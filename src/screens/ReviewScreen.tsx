@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { useProposal, useSubmitReview } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { PageHeader } from '@/components/TopBar';
@@ -42,7 +42,7 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
 
   if (done) {
     return (
-      <SafeAreaView style={styles.wrap} edges={['bottom']}>
+      <KeyboardAvoider>
         <PageHeader title={nb.review.title} showBack={false} />
         <View style={styles.center}>
           <View style={styles.badge}>
@@ -51,12 +51,12 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
           <ScreenTitle>{nb.review.submitted}</ScreenTitle>
           <Button label={nb.leggUt.toFront} onPress={() => router.replace('/')} />
         </View>
-      </SafeAreaView>
+      </KeyboardAvoider>
     );
   }
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={nb.review.title} />
       <View style={styles.body}>
         <ScreenTitle>{nb.review.heading}</ScreenTitle>
@@ -88,12 +88,11 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
       <View style={styles.footer}>
         <Button label={nb.review.submit} onPress={send} loading={submit.isPending} />
       </View>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   body: { flex: 1, padding: tokens.space.xl, gap: tokens.space.md },
   stars: { flexDirection: 'row', gap: tokens.space.sm, marginBottom: tokens.space.md },
   center: {

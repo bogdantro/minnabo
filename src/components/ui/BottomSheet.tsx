@@ -5,6 +5,8 @@ import {
   Pressable,
   Animated,
   Easing,
+  KeyboardAvoidingView,
+  Platform,
   useWindowDimensions,
   StyleSheet,
 } from 'react-native';
@@ -70,7 +72,10 @@ export function BottomSheet({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={dismiss}>
-      <View style={styles.root}>
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -103,7 +108,7 @@ export function BottomSheet({
           ) : null}
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import type { Purpose } from '@/domain/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -74,7 +74,7 @@ export function SetupScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={nb.onboarding.setupTitle} />
       <OnboardingProgress step={3} total={3} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -116,12 +116,11 @@ export function SetupScreen() {
       <View style={styles.footer}>
         <Button label={nb.onboarding.finish} onPress={finish} loading={busy} />
       </View>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   body: { padding: tokens.space.xl, gap: tokens.space.lg, paddingBottom: tokens.space.xxl },
   footer: {
     padding: tokens.space.xl,

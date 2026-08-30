@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { supabase } from '@/lib/supabase';
 import { ENV } from '@/lib/env';
 import { PageHeader } from '@/components/TopBar';
@@ -51,7 +51,7 @@ export function ConsentScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={nb.onboarding.consentTitle} />
       <OnboardingProgress step={2} total={3} />
       <View style={styles.body}>
@@ -79,12 +79,11 @@ export function ConsentScreen() {
       <View style={styles.footer}>
         <Button label={nb.onboarding.consentContinue} onPress={next} loading={busy} />
       </View>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   body: { flex: 1, padding: tokens.space.xl, gap: tokens.space.lg },
   list: { gap: tokens.space.sm },
   footer: {

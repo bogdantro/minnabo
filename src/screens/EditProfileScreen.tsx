@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useSession } from '@/auth/session';
 import { useProfile, useUpdateProfile } from '@/api/queries';
 import { pickAndUpload } from '@/lib/uploads';
+import { toast } from '@/lib/toast';
+import { haptics } from '@/lib/haptics';
+import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { TextField } from '@/components/ui/TextField';
@@ -57,12 +59,19 @@ export function EditProfileScreen() {
   const save = () => {
     update.mutate(
       { displayName: name.trim(), place: place.trim(), presentation: presentation.trim() },
-      { onSuccess: () => router.back() },
+      {
+        onSuccess: () => {
+          haptics.success();
+          toast.success(nb.toast.profileSaved);
+          router.back();
+        },
+        onError: () => toast.error(nb.toast.genericError),
+      },
     );
   };
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={nb.profile.editTitle} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenTitle>{nb.profile.editTitle}</ScreenTitle>
@@ -111,12 +120,11 @@ export function EditProfileScreen() {
       <View style={styles.footer}>
         <Button label={nb.profile.save} onPress={save} loading={update.isPending} />
       </View>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   content: { padding: tokens.space.xl, gap: tokens.space.lg, paddingBottom: tokens.space.xxl },
   avatarRow: {
     flexDirection: 'row',

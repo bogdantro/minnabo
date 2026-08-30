@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoider } from './ui/KeyboardAvoider';
 import { useRouter } from 'expo-router';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
@@ -63,7 +63,7 @@ export function Wizard({
   };
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={heading} onBack={back} />
 
       <View style={styles.progressWrap}>
@@ -141,12 +141,11 @@ export function Wizard({
           </View>
         </View>
       </View>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   progressWrap: {
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.sm,

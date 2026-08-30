@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { CATEGORIES as categories } from '@/domain/categories';
 import { useSubmitBusinessProfile } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -61,7 +61,7 @@ export function BedriftRegistreringScreen() {
 
   if (done) {
     return (
-      <SafeAreaView style={styles.wrap} edges={['bottom']}>
+      <KeyboardAvoider>
         <PageHeader title={nb.bedrift.title} showBack={false} />
         <View style={styles.center}>
           <View style={styles.badge}>
@@ -73,12 +73,12 @@ export function BedriftRegistreringScreen() {
           </AppText>
           <Button label={nb.leggUt.toFront} onPress={() => router.replace('/')} />
         </View>
-      </SafeAreaView>
+      </KeyboardAvoider>
     );
   }
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={nb.bedrift.title} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenTitle>{nb.bedrift.heading}</ScreenTitle>
@@ -125,12 +125,11 @@ export function BedriftRegistreringScreen() {
       <View style={styles.footer}>
         <Button label={nb.bedrift.submit} onPress={submit} iconRight="send" loading={submitBiz.isPending} />
       </View>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   content: { padding: tokens.space.xl, gap: tokens.space.md, paddingBottom: tokens.space.xxl },
   catGroup: { gap: tokens.space.sm },
   center: {

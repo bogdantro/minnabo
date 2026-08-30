@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQueries } from '@tanstack/react-query';
 import type { ReportTargetType } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import {
   profileKeys,
   useBlockedProfileIds,
@@ -69,7 +69,7 @@ export function SafetyScreen({
   };
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
+    <KeyboardAvoider>
       <PageHeader title={nb.safety.title} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenTitle>{nb.safety.title}</ScreenTitle>
@@ -162,12 +162,11 @@ export function SafetyScreen({
 
         <Button label={nb.common.close} variant="ghost" onPress={() => router.back()} />
       </ScrollView>
-    </SafeAreaView>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
   content: { padding: tokens.space.xl, gap: tokens.space.lg, paddingBottom: tokens.space.xxxl },
   card: {
     gap: tokens.space.sm,
