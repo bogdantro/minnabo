@@ -5,7 +5,10 @@ import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
+import { wizardNav } from '@/data/wizardNav';
 import { useCreateListing } from '@/api/queries';
+import { toast } from '@/lib/toast';
+import { haptics } from '@/lib/haptics';
 import { PageHeader } from '@/components/TopBar';
 import { AppText } from '@/components/ui/Text';
 import { Icon } from '@/components/ui/Icon';
@@ -47,11 +50,19 @@ export function PreviewScreen() {
       return;
     }
     create.mutate(listing, {
-      onSuccess: () => router.replace(`/legg-ut/publisert?id=${listing.id}`),
+      onSuccess: (created) => {
+        haptics.success();
+        draftStore.clear();
+        router.replace(`/legg-ut/publisert?id=${created.id}`);
+      },
+      onError: () => toast.error(nb.toast.genericError),
     });
   };
 
-  const editStep = () => goBack();
+  const editStep = (step: number) => {
+    wizardNav.requestStep(step);
+    goBack();
+  };
 
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
@@ -84,7 +95,7 @@ export function PreviewScreen() {
         )}
 
         <View style={styles.card}>
-          <EditableRow title={listing.title} onEdit={editStep} big />
+          <EditableRow title={listing.title} onEdit={() => editStep(0)} big />
           <View style={styles.badges}>
             <StatusPill label={listing.category.label} tone="lime" />
             <StatusPill label={nb.leggUt.notPublished} tone="neutral" filled />
@@ -104,14 +115,14 @@ export function PreviewScreen() {
             ) : null}
           </InfoCard>
 
-          <EditableRow title={isTask ? nb.listingDetail.description : nb.listingDetail.aboutOffer} onEdit={editStep} />
+          <EditableRow title={isTask ? nb.listingDetail.description : nb.listingDetail.aboutOffer} onEdit={() => editStep(0)} />
           <AppText variant="body" color="navyMuted">
             {isTask ? listing.task?.description : listing.offer?.about}
           </AppText>
 
           {isTask ? (
             <>
-              <EditableRow title={nb.listingDetail.practicalInfo} onEdit={editStep} />
+              <EditableRow title={nb.listingDetail.practicalInfo} onEdit={() => editStep(2)} />
               <InfoCard>
                 {listing.task?.equipment ? (
                   <InfoRow icon="feather" label={listing.task.equipment} last={!listing.task?.meetingNote} />
@@ -123,7 +134,7 @@ export function PreviewScreen() {
             </>
           ) : listing.offer?.services?.length ? (
             <>
-              <EditableRow title={nb.listingDetail.experienceAndServices} onEdit={editStep} />
+              <EditableRow title={nb.listingDetail.experienceAndServices} onEdit={() => editStep(1)} />
               <View style={styles.badges}>
                 {listing.offer.services.map((s) => (
                   <StatusPill key={s} label={s} tone="lime" />

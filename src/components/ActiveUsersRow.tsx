@@ -12,9 +12,12 @@ import { Icon } from './ui/Icon';
  */
 export function ActiveUsersRow({
   profiles,
+  onlineIds,
   onPressUser,
 }: {
   profiles: PublicProfile[];
+  /** profile ids that are actually online right now (presence) */
+  onlineIds?: Set<string>;
   onPressUser: (id: string) => void;
 }) {
   if (profiles.length === 0) return null;
@@ -25,39 +28,42 @@ export function ActiveUsersRow({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
     >
-      {profiles.map((p) => (
-        <Pressable
-          key={p.id}
-          accessibilityRole="button"
-          accessibilityLabel={`${p.displayName}, ${nb.common.activeNow}`}
-          onPress={() => onPressUser(p.id)}
-          style={styles.item}
-        >
-          <Avatar uri={p.avatarUrl} initials={p.initials} size={40} online />
-          <View style={styles.text}>
-            <AppText variant="meta" weight="bold" numberOfLines={1}>
-              {p.displayName}
-            </AppText>
-            <View style={styles.metaRow}>
-              {p.rating ? (
-                <>
-                  <Icon name="star" size={11} color="star" />
-                  <AppText variant="meta" color="navyMuted">
-                    {p.rating.average.toLocaleString('nb-NO', { minimumFractionDigits: 1 })}
-                  </AppText>
-                  <AppText variant="meta" color="navyMuted">
-                    {' · '}
-                  </AppText>
-                </>
-              ) : null}
-              <View style={styles.dot} />
-              <AppText variant="meta" color="navyMuted">
-                {nb.common.activeNow}
+      {profiles.map((p) => {
+        const isOnline = onlineIds?.has(p.id) ?? false;
+        return (
+          <Pressable
+            key={p.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${p.displayName}, ${isOnline ? nb.common.activeNow : nb.common.recentlyActive}`}
+            onPress={() => onPressUser(p.id)}
+            style={styles.item}
+          >
+            <Avatar uri={p.avatarUrl} initials={p.initials} size={40} online={isOnline} />
+            <View style={styles.text}>
+              <AppText variant="meta" weight="bold" numberOfLines={1}>
+                {p.displayName}
               </AppText>
+              <View style={styles.metaRow}>
+                {p.rating ? (
+                  <>
+                    <Icon name="star" size={11} color="star" />
+                    <AppText variant="meta" color="navyMuted">
+                      {p.rating.average.toLocaleString('nb-NO', { minimumFractionDigits: 1 })}
+                    </AppText>
+                    <AppText variant="meta" color="navyMuted">
+                      {' · '}
+                    </AppText>
+                  </>
+                ) : null}
+                {isOnline ? <View style={styles.dot} /> : null}
+                <AppText variant="meta" color="navyMuted">
+                  {isOnline ? nb.common.activeNow : nb.common.recentlyActive}
+                </AppText>
+              </View>
             </View>
-          </View>
-        </Pressable>
-      ))}
+          </Pressable>
+        );
+      })}
     </ScrollView>
   );
 }

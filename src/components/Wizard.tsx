@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { KeyboardAvoider } from './ui/KeyboardAvoider';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
+import { wizardNav } from '@/data/wizardNav';
 import { AppText } from './ui/Text';
 import { ScreenTitle } from './ui/ScreenTitle';
 import { Button } from './ui/Button';
@@ -38,6 +39,19 @@ export function Wizard({
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // The preview screen can ask us to jump to a specific step when the user
+  // taps "Rediger" on a field.
+  useFocusEffect(
+    useCallback(() => {
+      const target = wizardNav.consume();
+      if (target != null && target >= 0 && target < steps.length) {
+        setIndex(target);
+        setError(null);
+      }
+    }, [steps.length]),
+  );
+
   const step = steps[index];
   const isLast = index === steps.length - 1;
   const progress = (index + 1) / steps.length;

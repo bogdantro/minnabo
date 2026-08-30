@@ -128,6 +128,11 @@ afterEach(() => {
   } catch {
     /* not loaded */
   }
+  try {
+    require('@/data/wizardNav').wizardNav._reset();
+  } catch {
+    /* not loaded */
+  }
 });
 
 jest.mock('expo-haptics', () => ({
@@ -268,6 +273,12 @@ jest.mock('expo-router', () => {
     useLocalSearchParams: () => ({}),
     useSegments: () => [],
     usePathname: () => '/',
+    useFocusEffect: (cb: () => void | (() => void)) => {
+      const React2 = require('react');
+      React2.useEffect(() => cb(), []);
+    },
+    useIsFocused: () => true,
+    useNavigation: () => ({ addListener: () => () => {}, setOptions: jest.fn() }),
     Link: ({ children }: any) => children,
     Stack,
     Tabs,

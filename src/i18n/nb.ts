@@ -92,6 +92,7 @@ const nb = {
     seeAll: 'Se alle',
     seeMore: 'Se flere',
     activeNow: 'Aktiv nå',
+    recentlyActive: 'Nylig aktiv',
     activeUsers: 'Aktive nå',
     time: 'Tid',
     retry: 'Prøv igjen',

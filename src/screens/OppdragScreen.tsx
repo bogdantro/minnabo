@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
 import type { Listing, PublicProfile } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { HOME_CATEGORIES as homeCategories } from '@/domain/categories';
 import { useListings } from '@/api/queries';
+import { usePresence } from '@/api/realtime';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
@@ -39,6 +40,7 @@ const dedupeOwners = (listings: Listing[]): PublicProfile[] => {
 
 export function OppdragScreen() {
   const me = useCurrentUser();
+  const online = usePresence();
   const [activeSlug, setActiveSlug] = useState('alle');
 
   const offers = useListings({ categorySlug: activeSlug, type: 'SERVICE_OFFER' });
@@ -48,11 +50,15 @@ export function OppdragScreen() {
   const taskItems = (tasks.data ?? []).slice(0, PREVIEW);
   const activeProviders = dedupeOwners(offers.data ?? []).slice(0, 8);
 
-  const refreshing = offers.isFetching || tasks.isFetching;
-  const onRefresh = useCallback(() => {
-    void offers.refetch();
-    void tasks.refetch();
-  }, [offers, tasks]);
+  const { refetch: refetchOffers } = offers;
+  const { refetch: refetchTasks } = tasks;
+  // Show the pull spinner only for an actual pull, not the first load.
+  const refreshing =
+    (offers.isFetching && !offers.isLoading) || (tasks.isFetching && !tasks.isLoading);
+  const onRefresh = () => {
+    void refetchOffers();
+    void refetchTasks();
+  };
 
   return (
     <View style={styles.wrap}>
@@ -113,6 +119,7 @@ export function OppdragScreen() {
               <HScrollFade>
                 <ActiveUsersRow
                   profiles={activeProviders}
+                  onlineIds={online}
                   onPressUser={(id) => safePush(`/profil/${id}`)}
                 />
               </HScrollFade>
@@ -186,7 +193,6 @@ function Section({
         iconColor={iconColor}
         title={title}
         subtitle={subtitle}
-        onSeeAll={onSeeAll}
       />
       {query.isLoading ? (
         <ListingListSkeleton count={3} />
@@ -199,7 +205,11 @@ function Section({
         <>
           {children}
           {items.length > PREVIEW ? (
-            <Button label={nb.common.seeMore} variant="secondary" onPress={onSeeAll} />
+            <Button
+              label={`${nb.common.seeAll} (${items.length})`}
+              variant="secondary"
+              onPress={onSeeAll}
+            />
           ) : null}
         </>
       )}
