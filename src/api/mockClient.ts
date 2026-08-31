@@ -98,6 +98,16 @@ export class MockApiClient implements ApiClient {
     return chatRepository.sendAttachment(conversationId, attachmentUrl);
   }
 
+  async toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message[]> {
+    await delay(60);
+    return chatRepository.toggleReaction(conversationId, messageId, emoji);
+  }
+
+  async setPinnedMessage(conversationId: string, messageId: string | null): Promise<Message[]> {
+    await delay(60);
+    return chatRepository.setPinnedMessage(conversationId, messageId);
+  }
+
   async getProposal(id: string): Promise<Proposal> {
     await delay(120);
     const proposal = chatRepository.getProposal(id);

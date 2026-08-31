@@ -757,6 +757,11 @@ const nb = {
     declineConfirmBody: 'Tilbyderen får beskjed om at du takket nei.',
     agreed: 'Avtalt',
     jobFactsLabel: 'Avtalte detaljer',
+    messageActions: 'Meldingsvalg',
+    react: 'Reager med',
+    pinMessage: 'Fest melding',
+    unpinMessage: 'Løsne melding',
+    pinnedMessage: 'Festet melding',
     quickRepliesLabel: 'Hurtigsvar',
     quickReplies: [
       'Hei! 👋',

@@ -143,6 +143,31 @@ export const chatRepository = {
     return updated;
   },
 
+  toggleReaction(conversationId: string, messageId: string, emoji: string): Message[] {
+    const list = messages[conversationId] ?? [];
+    messages[conversationId] = list.map((m) => {
+      if (m.id !== messageId) return m;
+      const current = { ...(m.reactions ?? {}) };
+      const people = new Set(current[emoji] ?? []);
+      if (people.has(CURRENT_USER_ID)) people.delete(CURRENT_USER_ID);
+      else people.add(CURRENT_USER_ID);
+      if (people.size === 0) delete current[emoji];
+      else current[emoji] = [...people];
+      return { ...m, reactions: Object.keys(current).length ? current : undefined };
+    });
+    return chatRepository.getMessages(conversationId);
+  },
+
+  /** Pin one message (or clear the pin with null). Only one pin per conversation. */
+  setPinnedMessage(conversationId: string, messageId: string | null): Message[] {
+    const list = messages[conversationId] ?? [];
+    messages[conversationId] = list.map((m) => ({
+      ...m,
+      pinned: messageId != null && m.id === messageId,
+    }));
+    return chatRepository.getMessages(conversationId);
+  },
+
   markRead(conversationId: string): void {
     conversations = conversations.map((c) =>
       c.id === conversationId ? { ...c, unread: false } : c,

@@ -42,6 +42,35 @@ test('unread filter only returns unread conversations', () => {
   expect(unread.length).toBeGreaterThan(0);
 });
 
+test('toggleReaction adds and removes the current user reaction', () => {
+  const msg = chatRepository.getMessages('c-emma')[0];
+
+  let after = chatRepository.toggleReaction('c-emma', msg.id, '👍');
+  expect(after.find((m) => m.id === msg.id)?.reactions?.['👍']).toEqual([
+    chatRepository.currentUserId,
+  ]);
+
+  after = chatRepository.toggleReaction('c-emma', msg.id, '👍');
+  expect(after.find((m) => m.id === msg.id)?.reactions).toBeUndefined();
+});
+
+test('setPinnedMessage keeps only one pin per conversation', () => {
+  const [a, b] = chatRepository.getMessages('c-emma');
+
+  chatRepository.setPinnedMessage('c-emma', a.id);
+  expect(chatRepository.getMessages('c-emma').filter((m) => m.pinned).map((m) => m.id)).toEqual([
+    a.id,
+  ]);
+
+  chatRepository.setPinnedMessage('c-emma', b.id);
+  expect(chatRepository.getMessages('c-emma').filter((m) => m.pinned).map((m) => m.id)).toEqual([
+    b.id,
+  ]);
+
+  chatRepository.setPinnedMessage('c-emma', null);
+  expect(chatRepository.getMessages('c-emma').some((m) => m.pinned)).toBe(false);
+});
+
 test('no payment wording is present in seeded chat data', () => {
   const allText = chatRepository
     .listConversations()

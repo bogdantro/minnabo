@@ -175,6 +175,10 @@ export type Message = {
   pending?: boolean;
   /** client-side only: the send failed and can be retried */
   failed?: boolean;
+  /** emoji → the profile ids that reacted with it */
+  reactions?: Record<string, string[]>;
+  /** pinned to the top of the conversation (only one per conversation) */
+  pinned?: boolean;
 };
 
 // ---------------------------------------------------------------------------

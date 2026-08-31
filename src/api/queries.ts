@@ -206,6 +206,28 @@ export function useSendAttachment(conversationId: string, meId: string) {
   });
 }
 
+export function useToggleReaction(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string }) =>
+      apiClient.toggleReaction(conversationId, messageId, emoji),
+    onSuccess: (messages) => {
+      qc.setQueryData<Message[]>(chatKeys.messages(conversationId), messages);
+    },
+  });
+}
+
+export function useSetPinnedMessage(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string | null) =>
+      apiClient.setPinnedMessage(conversationId, messageId),
+    onSuccess: (messages) => {
+      qc.setQueryData<Message[]>(chatKeys.messages(conversationId), messages);
+    },
+  });
+}
+
 export function useStartConversation() {
   const qc = useQueryClient();
   return useMutation({

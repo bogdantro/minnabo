@@ -10,13 +10,26 @@ import { Icon } from './ui/Icon';
 type Props = {
   message: Message;
   mine: boolean;
+  meId: string;
   avatarUri?: string;
   avatarInitials: string;
   showAvatar: boolean;
   onRetry?: () => void;
+  onLongPress?: () => void;
+  onToggleReaction?: (emoji: string) => void;
 };
 
-export function ChatBubble({ message, mine, avatarUri, avatarInitials, showAvatar, onRetry }: Props) {
+export function ChatBubble({
+  message,
+  mine,
+  meId,
+  avatarUri,
+  avatarInitials,
+  showAvatar,
+  onRetry,
+  onLongPress,
+  onToggleReaction,
+}: Props) {
   if (message.kind === 'SYSTEM') {
     return (
       <View style={styles.systemRow}>
@@ -40,7 +53,11 @@ export function ChatBubble({ message, mine, avatarUri, avatarInitials, showAvata
         </View>
       ) : null}
 
-      <View
+      <Pressable
+        onLongPress={onLongPress}
+        delayLongPress={300}
+        accessibilityRole={onLongPress ? 'button' : undefined}
+        accessibilityLabel={onLongPress ? nb.chat.messageActions : undefined}
         style={[
           styles.bubble,
           mine ? styles.mine : styles.theirs,
@@ -72,7 +89,31 @@ export function ChatBubble({ message, mine, avatarUri, avatarInitials, showAvata
             />
           ) : null}
         </View>
-      </View>
+      </Pressable>
+
+      {message.reactions && Object.keys(message.reactions).length > 0 ? (
+        <View style={[styles.reactions, mine ? styles.reactionsMine : styles.reactionsTheirs]}>
+          {Object.entries(message.reactions).map(([emoji, ids]) => {
+            const reacted = ids.includes(meId);
+            return (
+              <Pressable
+                key={emoji}
+                accessibilityRole="button"
+                accessibilityLabel={`${emoji} ${ids.length}`}
+                onPress={() => onToggleReaction?.(emoji)}
+                style={[styles.reactionChip, reacted && styles.reactionChipMine]}
+              >
+                <AppText variant="meta">{emoji}</AppText>
+                {ids.length > 1 ? (
+                  <AppText variant="meta" weight="bold" color="navyMuted">
+                    {ids.length}
+                  </AppText>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       {message.failed ? (
         <Pressable
@@ -117,6 +158,21 @@ const styles = StyleSheet.create({
   image: { width: 200, height: 150, borderRadius: 14 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
   imageMeta: { position: 'absolute', right: 10, bottom: 10 },
+  reactions: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: '100%', marginTop: 2 },
+  reactionsMine: { justifyContent: 'flex-end' },
+  reactionsTheirs: { justifyContent: 'flex-start', paddingLeft: 28 + tokens.space.sm },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    backgroundColor: tokens.color.surface,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+  },
+  reactionChipMine: { borderColor: tokens.color.lime, backgroundColor: tokens.color.limeTint },
   systemRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md, marginVertical: tokens.space.md },
   systemLine: { flex: 1, height: 1, backgroundColor: tokens.color.line },
   systemPill: { flexDirection: 'row', alignItems: 'center', gap: 6 },

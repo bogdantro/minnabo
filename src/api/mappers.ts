@@ -94,6 +94,8 @@ export type MessageRow = {
   proposal_id: string | null;
   attachment_path: string | null;
   created_at: string;
+  reactions?: Record<string, string[]> | null;
+  pinned?: boolean | null;
 };
 
 export type AgreementRow = {
@@ -249,6 +251,8 @@ export function toMessage(row: MessageRow): Message {
         : undefined,
     createdAt: row.created_at,
     delivery: 'DELIVERED',
+    reactions: row.reactions ?? undefined,
+    pinned: row.pinned ?? undefined,
   };
 }
 

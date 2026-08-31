@@ -63,6 +63,29 @@ test('tapping a quick reply sends it', async () => {
   expect(chatRepository.getMessages('c-sara').at(-1)?.text).toBe('Det høres bra ut 👍');
 });
 
+test('a reaction renders as a chip and can be toggled off', async () => {
+  const conversation = chatRepository.getConversation('c-emma')!;
+  const first = chatRepository.getMessages('c-emma')[0];
+  chatRepository.toggleReaction('c-emma', first.id, '👍');
+
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  await fireEvent.press(await screen.findByLabelText('👍 1'));
+  await waitFor(() => expect(screen.queryByLabelText('👍 1')).toBeNull());
+});
+
+test('pinning a message shows the pinned banner until unpinned', async () => {
+  const conversation = chatRepository.getConversation('c-emma')!;
+  const first = chatRepository.getMessages('c-emma')[0];
+  chatRepository.setPinnedMessage('c-emma', first.id);
+
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  expect(await screen.findByText('Festet melding')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Løsne melding'));
+  await waitFor(() => expect(screen.queryByText('Festet melding')).toBeNull());
+});
+
 test('chat never shows payment actions', async () => {
   const conversation = chatRepository.getConversation('c-emma')!;
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);

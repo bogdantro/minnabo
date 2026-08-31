@@ -272,6 +272,36 @@ export class SupabaseApiClient implements ApiClient {
     return toMessage(data as unknown as MessageRow);
   }
 
+  async toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message[]> {
+    const me = await myId();
+    // toggle_message_reaction(message_id, emoji) flips the caller's reaction
+    const { error } = await supabase.rpc('toggle_message_reaction', {
+      p_message_id: messageId,
+      p_emoji: emoji,
+      p_profile_id: me,
+    });
+    if (error) fail(error.message);
+    return this.listMessages(conversationId);
+  }
+
+  async setPinnedMessage(conversationId: string, messageId: string | null): Promise<Message[]> {
+    // clear any existing pin in the conversation, then set the new one
+    const clear = await supabase
+      .from('messages')
+      .update({ pinned: false })
+      .eq('conversation_id', conversationId)
+      .eq('pinned', true);
+    if (clear.error) fail(clear.error.message);
+    if (messageId) {
+      const { error } = await supabase
+        .from('messages')
+        .update({ pinned: true })
+        .eq('id', messageId);
+      if (error) fail(error.message);
+    }
+    return this.listMessages(conversationId);
+  }
+
   // --- proposals & agreements -----------------------------------------
 
   async getProposal(id: string): Promise<Proposal> {

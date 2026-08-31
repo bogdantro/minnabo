@@ -99,6 +99,8 @@ export interface ApiClient {
   listMessages(conversationId: string): Promise<Message[]>;
   sendMessage(conversationId: string, text: string): Promise<Message>;
   sendAttachment(conversationId: string, attachmentUrl: string): Promise<Message>;
+  toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message[]>;
+  setPinnedMessage(conversationId: string, messageId: string | null): Promise<Message[]>;
 
   // proposals & agreements
   getProposal(id: string): Promise<Proposal>;

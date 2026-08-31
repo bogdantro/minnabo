@@ -22,6 +22,8 @@ import {
   useSendAttachment,
   useRespondToProposal,
   useAgreement,
+  useToggleReaction,
+  useSetPinnedMessage,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useConversationChannel, usePresence } from '@/api/realtime';
@@ -36,6 +38,7 @@ import { ChatHeader } from '@/components/ChatHeader';
 import { ChatBubble } from '@/components/ChatBubble';
 import { ChatComposer } from '@/components/ChatComposer';
 import { QuickReplies } from '@/components/QuickReplies';
+import { MessageActionsSheet } from '@/components/MessageActionsSheet';
 import { OfferCard } from '@/components/OfferCard';
 import { SendOfferSheet } from '@/components/SendOfferSheet';
 import { AttachSheet } from '@/components/AttachSheet';
@@ -113,10 +116,14 @@ export function ChatScreen({
   const sendMessage = useSendMessage(conversation.id, me.id);
   const sendProposal = useSendProposal(conversation.id);
   const sendAttachment = useSendAttachment(conversation.id, me.id);
+  const toggleReaction = useToggleReaction(conversation.id);
+  const setPinned = useSetPinnedMessage(conversation.id);
   const [offerOpen, setOfferOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [actionMsg, setActionMsg] = useState<Message | null>(null);
 
   const list = messages ?? [];
+  const pinnedMessage = list.find((m) => m.pinned);
 
   const scrollToEnd = useCallback((animated = true) => {
     scrollRef.current?.scrollToEnd({ animated });
@@ -196,10 +203,19 @@ export function ChatScreen({
         <ChatBubble
           message={message}
           mine={mine}
+          meId={me.id}
           avatarUri={conversation.counterpart.avatarUrl}
           avatarInitials={conversation.counterpart.initials}
           showAvatar={showAvatar}
           onRetry={() => retry(message)}
+          onLongPress={
+            message.kind === 'TEXT' || message.kind === 'IMAGE'
+              ? () => setActionMsg(message)
+              : undefined
+          }
+          onToggleReaction={(emoji) =>
+            toggleReaction.mutate({ messageId: message.id, emoji })
+          }
         />
       </View>
     );
@@ -304,6 +320,28 @@ export function ChatScreen({
         </View>
       )}
 
+      {pinnedMessage ? (
+        <View style={styles.pinnedBar}>
+          <Icon name="bookmark" size={14} color="cyan" />
+          <View style={styles.pinnedBody}>
+            <AppText variant="meta" weight="bold" color="cyan">
+              {nb.chat.pinnedMessage}
+            </AppText>
+            <AppText variant="meta" color="navy" numberOfLines={1}>
+              {pinnedMessage.kind === 'IMAGE' ? '📷 Bilde' : pinnedMessage.text}
+            </AppText>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.chat.unpinMessage}
+            hitSlop={8}
+            onPress={() => setPinned.mutate(null)}
+          >
+            <Icon name="x" size={16} color="navyMuted" />
+          </Pressable>
+        </View>
+      ) : null}
+
       {!isLoading && !isError ? <QuickReplies onPick={send} /> : null}
 
       <ChatComposer
@@ -343,6 +381,14 @@ export function ChatScreen({
         onClose={() => setAttachOpen(false)}
         folder={me.id}
         onPick={attach}
+      />
+
+      <MessageActionsSheet
+        message={actionMsg}
+        meId={me.id}
+        onClose={() => setActionMsg(null)}
+        onReact={(messageId, emoji) => toggleReaction.mutate({ messageId, emoji })}
+        onTogglePin={(messageId, pinned) => setPinned.mutate(pinned ? messageId : null)}
       />
     </KeyboardAvoidingView>
   );
@@ -390,6 +436,17 @@ const styles = StyleSheet.create({
     borderBottomColor: tokens.color.line,
   },
   fact: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  pinnedBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.sm,
+    paddingHorizontal: tokens.space.lg,
+    paddingVertical: tokens.space.sm,
+    backgroundColor: tokens.color.surface,
+    borderTopWidth: 1,
+    borderTopColor: tokens.color.line,
+  },
+  pinnedBody: { flex: 1, gap: 1 },
   agreedPill: {
     flexDirection: 'row',
     alignItems: 'center',
