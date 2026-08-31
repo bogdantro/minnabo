@@ -755,6 +755,17 @@ const nb = {
     newMessages: 'Nye meldinger',
     declineConfirmTitle: 'Avslå tilbudet?',
     declineConfirmBody: 'Tilbyderen får beskjed om at du takket nei.',
+    agreed: 'Avtalt',
+    jobFactsLabel: 'Avtalte detaljer',
+    quickRepliesLabel: 'Hurtigsvar',
+    quickReplies: [
+      'Hei! 👋',
+      'Når passer det for deg?',
+      'Det høres bra ut 👍',
+      'Kan du sende et bilde?',
+      'Jeg er på vei 🚗',
+      'Takk for hjelpen!',
+    ],
   },
 } as const;
 

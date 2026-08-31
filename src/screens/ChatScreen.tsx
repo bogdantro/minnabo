@@ -31,9 +31,11 @@ import { haptics } from '@/lib/haptics';
 import { confirm } from '@/lib/confirm';
 import { outbox } from '@/lib/outbox';
 import { formatDayLabel, isSameDay } from '@/lib/calendar';
+import { formatPrice } from '@/domain/price';
 import { ChatHeader } from '@/components/ChatHeader';
 import { ChatBubble } from '@/components/ChatBubble';
 import { ChatComposer } from '@/components/ChatComposer';
+import { QuickReplies } from '@/components/QuickReplies';
 import { OfferCard } from '@/components/OfferCard';
 import { SendOfferSheet } from '@/components/SendOfferSheet';
 import { AttachSheet } from '@/components/AttachSheet';
@@ -240,6 +242,37 @@ export function ChatScreen({
         <Icon name="chevron-right" size={20} color="navyMuted" />
       </Pressable>
 
+      {agreement ? (
+        <Pressable
+          testID="chat-job-facts"
+          accessibilityRole="button"
+          accessibilityLabel={nb.chat.jobFactsLabel}
+          style={styles.jobFacts}
+          onPress={() => safePush(`/avtale/${agreement.proposalId}`)}
+        >
+          {agreement.scheduledText ? (
+            <View style={styles.fact}>
+              <Icon name="calendar" size={13} color="navyMuted" />
+              <AppText variant="meta" weight="bold">
+                {agreement.scheduledText}
+              </AppText>
+            </View>
+          ) : null}
+          <View style={styles.fact}>
+            <Icon name="tag" size={13} color="navyMuted" />
+            <AppText variant="meta" weight="bold">
+              {formatPrice(agreement.price)}
+            </AppText>
+          </View>
+          <View style={styles.agreedPill}>
+            <Icon name="check" size={11} color="white" />
+            <AppText variant="meta" weight="bold" color="white">
+              {nb.chat.agreed}
+            </AppText>
+          </View>
+        </Pressable>
+      ) : null}
+
       {isLoading || isError ? (
         <ScreenState status={isError ? 'error' : 'loading'} onRetry={() => refetch()} />
       ) : (
@@ -271,19 +304,7 @@ export function ChatScreen({
         </View>
       )}
 
-      {agreement ? (
-        <Pressable
-          accessibilityRole="button"
-          style={styles.agreementBar}
-          onPress={() => safePush(`/avtale/${agreement.proposalId}`)}
-        >
-          <Icon name="file-text" size={16} color="lime" />
-          <AppText variant="meta" weight="bold" style={styles.agreementText}>
-            {nb.chat.offerAccepted} · {nb.avtale.title}
-          </AppText>
-          <Icon name="chevron-right" size={16} color="navyMuted" />
-        </Pressable>
-      ) : null}
+      {!isLoading && !isError ? <QuickReplies onPick={send} /> : null}
 
       <ChatComposer
         canSendOffer
@@ -357,6 +378,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.space.lg,
     ...tokens.shadow.fab,
   },
+  jobFacts: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: tokens.space.md,
+    paddingHorizontal: tokens.space.lg,
+    paddingVertical: tokens.space.sm,
+    backgroundColor: tokens.color.limeTint,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.color.line,
+  },
+  fact: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  agreedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 'auto',
+    backgroundColor: tokens.color.shieldGreen,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: tokens.space.sm,
+    paddingVertical: 2,
+  },
   offerWrap: { marginVertical: tokens.space.sm },
   dayRow: {
     flexDirection: 'row',
@@ -365,13 +408,4 @@ const styles = StyleSheet.create({
     marginVertical: tokens.space.md,
   },
   dayLine: { flex: 1, height: 1, backgroundColor: tokens.color.line },
-  agreementBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.space.sm,
-    backgroundColor: tokens.color.limeTint,
-    paddingHorizontal: tokens.space.lg,
-    paddingVertical: tokens.space.sm,
-  },
-  agreementText: { flex: 1 },
 });

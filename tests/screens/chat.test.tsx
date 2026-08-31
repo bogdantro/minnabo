@@ -1,4 +1,4 @@
-import { screen, waitFor, fireEvent } from '@testing-library/react-native';
+import { screen, waitFor, fireEvent, within } from '@testing-library/react-native';
 import { InnboksScreen } from '@/screens/InnboksScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { chatRepository } from '@/data/chatRepository';
@@ -34,6 +34,33 @@ test('accepting an offer in chat shows "Tilbud godtatt"', async () => {
 
   await waitFor(() => expect(screen.getAllByText('Tilbud godtatt').length).toBeGreaterThan(0));
   expect(screen.queryByText('Godta tilbud')).toBeNull();
+});
+
+test('the pinned job card shows the agreed price once an offer is accepted', async () => {
+  const conversation = chatRepository.getConversation('c-emma')!;
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  expect(screen.queryByTestId('chat-job-facts')).toBeNull();
+
+  fireEvent.press(await screen.findByText('Godta tilbud'));
+
+  const facts = await screen.findByTestId('chat-job-facts');
+  expect(within(facts).getByText(/600/)).toBeTruthy();
+  expect(within(facts).getByText('I morgen kl. 17:00')).toBeTruthy();
+  expect(within(facts).getByText('Avtalt')).toBeTruthy();
+});
+
+test('tapping a quick reply sends it', async () => {
+  const conversation = chatRepository.getConversation('c-sara')!;
+  const before = chatRepository.getMessages('c-sara').length;
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  await fireEvent.press(await screen.findByLabelText('Det høres bra ut 👍'));
+
+  await waitFor(() =>
+    expect(chatRepository.getMessages('c-sara').length).toBe(before + 1),
+  );
+  expect(chatRepository.getMessages('c-sara').at(-1)?.text).toBe('Det høres bra ut 👍');
 });
 
 test('chat never shows payment actions', async () => {
