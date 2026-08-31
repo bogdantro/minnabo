@@ -762,6 +762,7 @@ const nb = {
     pinMessage: 'Fest melding',
     unpinMessage: 'Løsne melding',
     pinnedMessage: 'Festet melding',
+    typing: 'skriver …',
     quickRepliesLabel: 'Hurtigsvar',
     quickReplies: [
       'Hei! 👋',

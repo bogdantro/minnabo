@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '@/theme';
@@ -11,16 +11,30 @@ export function ChatComposer({
   onSend,
   onAttach,
   onSendOffer,
+  onTyping,
   canSendOffer,
 }: {
   onSend: (text: string) => void;
   onAttach: () => void;
   onSendOffer: () => void;
+  onTyping?: () => void;
   canSendOffer: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const keyboardOpen = useKeyboardVisible();
   const [text, setText] = useState('');
+  const lastTypingPing = useRef(0);
+
+  const handleChange = (next: string) => {
+    setText(next);
+    if (next && onTyping) {
+      const now = Date.now();
+      if (now - lastTypingPing.current > 2000) {
+        lastTypingPing.current = now;
+        onTyping();
+      }
+    }
+  };
 
   const submit = () => {
     const trimmed = text.trim();
@@ -64,7 +78,7 @@ export function ChatComposer({
           placeholder={nb.chat.inputPlaceholder}
           placeholderTextColor={tokens.color.navyMuted}
           value={text}
-          onChangeText={setText}
+          onChangeText={handleChange}
           multiline
           spellCheck={false}
           accessibilityLabel={nb.chat.inputPlaceholder}

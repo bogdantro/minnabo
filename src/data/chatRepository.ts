@@ -172,6 +172,13 @@ export const chatRepository = {
     conversations = conversations.map((c) =>
       c.id === conversationId ? { ...c, unread: false } : c,
     );
+    // Reading the thread marks the counterpart's messages as read, and — since
+    // the seeded counterpart is treated as present — catches your own sent
+    // messages up to READ too, so the delivery ticks reflect a live thread.
+    const list = messages[conversationId] ?? [];
+    messages[conversationId] = list.map((m) =>
+      m.kind === 'SYSTEM' || m.delivery === 'READ' ? m : { ...m, delivery: 'READ' },
+    );
   },
 
   sendMessage(conversationId: string, text: string): Message {

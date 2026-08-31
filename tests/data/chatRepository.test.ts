@@ -71,6 +71,18 @@ test('setPinnedMessage keeps only one pin per conversation', () => {
   expect(chatRepository.getMessages('c-emma').some((m) => m.pinned)).toBe(false);
 });
 
+test('opening a thread marks its messages read', () => {
+  chatRepository.sendMessage('c-sara', 'Hei!');
+  expect(chatRepository.getMessages('c-sara').some((m) => m.delivery !== 'READ' && m.kind !== 'SYSTEM')).toBe(true);
+
+  chatRepository.markRead('c-sara');
+
+  expect(
+    chatRepository.getMessages('c-sara').every((m) => m.kind === 'SYSTEM' || m.delivery === 'READ'),
+  ).toBe(true);
+  expect(chatRepository.getConversation('c-sara')?.unread).toBe(false);
+});
+
 test('no payment wording is present in seeded chat data', () => {
   const allText = chatRepository
     .listConversations()

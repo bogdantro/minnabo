@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { ENV } from '@/lib/env';
@@ -51,6 +51,56 @@ export function useConversationChannel(conversationId: string): void {
       supabase.removeChannel(channel);
     };
   }, [conversationId, qc]);
+}
+
+/**
+ * Typing indicator for one open conversation. `notifyTyping()` broadcasts a
+ * lightweight ping (throttled by the caller); `counterpartTyping` flips true
+ * when the other side pings and clears itself after a short idle timeout.
+ * No-op under mocks — there is no peer to hear it.
+ */
+export function useTypingChannel(conversationId: string): {
+  counterpartTyping: boolean;
+  notifyTyping: () => void;
+} {
+  const { userId } = useSession();
+  const [counterpartTyping, setCounterpartTyping] = useState(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (ENV.useMocks || !conversationId || !userId) return;
+    const channel = supabase.channel(`typing:${conversationId}`, {
+      config: { broadcast: { self: false } },
+    });
+    channel
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if ((payload as { payload?: { from?: string } }).payload?.from === userId) return;
+        setCounterpartTyping(true);
+        if (clearTimer.current) clearTimeout(clearTimer.current);
+        clearTimer.current = setTimeout(() => setCounterpartTyping(false), 4000);
+      })
+      .subscribe();
+    channelRef.current = channel;
+
+    return () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  }, [conversationId, userId]);
+
+  const notifyTyping = () => {
+    const ch = channelRef.current;
+    if (!ch || typeof ch.send !== 'function') return;
+    try {
+      ch.send({ type: 'broadcast', event: 'typing', payload: { from: userId } });
+    } catch {
+      /* channel not ready yet — the next keystroke will retry */
+    }
+  };
+
+  return { counterpartTyping, notifyTyping };
 }
 
 /**

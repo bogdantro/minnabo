@@ -26,7 +26,7 @@ import {
   useSetPinnedMessage,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useConversationChannel, usePresence } from '@/api/realtime';
+import { useConversationChannel, usePresence, useTypingChannel } from '@/api/realtime';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { haptics } from '@/lib/haptics';
@@ -111,6 +111,7 @@ export function ChatScreen({
 
   useConversationChannel(conversation.id);
   const presence = usePresence();
+  const { counterpartTyping, notifyTyping } = useTypingChannel(conversation.id);
   const { data: messages, isLoading, isError, refetch } = useMessages(conversation.id);
   const { data: agreement } = useAgreement(conversation.id);
   const sendMessage = useSendMessage(conversation.id, me.id);
@@ -302,6 +303,13 @@ export function ChatScreen({
             keyboardDismissMode="interactive"
           >
             {list.map(renderMessage)}
+            {counterpartTyping ? (
+              <View style={styles.typingRow}>
+                <AppText variant="meta" color="navyMuted">
+                  {conversation.counterpart.displayName} {nb.chat.typing}
+                </AppText>
+              </View>
+            ) : null}
           </ScrollView>
 
           {showJump ? (
@@ -349,6 +357,7 @@ export function ChatScreen({
         onSend={send}
         onAttach={() => setAttachOpen(true)}
         onSendOffer={() => setOfferOpen(true)}
+        onTyping={notifyTyping}
       />
 
       <SendOfferSheet
@@ -447,6 +456,7 @@ const styles = StyleSheet.create({
     borderTopColor: tokens.color.line,
   },
   pinnedBody: { flex: 1, gap: 1 },
+  typingRow: { paddingVertical: tokens.space.xs, paddingHorizontal: tokens.space.sm },
   agreedPill: {
     flexDirection: 'row',
     alignItems: 'center',
