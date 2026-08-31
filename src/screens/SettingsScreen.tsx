@@ -25,7 +25,7 @@ const BASE_GROUPS: { title: string; rows: Row[] }[] = [
     rows: [
       { label: nb.settings.editProfile, icon: 'user', route: '/profil/rediger' },
       { label: nb.settings.verification, icon: 'shield', route: '/verifisering' },
-      { label: nb.settings.blocked, icon: 'slash', route: '/sikkerhet' },
+      { label: nb.settings.blocked, icon: 'slash', route: '/blokkerte' },
     ],
   },
   {

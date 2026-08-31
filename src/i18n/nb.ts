@@ -636,7 +636,11 @@ const nb = {
     blockConfirmBody: 'Dere kan ikke lenger kontakte hverandre, og du ser ikke oppføringene deres.',
     blocked: 'Brukeren er blokkert.',
     blockedListTitle: 'Blokkerte brukere',
+    blockedListBody: 'Disse kan ikke kontakte deg, og du ser ikke oppføringene deres.',
     noBlocked: 'Du har ikke blokkert noen.',
+    unblockConfirmTitle: 'Opphev blokkeringen?',
+    unblockConfirmBody: 'Dere kan kontakte hverandre igjen, og du ser oppføringene deres.',
+    unblocked: 'Blokkeringen er opphevet.',
   },
 
   settings: {
