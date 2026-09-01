@@ -24,6 +24,8 @@ const TASK = {
   equipBringOwn: false,
   equipExtra: '',
   whoCanOffer: 'ALL_VERIFIED' as const,
+  isDugnad: false,
+  recurrence: '' as const,
   confirmed: true,
 };
 
@@ -61,6 +63,18 @@ test('buildTaskListing keeps type explicit and price in NOK minor units', () => 
   expect(l.price).toEqual({ amountMinor: 40000, currency: 'NOK' });
   expect(l.task?.meetingNote).toMatch(/Adresse deles/);
   expect(l.task?.equipment).toBe('Kan lånes');
+});
+
+test('a dugnad task carries no price and the dugnad flag', () => {
+  const l = buildTaskListing({ ...TASK, isDugnad: true, amountKr: '400', priceMode: 'BUDGET' });
+  expect(l.price).toBeUndefined();
+  expect(l.priceMode).toBe('BY_AGREEMENT');
+  expect(l.task?.isDugnad).toBe(true);
+});
+
+test('a recurring task records its cadence', () => {
+  const l = buildTaskListing({ ...TASK, recurrence: 'BIWEEKLY' });
+  expect(l.task?.recurrence).toBe('BIWEEKLY');
 });
 
 test('buildOfferListing keeps type explicit and no price when by agreement', () => {

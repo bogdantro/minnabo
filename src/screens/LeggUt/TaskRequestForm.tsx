@@ -43,6 +43,8 @@ const EMPTY: TaskForm = {
   equipBringOwn: false,
   equipExtra: '',
   whoCanOffer: 'ALL_VERIFIED',
+  isDugnad: false,
+  recurrence: '',
   confirmed: false,
 };
 
@@ -218,6 +220,19 @@ export function TaskRequestForm() {
             options={DURATIONS.map((v) => ({ value: v, label: v }))}
             onChange={(v) => set('duration', v)}
           />
+
+          <FieldGroup title={nb.leggUt.recurrenceLabel} hint={nb.leggUt.recurrenceHint}>
+            <PickerPills
+              options={[
+                { value: '', label: nb.leggUt.recurrenceOnce },
+                { value: 'WEEKLY', label: nb.leggUt.recurrenceWeekly },
+                { value: 'BIWEEKLY', label: nb.leggUt.recurrenceBiweekly },
+                { value: 'MONTHLY', label: nb.leggUt.recurrenceMonthly },
+              ]}
+              selected={[form.recurrence]}
+              onToggle={(v) => set('recurrence', v as TaskForm['recurrence'])}
+            />
+          </FieldGroup>
         </>
       ),
     },
@@ -225,34 +240,49 @@ export function TaskRequestForm() {
       title: nb.leggUt.taskS4Title,
       subtitle: nb.leggUt.taskS4Sub,
       validate: () =>
-        form.priceMode === 'BUDGET' && !form.amountKr.trim()
+        !form.isDugnad && form.priceMode === 'BUDGET' && !form.amountKr.trim()
           ? nb.leggUt.errPrice
           : !form.confirmed
             ? nb.leggUt.errConfirm
             : null,
       render: () => (
         <>
-          <FieldGroup title={nb.leggUt.priceQuestion} hint={form.priceMode === 'BUDGET' ? nb.leggUt.budgetHint : undefined}>
-            <View style={styles.cardRow}>
-              <SelectionCard
-                label={nb.leggUt.priceModeBudget}
-                icon="calendar"
-                tone="lime"
-                selected={form.priceMode === 'BUDGET'}
-                onPress={() => set('priceMode', 'BUDGET')}
-              />
-              <SelectionCard
-                label={nb.leggUt.priceModeWantOffers}
-                icon="tag"
-                tone="cyan"
-                selected={form.priceMode === 'WANT_OFFERS'}
-                onPress={() => set('priceMode', 'WANT_OFFERS')}
-              />
-            </View>
-            {form.priceMode === 'BUDGET' ? (
-              <AmountField value={form.amountKr} onChange={(v) => set('amountKr', v)} />
-            ) : null}
-          </FieldGroup>
+          <ToggleCard>
+            <ToggleRow
+              icon="heart"
+              label={nb.leggUt.dugnadLabel}
+              value={form.isDugnad}
+              onValueChange={(v) => set('isDugnad', v)}
+              last
+            />
+          </ToggleCard>
+          {form.isDugnad ? (
+            <InfoBox icon="heart" tone="lime">
+              {nb.leggUt.dugnadNote}
+            </InfoBox>
+          ) : (
+            <FieldGroup title={nb.leggUt.priceQuestion} hint={form.priceMode === 'BUDGET' ? nb.leggUt.budgetHint : undefined}>
+              <View style={styles.cardRow}>
+                <SelectionCard
+                  label={nb.leggUt.priceModeBudget}
+                  icon="calendar"
+                  tone="lime"
+                  selected={form.priceMode === 'BUDGET'}
+                  onPress={() => set('priceMode', 'BUDGET')}
+                />
+                <SelectionCard
+                  label={nb.leggUt.priceModeWantOffers}
+                  icon="tag"
+                  tone="cyan"
+                  selected={form.priceMode === 'WANT_OFFERS'}
+                  onPress={() => set('priceMode', 'WANT_OFFERS')}
+                />
+              </View>
+              {form.priceMode === 'BUDGET' ? (
+                <AmountField value={form.amountKr} onChange={(v) => set('amountKr', v)} />
+              ) : null}
+            </FieldGroup>
+          )}
 
           <FieldGroup title={nb.leggUt.equipQuestion}>
             <ToggleCard>

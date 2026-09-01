@@ -146,6 +146,8 @@ export class SupabaseApiClient implements ApiClient {
         meeting_note: listing.task.meetingNote ?? null,
         duration_text: listing.task.durationText ?? null,
         scheduled_text: listing.task.scheduledText ?? null,
+        is_dugnad: listing.task.isDugnad ?? false,
+        recurrence: listing.task.recurrence ?? null,
       });
       if (e) await rollback(e.message);
     }

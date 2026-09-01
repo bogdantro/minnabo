@@ -50,6 +50,8 @@ const nb = {
     offersHelp: 'Tilbyr hjelp',
     openTask: 'Åpent oppdrag',
     offerAvailable: 'Tilgjengelig for småjobber',
+    dugnad: 'Dugnad',
+    recurring: 'Gjentakende',
   },
 
   a11y: {
@@ -234,6 +236,14 @@ const nb = {
 
     // task step 1
     templatesLabel: 'Start fra en mal',
+    recurrenceLabel: 'Gjentakelse',
+    recurrenceHint: 'For oppdrag som skal skje jevnlig – f.eks. plenklipping.',
+    recurrenceOnce: 'Én gang',
+    recurrenceWeekly: 'Ukentlig',
+    recurrenceBiweekly: 'Hver 14. dag',
+    recurrenceMonthly: 'Månedlig',
+    dugnadLabel: 'Dette er dugnad / frivillig hjelp',
+    dugnadNote: 'Dugnadsoppdrag har ingen betaling. Det får et eget merke så naboer ser at det er frivillig hjelp.',
     taskS1Title: 'Hva trenger du hjelp med?',
     taskS1Sub: 'Fortell kort hva oppdraget gjelder.',
     taskTitleLabel: 'Tittel på oppdraget',
@@ -387,6 +397,11 @@ const nb = {
   listingDetail: {
     taskTitle: 'Oppdragsdetaljer',
     offerTitle: 'Tilgjengelig for småjobber',
+    recurrence: {
+      WEEKLY: 'Gjentas ukentlig',
+      BIWEEKLY: 'Gjentas hver 14. dag',
+      MONTHLY: 'Gjentas månedlig',
+    },
     description: 'Beskrivelse',
     practicalInfo: 'Praktisk informasjon',
     aboutOffer: 'Om tilbudet',

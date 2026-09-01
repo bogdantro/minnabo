@@ -61,10 +61,14 @@ export function ListingRowCard({
             {listing.title}
           </AppText>
 
-          <StatusPill
-            label={isTask ? nb.badge.needsHelp : nb.badge.offersHelp}
-            tone={isTask ? 'lime' : 'cyan'}
-          />
+          <View style={styles.badgeRow}>
+            <StatusPill
+              label={isTask ? nb.badge.needsHelp : nb.badge.offersHelp}
+              tone={isTask ? 'lime' : 'cyan'}
+            />
+            {listing.task?.isDugnad ? <StatusPill label={nb.badge.dugnad} tone="lime" /> : null}
+            {listing.task?.recurrence ? <StatusPill label={nb.badge.recurring} tone="neutral" soft /> : null}
+          </View>
 
           <AppText variant="meta" color="navyMuted" numberOfLines={1}>
             {listing.owner.displayName}
@@ -117,6 +121,7 @@ export function ListingRowCard({
 
 const styles = StyleSheet.create({
   wrap: { position: 'relative' },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   card: {
     flexDirection: 'row',
     gap: tokens.space.md,

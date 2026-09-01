@@ -52,7 +52,13 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
           <StatusPill label={nb.badge.openTask} tone="cyan" />
         </View>
 
-        <StatusPill label={listing.category.label} tone="lime" />
+        <View style={styles.pillRow}>
+          <StatusPill label={listing.category.label} tone="lime" />
+          {task?.isDugnad ? <StatusPill label={nb.badge.dugnad} tone="lime" /> : null}
+          {task?.recurrence ? (
+            <StatusPill label={nb.listingDetail.recurrence[task.recurrence]} tone="cyan" />
+          ) : null}
+        </View>
         <PriceHeadline listing={listing} />
 
         <InfoCard>
@@ -127,5 +133,6 @@ const styles = StyleSheet.create({
     marginTop: tokens.space.xs,
   },
   title: { flex: 1 },
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs },
   section: { gap: tokens.space.sm, marginTop: tokens.space.sm },
 });

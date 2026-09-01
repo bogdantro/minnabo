@@ -9,6 +9,7 @@ import type {
   PublicProfile,
   Rating,
   Review,
+  TaskDetails,
   Verification,
 } from '@/domain/types';
 import { categoryBySlug } from '@/domain/categories';
@@ -61,6 +62,8 @@ export type ListingRow = {
     meeting_note: string | null;
     duration_text: string | null;
     scheduled_text: string | null;
+    is_dugnad?: boolean | null;
+    recurrence?: string | null;
   } | null;
   service_offer_details?: {
     about: string;
@@ -225,6 +228,8 @@ export function toListing(row: ListingRow): Listing {
           meetingNote: row.task_details.meeting_note ?? undefined,
           durationText: row.task_details.duration_text ?? undefined,
           scheduledText: row.task_details.scheduled_text ?? undefined,
+          isDugnad: row.task_details.is_dugnad ?? undefined,
+          recurrence: (row.task_details.recurrence as TaskDetails['recurrence']) ?? undefined,
         }
       : undefined,
     offer: row.service_offer_details

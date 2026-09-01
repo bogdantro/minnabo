@@ -35,6 +35,8 @@ export type TaskForm = {
   equipBringOwn: boolean;
   equipExtra: string;
   whoCanOffer: 'ALL_VERIFIED' | 'BUSINESS_ONLY';
+  isDugnad: boolean;
+  recurrence: '' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
   confirmed: boolean;
 };
 
@@ -90,8 +92,8 @@ export function buildTaskListing(form: TaskForm): Listing {
     type: 'TASK_REQUEST' as ListingType,
     title: form.title.trim(),
     category: catBySlug(form.categorySlug),
-    priceMode: form.priceMode === 'BUDGET' ? 'BUDGET' : 'BY_AGREEMENT',
-    price: form.priceMode === 'BUDGET' ? priceFrom('BUDGET', form.amountKr) : undefined,
+    priceMode: form.isDugnad ? 'BY_AGREEMENT' : form.priceMode === 'BUDGET' ? 'BUDGET' : 'BY_AGREEMENT',
+    price: form.isDugnad || form.priceMode !== 'BUDGET' ? undefined : priceFrom('BUDGET', form.amountKr),
     location: {
       municipality: form.place.trim(),
       place: form.place.trim(),
@@ -111,6 +113,8 @@ export function buildTaskListing(form: TaskForm): Listing {
       meetingNote: 'Adresse deles når tilbud er godtatt',
       durationText: form.duration.trim() || undefined,
       scheduledText: scheduledParts || undefined,
+      isDugnad: form.isDugnad || undefined,
+      recurrence: form.recurrence || undefined,
     },
   };
 }

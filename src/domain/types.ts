@@ -91,12 +91,18 @@ export type ReliabilityStats = {
 
 export type ListingImage = { id: string; url: string };
 
+export type TaskRecurrence = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+
 export type TaskDetails = {
   description: string;
   equipment?: string;
   meetingNote?: string;
   durationText?: string;
   scheduledText?: string;
+  /** unpaid community help — no price, shows a "Dugnad" badge */
+  isDugnad?: boolean;
+  /** the task repeats on this cadence */
+  recurrence?: TaskRecurrence;
 };
 
 export type ServiceOfferDetails = {
