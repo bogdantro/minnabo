@@ -23,6 +23,12 @@ test('the timer accumulates elapsed time across start/stop', () => {
   expect(stopped.timerAccumMs).toBeGreaterThanOrEqual(0);
 });
 
+test('before/after photos attach to the workspace', () => {
+  jobWorkspaceStore.addPhoto('p-4', 'https://x/before.jpg', 'BEFORE');
+  const ws = jobWorkspaceStore.addPhoto('p-4', 'https://x/after.jpg', 'AFTER');
+  expect(ws.photos.map((p) => p.phase)).toEqual(['BEFORE', 'AFTER']);
+});
+
 test('materials log keeps a running total', () => {
   jobWorkspaceStore.addMaterial('p-3', 'Parkering', 60);
   const ws = jobWorkspaceStore.addMaterial('p-3', 'Maling', 340);

@@ -154,6 +154,7 @@ export class SupabaseApiClient implements ApiClient {
         scheduled_text: listing.task.scheduledText ?? null,
         is_dugnad: listing.task.isDugnad ?? false,
         recurrence: listing.task.recurrence ?? null,
+        intake: listing.task.intake ?? [],
       });
       if (e) await rollback(e.message);
     }
@@ -471,6 +472,7 @@ export class SupabaseApiClient implements ApiClient {
       proposalId,
       checklist: row?.checklist ?? [],
       materials: row?.materials ?? [],
+      photos: (row as { photos?: JobWorkspace['photos'] } | null)?.photos ?? [],
       timerStartedAt: row?.timer_started_at ? Date.parse(row.timer_started_at) : null,
       timerAccumMs: row?.timer_accum_ms ?? 0,
     };

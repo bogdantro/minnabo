@@ -7,6 +7,7 @@ const blank = (proposalId: string): JobWorkspace => ({
   proposalId,
   checklist: [],
   materials: [],
+  photos: [],
   timerStartedAt: null,
   timerAccumMs: 0,
 });
@@ -56,6 +57,15 @@ export const jobWorkspaceStore = {
   removeMaterial(proposalId: string, itemId: string): JobWorkspace {
     const w = ws(proposalId);
     return commit({ ...w, materials: w.materials.filter((m) => m.id !== itemId) });
+  },
+
+  addPhoto(proposalId: string, url: string, phase: 'BEFORE' | 'AFTER'): JobWorkspace {
+    const w = ws(proposalId);
+    return commit({ ...w, photos: [...w.photos, { id: id('ph'), url, phase }] });
+  },
+  removePhoto(proposalId: string, itemId: string): JobWorkspace {
+    const w = ws(proposalId);
+    return commit({ ...w, photos: w.photos.filter((p) => p.id !== itemId) });
   },
 
   toggleTimer(proposalId: string): JobWorkspace {

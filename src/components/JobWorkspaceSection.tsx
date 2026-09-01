@@ -9,6 +9,7 @@ import { AppText } from './ui/Text';
 import { Icon } from './ui/Icon';
 import { Button } from './ui/Button';
 import { TextField } from './ui/TextField';
+import { ImagePickerField } from './ui/ImagePickerField';
 
 function fmtDuration(ms: number): string {
   const total = Math.floor(ms / 1000);
@@ -37,6 +38,16 @@ export function JobWorkspaceSection({ proposalId }: { proposalId: string }) {
 
   const trackedMs = ws.timerAccumMs + (ws.timerStartedAt != null ? Date.now() - ws.timerStartedAt : 0);
   const materialsTotal = ws.materials.reduce((sum, m) => sum + m.amountKr, 0);
+
+  const syncPhotos = (phase: 'BEFORE' | 'AFTER') => (urls: string[]) => {
+    const current = ws.photos.filter((p) => p.phase === phase);
+    for (const url of urls) {
+      if (!current.some((p) => p.url === url)) update.mutate({ kind: 'addPhoto', url, phase });
+    }
+    for (const p of current) {
+      if (!urls.includes(p.url)) update.mutate({ kind: 'removePhoto', itemId: p.id });
+    }
+  };
 
   return (
     <View style={styles.wrap}>
@@ -106,6 +117,27 @@ export function JobWorkspaceSection({ proposalId }: { proposalId: string }) {
             }}
           />
         </View>
+      </View>
+
+      {/* Before / after photos */}
+      <View style={styles.card}>
+        <AppText variant="meta" weight="bold" color="navyMuted">
+          {nb.jobWorkspace.photos}
+        </AppText>
+        <AppText variant="meta" color="navyMuted">
+          {nb.jobWorkspace.photosBefore}
+        </AppText>
+        <ImagePickerField
+          value={ws.photos.filter((p) => p.phase === 'BEFORE').map((p) => p.url)}
+          onChange={syncPhotos('BEFORE')}
+        />
+        <AppText variant="meta" color="navyMuted">
+          {nb.jobWorkspace.photosAfter}
+        </AppText>
+        <ImagePickerField
+          value={ws.photos.filter((p) => p.phase === 'AFTER').map((p) => p.url)}
+          onChange={syncPhotos('AFTER')}
+        />
       </View>
 
       {/* Materials log */}

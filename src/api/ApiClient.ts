@@ -137,6 +137,8 @@ export interface ApiClient {
       | { kind: 'removeChecklist'; itemId: string }
       | { kind: 'addMaterial'; label: string; amountKr: number }
       | { kind: 'removeMaterial'; itemId: string }
+      | { kind: 'addPhoto'; url: string; phase: 'BEFORE' | 'AFTER' }
+      | { kind: 'removePhoto'; itemId: string }
       | { kind: 'toggleTimer' },
   ): Promise<JobWorkspace>;
 

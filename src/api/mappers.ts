@@ -67,6 +67,7 @@ export type ListingRow = {
     scheduled_text: string | null;
     is_dugnad?: boolean | null;
     recurrence?: string | null;
+    intake?: { label: string; value: string }[] | null;
   } | null;
   service_offer_details?: {
     about: string;
@@ -236,6 +237,7 @@ export function toListing(row: ListingRow): Listing {
           scheduledText: row.task_details.scheduled_text ?? undefined,
           isDugnad: row.task_details.is_dugnad ?? undefined,
           recurrence: (row.task_details.recurrence as TaskDetails['recurrence']) ?? undefined,
+          intake: row.task_details.intake ?? undefined,
         }
       : undefined,
     offer: row.service_offer_details

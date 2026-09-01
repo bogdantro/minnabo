@@ -26,6 +26,7 @@ const TASK = {
   whoCanOffer: 'ALL_VERIFIED' as const,
   isDugnad: false,
   recurrence: '' as const,
+  intake: {},
   confirmed: true,
 };
 
@@ -76,6 +77,19 @@ test('a dugnad task carries no price and the dugnad flag', () => {
 test('a recurring task records its cadence', () => {
   const l = buildTaskListing({ ...TASK, recurrence: 'BIWEEKLY' });
   expect(l.task?.recurrence).toBe('BIWEEKLY');
+});
+
+test('category intake answers are attached to the task', () => {
+  const l = buildTaskListing({
+    ...TASK,
+    categorySlug: 'flytting',
+    intake: { floors: '3. etasje', elevator: 'Nei', boxes: '20 esker' },
+  });
+  expect(l.task?.intake).toEqual([
+    { label: 'Etasje', value: '3. etasje' },
+    { label: 'Heis', value: 'Nei' },
+    { label: 'Omtrent hvor mange esker/møbler?', value: '20 esker' },
+  ]);
 });
 
 test('buildOfferListing keeps type explicit and no price when by agreement', () => {

@@ -2,6 +2,7 @@ import type { Listing, ListingType, PriceMode, PublicProfile } from '@/domain/ty
 import { nok } from '@/domain/price';
 import { categoryBySlug } from '@/domain/categories';
 import { formatFriendlyDate } from '@/lib/calendar';
+import { CATEGORY_INTAKE } from '@/domain/categoryIntake';
 
 const catBySlug = categoryBySlug;
 
@@ -37,6 +38,8 @@ export type TaskForm = {
   whoCanOffer: 'ALL_VERIFIED' | 'BUSINESS_ONLY';
   isDugnad: boolean;
   recurrence: '' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+  /** category-specific intake answers, keyed by field key */
+  intake: Record<string, string>;
   confirmed: boolean;
 };
 
@@ -88,6 +91,9 @@ export function buildTaskListing(form: TaskForm): Listing {
   const scheduledParts = [dateLabel(form), timeLabel(form.timeFrom, form.timeTo)]
     .filter(Boolean)
     .join(', ');
+  const intake = (CATEGORY_INTAKE[form.categorySlug] ?? [])
+    .map((f) => ({ label: f.label, value: (form.intake[f.key] ?? '').trim() }))
+    .filter((a) => a.value.length > 0);
   return {
     id: newId(),
     type: 'TASK_REQUEST' as ListingType,
@@ -116,6 +122,7 @@ export function buildTaskListing(form: TaskForm): Listing {
       scheduledText: scheduledParts || undefined,
       isDugnad: form.isDugnad || undefined,
       recurrence: form.recurrence || undefined,
+      intake: intake.length ? intake : undefined,
     },
   };
 }

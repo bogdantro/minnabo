@@ -238,6 +238,7 @@ const nb = {
     errPrice: 'Skriv inn et beløp.',
     errConfirm: 'Du må bekrefte at informasjonen er riktig.',
     selectCategory: 'Velg kategori',
+    selectPlaceholder: 'Velg',
 
     // task step 1
     templatesLabel: 'Start fra en mal',
@@ -638,6 +639,9 @@ const nb = {
     materials: 'Materialer og utlegg',
     materialsNote: 'Notér parkering, deler o.l. Dette er kun en oversikt – ingen betaling håndteres i appen.',
     materialLabel: 'Hva',
+    photos: 'Bilder',
+    photosBefore: 'Før',
+    photosAfter: 'Etter',
   },
 
   agenda: {

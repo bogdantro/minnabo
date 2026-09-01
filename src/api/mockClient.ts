@@ -211,6 +211,10 @@ export class MockApiClient implements ApiClient {
         return jobWorkspaceStore.addMaterial(proposalId, action.label, action.amountKr);
       case 'removeMaterial':
         return jobWorkspaceStore.removeMaterial(proposalId, action.itemId);
+      case 'addPhoto':
+        return jobWorkspaceStore.addPhoto(proposalId, action.url, action.phase);
+      case 'removePhoto':
+        return jobWorkspaceStore.removePhoto(proposalId, action.itemId);
       case 'toggleTimer':
         return jobWorkspaceStore.toggleTimer(proposalId);
     }

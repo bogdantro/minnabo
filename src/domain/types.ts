@@ -117,6 +117,8 @@ export type TaskDetails = {
   isDugnad?: boolean;
   /** the task repeats on this cadence */
   recurrence?: TaskRecurrence;
+  /** category-specific intake answers (floors, rooms, pets …) */
+  intake?: { label: string; value: string }[];
 };
 
 export type ServiceOfferDetails = {
@@ -201,12 +203,14 @@ export type AgreementSnapshot = {
 
 export type ChecklistItem = { id: string; text: string; done: boolean };
 export type MaterialItem = { id: string; label: string; amountKr: number };
+export type JobPhoto = { id: string; url: string; phase: 'BEFORE' | 'AFTER' };
 
 /** Shared working state for one agreement, on the day the job happens. */
 export type JobWorkspace = {
   proposalId: string;
   checklist: ChecklistItem[];
   materials: MaterialItem[];
+  photos: JobPhoto[];
   /** epoch ms when the timer was last started, or null when paused */
   timerStartedAt: number | null;
   /** accumulated tracked time in ms */

@@ -74,10 +74,19 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
           </View>
         ) : null}
 
-        {task?.equipment || task?.meetingNote ? (
+        {task?.equipment || task?.meetingNote || task?.intake?.length ? (
           <View style={styles.section}>
             <SectionHeader title={nb.listingDetail.practicalInfo} />
             <InfoCard>
+              {(task?.intake ?? []).map((a, i) => (
+                <InfoRow
+                  key={a.label}
+                  icon="info"
+                  label={a.label}
+                  value={a.value}
+                  last={i === (task?.intake?.length ?? 0) - 1 && !task?.equipment && !task?.meetingNote}
+                />
+              ))}
               {task?.equipment ? (
                 <InfoRow icon="feather" label={nb.listingDetail.equipment} value={task.equipment} last={!task?.meetingNote} />
               ) : null}

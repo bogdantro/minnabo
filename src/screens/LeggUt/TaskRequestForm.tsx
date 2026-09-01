@@ -5,6 +5,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { CATEGORIES as categories } from '@/domain/categories';
 import { TASK_TEMPLATES } from '@/domain/taskTemplates';
+import { CATEGORY_INTAKE } from '@/domain/categoryIntake';
 import { draftStore } from '@/data/draftStore';
 import { haptics } from '@/lib/haptics';
 import { outdoorWarningFor } from '@/lib/weather';
@@ -46,6 +47,7 @@ const EMPTY: TaskForm = {
   whoCanOffer: 'ALL_VERIFIED',
   isDugnad: false,
   recurrence: '',
+  intake: {},
   confirmed: false,
 };
 
@@ -134,6 +136,27 @@ export function TaskRequestForm() {
             maxLength={500}
             hint={nb.leggUt.taskDescHint}
           />
+
+          {(CATEGORY_INTAKE[form.categorySlug] ?? []).map((field) =>
+            field.type === 'choice' ? (
+              <SelectField
+                key={field.key}
+                label={field.label}
+                placeholder={nb.leggUt.selectPlaceholder}
+                value={form.intake[field.key] || undefined}
+                options={field.options.map((o) => ({ value: o, label: o }))}
+                onChange={(v) => set('intake', { ...form.intake, [field.key]: v })}
+              />
+            ) : (
+              <TextField
+                key={field.key}
+                label={field.label}
+                placeholder={field.placeholder}
+                value={form.intake[field.key] ?? ''}
+                onChangeText={(t) => set('intake', { ...form.intake, [field.key]: t })}
+              />
+            ),
+          )}
         </>
       ),
     },
