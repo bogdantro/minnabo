@@ -40,6 +40,7 @@ export type ProfileRow = {
   paused?: boolean | null;
   home_notes?: string | null;
   portfolio?: string[] | null;
+  phone?: string | null;
   reliability_completed?: number | null;
   reliability_no_shows?: number | null;
   verifications?: { kind: string; verified: boolean; explanation: string }[] | null;
@@ -195,6 +196,7 @@ export function toProfile(row: ProfileRow): PublicProfile {
     paused: row.paused ?? undefined,
     homeNotes: row.home_notes ?? undefined,
     portfolio: row.portfolio ?? undefined,
+    phone: row.phone ?? undefined,
     reliability: toReliability(row),
     verifications: (row.verifications ?? []).map(
       (v): Verification => ({

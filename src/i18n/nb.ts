@@ -212,6 +212,9 @@ const nb = {
     enRoute: 'Jeg er på vei',
     arrived: 'Jeg er framme',
     statusSent: 'Sendt i samtalen.',
+    call: 'Ring',
+    sms: 'Send SMS',
+    contactShared: 'Telefonnummer deles automatisk når dere har en avtale.',
   },
 
   leggUt: {

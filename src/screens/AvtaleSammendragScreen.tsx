@@ -1,4 +1,4 @@
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, Linking, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
@@ -137,6 +137,28 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
             <Icon name="arrow-right" size={18} color="navyMuted" />
             <Party name={other?.displayName ?? 'Motpart'} uri={other?.avatarUrl} initials={other?.initials ?? '?'} />
           </View>
+          {other?.phone ? (
+            <View style={styles.contactRow}>
+              <Button
+                label={nb.avtale.call}
+                variant="secondary"
+                iconLeft="phone"
+                style={styles.contactBtn}
+                onPress={() => Linking.openURL(`tel:${other.phone!.replace(/\s/g, '')}`)}
+              />
+              <Button
+                label={nb.avtale.sms}
+                variant="secondary"
+                iconLeft="message-circle"
+                style={styles.contactBtn}
+                onPress={() => Linking.openURL(`sms:${other.phone!.replace(/\s/g, '')}`)}
+              />
+            </View>
+          ) : (
+            <AppText variant="meta" color="navyMuted">
+              {nb.avtale.contactShared}
+            </AppText>
+          )}
         </View>
 
         <View style={styles.statusRow}>
@@ -226,6 +248,8 @@ const styles = StyleSheet.create({
   section: { gap: tokens.space.xs },
   statusRow: { flexDirection: 'row', gap: tokens.space.sm },
   statusBtn: { flex: 1 },
+  contactRow: { flexDirection: 'row', gap: tokens.space.sm, marginTop: tokens.space.sm },
+  contactBtn: { flex: 1 },
   parties: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: tokens.space.md },
   party: { flex: 1, alignItems: 'center', gap: 4 },
   footer: {

@@ -224,8 +224,13 @@ export class MockApiClient implements ApiClient {
     await delay(150);
     const profile = profileRepository.getProfile(id);
     if (!profile) throw new Error('Fant ikke profilen.');
+    // Phone numbers are only shared once you have an agreement together.
+    const sharesContact =
+      id === profileRepository.currentUserId ||
+      chatRepository.listMyAgreements().some((a) => a.counterpartId === id);
     return {
       ...profile,
+      phone: sharesContact ? profile.phone : undefined,
       reliability: profileRepository.reliabilityFor(id),
       endorsements: endorsementsStore.list(id),
     };

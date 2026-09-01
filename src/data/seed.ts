@@ -81,6 +81,7 @@ export const profiles: Record<string, PublicProfile> = {
     verifications: [phoneVerified()],
     isBusiness: false,
     rating: { average: 4.9, count: 12 },
+    phone: '+47 934 56 789',
     portfolio: [
       'https://images.unsplash.com/photo-1558904541-efa843a96f01?auto=format&fit=crop&w=400&q=60',
       'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=400&q=60',
@@ -97,6 +98,7 @@ export const profiles: Record<string, PublicProfile> = {
     verifications: [phoneVerified()],
     isBusiness: false,
     rating: { average: 4.7, count: 9 },
+    phone: '+47 901 22 333',
   },
   martin: {
     id: 'u-martin',
@@ -109,6 +111,7 @@ export const profiles: Record<string, PublicProfile> = {
     verifications: [phoneVerified()],
     isBusiness: false,
     rating: { average: 4.6, count: 4 },
+    phone: '+47 912 34 567',
     homeNotes: 'Enebolig med hage. Parkering i innkjørselen. Vi har en snill hund som er ute i hagen.',
   },
   fjellbygg: {

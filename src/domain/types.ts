@@ -71,6 +71,8 @@ export type PublicProfile = {
   endorsements?: SkillEndorsement[];
   /** before/after photos from past jobs (helper profiles) */
   portfolio?: string[];
+  /** phone number — only shared once you have an agreement together */
+  phone?: string;
   /** reliability: shows-up / on-time / completes, distinct from the star rating */
   reliability?: ReliabilityStats;
 };
