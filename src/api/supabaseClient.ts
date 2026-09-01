@@ -497,6 +497,7 @@ export class SupabaseApiClient implements ApiClient {
     if (patch.maxDistanceKm !== undefined) row.max_distance_km = patch.maxDistanceKm;
     if (patch.paused !== undefined) row.paused = patch.paused;
     if (patch.homeNotes !== undefined) row.home_notes = patch.homeNotes || null;
+    if (patch.portfolio !== undefined) row.portfolio = patch.portfolio;
 
     const { data, error } = await supabase
       .from('profiles')

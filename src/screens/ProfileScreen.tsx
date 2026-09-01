@@ -1,4 +1,4 @@
-import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, View, Image, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
@@ -234,6 +234,17 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
           </View>
         ) : null}
 
+        {profile.portfolio?.length ? (
+          <View style={styles.section}>
+            <SectionHeader title={nb.profile.portfolioTitle} />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.portfolio}>
+              {profile.portfolio.map((url) => (
+                <Image key={url} source={{ uri: url }} style={styles.portfolioImg} />
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+
         {profile.homeNotes ? (
           <View style={styles.section}>
             <SectionHeader title={nb.profile.homeNotesTitle} />
@@ -369,4 +380,6 @@ const styles = StyleSheet.create({
   },
   impactRow: { flexDirection: 'row', gap: tokens.space.lg },
   impactStat: { flex: 1, gap: 2 },
+  portfolio: { gap: tokens.space.sm },
+  portfolioImg: { width: 150, height: 112, borderRadius: tokens.radius.tile, backgroundColor: tokens.color.line },
 });

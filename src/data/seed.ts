@@ -81,6 +81,10 @@ export const profiles: Record<string, PublicProfile> = {
     verifications: [phoneVerified()],
     isBusiness: false,
     rating: { average: 4.9, count: 12 },
+    portfolio: [
+      'https://images.unsplash.com/photo-1558904541-efa843a96f01?auto=format&fit=crop&w=400&q=60',
+      'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=400&q=60',
+    ],
   },
   emma: {
     id: 'u-emma',

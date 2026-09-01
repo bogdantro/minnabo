@@ -69,6 +69,8 @@ export type PublicProfile = {
   homeNotes?: string;
   /** neighbour endorsements of specific skills */
   endorsements?: SkillEndorsement[];
+  /** before/after photos from past jobs (helper profiles) */
+  portfolio?: string[];
   /** reliability: shows-up / on-time / completes, distinct from the star rating */
   reliability?: ReliabilityStats;
 };

@@ -71,6 +71,7 @@ export type UpdateProfilePatch = {
   maxDistanceKm?: number;
   paused?: boolean;
   homeNotes?: string;
+  portfolio?: string[];
 };
 
 export type SubmitReviewInput = {

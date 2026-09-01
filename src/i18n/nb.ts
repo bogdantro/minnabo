@@ -567,6 +567,8 @@ const nb = {
     endorsed: 'Du går god for dette',
     follow: 'Følg',
     following: 'Følger',
+    portfolioTitle: 'Portefølje',
+    portfolioHint: 'Bilder fra tidligere jobber – gjerne før og etter.',
     followedToast: 'Lagt til blant faste hjelpere.',
     unfollowedToast: 'Fjernet fra faste hjelpere.',
   },

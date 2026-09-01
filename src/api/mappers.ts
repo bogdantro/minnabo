@@ -39,6 +39,7 @@ export type ProfileRow = {
   purpose?: string | null;
   paused?: boolean | null;
   home_notes?: string | null;
+  portfolio?: string[] | null;
   reliability_completed?: number | null;
   reliability_no_shows?: number | null;
   verifications?: { kind: string; verified: boolean; explanation: string }[] | null;
@@ -190,6 +191,7 @@ export function toProfile(row: ProfileRow): PublicProfile {
     purpose: (row.purpose as PublicProfile['purpose']) ?? undefined,
     paused: row.paused ?? undefined,
     homeNotes: row.home_notes ?? undefined,
+    portfolio: row.portfolio ?? undefined,
     reliability: toReliability(row),
     verifications: (row.verifications ?? []).map(
       (v): Verification => ({

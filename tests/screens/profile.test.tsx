@@ -59,6 +59,11 @@ test('endorsing a skill on another profile increments the count', async () => {
   await waitFor(() => expect(screen.getByText('Hagearbeid · 4')).toBeTruthy());
 });
 
+test('a helper profile shows their portfolio gallery', async () => {
+  await renderWithProviders(<ProfileScreen profileId="u-andreas" />);
+  await waitFor(() => expect(screen.getByText('Portefølje')).toBeTruthy());
+});
+
 test('following a helper from their profile adds them to the follow list', async () => {
   const { followStore } = require('@/data/followStore');
   await renderWithProviders(<ProfileScreen profileId="u-andreas" />);

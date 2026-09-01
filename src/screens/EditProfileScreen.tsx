@@ -9,6 +9,8 @@ import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
 import { haptics } from '@/lib/haptics';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
+import { ImagePickerField } from '@/components/ui/ImagePickerField';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { PageHeader } from '@/components/TopBar';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -28,6 +30,7 @@ export function EditProfileScreen() {
   const [place, setPlace] = useState('');
   const [presentation, setPresentation] = useState('');
   const [homeNotes, setHomeNotes] = useState('');
+  const [portfolio, setPortfolio] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -39,6 +42,7 @@ export function EditProfileScreen() {
       setPlace(profile.location.place);
       setPresentation(profile.presentation ?? '');
       setHomeNotes(profile.homeNotes ?? '');
+      setPortfolio(profile.portfolio ?? []);
       setAvatarUrl(profile.avatarUrl);
       setHydrated(true);
     }
@@ -97,6 +101,7 @@ export function EditProfileScreen() {
         place: trimmedPlace,
         presentation: presentation.trim(),
         homeNotes: homeNotes.trim(),
+        portfolio,
       },
       {
         onSuccess: () => {
@@ -170,6 +175,14 @@ export function EditProfileScreen() {
           hint={nb.profile.homeNotesHint}
           multiline
         />
+
+        <View style={{ gap: 6 }}>
+          <SectionHeader title={nb.profile.portfolioTitle} />
+          <AppText variant="meta" color="navyMuted">
+            {nb.profile.portfolioHint}
+          </AppText>
+          <ImagePickerField value={portfolio} onChange={setPortfolio} />
+        </View>
         {update.isError ? (
           <AppText variant="meta" color="dangerText">
             {nb.state.error}
