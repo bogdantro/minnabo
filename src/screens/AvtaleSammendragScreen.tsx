@@ -5,9 +5,17 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatPrice } from '@/domain/price';
 import { formatRelative } from '@/lib/datetime';
-import { useProposal, useAgreementByProposal, useListing, useProfile } from '@/api/queries';
+import {
+  useProposal,
+  useAgreementByProposal,
+  useListing,
+  useProfile,
+  useReportNoShow,
+} from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
+import { confirm } from '@/lib/confirm';
+import { toast } from '@/lib/toast';
 import { DetailTopBar } from '@/components/TopBar';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -30,6 +38,24 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
       : proposal.fromProfileId
     : '';
   const { data: other } = useProfile(otherId);
+  const noShow = useReportNoShow();
+
+  const reportNoShow = async () => {
+    const ok = await confirm({
+      title: nb.avtale.noShowConfirmTitle,
+      message: nb.avtale.noShowConfirmBody,
+      confirmLabel: nb.avtale.noShowConfirm,
+      destructive: true,
+    });
+    if (!ok || !otherId) return;
+    noShow.mutate(
+      { agreementProposalId: proposalId, profileId: otherId },
+      {
+        onSuccess: () => toast.success(nb.avtale.noShowToast),
+        onError: () => toast.error(nb.toast.genericError),
+      },
+    );
+  };
 
   if (!proposal) {
     return (
@@ -110,6 +136,14 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
         </View>
 
         <InfoBox icon="shield">{nb.avtale.paymentNote}</InfoBox>
+
+        <Button
+          label={nb.avtale.reportNoShow}
+          variant="ghost"
+          iconLeft="user-x"
+          loading={noShow.isPending}
+          onPress={reportNoShow}
+        />
       </ScrollView>
 
       <View style={styles.footer}>

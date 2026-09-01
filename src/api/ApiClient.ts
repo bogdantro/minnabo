@@ -64,6 +64,7 @@ export type UpdateProfilePatch = {
   place?: string;
   avatarPath?: string;
   maxDistanceKm?: number;
+  paused?: boolean;
 };
 
 export type SubmitReviewInput = {
@@ -132,6 +133,7 @@ export interface ApiClient {
     byProfileId: string,
   ): Promise<CompletionConfirmation[]>;
   submitReview(input: SubmitReviewInput): Promise<Review>;
+  reportNoShow(agreementProposalId: string, profileId: string): Promise<void>;
 
   // saved listings & searches
   listSavedListingIds(): Promise<string[]>;

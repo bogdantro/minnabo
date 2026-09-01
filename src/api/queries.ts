@@ -384,6 +384,17 @@ export function useSubmitReview() {
   });
 }
 
+export function useReportNoShow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agreementProposalId, profileId }: { agreementProposalId: string; profileId: string }) =>
+      apiClient.reportNoShow(agreementProposalId, profileId),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: profileKeys.profile(vars.profileId) });
+    },
+  });
+}
+
 // --- saved listings & searches ---------------------------------------------
 
 export const savedKeys = {

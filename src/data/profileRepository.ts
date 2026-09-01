@@ -3,6 +3,7 @@ import type {
   CompletionConfirmation,
   Listing,
   PublicProfile,
+  ReliabilityStats,
   Review,
   VerificationKind,
 } from '@/domain/types';
@@ -22,9 +23,13 @@ const completionsSeed: CompletionConfirmation[] = [
   },
 ];
 
+// A couple of seeded no-shows so the reliability score has something to show.
+const noShowSeed: Record<string, number> = { 'u-sara': 1 };
+
 let notifications: AppNotification[] = clone(notificationsSeed);
 let reviews: Review[] = clone(reviewsSeed);
 let completions: CompletionConfirmation[] = clone(completionsSeed);
+let noShows: Record<string, number> = clone(noShowSeed);
 const editableProfile: PublicProfile = clone(profiles.mb);
 
 const CURRENT_USER_ID = profiles.mb.id;
@@ -55,7 +60,7 @@ export const profileRepository = {
     return clone(editableProfile);
   },
 
-  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation'>> & {
+  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused'>> & {
     place?: string;
     avatarPath?: string;
     maxDistanceKm?: number;
@@ -64,6 +69,7 @@ export const profileRepository = {
     if (patch.presentation !== undefined) editableProfile.presentation = patch.presentation;
     if (patch.avatarPath !== undefined) editableProfile.avatarUrl = patch.avatarPath;
     if (patch.maxDistanceKm !== undefined) editableProfile.maxDistanceKm = patch.maxDistanceKm;
+    if (patch.paused !== undefined) editableProfile.paused = patch.paused;
     if (patch.place !== undefined) {
       editableProfile.location = {
         ...editableProfile.location,
@@ -87,6 +93,28 @@ export const profileRepository = {
   },
   markNotificationRead(id: string): void {
     notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+  },
+
+  reportNoShow(profileId: string): void {
+    noShows = { ...noShows, [profileId]: (noShows[profileId] ?? 0) + 1 };
+  },
+
+  /**
+   * Reliability = did they show up and finish, separate from the star rating.
+   * `completed` uses the profile's completed-task count as the positive base;
+   * `noShows` is how often the other party reported them absent. The score
+   * stays undefined until there's a handful of data points.
+   */
+  reliabilityFor(profileId: string): ReliabilityStats {
+    const profile = profileRepository.getProfile(profileId);
+    const completed = profile?.completedTasks ?? 0;
+    const ns = noShows[profileId] ?? 0;
+    const total = completed + ns;
+    return {
+      completed,
+      noShows: ns,
+      score: total >= 3 ? Math.round((completed / total) * 100) : undefined,
+    };
   },
 
   listReviewsForProfile(profileId: string): Review[] {
@@ -140,6 +168,8 @@ export const profileRepository = {
     notifications = clone(notificationsSeed);
     reviews = clone(reviewsSeed);
     completions = clone(completionsSeed);
+    noShows = clone(noShowSeed);
     Object.assign(editableProfile, clone(profiles.mb));
+    delete editableProfile.paused;
   },
 };

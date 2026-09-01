@@ -33,6 +33,30 @@ test('edit profile blocks saving a blank name', async () => {
   expect(profileRepository.getProfile(meId)?.displayName).toBe(before);
 });
 
+test('pausing the profile shows the paused banner and hides own listings', async () => {
+  const meId = profileRepository.currentUserId;
+  const { repositories } = require('@/data/repositories');
+  const before = repositories.listings.list().filter((l: { owner: { id: string } }) => l.owner.id === meId).length;
+  expect(before).toBeGreaterThan(0);
+
+  await renderWithProviders(<ProfileScreen />);
+  await waitFor(() => expect(screen.getByText('Marius B.')).toBeTruthy());
+
+  await fireEvent.press(screen.getByText('Sett profilen på pause'));
+
+  await waitFor(() => expect(screen.getByText('Profilen din er på pause')).toBeTruthy());
+  expect(
+    repositories.listings.list().filter((l: { owner: { id: string } }) => l.owner.id === meId),
+  ).toHaveLength(0);
+});
+
+test('reliability score is computed from completions and no-shows', () => {
+  const before = profileRepository.reliabilityFor('u-sara');
+  profileRepository.reportNoShow('u-sara');
+  const after = profileRepository.reliabilityFor('u-sara');
+  expect(after.noShows).toBe(before.noShows + 1);
+});
+
 test('notifications list can be marked all read', async () => {
   await renderWithProviders(<NotificationsScreen />);
   await waitFor(() => expect(screen.getByText('Nytt tilbud fra Emma Larsen')).toBeTruthy());

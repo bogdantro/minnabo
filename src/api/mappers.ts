@@ -34,6 +34,9 @@ export type ProfileRow = {
   onboarded_at?: string | null;
   max_distance_km?: number | null;
   purpose?: string | null;
+  paused?: boolean | null;
+  reliability_completed?: number | null;
+  reliability_no_shows?: number | null;
   verifications?: { kind: string; verified: boolean; explanation: string }[] | null;
   profile_ratings?: RatingsRow;
 };
@@ -149,6 +152,18 @@ export type ConversationRow = {
 const toRating = (r: RatingsRow): Rating | undefined =>
   r && r.count > 0 ? { average: Number(r.average), count: r.count } : undefined;
 
+function toReliability(row: ProfileRow): PublicProfile['reliability'] {
+  const completed = row.reliability_completed ?? 0;
+  const noShows = row.reliability_no_shows ?? 0;
+  const total = completed + noShows;
+  if (total === 0) return undefined;
+  return {
+    completed,
+    noShows,
+    score: total >= 3 ? Math.round((completed / total) * 100) : undefined,
+  };
+}
+
 export function toProfile(row: ProfileRow): PublicProfile {
   return {
     id: row.id,
@@ -166,6 +181,8 @@ export function toProfile(row: ProfileRow): PublicProfile {
     onboardedAt: row.onboarded_at ?? undefined,
     maxDistanceKm: row.max_distance_km ?? undefined,
     purpose: (row.purpose as PublicProfile['purpose']) ?? undefined,
+    paused: row.paused ?? undefined,
+    reliability: toReliability(row),
     verifications: (row.verifications ?? []).map(
       (v): Verification => ({
         kind: v.kind as Verification['kind'],

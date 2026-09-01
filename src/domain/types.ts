@@ -63,6 +63,19 @@ export type PublicProfile = {
   /** the user's own search radius preference (own profile only) */
   maxDistanceKm?: number;
   purpose?: Purpose;
+  /** holiday mode: listings hidden from others, chat auto-replies you're away */
+  paused?: boolean;
+  /** reliability: shows-up / on-time / completes, distinct from the star rating */
+  reliability?: ReliabilityStats;
+};
+
+export type ReliabilityStats = {
+  /** completed agreements counted toward the score */
+  completed: number;
+  /** times the other party reported this person as a no-show */
+  noShows: number;
+  /** 0–100; undefined when there isn't enough history yet */
+  score?: number;
 };
 
 export type ListingImage = { id: string; url: string };

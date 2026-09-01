@@ -200,6 +200,11 @@ const nb = {
     paymentNote: 'Betaling avtales og gjennomføres direkte mellom partene. MinNabo håndterer ikke betaling.',
     toCompletion: 'Marker som fullført',
     openChat: 'Åpne samtale',
+    reportNoShow: 'Meld fra: motparten møtte ikke',
+    noShowConfirmTitle: 'Meld fra om at motparten ikke møtte?',
+    noShowConfirmBody: 'Dette teller inn i pålitelighetsscoren deres. Bruk det bare når noen ikke dukket opp til en avtale.',
+    noShowConfirm: 'Meld fra',
+    noShowToast: 'Takk. Vi har notert det.',
   },
 
   leggUt: {
@@ -512,6 +517,18 @@ const nb = {
     saved: 'Profilen er lagret.',
     nameRequired: 'Skriv inn navnet ditt.',
     areaRequired: 'Skriv inn hvilket område du holder til i.',
+    reliability: 'Pålitelighet',
+    reliabilityNew: 'Ny',
+    reliabilityExplainer: 'Pålitelighet viser hvor ofte avtaler blir gjennomført som planlagt. Den er egen fra terningkast/vurdering.',
+    pauseProfile: 'Sett profilen på pause',
+    resumeProfile: 'Aktivér profilen igjen',
+    pauseNow: 'Sett på pause',
+    pauseConfirmTitle: 'Sette profilen på pause?',
+    pauseConfirmBody: 'Oppføringene dine skjules for andre, og folk ser at du er borte. Du kan aktivere når som helst.',
+    pausedToast: 'Profilen er satt på pause.',
+    resumedToast: 'Profilen er aktiv igjen.',
+    pausedTitle: 'Profilen din er på pause',
+    pausedBody: 'Oppføringene dine er skjult for andre inntil du aktiverer profilen igjen.',
   },
 
   notifications: {

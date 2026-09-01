@@ -3,9 +3,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { CATEGORIES as categories } from '@/domain/categories';
-import { useProfile, useReviews } from '@/api/queries';
+import { useProfile, useReviews, useUpdateProfile } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { safePush } from '@/lib/nav';
+import { confirm } from '@/lib/confirm';
+import { toast } from '@/lib/toast';
+import { haptics } from '@/lib/haptics';
 import { PageHeader } from '@/components/TopBar';
 import { AppText } from '@/components/ui/Text';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -26,6 +29,28 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
   const isSelf = id === myId;
   const { data: profile, isLoading, isError, refetch } = useProfile(id);
   const { data: reviews } = useReviews(id);
+  const update = useUpdateProfile();
+
+  const setPaused = async (paused: boolean) => {
+    if (paused) {
+      const ok = await confirm({
+        title: nb.profile.pauseConfirmTitle,
+        message: nb.profile.pauseConfirmBody,
+        confirmLabel: nb.profile.pauseNow,
+      });
+      if (!ok) return;
+    }
+    update.mutate(
+      { paused },
+      {
+        onSuccess: () => {
+          haptics.success();
+          toast.success(paused ? nb.profile.pausedToast : nb.profile.resumedToast);
+        },
+        onError: () => toast.error(nb.toast.genericError),
+      },
+    );
+  };
 
   if (!profile) {
     return (
@@ -62,12 +87,35 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
           {profile.rating ? <Rating value={profile.rating} /> : null}
         </View>
 
+        {isSelf && profile.paused ? (
+          <View style={styles.pausedBanner}>
+            <Icon name="pause-circle" size={18} color="navy" />
+            <View style={styles.pausedText}>
+              <AppText variant="meta" weight="bold">
+                {nb.profile.pausedTitle}
+              </AppText>
+              <AppText variant="meta" color="navyMuted">
+                {nb.profile.pausedBody}
+              </AppText>
+            </View>
+          </View>
+        ) : null}
+
         {isSelf ? (
-          <Button
-            label={nb.profile.edit}
-            variant="secondary"
-            onPress={() => safePush('/profil/rediger')}
-          />
+          <>
+            <Button
+              label={nb.profile.edit}
+              variant="secondary"
+              onPress={() => safePush('/profil/rediger')}
+            />
+            <Button
+              label={profile.paused ? nb.profile.resumeProfile : nb.profile.pauseProfile}
+              variant="ghost"
+              iconLeft={profile.paused ? 'play' : 'pause'}
+              loading={update.isPending}
+              onPress={() => setPaused(!profile.paused)}
+            />
+          </>
         ) : (
           <Button
             label={nb.profile.reportOrBlock}
@@ -129,9 +177,24 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
             icon="star"
             label={nb.profile.reviews}
             value={profile.rating ? String(profile.rating.count) : '0'}
+          />
+          <InfoRow
+            icon="shield"
+            label={nb.profile.reliability}
+            value={
+              profile.reliability?.score != null
+                ? `${profile.reliability.score} %`
+                : nb.profile.reliabilityNew
+            }
             last
           />
         </InfoCard>
+
+        {profile.reliability?.score != null ? (
+          <AppText variant="meta" color="navyMuted">
+            {nb.profile.reliabilityExplainer}
+          </AppText>
+        ) : null}
 
         <View style={styles.section}>
           <SectionHeader
@@ -159,4 +222,13 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.sm },
   verRow: { paddingVertical: tokens.space.sm },
   verDivider: { height: 1, backgroundColor: tokens.color.line, marginTop: tokens.space.sm },
+  pausedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.md,
+    backgroundColor: tokens.color.limeTint,
+    borderRadius: tokens.radius.card,
+    padding: tokens.space.md,
+  },
+  pausedText: { flex: 1, gap: 1 },
 });

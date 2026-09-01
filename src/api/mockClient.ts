@@ -158,7 +158,7 @@ export class MockApiClient implements ApiClient {
     await delay(150);
     const profile = profileRepository.getProfile(id);
     if (!profile) throw new Error('Fant ikke profilen.');
-    return profile;
+    return { ...profile, reliability: profileRepository.reliabilityFor(id) };
   }
 
   async updateProfile(patch: UpdateProfilePatch): Promise<PublicProfile> {
@@ -207,6 +207,11 @@ export class MockApiClient implements ApiClient {
   async submitReview(input: SubmitReviewInput): Promise<Review> {
     await delay(200);
     return profileRepository.submitReview(input);
+  }
+
+  async reportNoShow(_agreementProposalId: string, profileId: string): Promise<void> {
+    await delay(120);
+    profileRepository.reportNoShow(profileId);
   }
 
   // --- saved listings & searches ---

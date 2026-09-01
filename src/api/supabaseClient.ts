@@ -418,6 +418,7 @@ export class SupabaseApiClient implements ApiClient {
     }
     if (patch.avatarPath !== undefined) row.avatar_path = patch.avatarPath;
     if (patch.maxDistanceKm !== undefined) row.max_distance_km = patch.maxDistanceKm;
+    if (patch.paused !== undefined) row.paused = patch.paused;
 
     const { data, error } = await supabase
       .from('profiles')
@@ -513,6 +514,14 @@ export class SupabaseApiClient implements ApiClient {
     });
     if (error) fail(error.message);
     return toReview(data as unknown as ReviewRow);
+  }
+
+  async reportNoShow(agreementProposalId: string, profileId: string): Promise<void> {
+    const { error } = await supabase.rpc('report_no_show', {
+      p_agreement_proposal_id: agreementProposalId,
+      p_profile_id: profileId,
+    });
+    if (error) fail(error.message);
   }
 
   // --- saved listings & searches ---
