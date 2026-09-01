@@ -50,6 +50,15 @@ test('pausing the profile shows the paused banner and hides own listings', async
   ).toHaveLength(0);
 });
 
+test('endorsing a skill on another profile increments the count', async () => {
+  await renderWithProviders(<ProfileScreen profileId="u-emma" />);
+  await waitFor(() => expect(screen.getByText('Emma Larsen')).toBeTruthy());
+
+  // Hagearbeid is seeded with 3 endorsements, none from the current user.
+  await fireEvent.press(screen.getByText('Hagearbeid · 3'));
+  await waitFor(() => expect(screen.getByText('Hagearbeid · 4')).toBeTruthy());
+});
+
 test('reliability score is computed from completions and no-shows', () => {
   const before = profileRepository.reliabilityFor('u-sara');
   profileRepository.reportNoShow('u-sara');

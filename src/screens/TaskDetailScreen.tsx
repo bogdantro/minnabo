@@ -82,6 +82,15 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
           </View>
         ) : null}
 
+        {listing.owner.homeNotes ? (
+          <View style={styles.section}>
+            <SectionHeader title={nb.profile.homeNotesTitle} />
+            <AppText variant="body" color="navyMuted">
+              {listing.owner.homeNotes}
+            </AppText>
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <SectionHeader title={nb.listingDetail.taskOwner} />
           <ProfileCard

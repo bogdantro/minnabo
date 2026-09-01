@@ -13,6 +13,7 @@ import type {
   Report,
   ReportTargetType,
   Review,
+  SkillEndorsement,
   VerificationKind,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
@@ -65,6 +66,7 @@ export type UpdateProfilePatch = {
   avatarPath?: string;
   maxDistanceKm?: number;
   paused?: boolean;
+  homeNotes?: string;
 };
 
 export type SubmitReviewInput = {
@@ -135,6 +137,8 @@ export interface ApiClient {
   ): Promise<CompletionConfirmation[]>;
   submitReview(input: SubmitReviewInput): Promise<Review>;
   reportNoShow(agreementProposalId: string, profileId: string): Promise<void>;
+  listEndorsements(profileId: string): Promise<SkillEndorsement[]>;
+  toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]>;
 
   // saved listings & searches
   listSavedListingIds(): Promise<string[]>;

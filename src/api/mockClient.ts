@@ -9,6 +9,7 @@ import type {
   Proposal,
   PublicProfile,
   Review,
+  SkillEndorsement,
   VerificationKind,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
@@ -19,6 +20,7 @@ import { profileRepository } from '@/data/profileRepository';
 import { savedStore } from '@/data/savedStore';
 import { savedSearchStore } from '@/data/savedSearchStore';
 import { safetyStore } from '@/data/safetyStore';
+import { endorsementsStore } from '@/data/endorsementsStore';
 import type {
   ApiClient,
   ListConversationsParams,
@@ -158,7 +160,11 @@ export class MockApiClient implements ApiClient {
     await delay(150);
     const profile = profileRepository.getProfile(id);
     if (!profile) throw new Error('Fant ikke profilen.');
-    return { ...profile, reliability: profileRepository.reliabilityFor(id) };
+    return {
+      ...profile,
+      reliability: profileRepository.reliabilityFor(id),
+      endorsements: endorsementsStore.list(id),
+    };
   }
 
   async updateProfile(patch: UpdateProfilePatch): Promise<PublicProfile> {
@@ -212,6 +218,16 @@ export class MockApiClient implements ApiClient {
   async reportNoShow(_agreementProposalId: string, profileId: string): Promise<void> {
     await delay(120);
     profileRepository.reportNoShow(profileId);
+  }
+
+  async listEndorsements(profileId: string): Promise<SkillEndorsement[]> {
+    await delay(60);
+    return endorsementsStore.list(profileId);
+  }
+
+  async toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]> {
+    await delay(80);
+    return endorsementsStore.toggle(profileId, skill);
   }
 
   // --- saved listings & searches ---

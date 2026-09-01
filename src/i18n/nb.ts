@@ -533,6 +533,12 @@ const nb = {
     impactNeighbours: 'naboer hjulpet',
     impactHours: 'timer spart i nabolaget',
     topTags: 'Naboene sier',
+    fieldHomeNotes: 'Om hjemmet mitt',
+    homeNotesHint: 'Kjæledyr, trapper, parkering – deles med hjelpere når du har en avtale.',
+    homeNotesTitle: 'Om hjemmet',
+    endorsementsTitle: 'Ferdigheter naboer går god for',
+    endorseHint: 'Trykk for å gå god for en ferdighet',
+    endorsed: 'Du går god for dette',
   },
 
   notifications: {

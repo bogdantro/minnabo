@@ -60,7 +60,7 @@ export const profileRepository = {
     return clone(editableProfile);
   },
 
-  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused'>> & {
+  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'homeNotes'>> & {
     place?: string;
     avatarPath?: string;
     maxDistanceKm?: number;
@@ -70,6 +70,7 @@ export const profileRepository = {
     if (patch.avatarPath !== undefined) editableProfile.avatarUrl = patch.avatarPath;
     if (patch.maxDistanceKm !== undefined) editableProfile.maxDistanceKm = patch.maxDistanceKm;
     if (patch.paused !== undefined) editableProfile.paused = patch.paused;
+    if (patch.homeNotes !== undefined) editableProfile.homeNotes = patch.homeNotes || undefined;
     if (patch.place !== undefined) {
       editableProfile.location = {
         ...editableProfile.location,
@@ -191,5 +192,6 @@ export const profileRepository = {
     noShows = clone(noShowSeed);
     Object.assign(editableProfile, clone(profiles.mb));
     delete editableProfile.paused;
+    delete editableProfile.homeNotes;
   },
 };

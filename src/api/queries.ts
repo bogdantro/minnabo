@@ -384,6 +384,24 @@ export function useSubmitReview() {
   });
 }
 
+export function useEndorsements(profileId: string) {
+  return useQuery({
+    queryKey: [...profileKeys.profile(profileId), 'endorsements'],
+    queryFn: () => apiClient.listEndorsements(profileId),
+    enabled: !!profileId,
+  });
+}
+
+export function useToggleEndorsement(profileId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (skill: string) => apiClient.toggleEndorsement(profileId, skill),
+    onSuccess: (endorsements) => {
+      qc.setQueryData([...profileKeys.profile(profileId), 'endorsements'], endorsements);
+    },
+  });
+}
+
 export function useReportNoShow() {
   const qc = useQueryClient();
   return useMutation({

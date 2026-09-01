@@ -11,6 +11,7 @@ import type {
   PublicProfile,
   Report,
   Review,
+  SkillEndorsement,
   VerificationKind,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
@@ -419,6 +420,7 @@ export class SupabaseApiClient implements ApiClient {
     if (patch.avatarPath !== undefined) row.avatar_path = patch.avatarPath;
     if (patch.maxDistanceKm !== undefined) row.max_distance_km = patch.maxDistanceKm;
     if (patch.paused !== undefined) row.paused = patch.paused;
+    if (patch.homeNotes !== undefined) row.home_notes = patch.homeNotes || null;
 
     const { data, error } = await supabase
       .from('profiles')
@@ -523,6 +525,33 @@ export class SupabaseApiClient implements ApiClient {
       p_profile_id: profileId,
     });
     if (error) fail(error.message);
+  }
+
+  async listEndorsements(profileId: string): Promise<SkillEndorsement[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('skill_endorsements')
+      .select('skill, endorser_id')
+      .eq('target_id', profileId);
+    if (error) fail(error.message);
+    const rows = (data as { skill: string; endorser_id: string }[]) ?? [];
+    const bySkill = new Map<string, Set<string>>();
+    for (const r of rows) {
+      if (!bySkill.has(r.skill)) bySkill.set(r.skill, new Set());
+      bySkill.get(r.skill)!.add(r.endorser_id);
+    }
+    return [...bySkill.entries()]
+      .map(([skill, people]) => ({ skill, count: people.size, byMe: people.has(me) }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  async toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]> {
+    const { error } = await supabase.rpc('toggle_endorsement', {
+      p_target_id: profileId,
+      p_skill: skill,
+    });
+    if (error) fail(error.message);
+    return this.listEndorsements(profileId);
   }
 
   // --- saved listings & searches ---

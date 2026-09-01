@@ -105,6 +105,7 @@ export const profiles: Record<string, PublicProfile> = {
     verifications: [phoneVerified()],
     isBusiness: false,
     rating: { average: 4.6, count: 4 },
+    homeNotes: 'Enebolig med hage. Parkering i innkjørselen. Vi har en snill hund som er ute i hagen.',
   },
   fjellbygg: {
     id: 'u-fjellbygg',

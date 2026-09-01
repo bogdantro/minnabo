@@ -146,6 +146,11 @@ afterEach(() => {
   } catch {
     /* not loaded */
   }
+  try {
+    require('@/data/endorsementsStore').endorsementsStore._reset();
+  } catch {
+    /* not loaded */
+  }
 });
 
 // Auto-confirm Alert dialogs so confirm() flows are testable — presses the

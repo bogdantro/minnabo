@@ -27,6 +27,7 @@ export function EditProfileScreen() {
   const [name, setName] = useState('');
   const [place, setPlace] = useState('');
   const [presentation, setPresentation] = useState('');
+  const [homeNotes, setHomeNotes] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -37,6 +38,7 @@ export function EditProfileScreen() {
       setName(profile.displayName);
       setPlace(profile.location.place);
       setPresentation(profile.presentation ?? '');
+      setHomeNotes(profile.homeNotes ?? '');
       setAvatarUrl(profile.avatarUrl);
       setHydrated(true);
     }
@@ -90,7 +92,12 @@ export function EditProfileScreen() {
     }
 
     update.mutate(
-      { displayName: trimmedName, place: trimmedPlace, presentation: presentation.trim() },
+      {
+        displayName: trimmedName,
+        place: trimmedPlace,
+        presentation: presentation.trim(),
+        homeNotes: homeNotes.trim(),
+      },
       {
         onSuccess: () => {
           haptics.success();
@@ -154,6 +161,13 @@ export function EditProfileScreen() {
           label={nb.profile.fieldPresentation}
           value={presentation}
           onChangeText={setPresentation}
+          multiline
+        />
+        <TextField
+          label={nb.profile.fieldHomeNotes}
+          value={homeNotes}
+          onChangeText={setHomeNotes}
+          hint={nb.profile.homeNotesHint}
           multiline
         />
         {update.isError ? (

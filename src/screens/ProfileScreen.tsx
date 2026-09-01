@@ -1,9 +1,15 @@
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { CATEGORIES as categories } from '@/domain/categories';
-import { useProfile, useReviews, useUpdateProfile } from '@/api/queries';
+import {
+  useProfile,
+  useReviews,
+  useUpdateProfile,
+  useEndorsements,
+  useToggleEndorsement,
+} from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { safePush } from '@/lib/nav';
 import { confirm } from '@/lib/confirm';
@@ -29,6 +35,8 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
   const isSelf = id === myId;
   const { data: profile, isLoading, isError, refetch } = useProfile(id);
   const { data: reviews } = useReviews(id);
+  const { data: endorsements } = useEndorsements(id);
+  const endorse = useToggleEndorsement(id);
   const update = useUpdateProfile();
 
   const setPaused = async (paused: boolean) => {
@@ -68,6 +76,15 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
     .filter(Boolean) as string[];
 
   const neighboursHelped = profile.completedTasks ?? 0;
+
+  const endorseList = endorsements ?? profile.endorsements ?? [];
+  const skillPool = Array.from(
+    new Set([
+      ...endorseList.map((e) => e.skill),
+      ...(profile.services ?? []),
+      ...categoryLabels,
+    ]),
+  );
   const topTags = Object.entries(
     (reviews ?? []).flatMap((r) => r.tags ?? []).reduce<Record<string, number>>((acc, t) => {
       acc[t] = (acc[t] ?? 0) + 1;
@@ -190,6 +207,47 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
           <View style={styles.section}>
             <SectionHeader title={nb.profile.presentation} />
             <AppText variant="body">{profile.presentation}</AppText>
+          </View>
+        ) : null}
+
+        {profile.homeNotes ? (
+          <View style={styles.section}>
+            <SectionHeader title={nb.profile.homeNotesTitle} />
+            <AppText variant="body" color="navyMuted">
+              {profile.homeNotes}
+            </AppText>
+          </View>
+        ) : null}
+
+        {skillPool.length ? (
+          <View style={styles.section}>
+            <SectionHeader title={nb.profile.endorsementsTitle} />
+            {!isSelf ? (
+              <AppText variant="meta" color="navyMuted">
+                {nb.profile.endorseHint}
+              </AppText>
+            ) : null}
+            <View style={styles.chips}>
+              {skillPool.map((skill) => {
+                const e = endorseList.find((x) => x.skill === skill);
+                const count = e?.count ?? 0;
+                const mine = !!e?.byMe;
+                const label = count > 0 ? `${skill} · ${count}` : skill;
+                return isSelf ? (
+                  <StatusPill key={skill} label={label} tone={count > 0 ? 'lime' : 'neutral'} />
+                ) : (
+                  <Pressable
+                    key={skill}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: mine }}
+                    accessibilityLabel={skill}
+                    onPress={() => endorse.mutate(skill)}
+                  >
+                    <StatusPill label={label} tone={mine ? 'lime' : 'neutral'} filled={mine} soft={!mine} />
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         ) : null}
 

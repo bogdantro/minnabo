@@ -35,6 +35,7 @@ export type ProfileRow = {
   max_distance_km?: number | null;
   purpose?: string | null;
   paused?: boolean | null;
+  home_notes?: string | null;
   reliability_completed?: number | null;
   reliability_no_shows?: number | null;
   verifications?: { kind: string; verified: boolean; explanation: string }[] | null;
@@ -183,6 +184,7 @@ export function toProfile(row: ProfileRow): PublicProfile {
     maxDistanceKm: row.max_distance_km ?? undefined,
     purpose: (row.purpose as PublicProfile['purpose']) ?? undefined,
     paused: row.paused ?? undefined,
+    homeNotes: row.home_notes ?? undefined,
     reliability: toReliability(row),
     verifications: (row.verifications ?? []).map(
       (v): Verification => ({

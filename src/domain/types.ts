@@ -65,8 +65,19 @@ export type PublicProfile = {
   purpose?: Purpose;
   /** holiday mode: listings hidden from others, chat auto-replies you're away */
   paused?: boolean;
+  /** "about my home" — pets, stairs, parking; reused across the person's tasks */
+  homeNotes?: string;
+  /** neighbour endorsements of specific skills */
+  endorsements?: SkillEndorsement[];
   /** reliability: shows-up / on-time / completes, distinct from the star rating */
   reliability?: ReliabilityStats;
+};
+
+export type SkillEndorsement = {
+  skill: string;
+  count: number;
+  /** whether the viewing user has endorsed this skill */
+  byMe?: boolean;
 };
 
 export type ReliabilityStats = {
