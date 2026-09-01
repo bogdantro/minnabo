@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
+import { ScrollView, View, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import type { Listing, PublicProfile } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
@@ -155,6 +155,18 @@ export function OppdragScreen() {
               />
             ))}
           </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.leadBoard.title}
+            onPress={() => safePush('/oppdrag-for-meg')}
+            style={styles.leadLink}
+          >
+            <Icon name="target" size={16} color="lime" />
+            <AppText variant="meta" weight="bold" style={styles.leadLinkText}>
+              {nb.leadBoard.title}
+            </AppText>
+            <Icon name="chevron-right" size={16} color="navyMuted" />
+          </Pressable>
         </Section>
 
         <View style={styles.footerNote}>
@@ -235,5 +247,17 @@ const styles = StyleSheet.create({
     marginBottom: tokens.space.sm,
   },
   list: { gap: tokens.space.md },
+  leadLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.sm,
+    marginTop: tokens.space.sm,
+    padding: tokens.space.md,
+    borderRadius: tokens.radius.card,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    backgroundColor: tokens.color.surface,
+  },
+  leadLinkText: { flex: 1 },
   footerNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: tokens.space.sm },
 });

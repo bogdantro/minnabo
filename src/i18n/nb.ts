@@ -590,6 +590,15 @@ const nb = {
     typical: 'oftest',
   },
 
+  leadBoard: {
+    title: 'Oppdrag for deg',
+    body: 'Åpne oppdrag som passer tilbudene dine, de nærmeste og nyeste først.',
+    noOfferBody: 'Legg ut et tilbud, så viser vi oppdrag som matcher det du kan hjelpe med.',
+    matchTag: 'Passer tilbudet ditt',
+    dismiss: 'Ikke aktuelt',
+    empty: 'Ingen åpne oppdrag akkurat nå. Kom tilbake senere.',
+  },
+
   review: {
     title: 'Gi en vurdering',
     heading: 'Hvordan gikk det?',
