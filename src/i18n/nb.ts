@@ -249,6 +249,11 @@ const nb = {
     recurrenceMonthly: 'Månedlig',
     dugnadLabel: 'Dette er dugnad / frivillig hjelp',
     dugnadNote: 'Dugnadsoppdrag har ingen betaling. Det får et eget merke så naboer ser at det er frivillig hjelp.',
+    weatherWarning: {
+      RAIN: 'Det er meldt regn denne dagen. Vurder en dag med bedre vær for et uteoppdrag.',
+      WIND: 'Det er meldt mye vind denne dagen. Vurder en roligere dag for et uteoppdrag.',
+      SNOW: 'Det er meldt snø denne dagen.',
+    },
     taskS1Title: 'Hva trenger du hjelp med?',
     taskS1Sub: 'Fortell kort hva oppdraget gjelder.',
     taskTitleLabel: 'Tittel på oppdraget',
@@ -814,6 +819,7 @@ const nb = {
       'Sletting fjerner profilen din og personopplysningene dine. Dette kan ikke angres.',
     deleteConfirm: 'Slett konto permanent',
     exportData: 'Last ned mine data',
+    exportStarted: 'Samler dataene dine …',
     consentLog: 'Samtykkelogg',
     pushNotifications: 'Push-varsler',
     emailNotifications: 'E-postvarsler',
@@ -908,6 +914,9 @@ const nb = {
     offerAccepted: 'Tilbud godtatt',
     offerDeclined: 'Tilbud avslått',
     offerWithdrawn: 'Tilbud trukket',
+    offerExpired: 'Tilbudet er utløpt',
+    offerExpiresIn: (d: number) =>
+      d <= 0 ? 'Utløper i dag' : d === 1 ? 'Utløper i morgen' : `Utløper om ${d} dager`,
     paymentNote:
       'Betaling avtales og gjennomføres direkte mellom partene. MinNabo håndterer ikke betaling.',
     systemOfferSent: 'sendte et tilbud',

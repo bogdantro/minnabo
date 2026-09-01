@@ -5,6 +5,8 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { safePush } from '@/lib/nav';
 import { shareInvite } from '@/lib/share';
+import { exportMyData } from '@/lib/dataExport';
+import { toast } from '@/lib/toast';
 import { signOut, useSession } from '@/auth/session';
 import { ENV } from '@/lib/env';
 import { PageHeader } from '@/components/TopBar';
@@ -40,7 +42,6 @@ const BASE_GROUPS: { title: string; rows: Row[] }[] = [
       { label: nb.settings.privacy, icon: 'lock', route: '/personvern' },
       { label: nb.settings.terms, icon: 'file-text', route: '/vilkar' },
       { label: nb.settings.consentLog, icon: 'list', route: '/personvern' },
-      { label: nb.settings.exportData, icon: 'download', route: '/personvern' },
     ],
   },
 ];
@@ -54,12 +55,23 @@ export function SettingsScreen() {
     router.replace('/velkommen');
   };
 
+  const exportData = async () => {
+    if (!userId) return;
+    toast.info(nb.settings.exportStarted);
+    try {
+      await exportMyData(userId);
+    } catch {
+      toast.error(nb.toast.genericError);
+    }
+  };
+
   const aboutRows: Row[] = [
     {
       label: nb.settings.inviteNeighbour,
       icon: 'user-plus',
       action: () => shareInvite(userId ?? 'app'),
     },
+    { label: nb.settings.exportData, icon: 'download', action: exportData },
     { label: nb.settings.language, icon: 'globe' },
   ];
   if (__DEV__ && !ENV.useMocks) {

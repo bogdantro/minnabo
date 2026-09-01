@@ -7,6 +7,7 @@ import { CATEGORIES as categories } from '@/domain/categories';
 import { TASK_TEMPLATES } from '@/domain/taskTemplates';
 import { draftStore } from '@/data/draftStore';
 import { haptics } from '@/lib/haptics';
+import { outdoorWarningFor } from '@/lib/weather';
 import { safePush } from '@/lib/nav';
 import { Wizard, type WizardStep } from '@/components/Wizard';
 import { TextField } from '@/components/ui/TextField';
@@ -188,6 +189,16 @@ export function TaskRequestForm() {
                 onChange={(d) => set('date', d)}
               />
             ) : null}
+            {form.dateMode === 'PICK' && form.date
+              ? (() => {
+                  const w = outdoorWarningFor(form.categorySlug, form.date.toISOString());
+                  return w ? (
+                    <InfoBox icon="cloud-drizzle" tone="cyan">
+                      {nb.leggUt.weatherWarning[w.kind]}
+                    </InfoBox>
+                  ) : null;
+                })()
+              : null}
           </FieldGroup>
 
           <FieldGroup title={nb.leggUt.timeLabel}>

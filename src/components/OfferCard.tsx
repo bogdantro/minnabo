@@ -1,6 +1,7 @@
 import { View, Image, StyleSheet } from 'react-native';
 import type { Proposal } from '@/domain/types';
 import { formatPrice } from '@/domain/price';
+import { isProposalExpired, proposalExpiresInDays } from '@/domain/proposal';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { AppText } from './ui/Text';
@@ -27,7 +28,8 @@ export function OfferCard({
   onDecline,
   pending = false,
 }: OfferCardProps) {
-  const showButtons = canRespond && proposal.status === 'SENT';
+  const expired = isProposalExpired(proposal);
+  const showButtons = canRespond && proposal.status === 'SENT' && !expired;
 
   const statusText =
     proposal.status === 'ACCEPTED'
@@ -36,7 +38,9 @@ export function OfferCard({
         ? nb.chat.offerDeclined
         : proposal.status === 'WITHDRAWN'
           ? nb.chat.offerWithdrawn
-          : null;
+          : expired
+            ? nb.chat.offerExpired
+            : null;
   const accepted = proposal.status === 'ACCEPTED';
 
   return (
@@ -83,6 +87,12 @@ export function OfferCard({
       {proposal.caveats ? (
         <AppText variant="meta" color="navyMuted">
           {proposal.caveats}
+        </AppText>
+      ) : null}
+
+      {showButtons && proposalExpiresInDays(proposal) <= 3 ? (
+        <AppText variant="meta" weight="bold" color="navyMuted">
+          {nb.chat.offerExpiresIn(proposalExpiresInDays(proposal))}
         </AppText>
       ) : null}
 
