@@ -40,6 +40,7 @@ import { ChatComposer } from '@/components/ChatComposer';
 import { QuickReplies } from '@/components/QuickReplies';
 import { MessageActionsSheet } from '@/components/MessageActionsSheet';
 import { TimeProposalSheet } from '@/components/TimeProposalSheet';
+import { PlaceShareSheet } from '@/components/PlaceShareSheet';
 import { OfferCard } from '@/components/OfferCard';
 import { SendOfferSheet } from '@/components/SendOfferSheet';
 import { AttachSheet } from '@/components/AttachSheet';
@@ -123,6 +124,7 @@ export function ChatScreen({
   const [offerOpen, setOfferOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
+  const [placeOpen, setPlaceOpen] = useState(false);
   const [actionMsg, setActionMsg] = useState<Message | null>(null);
 
   const list = messages ?? [];
@@ -360,6 +362,7 @@ export function ChatScreen({
         onAttach={() => setAttachOpen(true)}
         onSendOffer={() => setOfferOpen(true)}
         onProposeTime={() => setTimeOpen(true)}
+        onSharePlace={() => setPlaceOpen(true)}
         onTyping={notifyTyping}
       />
 
@@ -398,6 +401,13 @@ export function ChatScreen({
       <TimeProposalSheet
         visible={timeOpen}
         onClose={() => setTimeOpen(false)}
+        onSubmit={(text) => send(text)}
+      />
+
+      <PlaceShareSheet
+        visible={placeOpen}
+        onClose={() => setPlaceOpen(false)}
+        defaultPlace={conversation.listing.place}
         onSubmit={(text) => send(text)}
       />
 

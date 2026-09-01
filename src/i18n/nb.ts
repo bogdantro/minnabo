@@ -970,6 +970,9 @@ const nb = {
     proposeTime: 'Foreslå tid',
     timeSuggestion: 'Forslag til tid',
     sendSuggestion: 'Send forslag',
+    sharePlace: 'Del møteplass',
+    sharePlaceHint: 'Skriv en adresse eller et sted. Den andre kan åpne det i kart.',
+    meetingPoint: 'Møteplass',
     quickRepliesLabel: 'Hurtigsvar',
     quickReplies: [
       'Hei! 👋',

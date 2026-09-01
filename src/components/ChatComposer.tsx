@@ -12,6 +12,7 @@ export function ChatComposer({
   onAttach,
   onSendOffer,
   onProposeTime,
+  onSharePlace,
   onTyping,
   canSendOffer,
 }: {
@@ -19,6 +20,7 @@ export function ChatComposer({
   onAttach: () => void;
   onSendOffer: () => void;
   onProposeTime?: () => void;
+  onSharePlace?: () => void;
   onTyping?: () => void;
   canSendOffer: boolean;
 }) {
@@ -52,6 +54,14 @@ export function ChatComposer({
   return (
     <View style={[styles.wrap, { paddingBottom: pad }]}>
       <View style={styles.quickActions}>
+        {onSharePlace ? (
+          <Pressable accessibilityRole="button" onPress={onSharePlace} hitSlop={8} style={styles.offerLink}>
+            <Icon name="map-pin" size={14} color="cyan" />
+            <AppText variant="meta" weight="bold" color="cyan">
+              {nb.chat.sharePlace}
+            </AppText>
+          </Pressable>
+        ) : null}
         {onProposeTime ? (
           <Pressable accessibilityRole="button" onPress={onProposeTime} hitSlop={8} style={styles.offerLink}>
             <Icon name="calendar" size={14} color="cyan" />
