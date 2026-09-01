@@ -8,6 +8,7 @@ export type CurrentUser = {
   displayName: string;
   initials: string;
   avatarUrl?: string;
+  place?: string;
   onboardedAt?: string;
   isAdmin: boolean;
   isLoading: boolean;
@@ -28,6 +29,7 @@ export function useCurrentUser(): CurrentUser {
       displayName: data?.displayName ?? '',
       initials: data?.initials ?? 'N',
       avatarUrl: data?.avatarUrl,
+      place: data?.location.place,
       onboardedAt: data?.onboardedAt,
       isAdmin: data?.role === 'admin',
       isLoading: status === 'loading' || (!!userId && isLoading),
@@ -39,6 +41,7 @@ export function useCurrentUser(): CurrentUser {
       data?.displayName,
       data?.initials,
       data?.avatarUrl,
+      data?.location.place,
       data?.onboardedAt,
       data?.role,
     ],

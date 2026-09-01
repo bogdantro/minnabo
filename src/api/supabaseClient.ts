@@ -9,6 +9,8 @@ import type {
   Message,
   Proposal,
   PublicProfile,
+  NoticeboardPost,
+  NoticeKind,
   Report,
   Review,
   SkillEndorsement,
@@ -33,6 +35,7 @@ import {
   toListing,
   toMessage,
   toNotification,
+  toNoticeboardPost,
   toProfile,
   toProposal,
   toReview,
@@ -40,6 +43,7 @@ import {
   type ConversationRow,
   type ListingRow,
   type MessageRow,
+  type NoticeRow,
   type NotificationRow,
   type ProfileRow,
   type ProposalRow,
@@ -570,6 +574,41 @@ export class SupabaseApiClient implements ApiClient {
     const { error } = await supabase.rpc('toggle_follow', { p_followed_id: profileId });
     if (error) fail(error.message);
     return this.listFollowedProfileIds();
+  }
+
+  async listNoticeboard(kind?: NoticeKind): Promise<NoticeboardPost[]> {
+    let q = supabase.from('noticeboard_posts').select('*').order('created_at', { ascending: false });
+    if (kind) q = q.eq('kind', kind);
+    const { data, error } = await q;
+    if (error) fail(error.message);
+    return (data as NoticeRow[]).map(toNoticeboardPost);
+  }
+
+  async createNoticeboardPost(input: {
+    kind: NoticeKind;
+    title: string;
+    body: string;
+    place: string;
+  }): Promise<NoticeboardPost> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('noticeboard_posts')
+      .insert({
+        author_id: me,
+        kind: input.kind,
+        title: input.title,
+        body: input.body,
+        place: input.place,
+      })
+      .select('*')
+      .single();
+    if (error) fail(error.message);
+    return toNoticeboardPost(data as NoticeRow);
+  }
+
+  async deleteNoticeboardPost(id: string): Promise<void> {
+    const { error } = await supabase.from('noticeboard_posts').delete().eq('id', id);
+    if (error) fail(error.message);
   }
 
   // --- saved listings & searches ---

@@ -7,6 +7,8 @@ import type {
   ListingType,
   Message,
   Proposal,
+  NoticeboardPost,
+  NoticeKind,
   PublicProfile,
   Review,
   SkillEndorsement,
@@ -22,6 +24,7 @@ import { savedSearchStore } from '@/data/savedSearchStore';
 import { safetyStore } from '@/data/safetyStore';
 import { endorsementsStore } from '@/data/endorsementsStore';
 import { followStore } from '@/data/followStore';
+import { noticeboardStore } from '@/data/noticeboardStore';
 import type {
   ApiClient,
   ListConversationsParams,
@@ -239,6 +242,26 @@ export class MockApiClient implements ApiClient {
   async toggleFollow(profileId: string): Promise<string[]> {
     await delay(70);
     return followStore.toggle(profileId);
+  }
+
+  async listNoticeboard(kind?: NoticeKind): Promise<NoticeboardPost[]> {
+    await delay(120);
+    return noticeboardStore.list(kind);
+  }
+
+  async createNoticeboardPost(input: {
+    kind: NoticeKind;
+    title: string;
+    body: string;
+    place: string;
+  }): Promise<NoticeboardPost> {
+    await delay(150);
+    return noticeboardStore.create(input);
+  }
+
+  async deleteNoticeboardPost(id: string): Promise<void> {
+    await delay(80);
+    noticeboardStore.remove(id);
   }
 
   // --- saved listings & searches ---

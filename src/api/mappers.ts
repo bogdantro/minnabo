@@ -7,6 +7,8 @@ import type {
   Message,
   Proposal,
   PublicProfile,
+  NoticeboardPost,
+  NoticeKind,
   Rating,
   Review,
   TaskDetails,
@@ -290,6 +292,28 @@ export function toAgreement(row: AgreementRow): AgreementSnapshot {
     description: row.description,
     caveats: row.caveats ?? undefined,
     agreedAt: row.agreed_at,
+  };
+}
+
+export type NoticeRow = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  author_id: string;
+  place: string;
+  created_at: string;
+};
+
+export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
+  return {
+    id: row.id,
+    kind: row.kind as NoticeKind,
+    title: row.title,
+    body: row.body,
+    authorProfileId: row.author_id,
+    place: row.place,
+    createdAt: row.created_at,
   };
 }
 

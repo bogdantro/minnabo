@@ -12,6 +12,8 @@ import type {
   PublicProfile,
   Report,
   ReportTargetType,
+  NoticeboardPost,
+  NoticeKind,
   Review,
   SkillEndorsement,
   VerificationKind,
@@ -141,6 +143,14 @@ export interface ApiClient {
   toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]>;
   listFollowedProfileIds(): Promise<string[]>;
   toggleFollow(profileId: string): Promise<string[]>;
+  listNoticeboard(kind?: NoticeKind): Promise<NoticeboardPost[]>;
+  createNoticeboardPost(input: {
+    kind: NoticeKind;
+    title: string;
+    body: string;
+    place: string;
+  }): Promise<NoticeboardPost>;
+  deleteNoticeboardPost(id: string): Promise<void>;
 
   // saved listings & searches
   listSavedListingIds(): Promise<string[]>;

@@ -1,4 +1,4 @@
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { partners, documentedDonations, type Partner } from '@/data/seedCommunity';
@@ -40,6 +40,24 @@ export function FellesskapScreen() {
             {nb.community.intro}
           </AppText>
         </Card>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={nb.noticeboard.title}
+          onPress={() => safePush('/oppslagstavle')}
+          style={styles.noticeLink}
+        >
+          <Icon name="clipboard" size={18} color="cyan" />
+          <View style={styles.noticeLinkBody}>
+            <AppText variant="cardTitle" weight="bold">
+              {nb.noticeboard.title}
+            </AppText>
+            <AppText variant="meta" color="navyMuted">
+              {nb.noticeboard.body}
+            </AppText>
+          </View>
+          <Icon name="chevron-right" size={18} color="navyMuted" />
+        </Pressable>
 
         <AppText variant="meta" color="navyMuted">
           {nb.community.partnerNote}
@@ -129,6 +147,18 @@ const styles = StyleSheet.create({
     gap: tokens.space.lg,
   },
   hero: { gap: tokens.space.sm, backgroundColor: tokens.color.limeTint, borderColor: tokens.color.lime },
+  noticeLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.md,
+    backgroundColor: tokens.color.surface,
+    borderRadius: tokens.radius.card,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    padding: tokens.space.md,
+    ...tokens.shadow.card,
+  },
+  noticeLinkBody: { flex: 1, gap: 1 },
   section: { gap: tokens.space.sm },
   mainGrid: { flexDirection: 'row', gap: tokens.space.md },
   carousel: { gap: tokens.space.md, paddingVertical: tokens.space.xs },

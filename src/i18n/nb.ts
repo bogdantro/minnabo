@@ -605,6 +605,30 @@ const nb = {
     typical: 'oftest',
   },
 
+  noticeboard: {
+    title: 'Oppslagstavle',
+    body: 'Ting som gis bort, mistet og funnet, og verktøy naboer låner ut.',
+    newPost: 'Nytt oppslag',
+    all: 'Alle',
+    kindLabel: 'Type oppslag',
+    kinds: {
+      GIVEAWAY: 'Gis bort',
+      LOST_FOUND: 'Mistet / funnet',
+      TOOL_LEND: 'Lån et verktøy',
+      GENERAL: 'Annet',
+    },
+    titleField: 'Overskrift',
+    bodyField: 'Beskrivelse',
+    placeField: 'Sted',
+    publish: 'Publiser oppslag',
+    published: 'Oppslaget er publisert.',
+    deleted: 'Oppslaget er fjernet.',
+    deleteConfirm: 'Fjerne dette oppslaget?',
+    empty: 'Ingen oppslag her ennå. Bli den første!',
+    remove: 'Fjern',
+    missingFields: 'Fyll inn overskrift og beskrivelse.',
+  },
+
   leadBoard: {
     title: 'Oppdrag for deg',
     body: 'Åpne oppdrag som passer tilbudene dine, de nærmeste og nyeste først.',

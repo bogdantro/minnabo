@@ -417,6 +417,35 @@ export function useToggleFollow() {
   });
 }
 
+export const noticeboardKeys = {
+  all: ['noticeboard'] as const,
+  list: (kind?: string) => ['noticeboard', kind ?? 'all'] as const,
+};
+
+export function useNoticeboard(kind?: import('@/domain/types').NoticeKind) {
+  return useQuery({
+    queryKey: noticeboardKeys.list(kind),
+    queryFn: () => apiClient.listNoticeboard(kind),
+  });
+}
+
+export function useCreateNoticeboardPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof apiClient.createNoticeboardPost>[0]) =>
+      apiClient.createNoticeboardPost(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
+  });
+}
+
+export function useDeleteNoticeboardPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteNoticeboardPost(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
+  });
+}
+
 export function useReportNoShow() {
   const qc = useQueryClient();
   return useMutation({

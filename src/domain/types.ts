@@ -73,6 +73,18 @@ export type PublicProfile = {
   reliability?: ReliabilityStats;
 };
 
+export type NoticeKind = 'GIVEAWAY' | 'LOST_FOUND' | 'TOOL_LEND' | 'GENERAL';
+
+export type NoticeboardPost = {
+  id: string;
+  kind: NoticeKind;
+  title: string;
+  body: string;
+  authorProfileId: string;
+  place: string;
+  createdAt: string;
+};
+
 export type SkillEndorsement = {
   skill: string;
   count: number;
