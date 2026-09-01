@@ -193,6 +193,18 @@ export type AgreementSnapshot = {
   agreedAt: string;
 };
 
+/** One row in "Mine avtaler" — an accepted proposal the current user is part of. */
+export type AgendaItem = {
+  proposalId: string;
+  listingId: string;
+  listingTitle: string;
+  counterpartId: string;
+  price: Price;
+  scheduledText?: string;
+  agreedAt: string;
+  fullyCompleted: boolean;
+};
+
 // ---------------------------------------------------------------------------
 // Conversations and messages
 // ---------------------------------------------------------------------------

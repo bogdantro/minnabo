@@ -262,6 +262,13 @@ export function useRespondToProposal(conversationId: string) {
   });
 }
 
+export function useMyAgreements() {
+  return useQuery({
+    queryKey: ['my-agreements'],
+    queryFn: () => apiClient.listMyAgreements(),
+  });
+}
+
 export function useAgreement(conversationId: string) {
   return useQuery({
     queryKey: chatKeys.agreement(conversationId),

@@ -318,6 +318,44 @@ export const chatRepository = {
     return agreements.find((a) => a.proposalId === proposalId);
   },
 
+  /** Accepted proposals the current user is part of, with a listing title. */
+  listMyAgreements(): {
+    proposalId: string;
+    listingId: string;
+    listingTitle: string;
+    counterpartId: string;
+    price: AgreementSnapshot['price'];
+    scheduledText?: string;
+    agreedAt: string;
+  }[] {
+    return agreements
+      .map((a) => {
+        const proposal = proposals.find((p) => p.id === a.proposalId);
+        if (!proposal) return null;
+        if (
+          proposal.fromProfileId !== CURRENT_USER_ID &&
+          proposal.toProfileId !== CURRENT_USER_ID
+        ) {
+          return null;
+        }
+        const listing = repositories.listings.get(a.listingId);
+        return {
+          proposalId: a.proposalId,
+          listingId: a.listingId,
+          listingTitle: listing?.title ?? (a.description || 'Oppdrag'),
+          counterpartId:
+            proposal.fromProfileId === CURRENT_USER_ID
+              ? proposal.toProfileId
+              : proposal.fromProfileId,
+          price: a.price,
+          scheduledText: a.scheduledText,
+          agreedAt: a.agreedAt,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x != null)
+      .sort((a, b) => Date.parse(b.agreedAt) - Date.parse(a.agreedAt));
+  },
+
   _reset(): void {
     conversations = clone(seedConversations);
     messages = clone(seedMessages);

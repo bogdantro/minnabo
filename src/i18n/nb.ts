@@ -207,6 +207,8 @@ const nb = {
     noShowConfirmBody: 'Dette teller inn i pålitelighetsscoren deres. Bruk det bare når noen ikke dukket opp til en avtale.',
     noShowConfirm: 'Meld fra',
     noShowToast: 'Takk. Vi har notert det.',
+    rebook: (name: string) => `Kontakt ${name} igjen`,
+    rebookGeneric: 'Kontakt motparten igjen',
   },
 
   leggUt: {
@@ -603,6 +605,14 @@ const nb = {
   priceGuidance: {
     label: 'Vanlig pris her',
     typical: 'oftest',
+  },
+
+  agenda: {
+    title: 'Mine avtaler',
+    upcoming: 'Kommende',
+    done: 'Fullført',
+    empty: 'Du har ingen avtaler ennå. Godta et tilbud for å komme i gang.',
+    completed: 'Fullført',
   },
 
   noticeboard: {

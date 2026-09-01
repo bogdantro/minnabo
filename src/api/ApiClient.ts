@@ -1,4 +1,5 @@
 import type {
+  AgendaItem,
   AgreementSnapshot,
   AppNotification,
   CompletionConfirmation,
@@ -121,6 +122,7 @@ export interface ApiClient {
   ): Promise<RespondToProposalResult>;
   getAgreement(proposalId: string): Promise<AgreementSnapshot | null>;
   getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null>;
+  listMyAgreements(): Promise<AgendaItem[]>;
 
   // profile, verification, notifications, reviews
   getProfile(id: string): Promise<PublicProfile>;

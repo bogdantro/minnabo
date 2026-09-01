@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type {
+  AgendaItem,
   AgreementSnapshot,
   AppNotification,
   CompletionConfirmation,
@@ -400,6 +401,40 @@ export class SupabaseApiClient implements ApiClient {
       .maybeSingle();
     if (error) fail(error.message);
     return data ? toAgreement(data as unknown as AgreementRow) : null;
+  }
+
+  async listMyAgreements(): Promise<AgendaItem[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('agreement_snapshots')
+      .select(
+        '*, proposals!inner(from_profile_id, to_profile_id), listings!inner(title), completion_confirmations(by_profile_id)',
+      )
+      .or(`from_profile_id.eq.${me},to_profile_id.eq.${me}`, { foreignTable: 'proposals' });
+    if (error) fail(error.message);
+    type Row = AgreementRow & {
+      proposals: { from_profile_id: string; to_profile_id: string };
+      listings: { title: string };
+      completion_confirmations: { by_profile_id: string }[];
+    };
+    return (data as unknown as Row[])
+      .map((r) => {
+        const a = toAgreement(r as unknown as AgreementRow);
+        return {
+          proposalId: a.proposalId,
+          listingId: a.listingId,
+          listingTitle: r.listings.title,
+          counterpartId:
+            r.proposals.from_profile_id === me
+              ? r.proposals.to_profile_id
+              : r.proposals.from_profile_id,
+          price: a.price,
+          scheduledText: a.scheduledText,
+          agreedAt: a.agreedAt,
+          fullyCompleted: (r.completion_confirmations ?? []).length >= 2,
+        };
+      })
+      .sort((x, y) => Date.parse(y.agreedAt) - Date.parse(x.agreedAt));
   }
 
   // --- profile, verification, notifications, reviews ------------------

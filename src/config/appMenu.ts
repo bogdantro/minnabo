@@ -28,6 +28,7 @@ export const appMenu: AppMenuSection[] = [
     title: 'Mitt',
     items: [
       { label: 'Min profil', icon: 'user', route: '/profil' },
+      { label: 'Mine avtaler', icon: 'calendar', route: '/avtaler' },
       { label: 'Mine oppdrag og tjenester', icon: 'briefcase', route: '/mine' },
       { label: 'Mottatte tilbud', icon: 'inbox', route: '/tilbud' },
       { label: 'Lagrede oppføringer og søk', icon: 'heart', route: '/lagrede' },

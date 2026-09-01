@@ -1,4 +1,5 @@
 import type {
+  AgendaItem,
   AgreementSnapshot,
   AppNotification,
   CompletionConfirmation,
@@ -158,6 +159,14 @@ export class MockApiClient implements ApiClient {
   async getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null> {
     await delay(100);
     return chatRepository.getAgreementForConversation(conversationId) ?? null;
+  }
+
+  async listMyAgreements(): Promise<AgendaItem[]> {
+    await delay(150);
+    return chatRepository.listMyAgreements().map((a) => ({
+      ...a,
+      fullyCompleted: profileRepository.isFullyCompleted(a.proposalId),
+    }));
   }
 
   async getProfile(id: string): Promise<PublicProfile> {

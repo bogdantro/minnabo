@@ -160,6 +160,12 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
           variant="secondary"
           onPress={() => safePush(`/chat/${proposal.conversationId}`)}
         />
+        <Button
+          label={other ? nb.avtale.rebook(other.displayName) : nb.avtale.rebookGeneric}
+          variant="ghost"
+          iconLeft="repeat"
+          onPress={() => safePush(`/profil/${otherId}`)}
+        />
       </View>
     </SafeAreaView>
   );
