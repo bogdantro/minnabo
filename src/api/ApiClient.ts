@@ -127,6 +127,7 @@ export interface ApiClient {
   getAgreement(proposalId: string): Promise<AgreementSnapshot | null>;
   getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null>;
   listMyAgreements(): Promise<AgendaItem[]>;
+  instantBook(listingId: string): Promise<{ proposalId: string }>;
   getJobWorkspace(proposalId: string): Promise<JobWorkspace>;
   updateJobWorkspace(
     proposalId: string,

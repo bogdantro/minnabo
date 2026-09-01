@@ -44,6 +44,7 @@ const OFFER = {
   timeFrom: '06:00',
   timeTo: '10:00',
   ownTransport: true,
+  instantBook: false,
   priceMode: 'BY_AGREEMENT' as const,
   amountKr: '',
   priceUnit: 'per oppdrag' as const,

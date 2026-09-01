@@ -250,6 +250,33 @@ export const chatRepository = {
     return proposal;
   },
 
+  /**
+   * Instant book: for offers where the helper opted in, skip the proposal
+   * round-trip — open the conversation, auto-accept a proposal at the offer's
+   * price, and return the resulting agreement's proposal id.
+   */
+  instantBook(listingId: string): { proposalId: string } {
+    const listing = repositories.listings.get(listingId);
+    if (!listing) throw new Error('Fant ikke oppføringen.');
+    if (!listing.offer?.instantBook) throw new Error('Direktebooking er ikke tilgjengelig.');
+
+    const conv = chatRepository.findOrCreateConversationForListing(listingId);
+    const proposal: Proposal = {
+      id: nextId('p'),
+      listingId,
+      conversationId: conv.id,
+      fromProfileId: listing.owner.id,
+      toProfileId: CURRENT_USER_ID,
+      price: listing.price ?? { amountMinor: 0, currency: 'NOK' },
+      scheduledText: listing.offer.availabilityText,
+      status: 'SENT',
+      createdAt: new Date().toISOString(),
+    };
+    proposals = [...proposals, proposal];
+    chatRepository.respondToProposal(proposal.id, 'ACCEPT', 'RECIPIENT');
+    return { proposalId: proposal.id };
+  },
+
   respondToProposal(
     proposalId: string,
     event: ProposalEvent,

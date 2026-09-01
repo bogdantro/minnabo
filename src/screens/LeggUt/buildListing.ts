@@ -55,6 +55,7 @@ export type OfferForm = {
   timeFrom: string;
   timeTo: string;
   ownTransport: boolean;
+  instantBook: boolean;
   priceMode: 'FROM' | 'BY_AGREEMENT';
   amountKr: string;
   priceUnit: 'per oppdrag' | 'per time';
@@ -119,6 +120,10 @@ export function buildTaskListing(form: TaskForm): Listing {
   };
 }
 
+const DAY_INDEX: Record<string, number> = {
+  Søn: 0, Man: 1, Tir: 2, Ons: 3, Tor: 4, Fre: 5, Lør: 6,
+};
+
 export function buildOfferListing(form: OfferForm): Listing {
   const availability = [
     form.days.length ? form.days.join(', ') : null,
@@ -149,6 +154,8 @@ export function buildOfferListing(form: OfferForm): Listing {
         ? Number(/(\d+)/.exec(form.experience)![1])
         : undefined,
       availabilityText: availability || undefined,
+      availableWeekdays: form.days.map((d) => DAY_INDEX[d]).filter((n) => n !== undefined),
+      instantBook: form.instantBook || undefined,
       equipmentText: form.ownTransport ? 'Har egen transport' : undefined,
       maxDistanceKm: form.maxDistanceKm,
     },

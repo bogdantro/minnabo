@@ -2,8 +2,13 @@ import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { useIsSaved } from '@/api/queries';
+import { useIsSaved, useInstantBook } from '@/api/queries';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
+import { confirm } from '@/lib/confirm';
+import { toast } from '@/lib/toast';
+import { haptics } from '@/lib/haptics';
+import { useRouter } from 'expo-router';
 import { shareListing } from '@/lib/share';
 import { PageHeader } from '@/components/TopBar';
 import { Icon } from '@/components/ui/Icon';
@@ -17,6 +22,7 @@ import { PriceHeadline } from '@/components/PriceHeadline';
 import { ProfileCard } from '@/components/ProfileCard';
 import { StickyActions } from '@/components/StickyActions';
 import { VerificationBadge } from '@/components/VerificationBadge';
+import { Button } from '@/components/ui/Button';
 
 export function ServiceOfferDetailScreen({
   listing,
@@ -25,9 +31,30 @@ export function ServiceOfferDetailScreen({
   listing: Listing;
   onBack: () => void;
 }) {
+  const router = useRouter();
+  const me = useCurrentUser();
   const [saved, toggleSaved] = useIsSaved(listing.id);
   const offer = listing.offer;
   const phoneVerification = listing.owner.verifications.find((v) => v.verified);
+  const instantBook = useInstantBook();
+  const canInstantBook = !!offer?.instantBook && listing.owner.id !== me.id;
+
+  const doInstantBook = async () => {
+    const ok = await confirm({
+      title: nb.listingDetail.instantBookConfirmTitle,
+      message: nb.listingDetail.instantBookConfirmBody,
+      confirmLabel: nb.listingDetail.instantBookNow,
+    });
+    if (!ok) return;
+    instantBook.mutate(listing.id, {
+      onSuccess: ({ proposalId }) => {
+        haptics.success();
+        toast.success(nb.listingDetail.instantBookDone);
+        router.replace(`/avtale/${proposalId}`);
+      },
+      onError: () => toast.error(nb.toast.genericError),
+    });
+  };
 
   const area =
     typeof offer?.maxDistanceKm === 'number'
@@ -83,8 +110,20 @@ export function ServiceOfferDetailScreen({
         <InfoCard>
           <InfoRow icon="map-pin" label={area} />
           {offer?.availabilityText ? <InfoRow icon="calendar" label={offer.availabilityText} /> : null}
-          {offer?.equipmentText ? <InfoRow icon="tool" label={offer.equipmentText} last /> : null}
+          {offer?.equipmentText ? <InfoRow icon="tool" label={offer.equipmentText} /> : null}
+          {canInstantBook ? (
+            <InfoRow icon="zap" label={nb.listingDetail.instantBookAvailable} last />
+          ) : null}
         </InfoCard>
+
+        {canInstantBook ? (
+          <Button
+            label={nb.listingDetail.instantBookNow}
+            iconRight="zap"
+            loading={instantBook.isPending}
+            onPress={doInstantBook}
+          />
+        ) : null}
 
         {offer?.about ? (
           <View style={styles.section}>

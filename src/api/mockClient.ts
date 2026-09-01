@@ -185,6 +185,11 @@ export class MockApiClient implements ApiClient {
     }));
   }
 
+  async instantBook(listingId: string): Promise<{ proposalId: string }> {
+    await delay(250);
+    return chatRepository.instantBook(listingId);
+  }
+
   async getJobWorkspace(proposalId: string): Promise<JobWorkspace> {
     await delay(60);
     return jobWorkspaceStore.get(proposalId);

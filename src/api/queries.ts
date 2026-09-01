@@ -279,6 +279,17 @@ export function useUpdateJobWorkspace(proposalId: string) {
   });
 }
 
+export function useInstantBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (listingId: string) => apiClient.instantBook(listingId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+      qc.invalidateQueries({ queryKey: ['my-agreements'] });
+    },
+  });
+}
+
 export function useNotifyMatchingHelpers() {
   return useMutation({
     mutationFn: (listingId: string) => apiClient.notifyMatchingHelpers(listingId),

@@ -165,6 +165,8 @@ export class SupabaseApiClient implements ApiClient {
         completed_jobs: listing.offer.completedJobs ?? null,
         services: listing.offer.services,
         availability_text: listing.offer.availabilityText ?? null,
+        available_weekdays: listing.offer.availableWeekdays ?? [],
+        instant_book: listing.offer.instantBook ?? false,
         equipment_text: listing.offer.equipmentText ?? null,
         max_distance_km: listing.offer.maxDistanceKm ?? null,
       });
@@ -309,6 +311,12 @@ export class SupabaseApiClient implements ApiClient {
       if (error) fail(error.message);
     }
     return this.listMessages(conversationId);
+  }
+
+  async instantBook(listingId: string): Promise<{ proposalId: string }> {
+    const { data, error } = await supabase.rpc('instant_book', { p_listing_id: listingId });
+    if (error) fail(error.message);
+    return { proposalId: data as string };
   }
 
   async notifyMatchingHelpers(listingId: string): Promise<number> {

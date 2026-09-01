@@ -39,6 +39,7 @@ const EMPTY: OfferForm = {
   timeFrom: '',
   timeTo: '',
   ownTransport: true,
+  instantBook: false,
   priceMode: 'FROM',
   amountKr: '',
   priceUnit: 'per oppdrag',
@@ -226,6 +227,18 @@ export function ServiceOfferForm() {
                 hint={nb.leggUt.ownTransportHint}
                 value={form.ownTransport}
                 onValueChange={(v) => set('ownTransport', v)}
+                last
+              />
+            </ToggleCard>
+          </FieldGroup>
+
+          <FieldGroup title={nb.leggUt.instantBookTitle} hint={nb.leggUt.instantBookHint}>
+            <ToggleCard>
+              <ToggleRow
+                icon="zap"
+                label={nb.leggUt.instantBookLabel}
+                value={form.instantBook}
+                onValueChange={(v) => set('instantBook', v)}
                 last
               />
             </ToggleCard>

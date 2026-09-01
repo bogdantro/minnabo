@@ -275,6 +275,8 @@ export const listings: Listing[] = [
       completedJobs: 9,
       services: ['Gressklipping', 'Kantklipping', 'Enkelt hagearbeid'],
       availabilityText: 'Ledig ettermiddager og helger',
+      availableWeekdays: [2, 4, 6, 0],
+      instantBook: true,
       equipmentText: 'Har egen gressklipper',
       maxDistanceKm: 15,
     },

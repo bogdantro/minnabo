@@ -127,6 +127,10 @@ export type ServiceOfferDetails = {
   availabilityText?: string;
   equipmentText?: string;
   maxDistanceKm?: number;
+  /** weekday indices the helper is usually available (0 = Sun … 6 = Sat) */
+  availableWeekdays?: number[];
+  /** helper accepts direct bookings without a proposal round-trip */
+  instantBook?: boolean;
 };
 
 export type ListingStatus =

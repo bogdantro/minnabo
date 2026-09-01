@@ -76,6 +76,8 @@ export type ListingRow = {
     availability_text: string | null;
     equipment_text: string | null;
     max_distance_km: number | null;
+    available_weekdays?: number[] | null;
+    instant_book?: boolean | null;
   } | null;
   listing_images?: { id: string; storage_path: string; ord: number }[] | null;
 };
@@ -243,6 +245,8 @@ export function toListing(row: ListingRow): Listing {
           completedJobs: row.service_offer_details.completed_jobs ?? undefined,
           services: row.service_offer_details.services ?? [],
           availabilityText: row.service_offer_details.availability_text ?? undefined,
+          availableWeekdays: row.service_offer_details.available_weekdays ?? undefined,
+          instantBook: row.service_offer_details.instant_book ?? undefined,
           equipmentText: row.service_offer_details.equipment_text ?? undefined,
           maxDistanceKm: row.service_offer_details.max_distance_km ?? undefined,
         }

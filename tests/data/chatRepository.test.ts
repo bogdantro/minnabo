@@ -83,6 +83,17 @@ test('opening a thread marks its messages read', () => {
   expect(chatRepository.getConversation('c-sara')?.unread).toBe(false);
 });
 
+test('instant book creates an accepted agreement in one step', () => {
+  const { proposalId } = chatRepository.instantBook('l-tilbyr-gressklipping');
+  const proposal = chatRepository.getProposal(proposalId)!;
+  expect(proposal.status).toBe('ACCEPTED');
+  expect(chatRepository.getAgreement(proposalId)).toBeDefined();
+});
+
+test('instant book is rejected when the offer does not allow it', () => {
+  expect(() => chatRepository.instantBook('l-tilbyr-rengjoring')).toThrow(/ikke tilgjengelig/i);
+});
+
 test('no payment wording is present in seeded chat data', () => {
   const allText = chatRepository
     .listConversations()
