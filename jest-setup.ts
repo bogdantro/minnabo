@@ -151,6 +151,11 @@ afterEach(() => {
   } catch {
     /* not loaded */
   }
+  try {
+    require('@/data/followStore').followStore._reset();
+  } catch {
+    /* not loaded */
+  }
 });
 
 // Auto-confirm Alert dialogs so confirm() flows are testable — presses the

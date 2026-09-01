@@ -59,6 +59,16 @@ test('endorsing a skill on another profile increments the count', async () => {
   await waitFor(() => expect(screen.getByText('Hagearbeid · 4')).toBeTruthy());
 });
 
+test('following a helper from their profile adds them to the follow list', async () => {
+  const { followStore } = require('@/data/followStore');
+  await renderWithProviders(<ProfileScreen profileId="u-andreas" />);
+  await waitFor(() => expect(screen.getByText('Andreas')).toBeTruthy());
+
+  expect(followStore.isFollowing('u-andreas')).toBe(false);
+  await fireEvent.press(screen.getByText('Følg'));
+  await waitFor(() => expect(followStore.isFollowing('u-andreas')).toBe(true));
+});
+
 test('reliability score is computed from completions and no-shows', () => {
   const before = profileRepository.reliabilityFor('u-sara');
   profileRepository.reportNoShow('u-sara');

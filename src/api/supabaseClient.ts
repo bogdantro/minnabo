@@ -554,6 +554,22 @@ export class SupabaseApiClient implements ApiClient {
     return this.listEndorsements(profileId);
   }
 
+  async listFollowedProfileIds(): Promise<string[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('follows')
+      .select('followed_id')
+      .eq('follower_id', me);
+    if (error) fail(error.message);
+    return (data as { followed_id: string }[]).map((r) => r.followed_id);
+  }
+
+  async toggleFollow(profileId: string): Promise<string[]> {
+    const { error } = await supabase.rpc('toggle_follow', { p_followed_id: profileId });
+    if (error) fail(error.message);
+    return this.listFollowedProfileIds();
+  }
+
   // --- saved listings & searches ---
 
   async listSavedListingIds(): Promise<string[]> {

@@ -6,9 +6,11 @@ import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
 import {
   listingKeys,
+  profileKeys,
   useRemoveSavedSearch,
   useSavedListingIds,
   useSavedSearches,
+  useFollowedProfileIds,
 } from '@/api/queries';
 import { apiClient } from '@/api/client';
 import type { SavedSearchRecord } from '@/api/ApiClient';
@@ -22,14 +24,16 @@ import { AppText } from '@/components/ui/Text';
 import { Icon } from '@/components/ui/Icon';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { ListingRowCard } from '@/components/ListingRowCard';
+import { Avatar } from '@/components/ui/Avatar';
 
-type Tab = 'listings' | 'searches';
+type Tab = 'listings' | 'searches' | 'helpers';
 
 export function SavedScreen() {
   const [tab, setTab] = useState<Tab>('listings');
 
   const { data: savedIds = [] } = useSavedListingIds();
   const { data: searches = [] } = useSavedSearches();
+  const { data: followedIds = [] } = useFollowedProfileIds();
 
   const listingQueries = useQueries({
     queries: savedIds.map((id) => ({
@@ -50,13 +54,25 @@ export function SavedScreen() {
           options={[
             { value: 'listings', label: nb.saved.listingsTab },
             { value: 'searches', label: nb.saved.searchesTab },
+            { value: 'helpers', label: nb.saved.helpersTab },
           ]}
           value={tab}
           onChange={setTab}
         />
       </View>
 
-      {tab === 'listings' ? (
+      {tab === 'helpers' ? (
+        followedIds.length === 0 ? (
+          <ScreenState status="empty" emptyText={nb.saved.emptyHelpers} />
+        ) : (
+          <FlatList
+            data={followedIds}
+            keyExtractor={(id) => id}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => <FollowedHelperCard profileId={item} />}
+          />
+        )
+      ) : tab === 'listings' ? (
         listings.length === 0 ? (
           <ScreenState status="empty" emptyText={nb.saved.emptyListings} />
         ) : (
@@ -80,6 +96,35 @@ export function SavedScreen() {
         />
       )}
     </SafeAreaView>
+  );
+}
+
+function FollowedHelperCard({ profileId }: { profileId: string }) {
+  const { data: profile } = useQueries({
+    queries: [{ queryKey: profileKeys.profile(profileId), queryFn: () => apiClient.getProfile(profileId) }],
+  })[0];
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={profile?.displayName ?? profileId}
+      onPress={() => safePush(`/profil/${profileId}`)}
+      style={styles.card}
+    >
+      <View style={styles.cardTitle}>
+        <Avatar uri={profile?.avatarUrl} initials={profile?.initials ?? '?'} size={40} ring={false} />
+        <View style={{ flex: 1 }}>
+          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
+            {profile?.displayName ?? '…'}
+          </AppText>
+          {profile?.location.place ? (
+            <AppText variant="meta" color="navyMuted">
+              {profile.location.place}
+            </AppText>
+          ) : null}
+        </View>
+        <Icon name="chevron-right" size={16} color="navyMuted" />
+      </View>
+    </Pressable>
   );
 }
 

@@ -540,6 +540,10 @@ const nb = {
     endorsementsTitle: 'Ferdigheter naboer går god for',
     endorseHint: 'Trykk for å gå god for en ferdighet',
     endorsed: 'Du går god for dette',
+    follow: 'Følg',
+    following: 'Følger',
+    followedToast: 'Lagt til blant faste hjelpere.',
+    unfollowedToast: 'Fjernet fra faste hjelpere.',
   },
 
   notifications: {
@@ -554,6 +558,8 @@ const nb = {
     searchesTab: 'Søk',
     emptyListings: 'Du har ikke lagret noen oppføringer ennå.',
     emptySearches: 'Du har ikke lagret noen søk ennå.',
+    helpersTab: 'Faste hjelpere',
+    emptyHelpers: 'Følg en hjelper for å se dem her og få varsel om nye tilbud.',
   },
 
   mine: {

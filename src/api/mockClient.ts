@@ -21,6 +21,7 @@ import { savedStore } from '@/data/savedStore';
 import { savedSearchStore } from '@/data/savedSearchStore';
 import { safetyStore } from '@/data/safetyStore';
 import { endorsementsStore } from '@/data/endorsementsStore';
+import { followStore } from '@/data/followStore';
 import type {
   ApiClient,
   ListConversationsParams,
@@ -228,6 +229,16 @@ export class MockApiClient implements ApiClient {
   async toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]> {
     await delay(80);
     return endorsementsStore.toggle(profileId, skill);
+  }
+
+  async listFollowedProfileIds(): Promise<string[]> {
+    await delay(50);
+    return followStore.list();
+  }
+
+  async toggleFollow(profileId: string): Promise<string[]> {
+    await delay(70);
+    return followStore.toggle(profileId);
   }
 
   // --- saved listings & searches ---

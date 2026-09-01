@@ -9,6 +9,8 @@ import {
   useUpdateProfile,
   useEndorsements,
   useToggleEndorsement,
+  useFollowedProfileIds,
+  useToggleFollow,
 } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { safePush } from '@/lib/nav';
@@ -37,7 +39,11 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
   const { data: reviews } = useReviews(id);
   const { data: endorsements } = useEndorsements(id);
   const endorse = useToggleEndorsement(id);
+  const { data: followed } = useFollowedProfileIds();
+  const toggleFollow = useToggleFollow();
   const update = useUpdateProfile();
+
+  const isFollowing = (followed ?? []).includes(id);
 
   const setPaused = async (paused: boolean) => {
     if (paused) {
@@ -145,12 +151,30 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
             />
           </>
         ) : (
-          <Button
-            label={nb.profile.reportOrBlock}
-            variant="ghost"
-            iconLeft="flag"
-            onPress={() => safePush(`/rapporter?profil=${id}`)}
-          />
+          <>
+            <Button
+              label={isFollowing ? nb.profile.following : nb.profile.follow}
+              variant={isFollowing ? 'secondary' : 'primary'}
+              iconLeft={isFollowing ? 'check' : 'user-plus'}
+              loading={toggleFollow.isPending}
+              onPress={() =>
+                toggleFollow.mutate(id, {
+                  onSuccess: () => {
+                    haptics.light();
+                    toast.success(
+                      isFollowing ? nb.profile.unfollowedToast : nb.profile.followedToast,
+                    );
+                  },
+                })
+              }
+            />
+            <Button
+              label={nb.profile.reportOrBlock}
+              variant="ghost"
+              iconLeft="flag"
+              onPress={() => safePush(`/rapporter?profil=${id}`)}
+            />
+          </>
         )}
 
         {isSelf && neighboursHelped > 0 ? (

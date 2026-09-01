@@ -402,6 +402,21 @@ export function useToggleEndorsement(profileId: string) {
   });
 }
 
+export function useFollowedProfileIds() {
+  return useQuery({
+    queryKey: ['follows'],
+    queryFn: () => apiClient.listFollowedProfileIds(),
+  });
+}
+
+export function useToggleFollow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => apiClient.toggleFollow(profileId),
+    onSuccess: (ids) => qc.setQueryData(['follows'], ids),
+  });
+}
+
 export function useReportNoShow() {
   const qc = useQueryClient();
   return useMutation({

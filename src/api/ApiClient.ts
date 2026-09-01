@@ -139,6 +139,8 @@ export interface ApiClient {
   reportNoShow(agreementProposalId: string, profileId: string): Promise<void>;
   listEndorsements(profileId: string): Promise<SkillEndorsement[]>;
   toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]>;
+  listFollowedProfileIds(): Promise<string[]>;
+  toggleFollow(profileId: string): Promise<string[]>;
 
   // saved listings & searches
   listSavedListingIds(): Promise<string[]>;
