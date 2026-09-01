@@ -4,7 +4,9 @@ import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { CATEGORIES as categories } from '@/domain/categories';
+import { TASK_TEMPLATES } from '@/domain/taskTemplates';
 import { draftStore } from '@/data/draftStore';
+import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { Wizard, type WizardStep } from '@/components/Wizard';
 import { TextField } from '@/components/ui/TextField';
@@ -52,6 +54,20 @@ export function TaskRequestForm() {
   const [form, setForm] = useState<TaskForm>(EMPTY);
   const set = <K extends keyof TaskForm>(k: K, v: TaskForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  const applyTemplate = (id: string) => {
+    const t = TASK_TEMPLATES.find((x) => x.id === id);
+    if (!t) return;
+    haptics.select();
+    setForm((f) => ({
+      ...f,
+      categorySlug: t.categorySlug,
+      title: t.title,
+      description: t.description,
+      duration: t.duration ?? f.duration,
+      equipExtra: t.equipExtra ?? f.equipExtra,
+    }));
+  };
+
   const steps: WizardStep[] = [
     {
       title: nb.leggUt.taskS1Title,
@@ -66,6 +82,21 @@ export function TaskRequestForm() {
               : null,
       render: () => (
         <>
+          <View style={styles.templateGroup}>
+            <AppText variant="meta" weight="bold" color="navyMuted">
+              {nb.leggUt.templatesLabel}
+            </AppText>
+            <PickerPills
+              scroll
+              options={TASK_TEMPLATES.map((t) => ({
+                value: t.id,
+                label: t.label,
+                icon: t.icon,
+              }))}
+              selected={[]}
+              onToggle={applyTemplate}
+            />
+          </View>
           <View style={styles.catGroup}>
             <SelectField
               label={nb.leggUt.fieldCategory}
@@ -295,6 +326,7 @@ export function TaskRequestForm() {
 export { ConfirmCheckbox as ConfirmRow } from '@/components/ui/ConfirmCheckbox';
 
 const styles = StyleSheet.create({
+  templateGroup: { gap: tokens.space.sm, marginBottom: tokens.space.md },
   catGroup: { gap: tokens.space.sm },
   timeRow: { flexDirection: 'row', gap: tokens.space.md },
   timeCell: { flex: 1 },

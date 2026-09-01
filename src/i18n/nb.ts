@@ -233,6 +233,7 @@ const nb = {
     selectCategory: 'Velg kategori',
 
     // task step 1
+    templatesLabel: 'Start fra en mal',
     taskS1Title: 'Hva trenger du hjelp med?',
     taskS1Sub: 'Fortell kort hva oppdraget gjelder.',
     taskTitleLabel: 'Tittel på oppdraget',

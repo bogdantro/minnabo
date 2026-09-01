@@ -91,6 +91,16 @@ test('the task wizard blocks empty step 1 and reaches the preview', async () => 
   await waitFor(() => expect(screen.getByText('Pris og praktisk informasjon')).toBeTruthy());
 });
 
+test('a task template pre-fills the title and description', async () => {
+  await renderWithProviders(<TaskRequestForm />);
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Snømåking' }));
+
+  await waitFor(() =>
+    expect(screen.getByDisplayValue('Snømåking av innkjørsel og trapp')).toBeTruthy(),
+  );
+});
+
 test('preview publishes the draft into the listings repository', async () => {
   draftStore.set(buildTaskListing({ ...TASK, title: 'Rydde garasje', priceMode: 'WANT_OFFERS', amountKr: '' }));
 
