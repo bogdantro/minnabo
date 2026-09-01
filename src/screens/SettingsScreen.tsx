@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { safePush } from '@/lib/nav';
-import { signOut } from '@/auth/session';
+import { shareInvite } from '@/lib/share';
+import { signOut, useSession } from '@/auth/session';
 import { ENV } from '@/lib/env';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -46,13 +47,21 @@ const BASE_GROUPS: { title: string; rows: Row[] }[] = [
 
 export function SettingsScreen() {
   const router = useRouter();
+  const { userId } = useSession();
 
   const logOut = async () => {
     await signOut();
     router.replace('/velkommen');
   };
 
-  const aboutRows: Row[] = [{ label: nb.settings.language, icon: 'globe' }];
+  const aboutRows: Row[] = [
+    {
+      label: nb.settings.inviteNeighbour,
+      icon: 'user-plus',
+      action: () => shareInvite(userId ?? 'app'),
+    },
+    { label: nb.settings.language, icon: 'globe' },
+  ];
   if (__DEV__ && !ENV.useMocks) {
     aboutRows.push({ label: 'Bytt testbruker', icon: 'users', route: '/dev-switch' });
   }

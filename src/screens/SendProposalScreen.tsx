@@ -9,6 +9,7 @@ import { apiClient } from '@/api/client';
 import { toast } from '@/lib/toast';
 import { haptics } from '@/lib/haptics';
 import { PageHeader } from '@/components/TopBar';
+import { PriceGuidanceHint } from '@/components/PriceGuidanceHint';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -115,6 +116,7 @@ export function SendProposalScreen({
                 onChange={setPrice}
                 accessibilityLabel={nb.proposalForm.priceLabel}
               />
+              <PriceGuidanceHint categorySlug={listing.category.slug} />
             </View>
             <View style={styles.whenRow}>
               <View style={styles.whenDate}>

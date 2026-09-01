@@ -17,6 +17,8 @@ import { AppText } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
 import { ChipSelect } from '@/components/ui/ChipSelect';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { neighbourCountFor } from '@/lib/socialProof';
 
 const DISTANCES = [5, 10, 25, 50] as const;
 
@@ -98,6 +100,14 @@ export function SetupScreen() {
 
         <TextField label={nb.onboarding.municipalityLabel} value={municipality} onChangeText={setMunicipality} />
         <TextField label={nb.onboarding.placeLabel} value={place} onChangeText={setPlace} />
+        {neighbourCountFor(place) > 0 ? (
+          <View style={styles.socialProof}>
+            <Icon name="users" size={14} color="lime" />
+            <AppText variant="meta" weight="bold" color="navyMuted">
+              {nb.onboarding.socialProof(neighbourCountFor(place), place.trim())}
+            </AppText>
+          </View>
+        ) : null}
 
         <ChipSelect<string>
           label={nb.onboarding.distanceLabel}
@@ -122,6 +132,7 @@ export function SetupScreen() {
 
 const styles = StyleSheet.create({
   body: { padding: tokens.space.xl, gap: tokens.space.lg, paddingBottom: tokens.space.xxl },
+  socialProof: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -tokens.space.sm },
   footer: {
     padding: tokens.space.xl,
     borderTopWidth: 1,

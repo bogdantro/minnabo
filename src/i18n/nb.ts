@@ -578,6 +578,11 @@ const nb = {
     contactSupport: 'Kontakt support',
   },
 
+  priceGuidance: {
+    label: 'Vanlig pris her',
+    typical: 'oftest',
+  },
+
   review: {
     title: 'Gi en vurdering',
     heading: 'Hvordan gikk det?',
@@ -624,6 +629,7 @@ const nb = {
     placeLabel: 'Sted',
     distanceLabel: 'Ønsket avstand',
     finish: 'Fullfør',
+    socialProof: (n: number, place: string) => `${n} naboer i ${place} er allerede med`,
   },
 
   community: {
@@ -730,6 +736,8 @@ const nb = {
     consentLog: 'Samtykkelogg',
     pushNotifications: 'Push-varsler',
     emailNotifications: 'E-postvarsler',
+    inviteNeighbour: 'Inviter en nabo',
+    inviteBody: 'Jo flere naboer, jo mer nabohjelp. Del en invitasjon – begge får et lite verifiseringsløft når naboen blir med.',
   },
 
   inbox: {

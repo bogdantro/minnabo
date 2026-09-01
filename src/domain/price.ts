@@ -9,7 +9,7 @@ export const nok = (kroner: number): Price => ({
 export const NBSP = ' ';
 
 /** Group thousands with a non-breaking space: 1500 -> "1<nbsp>500". */
-const groupThousands = (n: number): string =>
+export const groupThousands = (n: number): string =>
   String(n).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
 
 export const formatPrice = (p: Price): string =>
