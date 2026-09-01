@@ -43,6 +43,24 @@ export function FellesskapScreen() {
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={nb.neighbourhood.title}
+          onPress={() => safePush('/nabolag')}
+          style={styles.noticeLink}
+        >
+          <Icon name="home" size={18} color="lime" />
+          <View style={styles.noticeLinkBody}>
+            <AppText variant="cardTitle" weight="bold">
+              {nb.neighbourhood.title}
+            </AppText>
+            <AppText variant="meta" color="navyMuted">
+              {nb.neighbourhood.joinBody}
+            </AppText>
+          </View>
+          <Icon name="chevron-right" size={18} color="navyMuted" />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel={nb.noticeboard.title}
           onPress={() => safePush('/oppslagstavle')}
           style={styles.noticeLink}

@@ -171,6 +171,11 @@ afterEach(() => {
   } catch {
     /* not loaded */
   }
+  try {
+    require('@/lib/neighbourhood').neighbourhood._reset();
+  } catch {
+    /* not loaded */
+  }
 });
 
 // Auto-confirm Alert dialogs so confirm() flows are testable — presses the

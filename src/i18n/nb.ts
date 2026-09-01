@@ -647,6 +647,22 @@ const nb = {
     photosAfter: 'Etter',
   },
 
+  neighbourhood: {
+    title: 'Mitt nabolag',
+    joinBody: 'Bli med i nabolaget eller borettslaget ditt for å se hva som skjer i nærområdet.',
+    nameLabel: 'Navn på nabolag / borettslag',
+    namePlaceholder: 'F.eks. Sørgården borettslag',
+    join: 'Bli med',
+    joined: 'Du er med i nabolaget.',
+    leave: 'Forlat gruppen',
+    left: 'Du har forlatt gruppen.',
+    leaveConfirm: 'Forlate nabolaget?',
+    memberCount: (n: number) => `${n} naboer er med`,
+    localTasks: 'Oppdrag i nærområdet',
+    localNotices: 'Fra oppslagstavla',
+    noLocal: 'Ingen oppdrag i nærområdet akkurat nå.',
+  },
+
   agenda: {
     title: 'Mine avtaler',
     upcoming: 'Kommende',
