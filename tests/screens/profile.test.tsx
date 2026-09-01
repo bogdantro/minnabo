@@ -80,11 +80,16 @@ test('completion needs both parties before the review CTA appears', async () => 
   await waitFor(() => expect(screen.getAllByText('Gi en vurdering').length).toBeGreaterThan(0));
 });
 
-test('submitting a review records it against the counterpart', async () => {
+test('submitting a review records it against the counterpart with tags', async () => {
   await renderWithProviders(<ReviewScreen proposalId="p-emma-klippe" />);
   await waitFor(() => expect(screen.getByText('Hvordan gikk det?')).toBeTruthy());
-  fireEvent.press(screen.getByText('Send vurdering'));
+  await fireEvent.press(screen.getByLabelText('Punktlig'));
+  await fireEvent.press(screen.getByText('Send vurdering'));
   await waitFor(() =>
     expect(profileRepository.hasReviewed('p-emma-klippe', profileRepository.currentUserId)).toBe(true),
   );
+  const mine = profileRepository
+    .reviewsWrittenBy(profileRepository.currentUserId)
+    .find((r) => r.agreementProposalId === 'p-emma-klippe');
+  expect(mine?.tags).toContain('Punktlig');
 });

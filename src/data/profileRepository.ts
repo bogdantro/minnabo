@@ -117,9 +117,23 @@ export const profileRepository = {
     };
   },
 
+  // Blind two-way reviews: a fresh review about someone stays hidden until
+  // that person has also reviewed the same agreement (or the reveal window
+  // passes), so neither side can hold their rating hostage.
   listReviewsForProfile(profileId: string): Review[] {
+    const REVEAL_MS = 10 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
     return reviews
       .filter((r) => r.toProfileId === profileId)
+      .filter(
+        (r) =>
+          now - Date.parse(r.createdAt) > REVEAL_MS ||
+          reviews.some(
+            (x) =>
+              x.agreementProposalId === r.agreementProposalId &&
+              x.fromProfileId === profileId,
+          ),
+      )
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   },
 
@@ -157,6 +171,12 @@ export const profileRepository = {
     };
     reviews = [review, ...reviews];
     return review;
+  },
+  /** Reviews the given person wrote — always visible to that person. */
+  reviewsWrittenBy(fromProfileId: string): Review[] {
+    return reviews
+      .filter((r) => r.fromProfileId === fromProfileId)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   },
   hasReviewed(agreementProposalId: string, fromProfileId: string): boolean {
     return reviews.some(

@@ -49,6 +49,7 @@ export const reviewsSeed: Review[] = [
     toProfileId: profiles.mb.id,
     rating: 5,
     comment: 'Ryddig og punktlig. Anbefales!',
+    tags: ['Punktlig', 'Ryddig', 'Anbefales'],
     createdAt: '2026-08-20T09:00:00Z',
   },
   {
@@ -59,6 +60,7 @@ export const reviewsSeed: Review[] = [
     toProfileId: profiles.mb.id,
     rating: 4,
     comment: 'God hjelp med monteringen.',
+    tags: ['Som avtalt', 'Ryddig'],
     createdAt: '2026-07-11T14:00:00Z',
   },
   {

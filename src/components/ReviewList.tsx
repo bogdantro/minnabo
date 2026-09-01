@@ -49,6 +49,17 @@ function ReviewItem({ review: r }: { review: Review }) {
           {r.comment}
         </AppText>
       ) : null}
+      {r.tags?.length ? (
+        <View style={styles.tags}>
+          {r.tags.map((t) => (
+            <View key={t} style={styles.tag}>
+              <AppText variant="meta" weight="bold" color="navy">
+                {t}
+              </AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -65,4 +76,11 @@ const styles = StyleSheet.create({
   },
   itemHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   stars: { flexDirection: 'row', gap: 2 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
+  tag: {
+    backgroundColor: tokens.color.limeTint,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: tokens.space.sm,
+    paddingVertical: 2,
+  },
 });

@@ -511,6 +511,7 @@ export class SupabaseApiClient implements ApiClient {
       p_agreement_proposal_id: input.agreementProposalId,
       p_rating: input.rating,
       p_comment: input.comment ?? '',
+      p_tags: input.tags ?? [],
     });
     if (error) fail(error.message);
     return toReview(data as unknown as ReviewRow);

@@ -67,6 +67,17 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
     .map((slug) => categories.find((c) => c.slug === slug)?.label)
     .filter(Boolean) as string[];
 
+  const neighboursHelped = profile.completedTasks ?? 0;
+  const topTags = Object.entries(
+    (reviews ?? []).flatMap((r) => r.tags ?? []).reduce<Record<string, number>>((acc, t) => {
+      acc[t] = (acc[t] ?? 0) + 1;
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([tag]) => tag);
+
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>
       <PageHeader title={nb.profile.title} />
@@ -124,6 +135,43 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
             onPress={() => safePush(`/rapporter?profil=${id}`)}
           />
         )}
+
+        {isSelf && neighboursHelped > 0 ? (
+          <View style={styles.impact}>
+            <AppText variant="meta" weight="bold" color="navyMuted">
+              {nb.profile.impactTitle.toUpperCase()}
+            </AppText>
+            <View style={styles.impactRow}>
+              <View style={styles.impactStat}>
+                <AppText variant="h1" weight="extrabold" color="lime">
+                  {neighboursHelped}
+                </AppText>
+                <AppText variant="meta" color="navyMuted">
+                  {nb.profile.impactNeighbours}
+                </AppText>
+              </View>
+              <View style={styles.impactStat}>
+                <AppText variant="h1" weight="extrabold" color="lime">
+                  ~{neighboursHelped * 2}
+                </AppText>
+                <AppText variant="meta" color="navyMuted">
+                  {nb.profile.impactHours}
+                </AppText>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {topTags.length ? (
+          <View style={styles.section}>
+            <SectionHeader title={nb.profile.topTags} />
+            <View style={styles.chips}>
+              {topTags.map((t) => (
+                <StatusPill key={t} label={t} tone="lime" />
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {profile.verifications.some((v) => v.verified) ? (
           <InfoCard>
@@ -231,4 +279,12 @@ const styles = StyleSheet.create({
     padding: tokens.space.md,
   },
   pausedText: { flex: 1, gap: 1 },
+  impact: {
+    gap: tokens.space.sm,
+    backgroundColor: tokens.color.limeTint,
+    borderRadius: tokens.radius.card,
+    padding: tokens.space.lg,
+  },
+  impactRow: { flexDirection: 'row', gap: tokens.space.lg },
+  impactStat: { flex: 1, gap: 2 },
 });

@@ -120,6 +120,7 @@ export type ReviewRow = {
   to_profile_id: string;
   rating: number;
   comment: string | null;
+  tags?: string[] | null;
   created_at: string;
 };
 
@@ -294,6 +295,7 @@ export function toReview(row: ReviewRow): Review {
     toProfileId: row.to_profile_id,
     rating: row.rating,
     comment: row.comment ?? undefined,
+    tags: row.tags ?? undefined,
     createdAt: row.created_at,
   };
 }

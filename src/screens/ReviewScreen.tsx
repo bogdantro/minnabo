@@ -21,7 +21,11 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
   const submit = useSubmitReview();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [done, setDone] = useState(false);
+
+  const toggleTag = (tag: string) =>
+    setTags((cur) => (cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag]));
 
   const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
   const me = useSession().userId ?? '';
@@ -38,6 +42,7 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
         toProfileId: counterpartId,
         rating,
         comment: comment.trim() || undefined,
+        tags: tags.length ? tags : undefined,
       },
       {
         onSuccess: () => {
@@ -96,6 +101,29 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
           ))}
         </View>
 
+        <AppText variant="meta" weight="bold">
+          {nb.review.tagsLabel}
+        </AppText>
+        <View style={styles.tags}>
+          {nb.review.tags.map((tag) => {
+            const on = tags.includes(tag);
+            return (
+              <Pressable
+                key={tag}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={tag}
+                onPress={() => toggleTag(tag)}
+                style={[styles.tag, on && styles.tagOn]}
+              >
+                <AppText variant="meta" weight="bold" color={on ? 'lime' : 'navy'}>
+                  {tag}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+
         <TextField
           label={nb.review.commentLabel}
           value={comment}
@@ -114,6 +142,15 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
 const styles = StyleSheet.create({
   body: { flex: 1, padding: tokens.space.xl, gap: tokens.space.md },
   stars: { flexDirection: 'row', gap: tokens.space.sm, marginBottom: tokens.space.md },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.sm, marginBottom: tokens.space.sm },
+  tag: {
+    paddingHorizontal: tokens.space.md,
+    paddingVertical: 6,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1.5,
+    borderColor: tokens.color.line,
+  },
+  tagOn: { borderColor: tokens.color.lime, backgroundColor: tokens.color.limeTint },
   center: {
     flex: 1,
     alignItems: 'center',

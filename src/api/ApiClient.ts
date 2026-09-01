@@ -74,6 +74,7 @@ export type SubmitReviewInput = {
   toProfileId: string;
   rating: number;
   comment?: string;
+  tags?: string[];
 };
 
 export type RespondToProposalResult = {

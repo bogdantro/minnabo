@@ -529,6 +529,10 @@ const nb = {
     resumedToast: 'Profilen er aktiv igjen.',
     pausedTitle: 'Profilen din er på pause',
     pausedBody: 'Oppføringene dine er skjult for andre inntil du aktiverer profilen igjen.',
+    impactTitle: 'Ditt bidrag',
+    impactNeighbours: 'naboer hjulpet',
+    impactHours: 'timer spart i nabolaget',
+    topTags: 'Naboene sier',
   },
 
   notifications: {
@@ -573,6 +577,8 @@ const nb = {
     heading: 'Hvordan gikk det?',
     ratingLabel: 'Din vurdering',
     commentLabel: 'Kommentar (valgfritt)',
+    tagsLabel: 'Hva stemte? (valgfritt)',
+    tags: ['Punktlig', 'Ryddig', 'Vennlig', 'Som avtalt', 'God kommunikasjon', 'Anbefales'],
     submit: 'Send vurdering',
     submitted: 'Takk for vurderingen!',
   },

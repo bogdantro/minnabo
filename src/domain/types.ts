@@ -206,6 +206,8 @@ export type Review = {
   toProfileId: string;
   rating: number;
   comment?: string;
+  /** structured quick-tags, e.g. "Punktlig", "Ryddig" */
+  tags?: string[];
   createdAt: string;
 };
 
