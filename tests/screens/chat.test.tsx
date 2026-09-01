@@ -86,6 +86,14 @@ test('pinning a message shows the pinned banner until unpinned', async () => {
   await waitFor(() => expect(screen.queryByText('Festet melding')).toBeNull());
 });
 
+test('the "Foreslå tid" action opens the time picker sheet', async () => {
+  const conversation = chatRepository.getConversation('c-sara')!;
+  await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
+
+  await fireEvent.press(await screen.findByText('Foreslå tid'));
+  expect(await screen.findByText('Send forslag')).toBeTruthy();
+});
+
 test('chat never shows payment actions', async () => {
   const conversation = chatRepository.getConversation('c-emma')!;
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);

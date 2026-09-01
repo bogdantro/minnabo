@@ -100,6 +100,8 @@ export interface ApiClient {
   getListing(id: string): Promise<Listing>;
   createListing(listing: Listing): Promise<Listing>;
   listMyListings(type?: ListingType): Promise<Listing[]>;
+  /** Notify nearby helpers whose offers match this task; returns how many. */
+  notifyMatchingHelpers(listingId: string): Promise<number>;
 
   // conversations & messages
   listConversations(params?: ListConversationsParams): Promise<Conversation[]>;

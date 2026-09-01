@@ -373,6 +373,8 @@ const nb = {
     seeListing: 'Se oppdraget',
     seeOffer: 'Se tilbudet',
     shareListing: 'Del oppdraget',
+    broadcast: 'Send til aktuelle hjelpere',
+    broadcastDone: (n: number) => `Varslet ${n} hjelpere i nærheten som matcher oppdraget.`,
     toMyListings: 'Gå til mine oppdrag',
     publishedReminder: 'Husk å avtale pris, tidspunkt og betalingsmåte i chatten. MinNabo håndterer ikke betaling.',
     viewListing: 'Se oppføringen',
@@ -934,6 +936,9 @@ const nb = {
     unpinMessage: 'Løsne melding',
     pinnedMessage: 'Festet melding',
     typing: 'skriver …',
+    proposeTime: 'Foreslå tid',
+    timeSuggestion: 'Forslag til tid',
+    sendSuggestion: 'Send forslag',
     quickRepliesLabel: 'Hurtigsvar',
     quickReplies: [
       'Hei! 👋',

@@ -5,6 +5,9 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatPrice, formatFromPrice } from '@/domain/price';
 import { draftStore } from '@/data/draftStore';
+import { shareListing } from '@/lib/share';
+import { toast } from '@/lib/toast';
+import { useNotifyMatchingHelpers } from '@/api/queries';
 import { PageHeader } from '@/components/TopBar';
 import { AppText } from '@/components/ui/Text';
 import { Icon } from '@/components/ui/Icon';
@@ -25,6 +28,15 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
   const router = useRouter();
   const listing = draftStore.get();
   const isTask = listing?.type !== 'SERVICE_OFFER';
+  const notify = useNotifyMatchingHelpers();
+
+  const broadcast = () => {
+    if (!listingId) return;
+    notify.mutate(listingId, {
+      onSuccess: (n) => toast.success(nb.leggUt.broadcastDone(n)),
+      onError: () => toast.error(nb.toast.genericError),
+    });
+  };
 
   const priceLabel = listing?.price
     ? listing.priceMode === 'FROM'
@@ -116,7 +128,20 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
             label={isTask ? nb.leggUt.seeListing : nb.leggUt.seeOffer}
             onPress={() => done(listingId ? `/oppdrag/${listingId}` : '/')}
           />
-          <Button label={nb.leggUt.shareListing} variant="secondary" onPress={() => {}} />
+          {isTask && listingId ? (
+            <Button
+              label={nb.leggUt.broadcast}
+              variant="secondary"
+              iconLeft="send"
+              loading={notify.isPending}
+              onPress={broadcast}
+            />
+          ) : null}
+          <Button
+            label={nb.leggUt.shareListing}
+            variant="secondary"
+            onPress={() => (listing ? shareListing(listingId ?? '', listing.title) : undefined)}
+          />
           <AppText
             variant="meta"
             weight="bold"

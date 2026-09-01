@@ -311,6 +311,14 @@ export class SupabaseApiClient implements ApiClient {
     return this.listMessages(conversationId);
   }
 
+  async notifyMatchingHelpers(listingId: string): Promise<number> {
+    const { data, error } = await supabase.rpc('notify_matching_helpers', {
+      p_listing_id: listingId,
+    });
+    if (error) fail(error.message);
+    return (data as number) ?? 0;
+  }
+
   // --- proposals & agreements -----------------------------------------
 
   async getProposal(id: string): Promise<Proposal> {

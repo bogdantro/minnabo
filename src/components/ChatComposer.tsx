@@ -11,12 +11,14 @@ export function ChatComposer({
   onSend,
   onAttach,
   onSendOffer,
+  onProposeTime,
   onTyping,
   canSendOffer,
 }: {
   onSend: (text: string) => void;
   onAttach: () => void;
   onSendOffer: () => void;
+  onProposeTime?: () => void;
   onTyping?: () => void;
   canSendOffer: boolean;
 }) {
@@ -49,19 +51,24 @@ export function ChatComposer({
 
   return (
     <View style={[styles.wrap, { paddingBottom: pad }]}>
-      {canSendOffer ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onSendOffer}
-          hitSlop={8}
-          style={styles.offerLink}
-        >
-          <Icon name="tag" size={14} color="cyan" />
-          <AppText variant="meta" weight="bold" color="cyan">
-            {nb.chat.sendOffer}
-          </AppText>
-        </Pressable>
-      ) : null}
+      <View style={styles.quickActions}>
+        {onProposeTime ? (
+          <Pressable accessibilityRole="button" onPress={onProposeTime} hitSlop={8} style={styles.offerLink}>
+            <Icon name="calendar" size={14} color="cyan" />
+            <AppText variant="meta" weight="bold" color="cyan">
+              {nb.chat.proposeTime}
+            </AppText>
+          </Pressable>
+        ) : null}
+        {canSendOffer ? (
+          <Pressable accessibilityRole="button" onPress={onSendOffer} hitSlop={8} style={styles.offerLink}>
+            <Icon name="tag" size={14} color="cyan" />
+            <AppText variant="meta" weight="bold" color="cyan">
+              {nb.chat.sendOffer}
+            </AppText>
+          </Pressable>
+        ) : null}
+      </View>
 
       <View style={styles.row}>
         <Pressable
@@ -109,11 +116,11 @@ const styles = StyleSheet.create({
     paddingTop: tokens.space.sm,
     gap: tokens.space.sm,
   },
+  quickActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: tokens.space.md },
   offerLink: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    alignSelf: 'flex-end',
     paddingVertical: 2,
     paddingHorizontal: tokens.space.xs,
   },

@@ -279,6 +279,12 @@ export function useUpdateJobWorkspace(proposalId: string) {
   });
 }
 
+export function useNotifyMatchingHelpers() {
+  return useMutation({
+    mutationFn: (listingId: string) => apiClient.notifyMatchingHelpers(listingId),
+  });
+}
+
 export function useMyAgreements() {
   return useQuery({
     queryKey: ['my-agreements'],

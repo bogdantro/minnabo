@@ -74,6 +74,20 @@ export class MockApiClient implements ApiClient {
     return profileRepository.myListings(type);
   }
 
+  async notifyMatchingHelpers(listingId: string): Promise<number> {
+    await delay(400);
+    const listing = repositories.listings.get(listingId);
+    if (!listing) return 0;
+    const offers = repositories.listings.list({ type: 'SERVICE_OFFER' });
+    const matches = offers.filter(
+      (o) =>
+        o.category.slug === listing.category.slug &&
+        o.owner.id !== listing.owner.id,
+    );
+    // A dev build would enqueue a push to each; here we just report the count.
+    return matches.length + 2;
+  }
+
   async listConversations(params: ListConversationsParams = {}): Promise<Conversation[]> {
     await delay(200);
     return chatRepository.listConversations(params);
