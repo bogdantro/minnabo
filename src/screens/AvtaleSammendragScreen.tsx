@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/Button';
 import { InfoCard, InfoRow } from '@/components/ui/InfoCard';
 import { InfoBox } from '@/components/ui/InfoBox';
 import { Avatar } from '@/components/ui/Avatar';
+import { SafeTripCard } from '@/components/SafeTripCard';
 
 export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const router = useRouter();
@@ -134,6 +135,8 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
             <Party name={other?.displayName ?? 'Motpart'} uri={other?.avatarUrl} initials={other?.initials ?? '?'} />
           </View>
         </View>
+
+        <SafeTripCard proposalId={proposalId} label={other?.displayName ?? nb.avtale.parties} />
 
         <InfoBox icon="shield">{nb.avtale.paymentNote}</InfoBox>
 

@@ -1,0 +1,92 @@
+import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const KEY = 'minnabo.safeTrip.v1';
+
+export type SafeTrip = {
+  /** the agreement this trip is tied to */
+  proposalId: string;
+  /** short label shown in the banner, e.g. the counterpart's name */
+  label: string;
+  startedAt: string;
+  /** ISO time the person expects to have checked back in by */
+  dueAt: string;
+  /** names of the contacts who'd be alerted */
+  contactNames: string[];
+};
+
+let current: SafeTrip | null = null;
+let hydrated = false;
+const listeners = new Set<() => void>();
+const emit = () => listeners.forEach((l) => l());
+
+async function hydrate() {
+  if (hydrated) return;
+  hydrated = true;
+  try {
+    const raw = await AsyncStorage.getItem(KEY);
+    current = raw ? (JSON.parse(raw) as SafeTrip) : null;
+  } catch {
+    current = null;
+  }
+  emit();
+}
+
+function persist() {
+  if (current) AsyncStorage.setItem(KEY, JSON.stringify(current)).catch(() => undefined);
+  else AsyncStorage.removeItem(KEY).catch(() => undefined);
+}
+
+export const safeTrip = {
+  get: () => current,
+  start(trip: SafeTrip) {
+    current = trip;
+    persist();
+    emit();
+  },
+  /** the person checked back in safely */
+  checkIn() {
+    current = null;
+    persist();
+    emit();
+  },
+  _reset() {
+    current = null;
+    hydrated = false;
+    emit();
+  },
+};
+
+export function useSafeTrip(): {
+  trip: SafeTrip | null;
+  overdue: boolean;
+  start: (trip: SafeTrip) => void;
+  checkIn: () => void;
+} {
+  const [trip, setTrip] = useState(current);
+  const [, tick] = useState(0);
+
+  useEffect(() => {
+    void hydrate();
+    const sync = () => setTrip(current ? { ...current } : null);
+    listeners.add(sync);
+    sync();
+    return () => {
+      listeners.delete(sync);
+    };
+  }, []);
+
+  // Re-render once a minute so `overdue` and any countdown stay current.
+  useEffect(() => {
+    if (!trip) return;
+    const id = setInterval(() => tick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, [trip]);
+
+  return {
+    trip,
+    overdue: !!trip && Date.now() > Date.parse(trip.dueAt),
+    start: safeTrip.start,
+    checkIn: safeTrip.checkIn,
+  };
+}

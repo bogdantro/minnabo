@@ -19,6 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { tokens } from '@/theme';
 import { InboxRealtime } from '@/api/realtime';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { SafeTripBanner } from '@/components/SafeTripBanner';
 import { ToastHost } from '@/components/ToastHost';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { OfflineOutbox } from '@/lib/outbox';
@@ -91,6 +92,7 @@ export default function RootLayout() {
             <InboxRealtime />
             <OfflineOutbox />
             <OfflineBanner />
+            <SafeTripBanner />
             <ToastHost />
           </AppErrorBoundary>
         </PersistQueryClientProvider>

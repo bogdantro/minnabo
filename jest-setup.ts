@@ -136,6 +136,16 @@ afterEach(() => {
   } catch {
     /* not loaded */
   }
+  try {
+    require('@/lib/trustedContacts').trustedContacts._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
+    require('@/lib/safeTrip').safeTrip._reset();
+  } catch {
+    /* not loaded */
+  }
 });
 
 // Auto-confirm Alert dialogs so confirm() flows are testable — presses the
