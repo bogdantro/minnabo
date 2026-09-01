@@ -193,6 +193,20 @@ export type AgreementSnapshot = {
   agreedAt: string;
 };
 
+export type ChecklistItem = { id: string; text: string; done: boolean };
+export type MaterialItem = { id: string; label: string; amountKr: number };
+
+/** Shared working state for one agreement, on the day the job happens. */
+export type JobWorkspace = {
+  proposalId: string;
+  checklist: ChecklistItem[];
+  materials: MaterialItem[];
+  /** epoch ms when the timer was last started, or null when paused */
+  timerStartedAt: number | null;
+  /** accumulated tracked time in ms */
+  timerAccumMs: number;
+};
+
 /** One row in "Mine avtaler" — an accepted proposal the current user is part of. */
 export type AgendaItem = {
   proposalId: string;

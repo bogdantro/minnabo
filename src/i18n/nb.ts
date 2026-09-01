@@ -209,6 +209,9 @@ const nb = {
     noShowToast: 'Takk. Vi har notert det.',
     rebook: (name: string) => `Kontakt ${name} igjen`,
     rebookGeneric: 'Kontakt motparten igjen',
+    enRoute: 'Jeg er på vei',
+    arrived: 'Jeg er framme',
+    statusSent: 'Sendt i samtalen.',
   },
 
   leggUt: {
@@ -605,6 +608,19 @@ const nb = {
   priceGuidance: {
     label: 'Vanlig pris her',
     typical: 'oftest',
+  },
+
+  jobWorkspace: {
+    title: 'Under jobben',
+    timer: 'Tidtaker',
+    start: 'Start',
+    stop: 'Stopp',
+    checklist: 'Sjekkliste',
+    addItem: 'Legg til punkt',
+    add: 'Legg til',
+    materials: 'Materialer og utlegg',
+    materialsNote: 'Notér parkering, deler o.l. Dette er kun en oversikt – ingen betaling håndteres i appen.',
+    materialLabel: 'Hva',
   },
 
   agenda: {

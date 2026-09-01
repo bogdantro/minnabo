@@ -11,6 +11,7 @@ import {
   useListing,
   useProfile,
   useReportNoShow,
+  useSendMessage,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
@@ -26,6 +27,7 @@ import { InfoCard, InfoRow } from '@/components/ui/InfoCard';
 import { InfoBox } from '@/components/ui/InfoBox';
 import { Avatar } from '@/components/ui/Avatar';
 import { SafeTripCard } from '@/components/SafeTripCard';
+import { JobWorkspaceSection } from '@/components/JobWorkspaceSection';
 
 export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const router = useRouter();
@@ -40,6 +42,7 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
     : '';
   const { data: other } = useProfile(otherId);
   const noShow = useReportNoShow();
+  const sendMessage = useSendMessage(proposal?.conversationId ?? '', me.id);
 
   const reportNoShow = async () => {
     const ok = await confirm({
@@ -136,7 +139,32 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
           </View>
         </View>
 
+        <View style={styles.statusRow}>
+          <Button
+            label={nb.avtale.enRoute}
+            variant="secondary"
+            iconLeft="navigation"
+            style={styles.statusBtn}
+            onPress={() => {
+              sendMessage.mutate('Jeg er på vei 🚗');
+              toast.success(nb.avtale.statusSent);
+            }}
+          />
+          <Button
+            label={nb.avtale.arrived}
+            variant="secondary"
+            iconLeft="map-pin"
+            style={styles.statusBtn}
+            onPress={() => {
+              sendMessage.mutate('Jeg er framme 👋');
+              toast.success(nb.avtale.statusSent);
+            }}
+          />
+        </View>
+
         <SafeTripCard proposalId={proposalId} label={other?.displayName ?? nb.avtale.parties} />
+
+        <JobWorkspaceSection proposalId={proposalId} />
 
         <InfoBox icon="shield">{nb.avtale.paymentNote}</InfoBox>
 
@@ -196,6 +224,8 @@ const styles = StyleSheet.create({
     marginBottom: tokens.space.xs,
   },
   section: { gap: tokens.space.xs },
+  statusRow: { flexDirection: 'row', gap: tokens.space.sm },
+  statusBtn: { flex: 1 },
   parties: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: tokens.space.md },
   party: { flex: 1, alignItems: 'center', gap: 4 },
   footer: {

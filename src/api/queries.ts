@@ -262,6 +262,23 @@ export function useRespondToProposal(conversationId: string) {
   });
 }
 
+export function useJobWorkspace(proposalId: string) {
+  return useQuery({
+    queryKey: ['job-workspace', proposalId],
+    queryFn: () => apiClient.getJobWorkspace(proposalId),
+    enabled: !!proposalId,
+  });
+}
+
+export function useUpdateJobWorkspace(proposalId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (action: Parameters<typeof apiClient.updateJobWorkspace>[1]) =>
+      apiClient.updateJobWorkspace(proposalId, action),
+    onSuccess: (ws) => qc.setQueryData(['job-workspace', proposalId], ws),
+  });
+}
+
 export function useMyAgreements() {
   return useQuery({
     queryKey: ['my-agreements'],

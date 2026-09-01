@@ -3,6 +3,7 @@ import type {
   AgendaItem,
   AgreementSnapshot,
   AppNotification,
+  JobWorkspace,
   CompletionConfirmation,
   Conversation,
   Listing,
@@ -435,6 +436,40 @@ export class SupabaseApiClient implements ApiClient {
         };
       })
       .sort((x, y) => Date.parse(y.agreedAt) - Date.parse(x.agreedAt));
+  }
+
+  async getJobWorkspace(proposalId: string): Promise<JobWorkspace> {
+    const { data, error } = await supabase
+      .from('job_workspaces')
+      .select('*')
+      .eq('proposal_id', proposalId)
+      .maybeSingle();
+    if (error) fail(error.message);
+    const row = data as {
+      checklist: JobWorkspace['checklist'] | null;
+      materials: JobWorkspace['materials'] | null;
+      timer_started_at: string | null;
+      timer_accum_ms: number | null;
+    } | null;
+    return {
+      proposalId,
+      checklist: row?.checklist ?? [],
+      materials: row?.materials ?? [],
+      timerStartedAt: row?.timer_started_at ? Date.parse(row.timer_started_at) : null,
+      timerAccumMs: row?.timer_accum_ms ?? 0,
+    };
+  }
+
+  async updateJobWorkspace(
+    proposalId: string,
+    action: Parameters<ApiClient['updateJobWorkspace']>[1],
+  ): Promise<JobWorkspace> {
+    const { error } = await supabase.rpc('update_job_workspace', {
+      p_proposal_id: proposalId,
+      p_action: action,
+    });
+    if (error) fail(error.message);
+    return this.getJobWorkspace(proposalId);
   }
 
   // --- profile, verification, notifications, reviews ------------------

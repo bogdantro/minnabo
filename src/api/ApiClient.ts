@@ -2,6 +2,7 @@ import type {
   AgendaItem,
   AgreementSnapshot,
   AppNotification,
+  JobWorkspace,
   CompletionConfirmation,
   Conversation,
   Listing,
@@ -123,6 +124,17 @@ export interface ApiClient {
   getAgreement(proposalId: string): Promise<AgreementSnapshot | null>;
   getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null>;
   listMyAgreements(): Promise<AgendaItem[]>;
+  getJobWorkspace(proposalId: string): Promise<JobWorkspace>;
+  updateJobWorkspace(
+    proposalId: string,
+    action:
+      | { kind: 'addChecklist'; text: string }
+      | { kind: 'toggleChecklist'; itemId: string }
+      | { kind: 'removeChecklist'; itemId: string }
+      | { kind: 'addMaterial'; label: string; amountKr: number }
+      | { kind: 'removeMaterial'; itemId: string }
+      | { kind: 'toggleTimer' },
+  ): Promise<JobWorkspace>;
 
   // profile, verification, notifications, reviews
   getProfile(id: string): Promise<PublicProfile>;

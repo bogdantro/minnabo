@@ -2,6 +2,7 @@ import type {
   AgendaItem,
   AgreementSnapshot,
   AppNotification,
+  JobWorkspace,
   CompletionConfirmation,
   Conversation,
   Listing,
@@ -26,6 +27,7 @@ import { safetyStore } from '@/data/safetyStore';
 import { endorsementsStore } from '@/data/endorsementsStore';
 import { followStore } from '@/data/followStore';
 import { noticeboardStore } from '@/data/noticeboardStore';
+import { jobWorkspaceStore } from '@/data/jobWorkspaceStore';
 import type {
   ApiClient,
   ListConversationsParams,
@@ -167,6 +169,32 @@ export class MockApiClient implements ApiClient {
       ...a,
       fullyCompleted: profileRepository.isFullyCompleted(a.proposalId),
     }));
+  }
+
+  async getJobWorkspace(proposalId: string): Promise<JobWorkspace> {
+    await delay(60);
+    return jobWorkspaceStore.get(proposalId);
+  }
+
+  async updateJobWorkspace(
+    proposalId: string,
+    action: Parameters<ApiClient['updateJobWorkspace']>[1],
+  ): Promise<JobWorkspace> {
+    await delay(60);
+    switch (action.kind) {
+      case 'addChecklist':
+        return jobWorkspaceStore.addChecklistItem(proposalId, action.text);
+      case 'toggleChecklist':
+        return jobWorkspaceStore.toggleChecklistItem(proposalId, action.itemId);
+      case 'removeChecklist':
+        return jobWorkspaceStore.removeChecklistItem(proposalId, action.itemId);
+      case 'addMaterial':
+        return jobWorkspaceStore.addMaterial(proposalId, action.label, action.amountKr);
+      case 'removeMaterial':
+        return jobWorkspaceStore.removeMaterial(proposalId, action.itemId);
+      case 'toggleTimer':
+        return jobWorkspaceStore.toggleTimer(proposalId);
+    }
   }
 
   async getProfile(id: string): Promise<PublicProfile> {
