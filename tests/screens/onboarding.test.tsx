@@ -3,6 +3,7 @@ import { ConsentScreen } from '@/screens/Onboarding/ConsentScreen';
 import { SetupScreen } from '@/screens/Onboarding/SetupScreen';
 import { LoginScreen } from '@/screens/Onboarding/LoginScreen';
 import { supabase } from '@/lib/supabase';
+import nb from '@/i18n/nb';
 import { renderWithProviders } from '../testUtils';
 
 test('login sends an email OTP then verifies the 6-digit code', async () => {
@@ -55,4 +56,13 @@ test('setup writes the profile and marks onboarding complete', async () => {
   await fireEvent.changeText(screen.getByLabelText('Sted'), 'Hamar sentrum');
   await fireEvent.press(screen.getByText('Fullfør'));
   await waitFor(() => expect(supabase.from).toHaveBeenCalledWith('profiles'));
+});
+
+test('"Bruk posisjonen min" fills the kommune field', async () => {
+  await renderWithProviders(<SetupScreen />);
+  await fireEvent.press(screen.getByText(nb.home.useMyLocation));
+  await waitFor(() =>
+    expect(screen.getByLabelText(nb.onboarding.municipalityLabel).props.value).toBe('Lillehammer'),
+  );
+  expect(screen.getByLabelText(nb.onboarding.placeLabel).props.value).toBe('Lillehammer');
 });

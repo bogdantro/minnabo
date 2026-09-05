@@ -19,8 +19,7 @@ import { ChipSelect } from '@/components/ui/ChipSelect';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { neighbourCountFor } from '@/lib/socialProof';
-
-const DISTANCES = [5, 10, 25, 50] as const;
+import { detectKommune } from '@/lib/geo';
 
 export function SetupScreen() {
   const router = useRouter();
@@ -30,9 +29,27 @@ export function SetupScreen() {
   const [purpose, setPurpose] = useState<Purpose>('BOTH');
   const [municipality, setMunicipality] = useState('');
   const [place, setPlace] = useState('');
-  const [distance, setDistance] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  const useMyLoc = async () => {
+    setLocating(true);
+    try {
+      const res = await detectKommune();
+      if ('municipality' in res) {
+        setMunicipality(res.municipality);
+        setPlace(res.place ?? res.municipality);
+        setError(null);
+      } else {
+        setError(
+          res.error === 'denied' ? nb.location.permissionDenied : nb.location.locationUnavailable,
+        );
+      }
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const initials = (n: string) =>
     n
@@ -62,7 +79,6 @@ export function SetupScreen() {
         purpose,
         municipality: municipality.trim(),
         place: place.trim(),
-        max_distance_km: distance,
         onboarded_at: new Date().toISOString(),
       })
       .eq('id', userId ?? '');
@@ -98,6 +114,14 @@ export function SetupScreen() {
           {nb.onboarding.purposeNote}
         </AppText>
 
+        <Button
+          variant="secondary"
+          label={locating ? nb.home.locating : nb.home.useMyLocation}
+          iconLeft="map-pin"
+          loading={locating}
+          onPress={useMyLoc}
+        />
+
         <TextField label={nb.onboarding.municipalityLabel} value={municipality} onChangeText={setMunicipality} />
         <TextField label={nb.onboarding.placeLabel} value={place} onChangeText={setPlace} />
         {neighbourCountFor(place) > 0 ? (
@@ -108,13 +132,6 @@ export function SetupScreen() {
             </AppText>
           </View>
         ) : null}
-
-        <ChipSelect<string>
-          label={nb.onboarding.distanceLabel}
-          options={DISTANCES.map((d) => ({ value: String(d), label: `${d} ${nb.common.km}` }))}
-          value={String(distance)}
-          onChange={(v) => setDistance(Number(v))}
-        />
 
         {error ? (
           <AppText variant="meta" color="dangerText">
