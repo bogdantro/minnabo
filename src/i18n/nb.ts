@@ -37,6 +37,22 @@ const nb = {
     offerHelpSection: 'Folk som tilbyr hjelp',
   },
 
+  location: {
+    kommuneSuffix: 'kommune',
+    pickKommune: 'Velg kommune',
+    searchKommune: 'Søk etter kommune eller postnummer',
+    reachLabel: 'Hvor langt unna?',
+    reachOwn: 'Bare min kommune',
+    reachNeighbours: '+ nabokommuner',
+    reachRegion: '+ hele regionen',
+    permissionDenied: 'MinNabo har ikke tilgang til posisjonen din. Gi tilgang i innstillingene, eller velg kommune manuelt.',
+    locationUnavailable: 'Fant ikke posisjonen din. Velg kommune manuelt.',
+    detected: 'Fant kommunen din:',
+    emptyListings: (k: string) => `Ingen oppdrag i ${k} akkurat nå. Prøv å utvide rekkevidden.`,
+    emptyPartners: (k: string) => `Ingen lokale samarbeidspartnere i ${k} enda.`,
+    emptyNotices: (k: string) => `Ingen oppslag i ${k} akkurat nå.`,
+  },
+
   categories: {
     alle: 'Alle',
     hage: 'Hage',
