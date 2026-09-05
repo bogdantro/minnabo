@@ -9,7 +9,7 @@ const SEED: NoticeboardPost[] = [
     body: 'Rød barnesykkel i god stand. Hentes på Stampesletta.',
     authorProfileId: 'u-emma',
     place: 'Lillehammer',
-    municipality: '',
+    municipality: 'Lillehammer',
     createdAt: '2026-08-30T09:00:00Z',
   },
   {
@@ -19,7 +19,7 @@ const SEED: NoticeboardPost[] = [
     body: 'Har en kraftig slagbormaskin og en 3 m stige som naboer gjerne kan låne.',
     authorProfileId: 'u-martin',
     place: 'Gjøvik',
-    municipality: '',
+    municipality: 'Gjøvik',
     createdAt: '2026-08-29T16:30:00Z',
   },
   {
@@ -29,7 +29,7 @@ const SEED: NoticeboardPost[] = [
     body: 'Fant et knippe med tre nøkler og en rød brikke. Ta kontakt for å beskrive.',
     authorProfileId: 'u-jonas',
     place: 'Lillehammer',
-    municipality: '',
+    municipality: 'Lillehammer',
     createdAt: '2026-08-28T18:00:00Z',
   },
 ];
@@ -48,7 +48,7 @@ export const noticeboardStore = {
     title: string;
     body: string;
     place: string;
-    municipality?: string;
+    municipality: string;
   }): NoticeboardPost {
     const post: NoticeboardPost = {
       id: `n-${Date.now()}-${seq++}`,
@@ -56,7 +56,7 @@ export const noticeboardStore = {
       title: input.title.trim(),
       body: input.body.trim(),
       place: input.place.trim(),
-      municipality: (input.municipality ?? '').trim(),
+      municipality: input.municipality.trim(),
       authorProfileId: profileRepository.currentUserId,
       createdAt: new Date().toISOString(),
     };

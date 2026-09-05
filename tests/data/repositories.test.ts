@@ -9,8 +9,10 @@ describe('municipalities filter', () => {
   });
 
   it('restricts results to the given kommuner', () => {
+    const all = repositories.listings.list();
     const scoped = repositories.listings.list({ municipalities: ['Gjøvik'] });
     expect(scoped.length).toBeGreaterThan(0);
+    expect(scoped.length).toBeLessThan(all.length);
     expect(scoped.every((l) => l.location.municipality === 'Gjøvik')).toBe(true);
   });
 

@@ -34,6 +34,9 @@ export const homeCategories: Category[] = [
 ];
 
 const lillehammer = { municipality: 'Lillehammer', place: 'Lillehammer' };
+const oyer = { municipality: 'Øyer', place: 'Øyer' };
+const gausdal = { municipality: 'Gausdal', place: 'Follebu' };
+const ringsaker = { municipality: 'Ringsaker', place: 'Brumunddal' };
 
 export const profiles: Record<string, PublicProfile> = {
   mb: {
@@ -203,7 +206,7 @@ export const listings: Listing[] = [
     category: bySlug('renhold'),
     priceMode: 'BUDGET',
     price: nok(900),
-    location: { ...lillehammer, distanceKm: 3.4 },
+    location: { ...oyer, distanceKm: 2.8 },
     images: [img('i5', cleaning)],
     owner: profiles.emma,
     createdAt: '2026-08-24T08:15:00Z',
@@ -224,7 +227,7 @@ export const listings: Listing[] = [
     category: bySlug('montering'),
     priceMode: 'FROM',
     price: nok(700),
-    location: { ...lillehammer, distanceKm: 0.9 },
+    location: { ...gausdal, distanceKm: 0.9 },
     images: [img('i6', wardrobe)],
     owner: profiles.emma,
     createdAt: '2026-08-23T17:45:00Z',
@@ -290,7 +293,7 @@ export const listings: Listing[] = [
     title: 'Fast eller enkeltvis rengjøring',
     category: bySlug('renhold'),
     priceMode: 'BY_AGREEMENT',
-    location: { ...lillehammer, distanceKm: 4.1 },
+    location: { ...ringsaker, distanceKm: 4.1 },
     images: [img('i8', cleaning)],
     owner: profiles.emma,
     createdAt: '2026-08-22T11:20:00Z',
