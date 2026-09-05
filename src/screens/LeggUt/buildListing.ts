@@ -3,8 +3,13 @@ import { nok } from '@/domain/price';
 import { categoryBySlug } from '@/domain/categories';
 import { formatFriendlyDate } from '@/lib/calendar';
 import { CATEGORY_INTAKE } from '@/domain/categoryIntake';
+import { resolveKommune } from '@/data/kommuner';
 
 const catBySlug = categoryBySlug;
+
+/** Kommune for a listing: explicit field, else resolved from poststed, else the raw place. */
+const kommuneFor = (form: { municipality?: string; place: string }) =>
+  (form.municipality && form.municipality.trim()) || resolveKommune(form.place) || form.place.trim();
 
 // The owner is assigned server-side from the auth session on createListing;
 // this placeholder only satisfies the local `Listing` shape for the preview.
@@ -24,6 +29,7 @@ export type TaskForm = {
   description: string;
   images: string[];
   place: string;
+  municipality: string;
   area: string;
   dateMode: 'ASAP' | 'FLEXIBLE' | 'PICK';
   date: Date | null;
@@ -52,6 +58,7 @@ export type OfferForm = {
   experience: string;
   experienceText: string;
   place: string;
+  municipality: string;
   maxDistanceKm: number;
   days: string[];
   timeOfDay: string[];
@@ -102,7 +109,7 @@ export function buildTaskListing(form: TaskForm): Listing {
     priceMode: form.isDugnad ? 'BY_AGREEMENT' : form.priceMode === 'BUDGET' ? 'BUDGET' : 'BY_AGREEMENT',
     price: form.isDugnad || form.priceMode !== 'BUDGET' ? undefined : priceFrom('BUDGET', form.amountKr),
     location: {
-      municipality: form.place.trim(),
+      municipality: kommuneFor(form),
       place: form.place.trim(),
       distanceKm: 0,
     },
@@ -146,7 +153,7 @@ export function buildOfferListing(form: OfferForm): Listing {
     priceMode: form.priceMode === 'FROM' ? 'FROM' : 'BY_AGREEMENT',
     price: form.priceMode === 'FROM' ? priceFrom('FROM', form.amountKr) : undefined,
     location: {
-      municipality: form.place.trim(),
+      municipality: kommuneFor(form),
       place: form.place.trim(),
       distanceKm: 0,
     },

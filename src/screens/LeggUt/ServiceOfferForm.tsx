@@ -6,7 +6,9 @@ import nb from '@/i18n/nb';
 import { CATEGORIES as categories } from '@/domain/categories';
 import { draftStore } from '@/data/draftStore';
 import { safePush } from '@/lib/nav';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Wizard, type WizardStep } from '@/components/Wizard';
+import { KommunePicker } from '@/components/KommunePicker';
 import { TextField } from '@/components/ui/TextField';
 import { SelectField } from '@/components/ui/SelectField';
 import { TimeField } from '@/components/ui/TimeField';
@@ -33,6 +35,7 @@ const EMPTY: OfferForm = {
   experience: '',
   experienceText: '',
   place: 'Lillehammer',
+  municipality: '',
   maxDistanceKm: 15,
   days: ['Man', 'Ons', 'Fre'],
   timeOfDay: [],
@@ -62,7 +65,8 @@ const EXPERIENCE = ['Under 1 år', '1 års erfaring', '2 års erfaring', '3–5 
 
 export function ServiceOfferForm() {
   const router = useRouter();
-  const [form, setForm] = useState<OfferForm>(EMPTY);
+  const me = useCurrentUser();
+  const [form, setForm] = useState<OfferForm>(() => ({ ...EMPTY, municipality: me.municipality ?? '' }));
   const set = <K extends keyof OfferForm>(k: K, v: OfferForm[K]) => setForm((f) => ({ ...f, [k]: v }));
   const toggleIn = (key: 'services' | 'days' | 'timeOfDay', v: string) =>
     set(key, form[key].includes(v) ? form[key].filter((x) => x !== v) : [...form[key], v]);
@@ -177,6 +181,9 @@ export function ServiceOfferForm() {
             options={['Lillehammer', 'Hamar', 'Gjøvik', 'Elverum', 'Otta'].map((v) => ({ value: v, label: v }))}
             onChange={(v) => set('place', v)}
           />
+          <FieldGroup title={nb.location.pickKommune}>
+            <KommunePicker value={form.municipality} onChange={(k) => set('municipality', k)} />
+          </FieldGroup>
           <FieldGroup title={nb.leggUt.travelDistance} hint={nb.leggUt.areaApproxNote}>
             <DistanceSlider label={nb.leggUt.travelDistance} value={form.maxDistanceKm} onChange={(v) => set('maxDistanceKm', v)} />
           </FieldGroup>

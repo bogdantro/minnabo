@@ -12,6 +12,7 @@ const TASK = {
   description: 'Innkjørsel og trapp',
   images: [] as string[],
   place: 'Hamar',
+  municipality: 'Hamar',
   area: '',
   dateMode: 'ASAP' as const,
   date: null,
@@ -39,6 +40,7 @@ const OFFER = {
   experience: '3 års erfaring',
   experienceText: '',
   place: 'Hamar',
+  municipality: 'Hamar',
   maxDistanceKm: 10,
   days: ['Man', 'Tir'],
   timeOfDay: ['Morgen'],
@@ -98,6 +100,17 @@ test('buildOfferListing keeps type explicit and no price when by agreement', () 
   expect(l.price).toBeUndefined();
   expect(l.offer?.services).toEqual(['Snømåking']);
   expect(l.offer?.maxDistanceKm).toBe(10);
+});
+
+test('stores the kommune, not the poststed, as municipality', () => {
+  const l = buildTaskListing({ ...TASK, place: 'Brumunddal', municipality: 'Ringsaker' });
+  expect(l.location.municipality).toBe('Ringsaker');
+  expect(l.location.place).toBe('Brumunddal');
+});
+
+test('falls back to resolveKommune when municipality is blank', () => {
+  const l = buildTaskListing({ ...TASK, place: 'Moelv', municipality: '' });
+  expect(l.location.municipality).toBe('Ringsaker');
 });
 
 test('the task wizard blocks empty step 1 and reaches the preview', async () => {

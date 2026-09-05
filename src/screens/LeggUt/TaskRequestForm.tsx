@@ -10,7 +10,9 @@ import { draftStore } from '@/data/draftStore';
 import { haptics } from '@/lib/haptics';
 import { outdoorWarningFor } from '@/lib/weather';
 import { safePush } from '@/lib/nav';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Wizard, type WizardStep } from '@/components/Wizard';
+import { KommunePicker } from '@/components/KommunePicker';
 import { TextField } from '@/components/ui/TextField';
 import { SelectField } from '@/components/ui/SelectField';
 import { DateField } from '@/components/ui/DateField';
@@ -33,6 +35,7 @@ const EMPTY: TaskForm = {
   description: '',
   images: [],
   place: 'Lillehammer',
+  municipality: '',
   area: '',
   dateMode: 'ASAP',
   date: null,
@@ -56,7 +59,8 @@ const DURATIONS = ['Under 1 time', 'Omtrent 1–2 timer', 'Omtrent 2–4 timer',
 
 export function TaskRequestForm() {
   const router = useRouter();
-  const [form, setForm] = useState<TaskForm>(EMPTY);
+  const me = useCurrentUser();
+  const [form, setForm] = useState<TaskForm>(() => ({ ...EMPTY, municipality: me.municipality ?? '' }));
   const set = <K extends keyof TaskForm>(k: K, v: TaskForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const applyTemplate = (id: string) => {
@@ -183,6 +187,7 @@ export function TaskRequestForm() {
       render: () => (
         <>
           <FieldGroup title={nb.leggUt.placeLabel}>
+            <KommunePicker value={form.municipality} onChange={(k) => set('municipality', k)} />
             <TextField label={nb.leggUt.placeLabel} hideLabel value={form.place} onChangeText={(t) => set('place', t)} />
             <TextField
               label={nb.leggUt.areaLabel}
