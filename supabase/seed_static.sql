@@ -17,14 +17,14 @@ insert into categories (slug, label, icon) values
 on conflict (slug) do update set label = excluded.label, icon = excluded.icon;
 
 -- partners (mirrors src/data/seedCommunity.ts `partners`)
-insert into partners (id, name, blurb, url) values
-  ('a1000000-0000-0000-0000-000000000001','Innlandet Sparebank','Støtter lokalt initiativ','https://example.no'),
-  ('a1000000-0000-0000-0000-000000000002','Fjellbygg AS','Bygg og vedlikehold i hele Innlandet','https://example.no'),
-  ('a1000000-0000-0000-0000-000000000003','Mjøsa Elektro','Autorisert elektriker','https://example.no'),
-  ('a1000000-0000-0000-0000-000000000004','Gudbrandsdal Hage','Planteskole og hagehjelp','https://example.no'),
-  ('a1000000-0000-0000-0000-000000000005','Toten Transport','Frakt og flytting','https://example.no'),
-  ('a1000000-0000-0000-0000-000000000006','Hedmark Rør','Rørlegger med lang erfaring','https://example.no')
-on conflict (id) do update set name = excluded.name, blurb = excluded.blurb;
+insert into partners (id, name, blurb, url, municipality) values
+  ('a1000000-0000-0000-0000-000000000001','Innlandet Sparebank','Støtter lokalt initiativ','https://example.no','Hamar'),
+  ('a1000000-0000-0000-0000-000000000002','Fjellbygg AS','Bygg og vedlikehold i hele Innlandet','https://example.no','Lillehammer'),
+  ('a1000000-0000-0000-0000-000000000003','Mjøsa Elektro','Autorisert elektriker','https://example.no','Gjøvik'),
+  ('a1000000-0000-0000-0000-000000000004','Gudbrandsdal Hage','Planteskole og hagehjelp','https://example.no','Sel'),
+  ('a1000000-0000-0000-0000-000000000005','Toten Transport','Frakt og flytting','https://example.no','Vestre Toten'),
+  ('a1000000-0000-0000-0000-000000000006','Hedmark Rør','Rørlegger med lang erfaring','https://example.no','Elverum')
+on conflict (id) do update set name = excluded.name, blurb = excluded.blurb, municipality = excluded.municipality;
 
 insert into partner_placements (id, partner_id, surface, headline, active) values
   ('a2000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','fellesskap','Innlandet Sparebank – hovedpartner', true),

@@ -2,6 +2,7 @@ import {
   toAgreement,
   toListing,
   toMessage,
+  toNoticeboardPost,
   toNotification,
   toProfile,
   toProposal,
@@ -140,6 +141,20 @@ test('toMessage maps kind + attachment', () => {
     attachmentUrl: 'https://img/a.jpg',
     delivery: 'DELIVERED',
   });
+});
+
+it('maps municipality onto a noticeboard post', () => {
+  const post = toNoticeboardPost({
+    id: 'n1',
+    kind: 'GENERAL',
+    title: 't',
+    body: 'b',
+    author_id: 'a',
+    place: 'Brumunddal',
+    municipality: 'Ringsaker',
+    created_at: '2026-09-05T00:00:00Z',
+  });
+  expect(post.municipality).toBe('Ringsaker');
 });
 
 test('toAgreement + toReview + toNotification', () => {

@@ -94,6 +94,9 @@ export class SupabaseApiClient implements ApiClient {
     if (filter?.query?.trim()) {
       q = q.textSearch('search', filter.query.trim(), { type: 'websearch', config: 'simple' });
     }
+    if (filter?.municipalities && filter.municipalities.length > 0) {
+      q = q.in('municipality', filter.municipalities);
+    }
     if (sort === 'PRICE') q = q.order('price_amount_minor', { ascending: true, nullsFirst: false });
     else q = q.order('created_at', { ascending: false });
 
@@ -507,10 +510,8 @@ export class SupabaseApiClient implements ApiClient {
     const row: Record<string, unknown> = {};
     if (patch.displayName !== undefined) row.display_name = patch.displayName;
     if (patch.presentation !== undefined) row.presentation = patch.presentation;
-    if (patch.place !== undefined) {
-      row.place = patch.place;
-      row.municipality = patch.place;
-    }
+    if (patch.place !== undefined) row.place = patch.place;
+    if (patch.municipality !== undefined) row.municipality = patch.municipality;
     if (patch.avatarPath !== undefined) row.avatar_path = patch.avatarPath;
     if (patch.maxDistanceKm !== undefined) row.max_distance_km = patch.maxDistanceKm;
     if (patch.paused !== undefined) row.paused = patch.paused;
@@ -678,6 +679,7 @@ export class SupabaseApiClient implements ApiClient {
     title: string;
     body: string;
     place: string;
+    municipality: string;
   }): Promise<NoticeboardPost> {
     const me = await myId();
     const { data, error } = await supabase
@@ -688,6 +690,7 @@ export class SupabaseApiClient implements ApiClient {
         title: input.title,
         body: input.body,
         place: input.place,
+        municipality: input.municipality,
       })
       .select('*')
       .single();

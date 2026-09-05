@@ -312,7 +312,7 @@ export type NoticeRow = {
   body: string;
   author_id: string;
   place: string;
-  municipality?: string | null;
+  municipality: string;
   created_at: string;
 };
 
@@ -324,7 +324,7 @@ export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
     body: row.body,
     authorProfileId: row.author_id,
     place: row.place,
-    municipality: row.municipality ?? '',
+    municipality: row.municipality,
     createdAt: row.created_at,
   };
 }
