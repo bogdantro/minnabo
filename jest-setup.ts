@@ -231,6 +231,14 @@ jest.mock('expo-image-picker', () => ({
     .mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///lib.jpg', mimeType: 'image/jpeg', fileSize: 1000 }] }),
 }));
 
+jest.mock('expo-location', () => ({
+  Accuracy: { Low: 1, Lowest: 0, Balanced: 3 },
+  getForegroundPermissionsAsync: jest.fn().mockResolvedValue({ granted: true, canAskAgain: true }),
+  requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  getCurrentPositionAsync: jest.fn().mockResolvedValue({ coords: { latitude: 61.115, longitude: 10.466 } }),
+  reverseGeocodeAsync: jest.fn().mockResolvedValue([{ subregion: 'Lillehammer', city: 'Lillehammer', region: 'Innlandet' }]),
+}));
+
 jest.mock('expo-image-manipulator', () => ({
   manipulateAsync: jest.fn().mockResolvedValue({ uri: 'file:///out.jpg' }),
   SaveFormat: { JPEG: 'jpeg' },

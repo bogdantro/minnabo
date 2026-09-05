@@ -45,6 +45,14 @@
           "photosPermission": "MinNabo trenger tilgang til bildene dine for å legge ved bilder i oppdrag og samtaler.",
           "cameraPermission": "MinNabo trenger tilgang til kameraet for å ta bilder til oppdrag og samtaler."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "MinNabo bruker posisjonen din én gang for å finne kommunen din, slik at du ser oppdrag og naboer i nærheten.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
       ]
     ]
   }
