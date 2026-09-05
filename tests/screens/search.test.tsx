@@ -17,6 +17,14 @@ test('typing a query shows matches of both listing types', async () => {
   });
 });
 
+test('results are scoped to the user kommune (Lillehammer)', async () => {
+  await renderWithProviders(<SearchScreen />);
+  fireEvent.changeText(screen.getByPlaceholderText('Søk etter småjobber'), 'rengjøring');
+  // "Fast eller enkeltvis rengjøring" is a Ringsaker offer — out of kommune
+  await waitFor(() => expect(screen.getByText(/Fant ingen treff/)).toBeTruthy());
+  expect(screen.queryByText('Fast eller enkeltvis rengjøring')).toBeNull();
+});
+
 test('the type toggle narrows results to offers', async () => {
   await renderWithProviders(<SearchScreen initialQuery="plen" />);
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());

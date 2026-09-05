@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useListings, useMyListings } from '@/api/queries';
+import { useLocationScope } from '@/lib/locationScope';
 import { useDismissedLeads } from '@/lib/dismissedLeads';
 import { safePush } from '@/lib/nav';
 import { PageHeader } from '@/components/TopBar';
@@ -15,8 +16,9 @@ import { ListingListSkeleton } from '@/components/ui/Skeleton';
 import { ListingRowCard } from '@/components/ListingRowCard';
 
 export function LeadBoardScreen() {
+  const { municipalities } = useLocationScope();
   const myOffers = useMyListings('SERVICE_OFFER');
-  const tasks = useListings({ type: 'TASK_REQUEST' }, 'NEWEST');
+  const tasks = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
   const { dismissed, dismiss } = useDismissedLeads();
 
   const myCategories = useMemo(

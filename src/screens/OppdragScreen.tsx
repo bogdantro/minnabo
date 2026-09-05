@@ -5,6 +5,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { HOME_CATEGORIES as homeCategories } from '@/domain/categories';
 import { useListings } from '@/api/queries';
+import { useLocationScope } from '@/lib/locationScope';
 import { usePresence } from '@/api/realtime';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
@@ -42,9 +43,13 @@ export function OppdragScreen() {
   const me = useCurrentUser();
   const online = usePresence();
   const [activeSlug, setActiveSlug] = useState('alle');
+  const { municipality, municipalities } = useLocationScope();
 
-  const offers = useListings({ categorySlug: activeSlug, type: 'SERVICE_OFFER' });
-  const tasks = useListings({ categorySlug: activeSlug, type: 'TASK_REQUEST' });
+  const offers = useListings({ categorySlug: activeSlug, type: 'SERVICE_OFFER', municipalities });
+  const tasks = useListings({ categorySlug: activeSlug, type: 'TASK_REQUEST', municipalities });
+
+  const emptyText =
+    municipalities.length > 0 ? nb.location.emptyListings(municipality ?? '') : undefined;
 
   const offerItems = (offers.data ?? []).slice(0, PREVIEW);
   const taskItems = (tasks.data ?? []).slice(0, PREVIEW);
@@ -112,6 +117,7 @@ export function OppdragScreen() {
           title={nb.home.offerSectionTitle}
           subtitle={nb.home.offerSectionSubtitle}
           query={offers}
+          emptyText={emptyText}
           onSeeAll={() => safePush('/tilbydere')}
         >
           {activeProviders.length > 0 ? (
@@ -144,6 +150,7 @@ export function OppdragScreen() {
           title={nb.home.taskSectionTitle}
           subtitle={nb.home.taskSectionSubtitle}
           query={tasks}
+          emptyText={emptyText}
           onSeeAll={() => safePush('/oppdrag-liste')}
         >
           <View style={styles.list}>
@@ -186,6 +193,7 @@ function Section({
   title,
   subtitle,
   query,
+  emptyText,
   onSeeAll,
   children,
 }: {
@@ -194,6 +202,7 @@ function Section({
   title: string;
   subtitle: string;
   query: ReturnType<typeof useListings>;
+  emptyText?: string;
   onSeeAll: () => void;
   children: React.ReactNode;
 }) {
@@ -213,6 +222,7 @@ function Section({
         <ScreenState
           status={query.isError ? 'error' : 'empty'}
           onRetry={() => query.refetch()}
+          emptyText={emptyText}
         />
       ) : (
         <>

@@ -6,6 +6,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { HOME_CATEGORIES as homeCategories } from '@/domain/categories';
 import { useListings } from '@/api/queries';
+import { useLocationScope } from '@/lib/locationScope';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { DetailTopBar } from '@/components/TopBar';
@@ -49,9 +50,10 @@ export function ListingListScreen({ type }: { type: ListingType }) {
 
   const [activeSlug, setActiveSlug] = useState('alle');
   const [sort, setSort] = useState<ListingSort>('DISTANCE');
+  const { municipality, municipalities } = useLocationScope();
 
   const { data, isLoading, isError, isFetching, refetch } = useListings(
-    { type, categorySlug: activeSlug },
+    { type, categorySlug: activeSlug, municipalities },
     sort,
   );
   const items = data ?? [];
@@ -160,7 +162,15 @@ export function ListingListScreen({ type }: { type: ListingType }) {
             ))}
           </View>
         ) : (
-          <ScreenState status={status} onRetry={() => refetch()} emptyText={nb.state.emptyListings} />
+          <ScreenState
+            status={status}
+            onRetry={() => refetch()}
+            emptyText={
+              municipalities.length > 0
+                ? nb.location.emptyListings(municipality ?? '')
+                : nb.state.emptyListings
+            }
+          />
         )}
       </ScrollView>
 

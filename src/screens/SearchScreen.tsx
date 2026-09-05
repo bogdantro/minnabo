@@ -7,6 +7,7 @@ import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
 import { CATEGORIES as categories, HOME_CATEGORIES as homeCategories } from '@/domain/categories';
 import { useAddSavedSearch, useListings } from '@/api/queries';
+import { useLocationScope } from '@/lib/locationScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRecentSearches } from '@/lib/recentSearches';
 import { toast } from '@/lib/toast';
@@ -49,6 +50,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
 
   const debouncedQuery = useDebouncedValue(query, 300);
   const recent = useRecentSearches();
+  const { municipalities } = useLocationScope();
 
   const filter: ListingFilter = useMemo(
     () => ({
@@ -57,8 +59,9 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
       categorySlug: categorySlug === 'alle' ? undefined : categorySlug,
       maxDistanceKm,
       verifiedOnly: verifiedOnly || undefined,
+      municipalities,
     }),
-    [debouncedQuery, type, categorySlug, maxDistanceKm, verifiedOnly],
+    [debouncedQuery, type, categorySlug, maxDistanceKm, verifiedOnly, municipalities],
   );
 
   const { data, isLoading, isError, isFetching, refetch } = useListings(filter, sort);
@@ -101,8 +104,10 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
   };
 
   const saveSearch = () => {
+    // The kommune scope is a live, hard scope — don't freeze it into the saved search.
+    const { municipalities: _drop, ...savedFilter } = filter;
     addSearch.mutate(
-      { name: searchName.trim() || query.trim() || 'Lagret søk', filter, sort },
+      { name: searchName.trim() || query.trim() || 'Lagret søk', filter: savedFilter, sort },
       {
         onSuccess: () => toast.success(nb.toast.savedSearch),
         onError: () => toast.error(nb.toast.genericError),

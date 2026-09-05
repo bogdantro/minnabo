@@ -20,6 +20,18 @@ test('the offer section shows providers and the task section shows requests', as
   expect(screen.getByText('Jeg kan klippe plenen din')).toBeTruthy();
 });
 
+test('only shows listings from the user kommune (Lillehammer)', async () => {
+  await renderWithProviders(<OppdragScreen />);
+  await seen('Klippe plen');
+  // a Lillehammer offer is still visible
+  expect(screen.getByText('Jeg kan klippe plenen din')).toBeTruthy();
+  // a Gjøvik-only seed offer must not appear for the Lillehammer demo user
+  await waitFor(
+    () => expect(screen.queryByText('Montering og småreparasjoner')).toBeNull(),
+    { timeout: 6000 },
+  );
+});
+
 test('filtering by Hage keeps only hage listings across both sections', async () => {
   await renderWithProviders(<OppdragScreen />);
   await seen('Klippe plen');
