@@ -21,6 +21,14 @@ test('Fellesskap shows partners, documented donations and no Røde Kors content'
   expect(screen.getByText(/skriftlig godkjenning/)).toBeTruthy();
 });
 
+test('Fellesskap shows MAIN partners always but hides out-of-kommune LOCAL partners', async () => {
+  await renderWithProviders(<FellesskapScreen />);
+  expect(await screen.findByText('Fjellbygg AS')).toBeTruthy(); // MAIN, always shown
+  // demo user is in Lillehammer; every LOCAL partner sits in another kommune
+  await waitFor(() => expect(screen.queryByText('Mjøsa Elektro')).toBeNull());
+  expect(screen.getByText(/Ingen lokale samarbeidspartnere i Lillehammer/)).toBeTruthy();
+});
+
 test('blocking a user hides their conversations', () => {
   const before = chatRepository.listConversations().length;
   safetyStore.toggleBlock('u-emma');

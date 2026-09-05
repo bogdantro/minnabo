@@ -11,6 +11,7 @@ import {
   useProfile,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useLocationScope } from '@/lib/locationScope';
 import { formatRelative } from '@/lib/datetime';
 import { toast } from '@/lib/toast';
 import { confirm } from '@/lib/confirm';
@@ -35,9 +36,14 @@ const KIND_ICON: Record<NoticeKind, IconName> = {
 
 export function NoticeboardScreen() {
   const me = useCurrentUser();
+  const { municipalities, municipality } = useLocationScope();
   const [filter, setFilter] = useState<NoticeKind | 'ALL'>('ALL');
   const { data: posts, isLoading, isError, refetch } = useNoticeboard(
     filter === 'ALL' ? undefined : filter,
+  );
+  const scoped = municipalities.length > 0;
+  const visiblePosts = (posts ?? []).filter(
+    (n) => !scoped || municipalities.includes(n.municipality),
   );
   const create = useCreateNoticeboardPost();
   const del = useDeleteNoticeboardPost();
@@ -54,7 +60,13 @@ export function NoticeboardScreen() {
       return;
     }
     create.mutate(
-      { kind, title, body, place: place.trim() || (me.place ?? ''), municipality: '' },
+      {
+        kind,
+        title,
+        body,
+        place: place.trim() || (me.place ?? ''),
+        municipality: me.municipality ?? '',
+      },
       {
         onSuccess: () => {
           haptics.success();
@@ -105,11 +117,14 @@ export function NoticeboardScreen() {
           <ScreenState status="loading" />
         ) : isError ? (
           <ScreenState status="error" onRetry={() => refetch()} />
-        ) : (posts ?? []).length === 0 ? (
-          <ScreenState status="empty" emptyText={nb.noticeboard.empty} />
+        ) : visiblePosts.length === 0 ? (
+          <ScreenState
+            status="empty"
+            emptyText={scoped ? nb.location.emptyNotices(municipality ?? '') : nb.noticeboard.empty}
+          />
         ) : (
           <View style={styles.list}>
-            {(posts ?? []).map((p) => (
+            {visiblePosts.map((p) => (
               <PostCard key={p.id} post={p} canDelete={p.authorProfileId === me.id} onDelete={() => remove(p.id)} />
             ))}
           </View>

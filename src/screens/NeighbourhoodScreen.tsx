@@ -5,7 +5,7 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useNeighbourhood } from '@/lib/neighbourhood';
 import { useListings, useNoticeboard } from '@/api/queries';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useLocationScope } from '@/lib/locationScope';
 import { toast } from '@/lib/toast';
 import { confirm } from '@/lib/confirm';
 import { safePush } from '@/lib/nav';
@@ -18,26 +18,29 @@ import { TextField } from '@/components/ui/TextField';
 import { ListingRowCard } from '@/components/ListingRowCard';
 
 export function NeighbourhoodScreen() {
-  const me = useCurrentUser();
   const { group, members, join, leave } = useNeighbourhood();
   const [name, setName] = useState('');
 
   const listings = useListings({}, 'NEWEST');
   const notices = useNoticeboard();
 
-  const local = useMemo(() => {
-    const place = (me.place ?? '').toLowerCase();
-    return (listings.data ?? [])
-      .filter((l) => !place || l.location.place.toLowerCase().includes(place))
-      .slice(0, 5);
-  }, [listings.data, me.place]);
+  const { municipalities } = useLocationScope();
 
-  const localNotices = useMemo(() => {
-    const place = (me.place ?? '').toLowerCase();
-    return (notices.data ?? [])
-      .filter((n) => !place || n.place.toLowerCase().includes(place))
-      .slice(0, 3);
-  }, [notices.data, me.place]);
+  const local = useMemo(
+    () =>
+      (listings.data ?? [])
+        .filter((l) => municipalities.length === 0 || municipalities.includes(l.location.municipality))
+        .slice(0, 5),
+    [listings.data, municipalities],
+  );
+
+  const localNotices = useMemo(
+    () =>
+      (notices.data ?? [])
+        .filter((n) => municipalities.length === 0 || municipalities.includes(n.municipality))
+        .slice(0, 3),
+    [notices.data, municipalities],
+  );
 
   const doLeave = async () => {
     if (await confirm({ title: nb.neighbourhood.leaveConfirm, destructive: true, confirmLabel: nb.neighbourhood.leave })) {

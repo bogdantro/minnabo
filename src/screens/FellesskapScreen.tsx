@@ -6,6 +6,7 @@ import { isEnabled } from '@/config/featureFlags';
 import { formatPrice } from '@/domain/price';
 import { nok } from '@/domain/price';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useLocationScope } from '@/lib/locationScope';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -17,8 +18,13 @@ import { StatusPill } from '@/components/ui/StatusPill';
 
 export function FellesskapScreen() {
   const me = useCurrentUser();
+  const { municipalities, municipality } = useLocationScope();
   const mainPartners = partners.filter((p) => p.tier === 'MAIN').slice(0, 2);
-  const localPartners = partners.filter((p) => p.tier === 'LOCAL');
+  const localPartners = partners.filter(
+    (p) =>
+      p.tier === 'LOCAL' &&
+      (municipalities.length === 0 || municipalities.includes(p.municipality)),
+  );
 
   return (
     <View style={styles.wrap}>
@@ -92,11 +98,17 @@ export function FellesskapScreen() {
 
         <View style={styles.section}>
           <SectionHeader title={nb.community.localSupporters} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
-            {localPartners.map((p) => (
-              <PartnerCard key={p.id} partner={p} />
-            ))}
-          </ScrollView>
+          {localPartners.length === 0 && municipality ? (
+            <AppText variant="body" color="navyMuted">
+              {nb.location.emptyPartners(municipality)}
+            </AppText>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
+              {localPartners.map((p) => (
+                <PartnerCard key={p.id} partner={p} />
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         <View style={styles.section}>

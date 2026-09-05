@@ -9,8 +9,10 @@ test('the noticeboard lists seeded posts and filters by kind', async () => {
   await renderWithProviders(<NoticeboardScreen />);
   await waitFor(() => expect(screen.getByText('Gis bort: barnesykkel 16"')).toBeTruthy());
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Lån et verktøy' }));
-  expect(await screen.findByText('Låner ut: slagbormaskin og stige')).toBeTruthy();
+  // Gjøvik's "Låner ut: slagbormaskin og stige" is now scoped out for the
+  // Lillehammer demo user, so filter to another kind that has a Lillehammer post.
+  await fireEvent.press(screen.getByRole('button', { name: 'Mistet / funnet' }));
+  expect(await screen.findByText('Funnet: nøkkelknippe ved Søndre park')).toBeTruthy();
   await waitFor(() =>
     expect(screen.queryByText('Gis bort: barnesykkel 16"')).toBeNull(),
   );
