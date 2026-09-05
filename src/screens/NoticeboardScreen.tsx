@@ -54,7 +54,7 @@ export function NoticeboardScreen() {
       return;
     }
     create.mutate(
-      { kind, title, body, place: place.trim() || (me.place ?? '') },
+      { kind, title, body, place: place.trim() || (me.place ?? ''), municipality: '' },
       {
         onSuccess: () => {
           haptics.success();

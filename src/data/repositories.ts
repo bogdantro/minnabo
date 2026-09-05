@@ -24,6 +24,10 @@ const matchesFilter = (listing: Listing, filter?: ListingFilter): boolean => {
     if (typeof d === 'number' && d > filter.maxDistanceKm) return false;
   }
 
+  if (filter.municipalities && filter.municipalities.length > 0) {
+    if (!filter.municipalities.includes(listing.location.municipality)) return false;
+  }
+
   if (filter.verifiedOnly) {
     const hasVerified = listing.owner.verifications.some((v) => v.verified);
     if (!hasVerified) return false;

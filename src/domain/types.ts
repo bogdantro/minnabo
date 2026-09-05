@@ -86,6 +86,7 @@ export type NoticeboardPost = {
   body: string;
   authorProfileId: string;
   place: string;
+  municipality: string;
   createdAt: string;
 };
 
@@ -349,6 +350,8 @@ export type ListingFilter = {
   type?: ListingType;
   categorySlug?: string;
   maxDistanceKm?: number;
+  /** kommune allow-list; undefined/empty = no location filtering */
+  municipalities?: string[];
   query?: string;
   verifiedOnly?: boolean;
 };

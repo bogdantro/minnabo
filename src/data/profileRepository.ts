@@ -62,6 +62,7 @@ export const profileRepository = {
 
   updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'homeNotes' | 'portfolio'>> & {
     place?: string;
+    municipality?: string;
     avatarPath?: string;
     maxDistanceKm?: number;
   }): PublicProfile {
@@ -73,11 +74,10 @@ export const profileRepository = {
     if (patch.homeNotes !== undefined) editableProfile.homeNotes = patch.homeNotes || undefined;
     if (patch.portfolio !== undefined) editableProfile.portfolio = patch.portfolio;
     if (patch.place !== undefined) {
-      editableProfile.location = {
-        ...editableProfile.location,
-        place: patch.place,
-        municipality: patch.place,
-      };
+      editableProfile.location = { ...editableProfile.location, place: patch.place };
+    }
+    if (patch.municipality !== undefined) {
+      editableProfile.location = { ...editableProfile.location, municipality: patch.municipality };
     }
     return clone(editableProfile);
   },

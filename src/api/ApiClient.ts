@@ -67,6 +67,7 @@ export type UpdateProfilePatch = {
   displayName?: string;
   presentation?: string;
   place?: string;
+  municipality?: string;
   avatarPath?: string;
   maxDistanceKm?: number;
   paused?: boolean;
@@ -169,6 +170,7 @@ export interface ApiClient {
     title: string;
     body: string;
     place: string;
+    municipality: string;
   }): Promise<NoticeboardPost>;
   deleteNoticeboardPost(id: string): Promise<void>;
 

@@ -9,6 +9,7 @@ const SEED: NoticeboardPost[] = [
     body: 'Rød barnesykkel i god stand. Hentes på Stampesletta.',
     authorProfileId: 'u-emma',
     place: 'Lillehammer',
+    municipality: '',
     createdAt: '2026-08-30T09:00:00Z',
   },
   {
@@ -18,6 +19,7 @@ const SEED: NoticeboardPost[] = [
     body: 'Har en kraftig slagbormaskin og en 3 m stige som naboer gjerne kan låne.',
     authorProfileId: 'u-martin',
     place: 'Gjøvik',
+    municipality: '',
     createdAt: '2026-08-29T16:30:00Z',
   },
   {
@@ -27,6 +29,7 @@ const SEED: NoticeboardPost[] = [
     body: 'Fant et knippe med tre nøkler og en rød brikke. Ta kontakt for å beskrive.',
     authorProfileId: 'u-jonas',
     place: 'Lillehammer',
+    municipality: '',
     createdAt: '2026-08-28T18:00:00Z',
   },
 ];
@@ -40,13 +43,20 @@ export const noticeboardStore = {
       .filter((p) => !kind || p.kind === kind)
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   },
-  create(input: { kind: NoticeKind; title: string; body: string; place: string }): NoticeboardPost {
+  create(input: {
+    kind: NoticeKind;
+    title: string;
+    body: string;
+    place: string;
+    municipality?: string;
+  }): NoticeboardPost {
     const post: NoticeboardPost = {
       id: `n-${Date.now()}-${seq++}`,
       kind: input.kind,
       title: input.title.trim(),
       body: input.body.trim(),
       place: input.place.trim(),
+      municipality: (input.municipality ?? '').trim(),
       authorProfileId: profileRepository.currentUserId,
       createdAt: new Date().toISOString(),
     };

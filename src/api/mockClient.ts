@@ -319,6 +319,7 @@ export class MockApiClient implements ApiClient {
     title: string;
     body: string;
     place: string;
+    municipality: string;
   }): Promise<NoticeboardPost> {
     await delay(150);
     return noticeboardStore.create(input);
