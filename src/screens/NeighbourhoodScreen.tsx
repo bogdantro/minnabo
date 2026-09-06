@@ -24,7 +24,7 @@ export function NeighbourhoodScreen() {
   const listings = useListings({}, 'NEWEST');
   const notices = useNoticeboard();
 
-  const { municipalities } = useLocationScope();
+  const { municipalities, ready } = useLocationScope();
 
   const local = useMemo(
     () =>
@@ -94,7 +94,7 @@ export function NeighbourhoodScreen() {
           <AppText variant="meta" weight="bold" color="navyMuted">
             {nb.neighbourhood.localTasks.toUpperCase()}
           </AppText>
-          {local.length === 0 ? (
+          {!ready ? null : local.length === 0 ? (
             <AppText variant="body" color="navyMuted">
               {nb.neighbourhood.noLocal}
             </AppText>
@@ -114,7 +114,7 @@ export function NeighbourhoodScreen() {
               {nb.common.seeAll}
             </AppText>
           </View>
-          {localNotices.map((n) => (
+          {(ready ? localNotices : []).map((n) => (
             <View key={n.id} style={styles.notice}>
               <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
                 {n.title}

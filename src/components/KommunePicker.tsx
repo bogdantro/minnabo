@@ -37,10 +37,10 @@ export function KommunePicker({
           style={styles.hint}
           onPress={() => onChange(resolved)}
           accessibilityRole="button"
-          accessibilityLabel={`${nb.location.detected} ${resolved}`}
+          accessibilityLabel={`${nb.location.postalResolved} ${resolved}`}
         >
           <AppText variant="meta" weight="bold" color="cyan">
-            {nb.location.detected} {resolved}
+            {nb.location.postalResolved} {resolved}
           </AppText>
         </Pressable>
       ) : null}

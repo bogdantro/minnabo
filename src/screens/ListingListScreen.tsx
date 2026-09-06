@@ -50,7 +50,7 @@ export function ListingListScreen({ type }: { type: ListingType }) {
 
   const [activeSlug, setActiveSlug] = useState('alle');
   const [sort, setSort] = useState<ListingSort>('DISTANCE');
-  const { municipality, municipalities } = useLocationScope();
+  const { municipality, municipalities, ready } = useLocationScope();
 
   const { data, isLoading, isError, isFetching, refetch } = useListings(
     { type, categorySlug: activeSlug, municipalities },
@@ -68,7 +68,7 @@ export function ListingListScreen({ type }: { type: ListingType }) {
   const recentProfiles = useMemo(() => dedupeOwners(recent).slice(0, 8), [recent]);
 
   let status: ScreenStatus = 'ready';
-  if (isLoading) status = 'loading';
+  if (isLoading || !ready) status = 'loading';
   else if (isError) status = 'error';
   else if (items.length === 0) status = 'empty';
 

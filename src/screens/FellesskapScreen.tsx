@@ -18,13 +18,17 @@ import { StatusPill } from '@/components/ui/StatusPill';
 
 export function FellesskapScreen() {
   const me = useCurrentUser();
-  const { municipalities, municipality } = useLocationScope();
+  const { municipalities, municipality, ready } = useLocationScope();
   const mainPartners = partners.filter((p) => p.tier === 'MAIN').slice(0, 2);
-  const localPartners = partners.filter(
-    (p) =>
-      p.tier === 'LOCAL' &&
-      (municipalities.length === 0 || municipalities.includes(p.municipality)),
-  );
+  // Don't surface LOCAL partners until the profile kommune has loaded — an
+  // unscoped list here would briefly show supporters from other kommuner.
+  const localPartners = !ready
+    ? []
+    : partners.filter(
+        (p) =>
+          p.tier === 'LOCAL' &&
+          (municipalities.length === 0 || municipalities.includes(p.municipality)),
+      );
 
   return (
     <View style={styles.wrap}>

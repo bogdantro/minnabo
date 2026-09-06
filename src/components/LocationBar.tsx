@@ -31,10 +31,13 @@ export function LocationBar() {
     try {
       const res = await detectKommune();
       if ('municipality' in res) {
-        update.mutate({
-          municipality: res.municipality,
-          place: res.place ?? res.municipality,
-        });
+        update.mutate(
+          {
+            municipality: res.municipality,
+            place: res.place ?? res.municipality,
+          },
+          { onError: () => setNote(nb.state.error) },
+        );
         setNote(`${nb.location.detected} ${res.municipality}`);
       } else {
         setNote(
@@ -54,7 +57,10 @@ export function LocationBar() {
         accessibilityRole="button"
         accessibilityLabel={nb.home.changeLocation}
         hitSlop={hitSlop}
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          setNote(null);
+          setOpen(true);
+        }}
         style={styles.bar}
       >
         <Icon name="map-pin" size={16} color="cyan" />

@@ -26,7 +26,9 @@ test('Fellesskap shows MAIN partners always but hides out-of-kommune LOCAL partn
   expect(await screen.findByText('Fjellbygg AS')).toBeTruthy(); // MAIN, always shown
   // demo user is in Lillehammer; every LOCAL partner sits in another kommune
   await waitFor(() => expect(screen.queryByText('Mjøsa Elektro')).toBeNull());
-  expect(screen.getByText(/Ingen lokale samarbeidspartnere i Lillehammer/)).toBeTruthy();
+  expect(
+    await screen.findByText(/Ingen lokale samarbeidspartnere i Lillehammer/),
+  ).toBeTruthy();
 });
 
 test('blocking a user hides their conversations', () => {

@@ -9,8 +9,9 @@ import { isPostalCode, lookupPostalCode } from './postalCodes';
 export const INNLANDET_KOMMUNER = [
   'Lillehammer', 'Øyer', 'Gausdal', 'Ringsaker', 'Hamar', 'Stange',
   'Gjøvik', 'Østre Toten', 'Vestre Toten', 'Nordre Land', 'Søndre Land',
-  'Elverum', 'Åmot', 'Trysil', 'Kongsvinger', 'Sør-Odal', 'Nord-Odal',
-  'Grue', 'Sel', 'Nord-Fron', 'Sør-Fron', 'Ringebu', 'Tynset', 'Tolga',
+  'Nord-Aurdal', 'Elverum', 'Åmot', 'Trysil', 'Kongsvinger', 'Sør-Odal',
+  'Nord-Odal', 'Eidskog', 'Grue', 'Åsnes', 'Sel', 'Nord-Fron', 'Sør-Fron',
+  'Ringebu', 'Tynset', 'Tolga',
 ] as const;
 
 /** poststed / tettsted / by → kommune, where the names differ. */
@@ -72,7 +73,7 @@ export function resolveKommune(input: string): string | undefined {
   if (PLACE_BY_NORM.has(n)) return PLACE_BY_NORM.get(n);
   if (isPostalCode(input)) {
     const poststed = lookupPostalCode(input);
-    if (poststed) return resolveKommune(poststed) ?? poststed;
+    if (poststed) return resolveKommune(poststed);
   }
   return undefined;
 }
@@ -84,7 +85,11 @@ export function expandKommuner(
   if (!base) return [];
   if (reach === 0) return [base];
   const known = KOMMUNE_NEIGHBOURS[base];
-  if (!known) return reach === 1 ? [base] : [...INNLANDET_KOMMUNER];
+  if (!known) {
+    return reach === 1
+      ? [base]
+      : [base, ...INNLANDET_KOMMUNER.filter((k) => k !== base)];
+  }
   const out = new Set<string>([base, ...known]);
   if (reach === 2) {
     for (const n of known) {

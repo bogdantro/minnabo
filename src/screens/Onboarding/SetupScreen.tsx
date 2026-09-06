@@ -34,6 +34,7 @@ export function SetupScreen() {
   const [locating, setLocating] = useState(false);
 
   const useMyLoc = async () => {
+    setError(null);
     setLocating(true);
     try {
       const res = await detectKommune();

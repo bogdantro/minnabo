@@ -324,7 +324,9 @@ export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
     body: row.body,
     authorProfileId: row.author_id,
     place: row.place,
-    municipality: row.municipality,
+    // Coalesce guards the deploy window before migration 0021 adds the column —
+    // `.select('*')` returns no `municipality` until then.
+    municipality: row.municipality ?? '',
     createdAt: row.created_at,
   };
 }

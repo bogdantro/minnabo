@@ -43,7 +43,7 @@ export function OppdragScreen() {
   const me = useCurrentUser();
   const online = usePresence();
   const [activeSlug, setActiveSlug] = useState('alle');
-  const { municipality, municipalities } = useLocationScope();
+  const { municipality, municipalities, ready } = useLocationScope();
 
   const offers = useListings({ categorySlug: activeSlug, type: 'SERVICE_OFFER', municipalities });
   const tasks = useListings({ categorySlug: activeSlug, type: 'TASK_REQUEST', municipalities });
@@ -117,6 +117,7 @@ export function OppdragScreen() {
           title={nb.home.offerSectionTitle}
           subtitle={nb.home.offerSectionSubtitle}
           query={offers}
+          loading={!ready}
           emptyText={emptyText}
           onSeeAll={() => safePush('/tilbydere')}
         >
@@ -150,6 +151,7 @@ export function OppdragScreen() {
           title={nb.home.taskSectionTitle}
           subtitle={nb.home.taskSectionSubtitle}
           query={tasks}
+          loading={!ready}
           emptyText={emptyText}
           onSeeAll={() => safePush('/oppdrag-liste')}
         >
@@ -193,6 +195,7 @@ function Section({
   title,
   subtitle,
   query,
+  loading = false,
   emptyText,
   onSeeAll,
   children,
@@ -202,6 +205,7 @@ function Section({
   title: string;
   subtitle: string;
   query: ReturnType<typeof useListings>;
+  loading?: boolean;
   emptyText?: string;
   onSeeAll: () => void;
   children: React.ReactNode;
@@ -216,7 +220,7 @@ function Section({
         subtitle={subtitle}
         onSeeAll={onSeeAll}
       />
-      {query.isLoading ? (
+      {loading || query.isLoading ? (
         <ListingListSkeleton count={3} />
       ) : query.isError || items.length === 0 ? (
         <ScreenState

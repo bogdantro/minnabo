@@ -50,7 +50,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
 
   const debouncedQuery = useDebouncedValue(query, 300);
   const recent = useRecentSearches();
-  const { municipalities } = useLocationScope();
+  const { municipalities, ready } = useLocationScope();
 
   const filter: ListingFilter = useMemo(
     () => ({
@@ -84,12 +84,16 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
     (verifiedOnly ? 1 : 0);
 
   let status: ScreenStatus = 'ready';
-  if (isLoading || typingBehind) status = 'loading';
+  if (isLoading || typingBehind || !ready) status = 'loading';
   else if (isError) status = 'error';
   else if (results.length === 0) status = 'empty';
 
   const showDiscovery =
-    debouncedQuery.trim().length === 0 && activeFilterCount === 0 && results.length === 0 && !isLoading;
+    ready &&
+    debouncedQuery.trim().length === 0 &&
+    activeFilterCount === 0 &&
+    results.length === 0 &&
+    !isLoading;
 
   const runRecent = (term: string) => {
     setQuery(term);

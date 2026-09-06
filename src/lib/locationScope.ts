@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '@/auth/session';
 import { useProfile } from '@/api/queries';
@@ -74,9 +74,13 @@ export function useLocationScope(): {
   }, []);
 
   const municipality = profile?.location.municipality || undefined;
+  const municipalities = useMemo(
+    () => expandKommuner(municipality, r),
+    [municipality, r],
+  );
   return {
     municipality,
-    municipalities: expandKommuner(municipality, r),
+    municipalities,
     reach: r,
     setReach: locationScope.setReach,
     ready: !!userId && !isLoading,

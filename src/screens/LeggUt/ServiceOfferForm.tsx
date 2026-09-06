@@ -66,7 +66,11 @@ const EXPERIENCE = ['Under 1 år', '1 års erfaring', '2 års erfaring', '3–5 
 export function ServiceOfferForm() {
   const router = useRouter();
   const me = useCurrentUser();
-  const [form, setForm] = useState<OfferForm>(() => ({ ...EMPTY, municipality: me.municipality ?? '' }));
+  const [form, setForm] = useState<OfferForm>(() => ({
+    ...EMPTY,
+    place: me.place ?? EMPTY.place,
+    municipality: me.municipality ?? '',
+  }));
   const set = <K extends keyof OfferForm>(k: K, v: OfferForm[K]) => setForm((f) => ({ ...f, [k]: v }));
   const toggleIn = (key: 'services' | 'days' | 'timeOfDay', v: string) =>
     set(key, form[key].includes(v) ? form[key].filter((x) => x !== v) : [...form[key], v]);

@@ -36,7 +36,7 @@ const KIND_ICON: Record<NoticeKind, IconName> = {
 
 export function NoticeboardScreen() {
   const me = useCurrentUser();
-  const { municipalities, municipality } = useLocationScope();
+  const { municipalities, municipality, ready } = useLocationScope();
   const [filter, setFilter] = useState<NoticeKind | 'ALL'>('ALL');
   const { data: posts, isLoading, isError, refetch } = useNoticeboard(
     filter === 'ALL' ? undefined : filter,
@@ -113,7 +113,7 @@ export function NoticeboardScreen() {
 
         <Button label={nb.noticeboard.newPost} iconRight="plus" onPress={() => setOpen(true)} />
 
-        {isLoading ? (
+        {isLoading || !ready ? (
           <ScreenState status="loading" />
         ) : isError ? (
           <ScreenState status="error" onRetry={() => refetch()} />

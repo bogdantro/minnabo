@@ -18,19 +18,19 @@ export async function detectKommune(): Promise<DetectResult> {
     return { municipality: 'Lillehammer', place: 'Lillehammer' };
   }
 
-  // Loaded lazily (after the ENV.useMocks branch) so mock/test runs never pull
-  // in the native module. `require` rather than `await import` — Jest's CJS VM
-  // rejects a dynamic import() callback, and Metro resolves this inline require
-  // the same way. The cast keeps the call sites type-checked.
-  const Location = require('expo-location') as typeof import('expo-location');
-
-  let granted = (await Location.getForegroundPermissionsAsync()).granted;
-  if (!granted) {
-    granted = (await Location.requestForegroundPermissionsAsync()).granted;
-  }
-  if (!granted) return { error: 'denied' };
-
   try {
+    // Loaded lazily (after the ENV.useMocks branch) so mock/test runs never pull
+    // in the native module. `require` rather than `await import` — Jest's CJS VM
+    // rejects a dynamic import() callback, and Metro resolves this inline require
+    // the same way. The cast keeps the call sites type-checked.
+    const Location = require('expo-location') as typeof import('expo-location');
+
+    let granted = (await Location.getForegroundPermissionsAsync()).granted;
+    if (!granted) {
+      granted = (await Location.requestForegroundPermissionsAsync()).granted;
+    }
+    if (!granted) return { error: 'denied' };
+
     const pos = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Low,
     });
@@ -46,7 +46,7 @@ export async function detectKommune(): Promise<DetectResult> {
     if (!municipality) return { error: 'unavailable' };
 
     const place = hit.city || hit.district || hit.subregion || undefined;
-    return { municipality, place: place ?? undefined };
+    return { municipality, place };
   } catch {
     return { error: 'unavailable' };
   }

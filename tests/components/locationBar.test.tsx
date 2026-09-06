@@ -1,4 +1,5 @@
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LocationBar } from '@/components/LocationBar';
 import { locationScope } from '@/lib/locationScope';
 import nb from '@/i18n/nb';
@@ -6,6 +7,10 @@ import { renderWithProviders } from '../testUtils';
 
 const render = renderWithProviders;
 
+beforeEach(async () => {
+  await AsyncStorage.clear();
+  locationScope._reset();
+});
 afterEach(() => locationScope._reset());
 
 describe('LocationBar', () => {

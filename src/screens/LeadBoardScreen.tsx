@@ -16,7 +16,7 @@ import { ListingListSkeleton } from '@/components/ui/Skeleton';
 import { ListingRowCard } from '@/components/ListingRowCard';
 
 export function LeadBoardScreen() {
-  const { municipalities } = useLocationScope();
+  const { municipalities, ready } = useLocationScope();
   const myOffers = useMyListings('SERVICE_OFFER');
   const tasks = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
   const { dismissed, dismiss } = useDismissedLeads();
@@ -43,7 +43,7 @@ export function LeadBoardScreen() {
       });
   }, [tasks.data, dismissed, myCategories]);
 
-  const loading = tasks.isLoading || myOffers.isLoading;
+  const loading = tasks.isLoading || myOffers.isLoading || !ready;
 
   return (
     <SafeAreaView style={styles.wrap} edges={['bottom']}>

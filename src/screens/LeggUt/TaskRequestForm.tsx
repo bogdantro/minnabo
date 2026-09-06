@@ -60,7 +60,11 @@ const DURATIONS = ['Under 1 time', 'Omtrent 1–2 timer', 'Omtrent 2–4 timer',
 export function TaskRequestForm() {
   const router = useRouter();
   const me = useCurrentUser();
-  const [form, setForm] = useState<TaskForm>(() => ({ ...EMPTY, municipality: me.municipality ?? '' }));
+  const [form, setForm] = useState<TaskForm>(() => ({
+    ...EMPTY,
+    place: me.place ?? EMPTY.place,
+    municipality: me.municipality ?? '',
+  }));
   const set = <K extends keyof TaskForm>(k: K, v: TaskForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const applyTemplate = (id: string) => {

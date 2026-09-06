@@ -45,8 +45,19 @@ describe('expandKommuner', () => {
   it('returns [] when base is undefined', () => {
     expect(expandKommuner(undefined, 2)).toEqual([]);
   });
-  it('unknown base: reach 1 is [base], reach 2 is region-wide', () => {
+  it('unknown base: reach 1 is [base], reach 2 is base + region-wide', () => {
     expect(expandKommuner('Atlantis', 1)).toEqual(['Atlantis']);
-    expect(expandKommuner('Atlantis', 2)).toEqual([...INNLANDET_KOMMUNER]);
+    const r2 = expandKommuner('Atlantis', 2);
+    // the base is always present in the result, even when it isn't canonical
+    expect(r2[0]).toBe('Atlantis');
+    expect(r2).toEqual(expect.arrayContaining([...INNLANDET_KOMMUNER]));
+    expect(new Set(r2).size).toBe(r2.length);
+  });
+
+  it('unknown base that IS canonical stays present exactly once at reach 2', () => {
+    const r2 = expandKommuner('Trysil', 2); // canonical, but no neighbours entry
+    expect(r2[0]).toBe('Trysil');
+    expect(r2.filter((k) => k === 'Trysil')).toHaveLength(1);
+    expect(r2).toEqual(expect.arrayContaining([...INNLANDET_KOMMUNER]));
   });
 });
