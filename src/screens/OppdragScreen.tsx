@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, View, Pressable, RefreshControl, StyleSheet } from 'react-native';
-import { tokens } from '@/theme';
+import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
 import { useListings } from '@/api/queries';
 import { useLocationScope } from '@/lib/locationScope';
@@ -86,47 +86,51 @@ export function OppdragScreen() {
           onSelect={onCategory}
         />
 
-        <View style={styles.sectionHead}>
-          <AppText variant="section" weight="extrabold">
-            {nb.home.nearYou}
-          </AppText>
-          <LocationBar />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={nb.common.seeAll}
-            onPress={() => safePush('/oppdrag-liste')}
-            style={styles.seeAll}
-          >
-            <AppText variant="meta" weight="bold" color="navyMuted">
-              {nb.common.seeAll}
+        <View style={styles.nearYou}>
+          <View style={styles.sectionHead}>
+            <AppText weight="extrabold" style={styles.sectionTitle}>
+              {nb.home.nearYou}
             </AppText>
-            <Icon name="chevron-right" size={14} color="navyMuted" />
-          </Pressable>
-        </View>
+            <LocationBar />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={nb.common.seeAll}
+              hitSlop={hitSlop}
+              onPress={() => safePush('/oppdrag-liste')}
+              style={styles.seeAll}
+            >
+              <AppText variant="body" color="navyMuted">
+                {nb.common.seeAll}
+              </AppText>
+              <Icon name="chevron-right" size={16} color="navyMuted" />
+            </Pressable>
+          </View>
 
-        {loading ? (
-          <ListingListSkeleton count={2} />
-        ) : jobs.isError || items.length === 0 ? (
-          <ScreenState
-            status={jobs.isError ? 'error' : 'empty'}
-            onRetry={() => jobs.refetch()}
-            emptyText={emptyText}
-          />
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.carousel}
-          >
-            {items.map((listing) => (
-              <JobCardTile
-                key={listing.id}
-                listing={listing}
-                onPress={() => safePush(`/oppdrag/${listing.id}`)}
-              />
-            ))}
-          </ScrollView>
-        )}
+          {loading ? (
+            <ListingListSkeleton count={2} />
+          ) : jobs.isError || items.length === 0 ? (
+            <ScreenState
+              status={jobs.isError ? 'error' : 'empty'}
+              onRetry={() => jobs.refetch()}
+              emptyText={emptyText}
+            />
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.carouselBleed}
+              contentContainerStyle={styles.carousel}
+            >
+              {items.map((listing) => (
+                <JobCardTile
+                  key={listing.id}
+                  listing={listing}
+                  onPress={() => safePush(`/oppdrag/${listing.id}`)}
+                />
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
         <CommunityTeaserCard onPress={() => safePush('/fellesskap')} />
       </ScrollView>
@@ -140,18 +144,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.xs,
     paddingBottom: tokens.space.xxxl,
-    gap: tokens.space.lg,
+    gap: tokens.space.xl,
   },
+  nearYou: { gap: tokens.space.md },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.space.sm,
-    marginTop: tokens.space.xs,
   },
-  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
+  sectionTitle: { fontSize: 23, lineHeight: 28, color: tokens.color.navy },
+  seeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 1,
+    marginLeft: 'auto',
+    flexShrink: 0,
+  },
+  carouselBleed: {
+    marginHorizontal: -tokens.space.xl,
+  },
   carousel: {
     gap: tokens.space.md,
-    paddingRight: tokens.space.xl,
+    paddingHorizontal: tokens.space.xl,
     paddingVertical: 2,
   },
 });

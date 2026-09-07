@@ -16,19 +16,19 @@ const color = {
   navy: '#0B2E4E',
   navyMuted: '#7A8794',
   /** primary action, active state, positive status (grass green) */
-  lime: '#39B54A',
-  limeGradientEnd: '#5AC66B',
+  lime: '#37B24A',
+  limeGradientEnd: '#57C56A',
   /** mint fill for pills, active category circles, positive tint */
-  limeTint: '#E9F5EB',
+  limeTint: '#E6F3E6',
   cyan: '#22A9E0',
   cyanTint: '#EAF7FD',
-  bg: '#FDFBFA',
+  bg: '#F6F8F7',
   surface: '#FFFFFF',
   white: '#FFFFFF',
-  line: '#ECEFF2',
+  line: '#EDF0F1',
   /** sage-mint gradient for the hero + community panels */
-  panelFrom: '#DFEDDD',
-  panelTo: '#F1F7EF',
+  panelFrom: '#DCEBD9',
+  panelTo: '#EFF5EC',
   bubbleIn: '#EDEFF2',
   bubbleOut: '#DBF1FB',
   star: '#F5B301',
@@ -53,8 +53,8 @@ const radius = {
   sm: 8,
   md: 12,
   tile: 16,
-  card: 20,
-  hero: 24,
+  card: 18,
+  hero: 28,
   pill: 999,
 } as const;
 

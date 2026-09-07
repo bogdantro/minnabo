@@ -86,17 +86,17 @@ export function JobCardTile({
 }
 
 const styles = StyleSheet.create({
-  tile: { width: 190, gap: 6 },
-  imageWrap: { height: 160, borderRadius: tokens.radius.card, overflow: 'hidden' },
+  tile: { width: 172, gap: 3 },
+  imageWrap: { height: 138, borderRadius: tokens.radius.card, overflow: 'hidden' },
   image: { width: '100%', height: '100%', backgroundColor: tokens.color.line },
   imageFallback: { alignItems: 'center', justifyContent: 'center' },
   heart: {
     position: 'absolute',
     top: tokens.space.sm,
     right: tokens.space.sm,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: tokens.color.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -108,14 +108,14 @@ const styles = StyleSheet.create({
     bottom: tokens.space.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.pill,
-    paddingVertical: 5,
+    paddingVertical: 4,
     paddingHorizontal: tokens.space.sm,
     ...tokens.shadow.card,
   },
-  title: { marginTop: 4 },
+  title: { marginTop: 7 },
   catPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -124,6 +124,6 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.pill,
     paddingVertical: 5,
     paddingHorizontal: tokens.space.md,
-    marginTop: 2,
+    marginTop: 5,
   },
 });

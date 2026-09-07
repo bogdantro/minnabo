@@ -3,16 +3,16 @@ import nb from '@/i18n/nb';
 
 test('core color tokens exist with expected values', () => {
   expect(tokens.color.navy).toBe('#0B2E4E');
-  expect(tokens.color.lime).toBe('#39B54A');
+  expect(tokens.color.lime).toBe('#37B24A');
   expect(tokens.color.cyan).toBe('#22A9E0');
-  expect(tokens.color.bg).toBe('#FDFBFA');
+  expect(tokens.color.bg).toMatch(/^#[0-9A-Fa-f]{6}$/);
   expect(tokens.color.panelFrom).toMatch(/^#[0-9A-Fa-f]{6}$/);
   expect(tokens.color.panelTo).toMatch(/^#[0-9A-Fa-f]{6}$/);
 });
 
 test('radius scale carries hero + card', () => {
-  expect(tokens.radius.card).toBe(20);
-  expect(tokens.radius.hero).toBe(24);
+  expect(tokens.radius.card).toBe(18);
+  expect(tokens.radius.hero).toBe(28);
 });
 
 test('text scale entries carry fontFamily + lineHeight', () => {

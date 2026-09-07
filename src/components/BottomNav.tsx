@@ -48,7 +48,7 @@ export function BottomNav({
         onPress={() => onNavigate(s.target)}
       >
         <View>
-          <Icon name={s.icon} size={22} color={isActive ? 'lime' : 'navy'} />
+          <Icon name={s.icon} size={23} color={isActive ? 'lime' : 'navy'} />
           {badge > 0 ? <View style={styles.badge} /> : null}
         </View>
         <AppText variant="meta" weight={isActive ? 'bold' : 'regular'} color={isActive ? 'lime' : 'navy'}>
@@ -72,7 +72,7 @@ export function BottomNav({
           onPress={onLeggUt}
         >
           <View style={styles.fab}>
-            <Icon name="plus" size={26} color="white" />
+            <Icon name="plus" size={27} color="white" />
           </View>
           <AppText
             variant="meta"
@@ -129,13 +129,13 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 3,
     backgroundColor: tokens.color.lime,
-    marginTop: 1,
+    marginTop: 3,
   },
   fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    marginTop: -16,
+    marginTop: -18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: tokens.color.lime,

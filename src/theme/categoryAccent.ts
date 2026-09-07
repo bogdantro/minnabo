@@ -12,9 +12,9 @@ export type CategoryAccent = {
   tint: string;
 };
 
-const GREEN: CategoryAccent = { color: '#39B54A', tint: '#E9F5EB' };
-const BLUE: CategoryAccent = { color: '#2E90C4', tint: '#E4F1F8' };
-const PURPLE: CategoryAccent = { color: '#8A7DD4', tint: '#EEEBF8' };
+const GREEN: CategoryAccent = { color: '#37B24A', tint: '#E6F3E6' };
+const BLUE: CategoryAccent = { color: '#2E90C4', tint: '#E3F0F7' };
+const PURPLE: CategoryAccent = { color: '#8A7DD4', tint: '#ECE9F7' };
 
 const BY_SLUG: Record<string, CategoryAccent> = {
   hage: GREEN,

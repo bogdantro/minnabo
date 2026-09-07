@@ -1,10 +1,10 @@
 import { categoryAccent } from '@/theme';
 
 test('known slugs get their hue, unknown falls back to green', () => {
-  expect(categoryAccent('hage').color).toBe('#39B54A');
+  expect(categoryAccent('hage').color).toBe('#37B24A');
   expect(categoryAccent('transport').color).toBe('#2E90C4');
   expect(categoryAccent('montering').color).toBe('#8A7DD4');
-  expect(categoryAccent('does-not-exist').color).toBe('#39B54A');
+  expect(categoryAccent('does-not-exist').color).toBe('#37B24A');
 });
 
 test('every accent carries a solid colour and a tint', () => {

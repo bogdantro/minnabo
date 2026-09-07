@@ -63,11 +63,11 @@ export function LocationBar() {
         }}
         style={styles.pill}
       >
-        <Icon name="map-pin" size={14} color="lime" />
-        <AppText variant="meta" weight="bold" color="navyMuted" numberOfLines={1}>
+        <Icon name="map-pin" size={15} color="navyMuted" />
+        <AppText variant="body" color="navyMuted" numberOfLines={1}>
           {municipality ?? nb.location.pickKommune}
         </AppText>
-        <Icon name="chevron-down" size={14} color="navyMuted" />
+        <Icon name="chevron-down" size={15} color="navyMuted" />
       </Pressable>
 
       <BottomSheet

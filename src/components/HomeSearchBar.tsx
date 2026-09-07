@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.space.md,
-    height: 56,
+    height: 58,
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.pill,
     paddingHorizontal: tokens.space.xl,

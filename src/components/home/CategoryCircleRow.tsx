@@ -36,7 +36,7 @@ export function CategoryCircleRow({
             style={styles.item}
           >
             <View style={[styles.circle, active && styles.circleActive]}>
-              <Icon name={c.icon} size={22} color={active ? 'lime' : 'navyMuted'} />
+              <Icon name={c.icon} size={24} color={active ? 'lime' : 'navyMuted'} />
             </View>
             <AppText
               variant="meta"
@@ -54,12 +54,12 @@ export function CategoryCircleRow({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: tokens.space.md, paddingVertical: tokens.space.xs, paddingRight: tokens.space.xl },
-  item: { alignItems: 'center', gap: 6, width: 64 },
+  row: { gap: tokens.space.lg, paddingVertical: tokens.space.xs, paddingRight: tokens.space.xl },
+  item: { alignItems: 'center', gap: 7, width: 66 },
   circle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     backgroundColor: tokens.color.surface,
     alignItems: 'center',
     justifyContent: 'center',

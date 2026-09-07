@@ -24,8 +24,8 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
       />
       <Image source={{ uri: HERO_IMAGE }} style={styles.photo} />
       <LinearGradient
-        colors={[tokens.color.panelFrom, 'rgba(223,237,221,0)']}
-        start={{ x: 0.35, y: 0 }}
+        colors={[tokens.color.panelFrom, 'rgba(220,235,217,0.35)', 'rgba(220,235,217,0)']}
+        start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.photoFade}
       />
@@ -56,45 +56,46 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: tokens.radius.hero,
     overflow: 'hidden',
-    minHeight: 232,
+    minHeight: 296,
   },
   photo: {
     position: 'absolute',
     right: 0,
     top: 0,
     bottom: 0,
-    width: '62%',
+    width: '56%',
   },
   photoFade: {
     position: 'absolute',
-    left: '30%',
+    left: '38%',
     top: 0,
     bottom: 0,
-    width: '25%',
+    width: '24%',
   },
   body: {
     padding: tokens.space.xl,
-    paddingRight: '42%',
-    gap: tokens.space.sm,
+    paddingRight: '44%',
+    gap: tokens.space.md,
     flex: 1,
     justifyContent: 'center',
   },
   title: {
-    fontSize: 30,
-    lineHeight: 35,
+    fontSize: 33,
+    lineHeight: 38,
     fontFamily: tokens.font.regular,
     color: tokens.color.navy,
+    letterSpacing: -0.3,
   },
-  subtitle: { marginBottom: tokens.space.sm },
+  subtitle: { marginBottom: tokens.space.xs },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.space.sm,
+    gap: tokens.space.md,
     alignSelf: 'flex-start',
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.pill,
-    paddingVertical: tokens.space.md,
-    paddingHorizontal: tokens.space.lg,
+    paddingVertical: 15,
+    paddingHorizontal: tokens.space.xl,
     ...tokens.shadow.card,
   },
 });

@@ -5,12 +5,14 @@ import nb from '@/i18n/nb';
 import { AppText } from '../ui/Text';
 import { Icon } from '../ui/Icon';
 
-/** Portraits — Unsplash licence (see assets/home/CREDITS.md). */
+/** Portraits + a faint street-map texture — Unsplash licence (assets/home/CREDITS.md). */
 const FACES = [
   'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=60',
   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=60',
   'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&q=60',
 ];
+const MAP_TEXTURE =
+  'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=500&q=40';
 
 /**
  * Front-page community teaser (newhomepage.png): a sage panel with scattered
@@ -26,10 +28,13 @@ export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
         style={StyleSheet.absoluteFill}
       />
 
+      <Image source={{ uri: MAP_TEXTURE }} style={styles.mapTexture} />
+
       <View style={styles.faces} pointerEvents="none">
-        <Image source={{ uri: FACES[0] }} style={[styles.face, { top: 46, right: 96 }]} />
-        <Image source={{ uri: FACES[1] }} style={[styles.face, { top: 14, right: 40 }]} />
-        <Image source={{ uri: FACES[2] }} style={[styles.face, { top: 92, right: 24 }]} />
+        <Image source={{ uri: FACES[0] }} style={[styles.face, { top: 44, right: 104 }]} />
+        <Image source={{ uri: FACES[1] }} style={[styles.face, { top: 10, right: 42 }]} />
+        <Image source={{ uri: FACES[2] }} style={[styles.face, { top: 96, right: 22 }]} />
+        <View style={styles.halo} />
         <View style={styles.here} />
       </View>
 
@@ -43,7 +48,7 @@ export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
       </View>
 
       <View style={styles.body}>
-        <AppText variant="section" weight="extrabold" style={styles.title}>
+        <AppText weight="extrabold" style={styles.title}>
           {nb.home.teaserTitle}
         </AppText>
         <AppText variant="meta" color="navyMuted">{nb.home.teaserBody}</AppText>
@@ -66,7 +71,15 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: tokens.radius.hero,
     overflow: 'hidden',
-    minHeight: 190,
+    minHeight: 222,
+  },
+  mapTexture: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '58%',
+    opacity: 0.14,
   },
   body: {
     padding: tokens.space.xl,
@@ -75,7 +88,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  title: { maxWidth: 180 },
+  title: { maxWidth: 170, fontSize: 22, lineHeight: 27, color: tokens.color.navy },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -91,16 +104,25 @@ const styles = StyleSheet.create({
   faces: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '52%' },
   face: {
     position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2.5,
     borderColor: tokens.color.surface,
+  },
+  halo: {
+    position: 'absolute',
+    top: 62,
+    right: 62,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(34,169,224,0.18)',
   },
   here: {
     position: 'absolute',
-    top: 70,
-    right: 70,
+    top: 71,
+    right: 71,
     width: 12,
     height: 12,
     borderRadius: 6,
