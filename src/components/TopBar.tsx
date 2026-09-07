@@ -56,7 +56,7 @@ function RightCluster({
         accessibilityLabel={nb.a11y.openProfile}
         onPress={onProfilePress}
       >
-        <Avatar uri={avatar.uri} initials={avatar.initials} size={38} />
+        <Avatar uri={avatar.uri} initials={avatar.initials} size={38} ring={false} />
       </Pressable>
     </View>
   );
@@ -156,13 +156,13 @@ const styles = StyleSheet.create({
   bell: { padding: 2 },
   badge: {
     position: 'absolute',
-    top: -3,
-    right: -4,
+    top: -2,
+    right: -2,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 3,
-    backgroundColor: tokens.color.cyan,
+    backgroundColor: tokens.color.alert,
     borderWidth: 1.5,
     borderColor: tokens.color.bg,
     alignItems: 'center',

@@ -6,6 +6,8 @@ import nb from '@/i18n/nb';
 import { renderWithProviders } from '../testUtils';
 
 const render = renderWithProviders;
+const openSheet = () =>
+  fireEvent.press(screen.getByLabelText(new RegExp(nb.home.changeLocation)));
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -13,45 +15,38 @@ beforeEach(async () => {
 });
 afterEach(() => locationScope._reset());
 
-describe('LocationBar', () => {
-  it('shows the profile kommune with the "kommune" suffix', async () => {
+describe('LocationBar (kommune pill)', () => {
+  it('shows the profile kommune on the pill', async () => {
     await render(<LocationBar />);
-    expect(await screen.findByText(/Lillehammer kommune/i)).toBeTruthy();
+    expect(await screen.findByText('Lillehammer')).toBeTruthy();
   });
 
   it('"Bruk posisjonen min" detects and shows the found kommune', async () => {
     await render(<LocationBar />);
-    await screen.findByText(/Lillehammer kommune/i);
+    await screen.findByText('Lillehammer');
 
-    await fireEvent.press(screen.getByLabelText(nb.home.changeLocation));
+    await openSheet();
     await fireEvent.press(screen.getByLabelText(nb.home.useMyLocation));
 
-    expect(
-      await screen.findByText(new RegExp(nb.location.detected)),
-    ).toBeTruthy();
+    expect(await screen.findByText(new RegExp(nb.location.detected))).toBeTruthy();
   });
 
-  it('picking a reach updates the visible reach label on the bar', async () => {
+  it('picking a wider reach in the sheet selects it', async () => {
     await render(<LocationBar />);
-    await screen.findByText(/Lillehammer kommune/i);
-    // bar starts on "own kommune only"
-    expect(screen.getByText(`· ${nb.location.reachOwn}`)).toBeTruthy();
+    await screen.findByText('Lillehammer');
 
-    await fireEvent.press(screen.getByLabelText(nb.home.changeLocation));
+    await openSheet();
     await fireEvent.press(
       screen.getByRole('button', { name: nb.location.reachNeighbours }),
     );
 
-    // the bar's secondary line now reflects the new reach
     await waitFor(() =>
       expect(
-        screen.getByText(`· ${nb.location.reachNeighbours}`),
-      ).toBeTruthy(),
+        screen.getByRole('button', { name: nb.location.reachNeighbours }).props
+          .accessibilityState,
+      ).toEqual({ selected: true }),
     );
-    // and the pressed pill is the selected one
-    expect(
-      screen.getByRole('button', { name: nb.location.reachNeighbours }).props
-        .accessibilityState,
-    ).toEqual({ selected: true });
+    // the pill's a11y label now reflects the wider reach
+    expect(screen.getAllByLabelText(/nabokommuner/).length).toBeGreaterThan(0);
   });
 });

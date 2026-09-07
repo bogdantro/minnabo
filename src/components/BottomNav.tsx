@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useUnreadConversationCount } from '@/api/queries';
@@ -50,17 +49,12 @@ export function BottomNav({
       >
         <View>
           <Icon name={s.icon} size={22} color={isActive ? 'lime' : 'navy'} />
-          {badge > 0 ? (
-            <View style={styles.badge}>
-              <AppText variant="meta" weight="bold" color="white" style={styles.badgeText}>
-                {badge > 9 ? '9+' : badge}
-              </AppText>
-            </View>
-          ) : null}
+          {badge > 0 ? <View style={styles.badge} /> : null}
         </View>
         <AppText variant="meta" weight={isActive ? 'bold' : 'regular'} color={isActive ? 'lime' : 'navy'}>
           {s.label}
         </AppText>
+        {isActive ? <View style={styles.activeDot} /> : null}
       </Pressable>
     );
   };
@@ -78,13 +72,7 @@ export function BottomNav({
           onPress={onLeggUt}
         >
           <View style={styles.fab}>
-            <LinearGradient
-              colors={[tokens.color.lime, tokens.color.limeGradientEnd]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <Icon name="plus" size={28} color="white" />
+            <Icon name="plus" size={26} color="white" />
           </View>
           <AppText
             variant="meta"
@@ -121,32 +109,36 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-around',
     backgroundColor: tokens.color.surface,
-    borderTopWidth: 1,
-    borderTopColor: tokens.color.line,
-    paddingTop: tokens.space.sm,
+    borderTopLeftRadius: tokens.radius.hero,
+    borderTopRightRadius: tokens.radius.hero,
+    paddingTop: tokens.space.md,
+    ...tokens.shadow.fab,
   },
   slot: { flex: 1, alignItems: 'center', gap: 3 },
   badge: {
     position: 'absolute',
-    top: -5,
-    right: -9,
-    minWidth: 15,
-    height: 15,
-    borderRadius: 8,
-    paddingHorizontal: 3,
-    backgroundColor: tokens.color.cyan,
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: -3,
+    right: -6,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: tokens.color.alert,
   },
-  badgeText: { fontSize: 9, lineHeight: 11 },
+  activeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: tokens.color.lime,
+    marginTop: 1,
+  },
   fab: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    marginTop: -22,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginTop: -16,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    backgroundColor: tokens.color.lime,
     borderWidth: 4,
     borderColor: tokens.color.surface,
     ...tokens.shadow.fab,

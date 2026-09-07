@@ -55,24 +55,19 @@ export function LocationBar() {
     <>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={nb.home.changeLocation}
+        accessibilityLabel={`${nb.home.changeLocation}. ${municipality ?? nb.location.pickKommune}, ${REACH_LABEL[reach]}`}
         hitSlop={hitSlop}
         onPress={() => {
           setNote(null);
           setOpen(true);
         }}
-        style={styles.bar}
+        style={styles.pill}
       >
-        <Icon name="map-pin" size={16} color="cyan" />
-        <AppText variant="body" weight="bold">
-          {municipality
-            ? `${municipality} ${nb.location.kommuneSuffix}`
-            : nb.location.pickKommune}
+        <Icon name="map-pin" size={14} color="lime" />
+        <AppText variant="meta" weight="bold" color="navyMuted" numberOfLines={1}>
+          {municipality ?? nb.location.pickKommune}
         </AppText>
-        <AppText variant="body" color="navyMuted">
-          {`· ${REACH_LABEL[reach]}`}
-        </AppText>
-        <Icon name="chevron-right" size={16} color="cyan" />
+        <Icon name="chevron-down" size={14} color="navyMuted" />
       </Pressable>
 
       <BottomSheet
@@ -117,7 +112,7 @@ export function LocationBar() {
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   sheet: { gap: tokens.space.lg, paddingBottom: tokens.space.lg },
   detect: {
     flexDirection: 'row',

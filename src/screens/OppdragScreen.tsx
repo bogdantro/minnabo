@@ -1,68 +1,55 @@
 import { useState } from 'react';
 import { ScrollView, View, Pressable, RefreshControl, StyleSheet } from 'react-native';
-import type { Listing, PublicProfile } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { HOME_CATEGORIES as homeCategories } from '@/domain/categories';
 import { useListings } from '@/api/queries';
 import { useLocationScope } from '@/lib/locationScope';
-import { usePresence } from '@/api/realtime';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
-import { ScreenTitle } from '@/components/ui/ScreenTitle';
-import { CategoryChip } from '@/components/ui/CategoryChip';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { ListingListSkeleton } from '@/components/ui/Skeleton';
-import type { IconName } from '@/components/ui/Icon';
-import { Button } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
 import { AppText } from '@/components/ui/Text';
-import { LocationBar } from '@/components/LocationBar';
+import { Icon } from '@/components/ui/Icon';
 import { HomeSearchBar } from '@/components/HomeSearchBar';
-import { RichSectionHeader } from '@/components/RichSectionHeader';
-import { ActiveUsersRow } from '@/components/ActiveUsersRow';
-import { ListingRowCard } from '@/components/ListingRowCard';
-import { HScrollFade } from '@/components/ui/HScrollFade';
+import { LocationBar } from '@/components/LocationBar';
+import { HeroCard } from '@/components/home/HeroCard';
+import { CategoryCircleRow, type CategoryCircle } from '@/components/home/CategoryCircleRow';
+import { JobCardTile } from '@/components/home/JobCardTile';
+import { CommunityTeaserCard } from '@/components/home/CommunityTeaserCard';
 
-const PREVIEW = 4;
+/** Circular category row on the front page (newhomepage.png). */
+const CATEGORY_CIRCLES: CategoryCircle[] = [
+  { slug: 'alle', label: 'Alle', icon: 'grid' },
+  { slug: 'hage', label: 'Hage', icon: 'feather' },
+  { slug: 'renhold', label: 'Renhold', icon: 'droplet' },
+  { slug: 'transport', label: 'Transport', icon: 'truck' },
+  { slug: 'montering', label: 'Montering', icon: 'tool' },
+  { slug: 'more', label: nb.home.moreCategories, icon: 'more-horizontal' },
+];
 
-const dedupeOwners = (listings: Listing[]): PublicProfile[] => {
-  const seen = new Set<string>();
-  const out: PublicProfile[] = [];
-  for (const l of listings) {
-    if (!seen.has(l.owner.id)) {
-      seen.add(l.owner.id);
-      out.push(l.owner);
-    }
-  }
-  return out;
-};
+const PREVIEW = 8;
 
 export function OppdragScreen() {
   const me = useCurrentUser();
-  const online = usePresence();
-  const [activeSlug, setActiveSlug] = useState('alle');
   const { municipality, municipalities, ready } = useLocationScope();
+  const [activeSlug, setActiveSlug] = useState('alle');
 
-  const offers = useListings({ categorySlug: activeSlug, type: 'SERVICE_OFFER', municipalities });
-  const tasks = useListings({ categorySlug: activeSlug, type: 'TASK_REQUEST', municipalities });
+  // One blended list — both task requests and service offers near you.
+  const jobs = useListings({ categorySlug: activeSlug, municipalities }, 'DISTANCE');
+  const items = (jobs.data ?? []).slice(0, PREVIEW);
+  const loading = jobs.isLoading || !ready;
+  const refreshing = jobs.isFetching && !jobs.isLoading;
 
   const emptyText =
-    municipalities.length > 0 ? nb.location.emptyListings(municipality ?? '') : undefined;
+    municipalities.length > 0 ? nb.location.emptyListings(municipality ?? '') : nb.state.emptyListings;
 
-  const offerItems = (offers.data ?? []).slice(0, PREVIEW);
-  const taskItems = (tasks.data ?? []).slice(0, PREVIEW);
-  const activeProviders = dedupeOwners(offers.data ?? []).slice(0, 8);
-
-  const { refetch: refetchOffers } = offers;
-  const { refetch: refetchTasks } = tasks;
-  // Show the pull spinner only for an actual pull, not the first load.
-  const refreshing =
-    (offers.isFetching && !offers.isLoading) || (tasks.isFetching && !tasks.isLoading);
-  const onRefresh = () => {
-    void refetchOffers();
-    void refetchTasks();
+  const onCategory = (slug: string) => {
+    if (slug === 'more') {
+      safePush('/sok');
+      return;
+    }
+    setActiveSlug(slug);
   };
 
   return (
@@ -80,166 +67,69 @@ export function OppdragScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={tokens.color.cyan}
-            colors={[tokens.color.cyan]}
+            onRefresh={() => jobs.refetch()}
+            tintColor={tokens.color.lime}
+            colors={[tokens.color.lime]}
           />
         }
       >
-        <ScreenTitle style={styles.title}>{nb.home.question}</ScreenTitle>
-        <LocationBar />
+        <HeroCard onPressCta={() => safePush('/legg-ut')} />
+
         <HomeSearchBar
           onPressSearch={() => safePush('/sok')}
           onPressFilter={() => safePush('/sok')}
         />
 
-        <HScrollFade>
+        <CategoryCircleRow
+          items={CATEGORY_CIRCLES}
+          activeSlug={activeSlug}
+          onSelect={onCategory}
+        />
+
+        <View style={styles.sectionHead}>
+          <AppText variant="section" weight="extrabold">
+            {nb.home.nearYou}
+          </AppText>
+          <LocationBar />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.common.seeAll}
+            onPress={() => safePush('/oppdrag-liste')}
+            style={styles.seeAll}
+          >
+            <AppText variant="meta" weight="bold" color="navyMuted">
+              {nb.common.seeAll}
+            </AppText>
+            <Icon name="chevron-right" size={14} color="navyMuted" />
+          </Pressable>
+        </View>
+
+        {loading ? (
+          <ListingListSkeleton count={2} />
+        ) : jobs.isError || items.length === 0 ? (
+          <ScreenState
+            status={jobs.isError ? 'error' : 'empty'}
+            onRetry={() => jobs.refetch()}
+            emptyText={emptyText}
+          />
+        ) : (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categories}
+            contentContainerStyle={styles.carousel}
           >
-            {homeCategories.map((c) => (
-              <CategoryChip
-                key={c.id}
-                label={c.label}
-                icon={c.icon as IconName}
-                active={activeSlug === c.slug}
-                onPress={() => setActiveSlug(c.slug)}
+            {items.map((listing) => (
+              <JobCardTile
+                key={listing.id}
+                listing={listing}
+                onPress={() => safePush(`/oppdrag/${listing.id}`)}
               />
             ))}
           </ScrollView>
-        </HScrollFade>
+        )}
 
-        <Section
-          icon="user"
-          iconColor="cyan"
-          title={nb.home.offerSectionTitle}
-          subtitle={nb.home.offerSectionSubtitle}
-          query={offers}
-          loading={!ready}
-          emptyText={emptyText}
-          onSeeAll={() => safePush('/tilbydere')}
-        >
-          {activeProviders.length > 0 ? (
-            <View style={styles.activeRow}>
-              <HScrollFade>
-                <ActiveUsersRow
-                  profiles={activeProviders}
-                  onlineIds={online}
-                  onPressUser={(id) => safePush(`/profil/${id}`)}
-                />
-              </HScrollFade>
-            </View>
-          ) : null}
-          <View style={styles.list}>
-            {offerItems.map((listing) => (
-              <ListingRowCard
-                key={listing.id}
-                listing={listing}
-                onPress={() => safePush(`/oppdrag/${listing.id}`)}
-              />
-            ))}
-          </View>
-        </Section>
-
-        <View style={styles.sectionGap} />
-
-        <Section
-          icon="clipboard"
-          iconColor="lime"
-          title={nb.home.taskSectionTitle}
-          subtitle={nb.home.taskSectionSubtitle}
-          query={tasks}
-          loading={!ready}
-          emptyText={emptyText}
-          onSeeAll={() => safePush('/oppdrag-liste')}
-        >
-          <View style={styles.list}>
-            {taskItems.map((listing) => (
-              <ListingRowCard
-                key={listing.id}
-                listing={listing}
-                onPress={() => safePush(`/oppdrag/${listing.id}`)}
-              />
-            ))}
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={nb.leadBoard.title}
-            onPress={() => safePush('/oppdrag-for-meg')}
-            style={styles.leadLink}
-          >
-            <Icon name="target" size={16} color="lime" />
-            <AppText variant="meta" weight="bold" style={styles.leadLinkText}>
-              {nb.leadBoard.title}
-            </AppText>
-            <Icon name="chevron-right" size={16} color="navyMuted" />
-          </Pressable>
-        </Section>
-
-        <View style={styles.footerNote}>
-          <Icon name="zap" size={14} color="cyan" />
-          <AppText variant="meta" color="navyMuted">
-            {nb.home.freshDaily}
-          </AppText>
-        </View>
+        <CommunityTeaserCard onPress={() => safePush('/fellesskap')} />
       </ScrollView>
-    </View>
-  );
-}
-
-function Section({
-  icon,
-  iconColor,
-  title,
-  subtitle,
-  query,
-  loading = false,
-  emptyText,
-  onSeeAll,
-  children,
-}: {
-  icon: 'user' | 'clipboard';
-  iconColor: 'lime' | 'cyan';
-  title: string;
-  subtitle: string;
-  query: ReturnType<typeof useListings>;
-  loading?: boolean;
-  emptyText?: string;
-  onSeeAll: () => void;
-  children: React.ReactNode;
-}) {
-  const items = query.data ?? [];
-  return (
-    <View style={styles.section}>
-      <RichSectionHeader
-        icon={icon}
-        iconColor={iconColor}
-        title={title}
-        subtitle={subtitle}
-        onSeeAll={onSeeAll}
-      />
-      {loading || query.isLoading ? (
-        <ListingListSkeleton count={3} />
-      ) : query.isError || items.length === 0 ? (
-        <ScreenState
-          status={query.isError ? 'error' : 'empty'}
-          onRetry={() => query.refetch()}
-          emptyText={emptyText}
-        />
-      ) : (
-        <>
-          {children}
-          {items.length > PREVIEW ? (
-            <Button
-              label={`${nb.common.seeAll} (${items.length})`}
-              variant="secondary"
-              onPress={onSeeAll}
-            />
-          ) : null}
-        </>
-      )}
     </View>
   );
 }
@@ -248,30 +138,20 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: tokens.color.bg },
   content: {
     paddingHorizontal: tokens.space.xl,
+    paddingTop: tokens.space.xs,
     paddingBottom: tokens.space.xxxl,
-    gap: tokens.space.md,
+    gap: tokens.space.lg,
   },
-  title: { paddingRight: 72 },
-  categories: { gap: tokens.space.sm, paddingVertical: tokens.space.xs },
-  sectionGap: { height: tokens.space.xxl },
-  section: { gap: tokens.space.md },
-  activeRow: {
-    marginHorizontal: -tokens.space.xl,
-    marginTop: tokens.space.xs,
-    marginBottom: tokens.space.sm,
-  },
-  list: { gap: tokens.space.md },
-  leadLink: {
+  sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.space.sm,
-    marginTop: tokens.space.sm,
-    padding: tokens.space.md,
-    borderRadius: tokens.radius.card,
-    borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    marginTop: tokens.space.xs,
   },
-  leadLinkText: { flex: 1 },
-  footerNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: tokens.space.sm },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
+  carousel: {
+    gap: tokens.space.md,
+    paddingRight: tokens.space.xl,
+    paddingVertical: 2,
+  },
 });

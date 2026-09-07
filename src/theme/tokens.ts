@@ -1,7 +1,8 @@
 /**
- * Design tokens derived from the 7 MinNabo mockups.
- * These are the single source of truth for colour, spacing and type.
- * Components must never hardcode hex values.
+ * Design tokens. Single source of truth for colour, spacing and type.
+ * The palette follows the 2026 home redesign (newhomepage.png): a fresh grass
+ * green as the primary action colour, soft sage-mint panels, and per-category
+ * accent colours (see `categoryAccent.ts`). Components must never hardcode hex.
  */
 
 const font = {
@@ -14,20 +15,27 @@ const font = {
 const color = {
   navy: '#0B2E4E',
   navyMuted: '#7A8794',
-  lime: '#8CC63F',
-  limeGradientEnd: '#A5D638',
-  limeTint: '#F4F9EC',
+  /** primary action, active state, positive status (grass green) */
+  lime: '#39B54A',
+  limeGradientEnd: '#5AC66B',
+  /** mint fill for pills, active category circles, positive tint */
+  limeTint: '#E9F5EB',
   cyan: '#22A9E0',
   cyanTint: '#EAF7FD',
   bg: '#FDFBFA',
   surface: '#FFFFFF',
   white: '#FFFFFF',
   line: '#ECEFF2',
+  /** sage-mint gradient for the hero + community panels */
+  panelFrom: '#DFEDDD',
+  panelTo: '#F1F7EF',
   bubbleIn: '#EDEFF2',
   bubbleOut: '#DBF1FB',
   star: '#F5B301',
   shieldGreen: '#3AAE5C',
   dangerText: '#C0392B',
+  /** unread / attention dot on the bell and inbox tab */
+  alert: '#FF3B30',
   overlay: 'rgba(11,46,78,0.55)',
 } as const;
 
@@ -45,7 +53,8 @@ const radius = {
   sm: 8,
   md: 12,
   tile: 16,
-  card: 18,
+  card: 20,
+  hero: 24,
   pill: 999,
 } as const;
 
