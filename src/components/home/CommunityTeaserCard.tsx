@@ -21,14 +21,18 @@ const MAP_TEXTURE =
 export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
   return (
     <View style={styles.card}>
+      <Image source={{ uri: MAP_TEXTURE }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <LinearGradient
-        colors={[tokens.color.panelFrom, tokens.color.panelTo]}
+        colors={[
+          tokens.color.panelFrom,
+          'rgba(220,235,217,0.82)',
+          'rgba(220,235,217,0.5)',
+        ]}
+        locations={[0, 0.45, 1]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        end={{ x: 1, y: 0 }}
         style={StyleSheet.absoluteFill}
       />
-
-      <Image source={{ uri: MAP_TEXTURE }} style={styles.mapTexture} />
 
       <View style={styles.faces} pointerEvents="none">
         <Image source={{ uri: FACES[0] }} style={[styles.face, { top: 40, right: 96 }]} />
@@ -80,14 +84,7 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.hero,
     overflow: 'hidden',
     justifyContent: 'center',
-  },
-  mapTexture: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: '58%',
-    opacity: 0.14,
+    backgroundColor: tokens.color.panelTo,
   },
   body: {
     padding: tokens.space.xl,

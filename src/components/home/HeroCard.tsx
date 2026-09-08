@@ -16,22 +16,19 @@ const HERO_IMAGE =
 export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
   return (
     <View style={styles.card}>
+      <Image source={{ uri: HERO_IMAGE }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <LinearGradient
-        colors={[tokens.color.panelFrom, tokens.color.panelTo]}
+        colors={[
+          tokens.color.panelFrom,
+          tokens.color.panelFrom,
+          'rgba(220,235,217,0.65)',
+          'rgba(220,235,217,0)',
+        ]}
+        locations={[0, 0.4, 0.62, 0.9]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        end={{ x: 1, y: 0 }}
         style={StyleSheet.absoluteFill}
       />
-
-      <View style={styles.imageSide}>
-        <Image source={{ uri: HERO_IMAGE }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-        <LinearGradient
-          colors={[tokens.color.panelFrom, 'rgba(220,235,217,0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.fade}
-        />
-      </View>
 
       <View style={styles.body}>
         <AppText style={styles.title}>{nb.home.heroTitle}</AppText>
@@ -61,15 +58,8 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.hero,
     overflow: 'hidden',
     justifyContent: 'center',
+    backgroundColor: tokens.color.panelFrom,
   },
-  imageSide: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: '52%',
-  },
-  fade: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '46%' },
   body: {
     paddingLeft: tokens.space.xl,
     paddingRight: '46%',
