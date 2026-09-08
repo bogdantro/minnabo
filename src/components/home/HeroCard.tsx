@@ -5,9 +5,9 @@ import nb from '@/i18n/nb';
 import { AppText } from '../ui/Text';
 import { Icon } from '../ui/Icon';
 
-/** Norwegian forest cabin — Unsplash licence (see assets/home/CREDITS.md). */
+/** Sunlit Nordic forest — Unsplash licence (see assets/home/CREDITS.md). */
 const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=900&q=60';
+  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=900&q=60';
 
 /**
  * Front-page hero (newhomepage.png): a sage-mint panel with a photo bleeding

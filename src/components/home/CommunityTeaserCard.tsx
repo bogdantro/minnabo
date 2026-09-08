@@ -31,9 +31,9 @@ export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
       <Image source={{ uri: MAP_TEXTURE }} style={styles.mapTexture} />
 
       <View style={styles.faces} pointerEvents="none">
-        <Image source={{ uri: FACES[0] }} style={[styles.face, { top: 44, right: 104 }]} />
-        <Image source={{ uri: FACES[1] }} style={[styles.face, { top: 10, right: 42 }]} />
-        <Image source={{ uri: FACES[2] }} style={[styles.face, { top: 96, right: 22 }]} />
+        <Image source={{ uri: FACES[0] }} style={[styles.face, { top: 40, right: 96 }]} />
+        <Image source={{ uri: FACES[1] }} style={[styles.face, { top: 8, right: 34 }]} />
+        <Image source={{ uri: FACES[2] }} style={[styles.face, { top: 92, right: 16 }]} />
         <View style={styles.halo} />
         <View style={styles.here} />
       </View>
@@ -48,10 +48,17 @@ export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
       </View>
 
       <View style={styles.body}>
-        <AppText weight="bold" style={styles.title}>
-          {nb.home.teaserTitle}
+        <View>
+          {/* "Lokale folk." / "Reell hjelp." — one sentence per line */}
+          {nb.home.teaserTitle.split(/(?<=\.)\s+/).map((line) => (
+            <AppText key={line} weight="bold" style={styles.title}>
+              {line}
+            </AppText>
+          ))}
+        </View>
+        <AppText variant="meta" color="navyMuted" numberOfLines={2}>
+          {nb.home.teaserBody}
         </AppText>
-        <AppText variant="meta" color="navyMuted">{nb.home.teaserBody}</AppText>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={nb.home.teaserCta}
@@ -84,12 +91,12 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: tokens.space.xl,
-    paddingRight: '46%',
-    gap: 6,
+    paddingRight: '43%',
+    gap: 7,
     flex: 1,
     justifyContent: 'center',
   },
-  title: { maxWidth: 165, fontSize: 19, lineHeight: 24, color: tokens.color.navy },
+  title: { fontSize: 19, lineHeight: 24, color: tokens.color.navy },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -39,6 +39,6 @@ test('picking the Hage category filters the carousel to hage listings', async ()
 
 test('the community teaser links to Fellesskap', async () => {
   await renderWithProviders(<OppdragScreen />);
-  await seen('Lokale folk. Reell hjelp.');
+  await seen('Lokale folk.');
   expect(screen.getByRole('button', { name: 'Bli en del' })).toBeTruthy();
 });

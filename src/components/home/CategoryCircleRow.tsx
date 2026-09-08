@@ -63,9 +63,15 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.color.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    ...tokens.shadow.card,
+    shadowColor: '#0B2E4E',
+    shadowOpacity: 0.1,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   circleActive: {
     backgroundColor: tokens.color.limeTint,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

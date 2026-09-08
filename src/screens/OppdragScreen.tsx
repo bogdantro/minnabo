@@ -35,9 +35,12 @@ export function OppdragScreen() {
   const { municipality, municipalities, ready } = useLocationScope();
   const [activeSlug, setActiveSlug] = useState('alle');
 
-  // One blended list — both task requests and service offers near you.
+  // One blended list — both task requests and service offers near you,
+  // minus the user's own listings.
   const jobs = useListings({ categorySlug: activeSlug, municipalities }, 'DISTANCE');
-  const items = (jobs.data ?? []).slice(0, PREVIEW);
+  const items = (jobs.data ?? [])
+    .filter((l) => l.owner.id !== me.id)
+    .slice(0, PREVIEW);
   const loading = jobs.isLoading || !ready;
   const refreshing = jobs.isFetching && !jobs.isLoading;
 
