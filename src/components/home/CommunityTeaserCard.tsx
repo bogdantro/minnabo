@@ -48,7 +48,7 @@ export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
       </View>
 
       <View style={styles.body}>
-        <AppText weight="extrabold" style={styles.title}>
+        <AppText weight="bold" style={styles.title}>
           {nb.home.teaserTitle}
         </AppText>
         <AppText variant="meta" color="navyMuted">{nb.home.teaserBody}</AppText>
@@ -69,9 +69,10 @@ export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
 
 const styles = StyleSheet.create({
   card: {
+    height: 208,
     borderRadius: tokens.radius.hero,
     overflow: 'hidden',
-    minHeight: 222,
+    justifyContent: 'center',
   },
   mapTexture: {
     position: 'absolute',
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  title: { maxWidth: 170, fontSize: 22, lineHeight: 27, color: tokens.color.navy },
+  title: { maxWidth: 165, fontSize: 19, lineHeight: 24, color: tokens.color.navy },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',

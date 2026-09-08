@@ -5,13 +5,13 @@ import nb from '@/i18n/nb';
 import { AppText } from '../ui/Text';
 import { Icon } from '../ui/Icon';
 
-/** Norwegian lakeside cabin — Unsplash licence (see assets/home/CREDITS.md). */
+/** Norwegian forest cabin — Unsplash licence (see assets/home/CREDITS.md). */
 const HERO_IMAGE =
   'https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=900&q=60';
 
 /**
- * The front-page hero (newhomepage.png): sage-mint gradient card with a photo
- * bleeding off the right edge, a light-weight headline, and a white pill CTA.
+ * Front-page hero (newhomepage.png): a sage-mint panel with a photo bleeding
+ * off the right edge, a light headline, and a white pill CTA.
  */
 export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
   return (
@@ -22,13 +22,16 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <Image source={{ uri: HERO_IMAGE }} style={styles.photo} />
-      <LinearGradient
-        colors={[tokens.color.panelFrom, 'rgba(220,235,217,0.35)', 'rgba(220,235,217,0)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.photoFade}
-      />
+
+      <View style={styles.imageSide}>
+        <Image source={{ uri: HERO_IMAGE }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <LinearGradient
+          colors={[tokens.color.panelFrom, 'rgba(220,235,217,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.fade}
+        />
+      </View>
 
       <View style={styles.body}>
         <AppText style={styles.title}>{nb.home.heroTitle}</AppText>
@@ -42,7 +45,7 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
           onPress={onPressCta}
           style={styles.cta}
         >
-          <AppText variant="cardTitle" weight="bold">
+          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
             {nb.home.heroCta}
           </AppText>
           <Icon name="arrow-right" size={18} color="navy" />
@@ -54,48 +57,42 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
 
 const styles = StyleSheet.create({
   card: {
+    height: 254,
     borderRadius: tokens.radius.hero,
     overflow: 'hidden',
-    minHeight: 296,
+    justifyContent: 'center',
   },
-  photo: {
+  imageSide: {
     position: 'absolute',
     right: 0,
     top: 0,
     bottom: 0,
-    width: '56%',
+    width: '52%',
   },
-  photoFade: {
-    position: 'absolute',
-    left: '38%',
-    top: 0,
-    bottom: 0,
-    width: '24%',
-  },
+  fade: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '46%' },
   body: {
-    padding: tokens.space.xl,
-    paddingRight: '44%',
-    gap: tokens.space.md,
-    flex: 1,
-    justifyContent: 'center',
+    paddingLeft: tokens.space.xl,
+    paddingRight: '46%',
+    gap: tokens.space.sm,
   },
   title: {
-    fontSize: 33,
-    lineHeight: 38,
+    fontSize: 26,
+    lineHeight: 31,
     fontFamily: tokens.font.regular,
+    fontWeight: '400',
     color: tokens.color.navy,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
-  subtitle: { marginBottom: tokens.space.xs },
+  subtitle: { marginTop: 2, marginBottom: tokens.space.sm },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.space.md,
+    gap: tokens.space.sm,
     alignSelf: 'flex-start',
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.pill,
-    paddingVertical: 15,
-    paddingHorizontal: tokens.space.xl,
+    paddingVertical: 13,
+    paddingHorizontal: tokens.space.lg,
     ...tokens.shadow.card,
   },
 });

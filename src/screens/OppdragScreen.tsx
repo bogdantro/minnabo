@@ -88,7 +88,7 @@ export function OppdragScreen() {
 
         <View style={styles.nearYou}>
           <View style={styles.sectionHead}>
-            <AppText weight="extrabold" style={styles.sectionTitle}>
+            <AppText weight="bold" numberOfLines={1} style={styles.sectionTitle}>
               {nb.home.nearYou}
             </AppText>
             <LocationBar />
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: tokens.space.sm,
   },
-  sectionTitle: { fontSize: 23, lineHeight: 28, color: tokens.color.navy },
+  sectionTitle: { fontSize: 19, lineHeight: 24, color: tokens.color.navy, flexShrink: 0 },
   seeAll: {
     flexDirection: 'row',
     alignItems: 'center',

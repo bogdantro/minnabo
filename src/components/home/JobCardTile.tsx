@@ -34,60 +34,72 @@ export function JobCardTile({
       : listing.location.place;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${listing.title}, ${listing.category.label}`}
-      onPress={onPress}
-      style={styles.tile}
-    >
-      <View style={styles.imageWrap}>
-        {cover ? (
-          <Image source={{ uri: cover }} style={styles.image} />
-        ) : (
-          <View style={[styles.image, styles.imageFallback]}>
-            <Icon name="image" size={24} color="navyMuted" />
+    <View style={styles.tile}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${listing.title}, ${listing.category.label}`}
+        onPress={onPress}
+        style={styles.pressable}
+      >
+        <View style={styles.imageWrap}>
+          {cover ? (
+            <Image source={{ uri: cover }} style={styles.image} />
+          ) : (
+            <View style={[styles.image, styles.imageFallback]}>
+              <Icon name="image" size={24} color="navyMuted" />
+            </View>
+          )}
+          <View style={styles.kmPill}>
+            <Icon name="map-pin" size={12} color="navy" />
+            <AppText variant="meta" weight="bold" numberOfLines={1}>
+              {km}
+            </AppText>
           </View>
-        )}
+        </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={saved ? nb.a11y.unsave : nb.a11y.save}
-          hitSlop={hitSlop}
-          onPress={toggleSaved}
-          style={styles.heart}
+        <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
+          {listing.title}
+        </AppText>
+
+        <AppText
+          variant="section"
+          weight="extrabold"
+          numberOfLines={1}
+          style={{ color: accent.color }}
         >
-          <Icon name="heart" size={16} color={saved ? 'lime' : 'navy'} />
-        </Pressable>
+          {priceLabel(listing)}
+        </AppText>
 
-        <View style={styles.kmPill}>
-          <Icon name="map-pin" size={12} color="navy" />
-          <AppText variant="meta" weight="bold" numberOfLines={1}>
-            {km}
+        <View style={[styles.catPill, { backgroundColor: accent.tint }]}>
+          <Icon name={listing.category.icon as never} size={13} color="navy" />
+          <AppText variant="meta" weight="bold" style={{ color: accent.color }} numberOfLines={1}>
+            {listing.category.label}
           </AppText>
         </View>
-      </View>
+      </Pressable>
 
-      <AppText variant="cardTitle" weight="bold" numberOfLines={1} style={styles.title}>
-        {listing.title}
-      </AppText>
-
-      <AppText variant="section" weight="extrabold" numberOfLines={1} style={{ color: accent.color }}>
-        {priceLabel(listing)}
-      </AppText>
-
-      <View style={[styles.catPill, { backgroundColor: accent.tint }]}>
-        <Icon name={listing.category.icon as never} size={13} color="navy" />
-        <AppText variant="meta" weight="bold" style={{ color: accent.color }} numberOfLines={1}>
-          {listing.category.label}
-        </AppText>
-      </View>
-    </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={saved ? nb.a11y.unsave : nb.a11y.save}
+        hitSlop={hitSlop}
+        onPress={toggleSaved}
+        style={styles.heart}
+      >
+        <Icon name="heart" size={16} color={saved ? 'lime' : 'navy'} />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tile: { width: 172, gap: 3 },
-  imageWrap: { height: 138, borderRadius: tokens.radius.card, overflow: 'hidden' },
+  tile: { width: 172, position: 'relative' },
+  pressable: { gap: 5 },
+  imageWrap: {
+    height: 134,
+    borderRadius: tokens.radius.card,
+    overflow: 'hidden',
+    marginBottom: 3,
+  },
   image: { width: '100%', height: '100%', backgroundColor: tokens.color.line },
   imageFallback: { alignItems: 'center', justifyContent: 'center' },
   heart: {
@@ -115,7 +127,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.space.sm,
     ...tokens.shadow.card,
   },
-  title: { marginTop: 7 },
   catPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -124,6 +135,6 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.pill,
     paddingVertical: 5,
     paddingHorizontal: tokens.space.md,
-    marginTop: 5,
+    marginTop: 3,
   },
 });
