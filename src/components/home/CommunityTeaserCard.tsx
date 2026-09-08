@@ -42,15 +42,6 @@ export function CommunityTeaserCard({ onPress }: { onPress: () => void }) {
         <View style={styles.here} />
       </View>
 
-      <View style={styles.chip} pointerEvents="none">
-        <Icon name="shield" size={16} color="shieldGreen" />
-        <View>
-          <AppText variant="meta" weight="bold">{nb.home.teaserPointTrygt}</AppText>
-          <AppText variant="meta" weight="bold">{nb.home.teaserPointEnkelt}</AppText>
-          <AppText variant="meta" weight="bold">{nb.home.teaserPointLokalt}</AppText>
-        </View>
-      </View>
-
       <View style={styles.body}>
         <View>
           {/* "Lokale folk." / "Reell hjelp." — one sentence per line */}
@@ -134,18 +125,5 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.color.cyan,
     borderWidth: 2,
     borderColor: tokens.color.surface,
-  },
-  chip: {
-    position: 'absolute',
-    right: tokens.space.lg,
-    bottom: tokens.space.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.space.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.md,
-    paddingVertical: tokens.space.sm,
-    paddingHorizontal: tokens.space.md,
-    ...tokens.shadow.card,
   },
 });

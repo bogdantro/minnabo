@@ -5,9 +5,10 @@ import nb from '@/i18n/nb';
 import { AppText } from '../ui/Text';
 import { Icon } from '../ui/Icon';
 
-/** Sunlit Nordic forest — Unsplash licence (see assets/home/CREDITS.md). */
+/** Lillehammer — Wikimedia Commons (see assets/home/CREDITS.md).
+ *  1280px thumbnail (~320 KB) rather than the 5.4 MB original. */
 const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=900&q=60';
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Lillehammer_City.jpg/1280px-Lillehammer_City.jpg';
 
 /**
  * Front-page hero (newhomepage.png): a sage-mint panel with a photo bleeding
