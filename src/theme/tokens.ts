@@ -25,7 +25,8 @@ const color = {
   bg: '#F6F8F7',
   surface: '#FFFFFF',
   white: '#FFFFFF',
-  line: '#EDF0F1',
+  /** hairline for grouping — strong enough to stand in for a shadow */
+  line: '#E4E8E9',
   /** sage-mint gradient for the hero + community panels */
   panelFrom: '#DCEBD9',
   panelTo: '#EFF5EC',
@@ -59,9 +60,13 @@ const radius = {
 } as const;
 
 const text = {
+  /** Home hero only — the one place on the app with real display size. */
+  display: { fontSize: 30, lineHeight: 35, fontFamily: font.extrabold },
   h1: { fontSize: 26, lineHeight: 32, fontFamily: font.extrabold },
   /** The single screen-title style. Every tab's first heading uses this. */
   question: { fontSize: 24, lineHeight: 30, fontFamily: font.bold },
+  /** Section headings inside a screen ("Jobber nær deg"). */
+  sectionHead: { fontSize: 21, lineHeight: 26, fontFamily: font.extrabold },
   section: { fontSize: 19, lineHeight: 25, fontFamily: font.bold },
   cardTitle: { fontSize: 17, lineHeight: 23, fontFamily: font.bold },
   body: { fontSize: 15, lineHeight: 22, fontFamily: font.regular },

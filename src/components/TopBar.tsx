@@ -42,13 +42,9 @@ function RightCluster({
         onPress={onNotificationsPress}
         style={styles.bell}
       >
-        <Icon name="bell" size={24} color="navy" />
+        <Icon name="bell" size={23} color="navy" />
         {count > 0 ? (
-          <View testID={testID ? `${testID}-noti-dot` : 'noti-dot'} style={styles.badge}>
-            <AppText variant="meta" weight="bold" color="white" style={styles.badgeText}>
-              {count > 9 ? '9+' : count}
-            </AppText>
-          </View>
+          <View testID={testID ? `${testID}-noti-dot` : 'noti-dot'} style={styles.badge} />
         ) : null}
       </Pressable>
       <Pressable
@@ -156,19 +152,15 @@ const styles = StyleSheet.create({
   bell: { padding: 2 },
   badge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 3,
+    top: 0,
+    right: 0,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
     backgroundColor: tokens.color.alert,
     borderWidth: 1.5,
     borderColor: tokens.color.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  badgeText: { fontSize: 9, lineHeight: 11 },
   title: {
     flex: 1,
     textAlign: 'center',

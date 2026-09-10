@@ -7,14 +7,14 @@ const seen = (text: string | RegExp) =>
 
 test('shows the hero, search, category row and the "Jobber nær deg" section', async () => {
   await renderWithProviders(<OppdragScreen />);
-  expect(screen.getByText('Trenger du hjelp raskt?')).toBeTruthy();
-  expect(screen.getByText('Søk etter en tjeneste …')).toBeTruthy();
+  expect(screen.getByText('Trenger du en hånd?')).toBeTruthy();
+  expect(screen.getByText('Finn en tjeneste')).toBeTruthy();
   expect(screen.getByLabelText('Åpne profil')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Alle' })).toBeTruthy();
   await seen('Jobber nær deg');
 });
 
-test('the job carousel blends both listing types near the user', async () => {
+test('the job feed blends both listing types near the user', async () => {
   await renderWithProviders(<OppdragScreen />);
   await seen('Klippe plen'); // a task request
   expect(screen.getByText('Jeg kan klippe plenen din')).toBeTruthy(); // a service offer
@@ -29,7 +29,7 @@ test('only shows listings from the user kommune (Lillehammer)', async () => {
   );
 });
 
-test('picking the Hage category filters the carousel to hage listings', async () => {
+test('picking the Hage category filters the feed to hage listings', async () => {
   await renderWithProviders(<OppdragScreen />);
   await seen('Klippe plen');
   await fireEvent.press(screen.getByRole('button', { name: 'Hage' }));
@@ -39,6 +39,8 @@ test('picking the Hage category filters the carousel to hage listings', async ()
 
 test('the community teaser links to Fellesskap', async () => {
   await renderWithProviders(<OppdragScreen />);
-  await seen('Lokale folk.');
-  expect(screen.getByRole('button', { name: 'Bli en del' })).toBeTruthy();
+  await seen('Naboer som hjelper naboer');
+  expect(
+    screen.getByRole('button', { name: /Naboer som hjelper naboer/ }),
+  ).toBeTruthy();
 });

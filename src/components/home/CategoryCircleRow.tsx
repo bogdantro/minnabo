@@ -6,8 +6,8 @@ import { Icon, type IconName } from '../ui/Icon';
 export type CategoryCircle = { slug: string; label: string; icon: IconName };
 
 /**
- * Circular category picker on the front page (newhomepage.png). One row,
- * horizontally scrolling. The active circle takes a mint fill + green icon.
+ * Circular category filter for the front page. One horizontally-scrolling row.
+ * Each circle is bordered (no drop shadow); the active one fills mint green.
  */
 export function CategoryCircleRow({
   items,
@@ -36,12 +36,12 @@ export function CategoryCircleRow({
             style={styles.item}
           >
             <View style={[styles.circle, active && styles.circleActive]}>
-              <Icon name={c.icon} size={24} color={active ? 'lime' : 'navyMuted'} />
+              <Icon name={c.icon} size={23} color={active ? 'lime' : 'navy'} />
             </View>
             <AppText
               variant="meta"
-              weight={active ? 'bold' : 'regular'}
-              color={active ? 'lime' : 'navyMuted'}
+              weight={active ? 'bold' : 'medium'}
+              color={active ? 'navy' : 'navyMuted'}
               numberOfLines={1}
             >
               {c.label}
@@ -54,24 +54,20 @@ export function CategoryCircleRow({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: tokens.space.lg, paddingVertical: tokens.space.xs, paddingRight: tokens.space.xl },
-  item: { alignItems: 'center', gap: 7, width: 66 },
+  row: { gap: tokens.space.lg, paddingVertical: tokens.space.sm, paddingRight: tokens.space.xl },
+  item: { alignItems: 'center', gap: 7, width: 64 },
   circle: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: tokens.color.surface,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0B2E4E',
-    shadowOpacity: 0.1,
-    shadowRadius: 9,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
   },
   circleActive: {
     backgroundColor: tokens.color.limeTint,
-    shadowOpacity: 0,
-    elevation: 0,
+    borderColor: tokens.color.lime,
   },
 });

@@ -51,10 +51,9 @@ export function BottomNav({
           <Icon name={s.icon} size={23} color={isActive ? 'lime' : 'navy'} />
           {badge > 0 ? <View style={styles.badge} /> : null}
         </View>
-        <AppText variant="meta" weight={isActive ? 'bold' : 'regular'} color={isActive ? 'lime' : 'navy'}>
+        <AppText variant="meta" weight={isActive ? 'bold' : 'medium'} color={isActive ? 'lime' : 'navy'}>
           {s.label}
         </AppText>
-        {isActive ? <View style={styles.activeDot} /> : null}
       </Pressable>
     );
   };
@@ -72,11 +71,11 @@ export function BottomNav({
           onPress={onLeggUt}
         >
           <View style={styles.fab}>
-            <Icon name="plus" size={27} color="white" />
+            <Icon name="plus" size={26} color="white" />
           </View>
           <AppText
             variant="meta"
-            weight={active === 'leggUt' ? 'bold' : 'regular'}
+            weight={active === 'leggUt' ? 'bold' : 'medium'}
             color={active === 'leggUt' ? 'lime' : 'navy'}
           >
             {nb.tabs.leggUt}
@@ -91,8 +90,8 @@ export function BottomNav({
           style={styles.slot}
           onPress={() => setMenuOpen(true)}
         >
-          <Icon name="menu" size={22} color="navy" />
-          <AppText variant="meta" color="navy">
+          <Icon name="menu" size={23} color="navy" />
+          <AppText variant="meta" weight="medium" color="navy">
             {nb.tabs.meny}
           </AppText>
         </Pressable>
@@ -109,10 +108,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-around',
     backgroundColor: tokens.color.surface,
-    borderTopLeftRadius: tokens.radius.hero,
-    borderTopRightRadius: tokens.radius.hero,
+    borderTopWidth: 1,
+    borderTopColor: tokens.color.line,
+    borderTopLeftRadius: tokens.radius.tile,
+    borderTopRightRadius: tokens.radius.tile,
     paddingTop: tokens.space.md,
-    ...tokens.shadow.fab,
+    shadowColor: '#0B2E4E',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 8,
   },
   slot: { flex: 1, alignItems: 'center', gap: 3 },
   badge: {
@@ -124,23 +129,20 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: tokens.color.alert,
   },
-  activeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: tokens.color.lime,
-    marginTop: 3,
-  },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginTop: -18,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginTop: -16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: tokens.color.lime,
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: tokens.color.surface,
-    ...tokens.shadow.fab,
+    shadowColor: tokens.color.lime,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
 });

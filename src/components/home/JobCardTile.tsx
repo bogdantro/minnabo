@@ -1,7 +1,7 @@
 import { View, Image, Pressable, StyleSheet } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { formatPrice, formatFromPrice } from '@/domain/price';
-import { tokens, hitSlop, categoryAccent } from '@/theme';
+import { tokens, hitSlop } from '@/theme';
 import nb from '@/i18n/nb';
 import { useIsSaved } from '@/api/queries';
 import { AppText } from '../ui/Text';
@@ -14,9 +14,8 @@ function priceLabel(listing: Listing): string {
 }
 
 /**
- * Vertical job tile for the "Jobber nær deg" carousel (newhomepage.png).
- * Image with a save heart and a distance pill, then title, the price in the
- * category's accent colour, and a category pill.
+ * Job tile for the "Jobber nær deg" carousel: photo + save heart, then title,
+ * a muted category · distance line, and the price as the anchor.
  */
 export function JobCardTile({
   listing,
@@ -26,7 +25,6 @@ export function JobCardTile({
   onPress: () => void;
 }) {
   const [saved, toggleSaved] = useIsSaved(listing.id);
-  const accent = categoryAccent(listing.category.slug);
   const cover = listing.images[0]?.url;
   const km =
     typeof listing.location.distanceKm === 'number'
@@ -37,7 +35,7 @@ export function JobCardTile({
     <View style={styles.tile}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${listing.title}, ${listing.category.label}`}
+        accessibilityLabel={`${listing.title}, ${listing.category.label}, ${km}`}
         onPress={onPress}
         style={styles.pressable}
       >
@@ -49,33 +47,27 @@ export function JobCardTile({
               <Icon name="image" size={24} color="navyMuted" />
             </View>
           )}
-          <View style={styles.kmPill}>
-            <Icon name="map-pin" size={12} color="navy" />
+          <View style={styles.kmChip}>
             <AppText variant="meta" weight="bold" numberOfLines={1}>
               {km}
             </AppText>
           </View>
         </View>
 
-        <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
+        <AppText variant="cardTitle" weight="bold" numberOfLines={1} style={styles.title}>
           {listing.title}
         </AppText>
 
-        <AppText
-          variant="section"
-          weight="extrabold"
-          numberOfLines={1}
-          style={{ color: accent.color }}
-        >
-          {priceLabel(listing)}
-        </AppText>
-
-        <View style={[styles.catPill, { backgroundColor: accent.tint }]}>
-          <Icon name={listing.category.icon as never} size={13} color="navy" />
-          <AppText variant="meta" weight="bold" style={{ color: accent.color }} numberOfLines={1}>
+        <View style={styles.meta}>
+          <Icon name={listing.category.icon as never} size={13} color="navyMuted" />
+          <AppText variant="meta" weight="medium" color="navyMuted" numberOfLines={1} style={styles.metaText}>
             {listing.category.label}
           </AppText>
         </View>
+
+        <AppText variant="section" weight="extrabold" numberOfLines={1} style={styles.price}>
+          {priceLabel(listing)}
+        </AppText>
       </Pressable>
 
       <Pressable
@@ -92,16 +84,31 @@ export function JobCardTile({
 }
 
 const styles = StyleSheet.create({
-  tile: { width: 172, position: 'relative' },
-  pressable: { gap: 5 },
+  tile: { width: 176, position: 'relative' },
+  pressable: { gap: 6 },
   imageWrap: {
-    height: 134,
-    borderRadius: tokens.radius.card,
+    height: 128,
+    borderRadius: tokens.radius.tile,
     overflow: 'hidden',
-    marginBottom: 3,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    padding: tokens.space.sm,
   },
-  image: { width: '100%', height: '100%', backgroundColor: tokens.color.line },
+  image: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: tokens.color.line,
+  },
   imageFallback: { alignItems: 'center', justifyContent: 'center' },
+  kmChip: {
+    backgroundColor: tokens.color.surface,
+    borderRadius: tokens.radius.pill,
+    paddingVertical: 3,
+    paddingHorizontal: tokens.space.sm,
+  },
   heart: {
     position: 'absolute',
     top: tokens.space.sm,
@@ -114,27 +121,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...tokens.shadow.card,
   },
-  kmPill: {
-    position: 'absolute',
-    left: tokens.space.sm,
-    bottom: tokens.space.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.pill,
-    paddingVertical: 4,
-    paddingHorizontal: tokens.space.sm,
-    ...tokens.shadow.card,
-  },
-  catPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    borderRadius: tokens.radius.pill,
-    paddingVertical: 5,
-    paddingHorizontal: tokens.space.md,
-    marginTop: 3,
-  },
+  title: { marginTop: 1 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { flex: 1 },
+  price: { color: tokens.color.navy, marginTop: 1 },
 });

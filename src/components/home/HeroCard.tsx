@@ -11,8 +11,8 @@ const HERO_IMAGE =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Lillehammer_City.jpg/1280px-Lillehammer_City.jpg';
 
 /**
- * Front-page hero (newhomepage.png): a sage-mint panel with a photo bleeding
- * off the right edge, a light headline, and a white pill CTA.
+ * Front-page hero: a sage panel with a local photo bleeding across it, one
+ * confident headline, and the primary "legg ut" action.
  */
 export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
   return (
@@ -22,18 +22,20 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
         colors={[
           tokens.color.panelFrom,
           tokens.color.panelFrom,
-          'rgba(220,235,217,0.65)',
+          'rgba(220,235,217,0.6)',
           'rgba(220,235,217,0)',
         ]}
-        locations={[0, 0.4, 0.62, 0.9]}
+        locations={[0, 0.42, 0.64, 0.92]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={StyleSheet.absoluteFill}
       />
 
       <View style={styles.body}>
-        <AppText style={styles.title}>{nb.home.heroTitle}</AppText>
-        <AppText variant="body" color="navyMuted" style={styles.subtitle}>
+        <AppText variant="display" style={styles.title}>
+          {nb.home.heroTitle}
+        </AppText>
+        <AppText variant="body" weight="medium" color="navyMuted" style={styles.subtitle}>
           {nb.home.heroBody}
         </AppText>
         <Pressable
@@ -43,10 +45,10 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
           onPress={onPressCta}
           style={styles.cta}
         >
-          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
+          <AppText variant="body" weight="bold" numberOfLines={1}>
             {nb.home.heroCta}
           </AppText>
-          <Icon name="arrow-right" size={18} color="navy" />
+          <Icon name="arrow-right" size={17} color="navy" />
         </Pressable>
       </View>
     </View>
@@ -55,7 +57,7 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
 
 const styles = StyleSheet.create({
   card: {
-    height: 254,
+    height: 232,
     borderRadius: tokens.radius.hero,
     overflow: 'hidden',
     justifyContent: 'center',
@@ -66,14 +68,7 @@ const styles = StyleSheet.create({
     paddingRight: '46%',
     gap: tokens.space.sm,
   },
-  title: {
-    fontSize: 26,
-    lineHeight: 31,
-    fontFamily: tokens.font.regular,
-    fontWeight: '400',
-    color: tokens.color.navy,
-    letterSpacing: -0.2,
-  },
+  title: { color: tokens.color.navy },
   subtitle: { marginTop: 2, marginBottom: tokens.space.sm },
   cta: {
     flexDirection: 'row',
@@ -82,7 +77,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.pill,
-    paddingVertical: 13,
+    paddingVertical: 12,
     paddingHorizontal: tokens.space.lg,
     ...tokens.shadow.card,
   },
