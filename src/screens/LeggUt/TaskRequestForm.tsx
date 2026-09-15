@@ -12,6 +12,7 @@ import { outdoorWarningFor } from '@/lib/weather';
 import { safePush } from '@/lib/nav';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Wizard, type WizardStep } from '@/components/Wizard';
+import { PriceGuidanceHint } from '@/components/PriceGuidanceHint';
 import { KommunePicker } from '@/components/KommunePicker';
 import { TextField } from '@/components/ui/TextField';
 import { SelectField } from '@/components/ui/SelectField';
@@ -254,7 +255,10 @@ export function TaskRequestForm() {
                 />
               </View>
               {form.priceMode === 'BUDGET' ? (
-                <AmountField value={form.amountKr} onChange={(v) => set('amountKr', v)} />
+                <>
+                  <AmountField value={form.amountKr} onChange={(v) => set('amountKr', v)} />
+                  {form.categorySlug ? <PriceGuidanceHint categorySlug={form.categorySlug} /> : null}
+                </>
               ) : null}
             </FieldGroup>
           )}

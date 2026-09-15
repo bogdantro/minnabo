@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { KeyboardAvoider } from './ui/KeyboardAvoider';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -37,6 +37,7 @@ export function Wizard({
   onSaveDraft?: () => void;
 }) {
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +52,12 @@ export function Wizard({
       }
     }, [steps.length]),
   );
+
+  // A step can be long (esp. with "Flere detaljer" expanded); always start
+  // it scrolled to the top so the title and first field are visible.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [index]);
 
   const step = steps[index];
   const isLast = index === steps.length - 1;
@@ -69,6 +76,10 @@ export function Wizard({
     const err = step.validate?.() ?? null;
     if (err) {
       setError(err);
+      // The "Neste" button is reachable from anywhere via the sticky footer,
+      // so the error (shown up near the title) needs the view scrolled to
+      // it — otherwise it silently appears off-screen above the fold.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
     setError(null);
@@ -96,6 +107,7 @@ export function Wizard({
       </View>
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -106,7 +118,6 @@ export function Wizard({
             {step.subtitle}
           </AppText>
         ) : null}
-        <View style={styles.fields}>{step.render()}</View>
         {error ? (
           <View style={styles.errorRow}>
             <Icon name="alert-circle" size={15} color="dangerText" />
@@ -115,6 +126,7 @@ export function Wizard({
             </AppText>
           </View>
         ) : null}
+        <View style={styles.fields}>{step.render()}</View>
       </ScrollView>
 
       <View style={styles.footer}>
