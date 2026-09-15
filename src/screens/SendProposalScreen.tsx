@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatFriendlyDate } from '@/lib/calendar';
-import { useListing, useStartConversation } from '@/api/queries';
+import { useListing, useStartConversation, chatKeys } from '@/api/queries';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { apiClient } from '@/api/client';
 import { toast } from '@/lib/toast';
 import { haptics } from '@/lib/haptics';
@@ -28,6 +30,8 @@ export function SendProposalScreen({
   mode: 'give' | 'request';
 }) {
   const router = useRouter();
+  const qc = useQueryClient();
+  const me = useCurrentUser();
   const { data: listing, isLoading, isError, refetch } = useListing(listingId);
   const startConversation = useStartConversation();
 
@@ -51,6 +55,16 @@ export function SendProposalScreen({
     );
   }
 
+  if (me.id && listing.owner.id === me.id) {
+    return (
+      <FallbackScreen
+        status="empty"
+        emptyText={nb.listingDetail.ownListingNote}
+        title={isGive ? nb.proposalForm.giveTitle : nb.proposalForm.requestTitle}
+      />
+    );
+  }
+
   const submit = async () => {
     const kroner = Number(price.replace(/\s/g, '').replace(',', '.'));
     if (isGive && (!Number.isFinite(kroner) || kroner <= 0)) {
@@ -60,7 +74,7 @@ export function SendProposalScreen({
     setError(null);
     setBusy(true);
     try {
-      const conv = await apiClient.startConversationForListing(listing.id);
+      const conv = await startConversation.mutateAsync(listing.id);
       if (isGive) {
         const scheduledText = [
           date ? formatFriendlyDate(date) : null,
@@ -85,6 +99,8 @@ export function SendProposalScreen({
         );
         toast.success(nb.proposalForm.requestSent);
       }
+      qc.invalidateQueries({ queryKey: chatKeys.messages(conv.id) });
+      qc.invalidateQueries({ queryKey: ['conversations'] });
       router.replace(`/chat/${conv.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : nb.state.error);

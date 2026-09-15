@@ -3,6 +3,7 @@ import type { Listing } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useIsSaved } from '@/api/queries';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { shareListing } from '@/lib/share';
 import { PageHeader } from '@/components/TopBar';
@@ -17,8 +18,10 @@ import { ProfileCard } from '@/components/ProfileCard';
 import { StickyActions } from '@/components/StickyActions';
 
 export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack: () => void }) {
+  const me = useCurrentUser();
   const [saved, toggleSaved] = useIsSaved(listing.id);
   const task = listing.task;
+  const isOwner = listing.owner.id === me.id;
 
   const distance =
     typeof listing.location.distanceKm === 'number'
@@ -116,13 +119,21 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
         </View>
       </ScrollView>
 
-      <StickyActions
-        primaryLabel={nb.listingDetail.giveOffer}
-        onPrimary={() => safePush(`/tilbud/ny?listing=${listing.id}`)}
-        secondaryLabel={nb.listingDetail.sendMessage}
-        onSecondary={() => safePush(`/chat/start?listing=${listing.id}`)}
-        note={nb.listingDetail.priceNoteTask}
-      />
+      {isOwner ? (
+        <StickyActions
+          primaryLabel={nb.listingDetail.viewReceivedOffers}
+          onPrimary={() => safePush('/tilbud')}
+          note={nb.listingDetail.ownListingNote}
+        />
+      ) : (
+        <StickyActions
+          primaryLabel={nb.listingDetail.giveOffer}
+          onPrimary={() => safePush(`/tilbud/ny?listing=${listing.id}`)}
+          secondaryLabel={nb.listingDetail.sendMessage}
+          onSecondary={() => safePush(`/chat/start?listing=${listing.id}`)}
+          note={nb.listingDetail.priceNoteTask}
+        />
+      )}
     </View>
   );
 }

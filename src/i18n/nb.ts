@@ -469,6 +469,8 @@ const nb = {
     requestOffer: 'Be om tilbud',
     priceNoteTask: 'Pris og betaling avtales mellom dere.',
     priceNoteOffer: 'Pris og betaling avtales direkte mellom dere.',
+    ownListingNote: 'Dette er din egen annonse.',
+    viewReceivedOffers: 'Se mottatte tilbud',
     ratingsSuffix: 'vurderinger',
     completedJobs: 'fullførte oppdrag',
     yearsExperience: 'års erfaring',

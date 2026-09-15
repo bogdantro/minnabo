@@ -8,8 +8,8 @@ import { Icon } from './ui/Icon';
 export type StickyActionsProps = {
   primaryLabel: string;
   onPrimary: () => void;
-  secondaryLabel: string;
-  onSecondary: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
   note: string;
 };
 
@@ -24,7 +24,9 @@ export function StickyActions({
   return (
     <View style={[styles.wrap, { paddingBottom: insets.bottom + tokens.space.sm }]}>
       <Button label={primaryLabel} onPress={onPrimary} variant="primary" />
-      <Button label={secondaryLabel} onPress={onSecondary} variant="secondary" />
+      {secondaryLabel && onSecondary ? (
+        <Button label={secondaryLabel} onPress={onSecondary} variant="secondary" />
+      ) : null}
       <View style={styles.note}>
         <Icon name="lock" size={13} color="navyMuted" />
         <AppText variant="meta" color="navyMuted">

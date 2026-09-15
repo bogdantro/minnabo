@@ -37,7 +37,8 @@ export function ServiceOfferDetailScreen({
   const offer = listing.offer;
   const phoneVerification = listing.owner.verifications.find((v) => v.verified);
   const instantBook = useInstantBook();
-  const canInstantBook = !!offer?.instantBook && listing.owner.id !== me.id;
+  const isOwner = listing.owner.id === me.id;
+  const canInstantBook = !!offer?.instantBook && !isOwner;
 
   const doInstantBook = async () => {
     const ok = await confirm({
@@ -157,13 +158,21 @@ export function ServiceOfferDetailScreen({
         </View>
       </ScrollView>
 
-      <StickyActions
-        primaryLabel={nb.listingDetail.contact}
-        onPrimary={() => safePush(`/chat/start?listing=${listing.id}`)}
-        secondaryLabel={nb.listingDetail.requestOffer}
-        onSecondary={() => safePush(`/tilbud/be-om?listing=${listing.id}`)}
-        note={nb.listingDetail.priceNoteOffer}
-      />
+      {isOwner ? (
+        <StickyActions
+          primaryLabel={nb.mine.title}
+          onPrimary={() => safePush('/mine')}
+          note={nb.listingDetail.ownListingNote}
+        />
+      ) : (
+        <StickyActions
+          primaryLabel={nb.listingDetail.contact}
+          onPrimary={() => safePush(`/chat/start?listing=${listing.id}`)}
+          secondaryLabel={nb.listingDetail.requestOffer}
+          onSecondary={() => safePush(`/tilbud/be-om?listing=${listing.id}`)}
+          note={nb.listingDetail.priceNoteOffer}
+        />
+      )}
     </View>
   );
 }
