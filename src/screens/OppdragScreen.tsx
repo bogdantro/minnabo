@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
+import { HOME_CATEGORIES, categoryBySlug } from '@/domain/categories';
 import { useListings } from '@/api/queries';
 import { useLocationScope } from '@/lib/locationScope';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -14,18 +15,23 @@ import { Button } from '@/components/ui/Button';
 import { HomeSearchBar } from '@/components/HomeSearchBar';
 import { LocationBar } from '@/components/LocationBar';
 import { HeroCard } from '@/components/home/HeroCard';
-import { CategoryCircleRow, type CategoryCircle } from '@/components/home/CategoryCircleRow';
+import { CategoryCircleRow, type CategoryCircle } from '@/components/CategoryCircleRow';
 import { JobCardTile } from '@/components/home/JobCardTile';
 import { JobRow } from '@/components/home/JobRow';
 import { CommunityTeaserCard } from '@/components/home/CommunityTeaserCard';
 
+/**
+ * Reuses `HOME_CATEGORIES` (Alle/Hage/Renhold/Transport/Montering — the same
+ * short labels the search/list screens show for these) plus one more, so the
+ * label/icon here can't drift from what a listing actually shows elsewhere.
+ */
 const CATEGORY_CIRCLES: CategoryCircle[] = [
-  { slug: 'alle', label: 'Alle', icon: 'grid' },
-  { slug: 'hage', label: 'Hage', icon: 'feather' },
-  { slug: 'renhold', label: 'Renhold', icon: 'droplet' },
-  { slug: 'transport', label: 'Transport', icon: 'truck' },
-  { slug: 'montering', label: 'Montering', icon: 'tool' },
-  { slug: 'maling', label: 'Maling', icon: 'edit-2' },
+  ...HOME_CATEGORIES.map((c) => ({ slug: c.slug, label: c.label, icon: c.icon as CategoryCircle['icon'] })),
+  {
+    slug: 'maling',
+    label: categoryBySlug('maling').label.split('/')[0],
+    icon: categoryBySlug('maling').icon as CategoryCircle['icon'],
+  },
 ];
 
 /** First few jobs go in the carousel; the rest stack as compact rows. */

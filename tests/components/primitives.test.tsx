@@ -4,7 +4,6 @@ import { AppText } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { CategoryChip } from '@/components/ui/CategoryChip';
 import { SearchField } from '@/components/ui/SearchField';
 import { ScreenState } from '@/components/ui/ScreenState';
 
@@ -49,13 +48,6 @@ test('disabled Button does not fire', async () => {
 test('StatusPill shows its label', async () => {
   await render(<StatusPill label="Åpent oppdrag" tone="cyan" />);
   expect(screen.getByText('Åpent oppdrag')).toBeTruthy();
-});
-
-test('CategoryChip fires onPress', async () => {
-  const fn = jest.fn();
-  await render(<CategoryChip label="Hage" icon="feather" onPress={fn} />);
-  await fireEvent.press(screen.getByText('Hage'));
-  expect(fn).toHaveBeenCalled();
 });
 
 test('SearchField calls onChangeText', async () => {

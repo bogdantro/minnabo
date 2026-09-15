@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.color.line,
     paddingLeft: tokens.space.lg,
-    shadowColor: '#0B2E4E',
+    shadowColor: tokens.color.navy,
     shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },

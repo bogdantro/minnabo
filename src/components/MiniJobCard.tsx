@@ -57,7 +57,7 @@ export function MiniJobCard({
         <AppText variant="meta" weight="bold" numberOfLines={1}>
           {listing.title}
         </AppText>
-        <AppText variant="meta" weight="bold" color="lime" numberOfLines={1}>
+        <AppText variant="meta" weight="extrabold" numberOfLines={1}>
           {priceLabel(listing)}
         </AppText>
         <AppText variant="meta" color="navyMuted" numberOfLines={1}>
@@ -78,7 +78,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.color.line,
     padding: tokens.space.sm,
-    ...tokens.shadow.card,
   },
   thumbWrap: { width: 60, height: 60 },
   thumb: { width: 60, height: 60, borderRadius: tokens.radius.sm, backgroundColor: tokens.color.line },

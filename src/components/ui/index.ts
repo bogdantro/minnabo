@@ -10,8 +10,6 @@ export { Card } from './Card';
 export type { CardProps } from './Card';
 export { StatusPill } from './StatusPill';
 export type { StatusPillProps, PillTone } from './StatusPill';
-export { CategoryChip } from './CategoryChip';
-export type { CategoryChipProps } from './CategoryChip';
 export { SearchField } from './SearchField';
 export type { SearchFieldProps } from './SearchField';
 export { SectionHeader } from './SectionHeader';

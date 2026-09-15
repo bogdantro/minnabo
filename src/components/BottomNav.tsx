@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: tokens.radius.tile,
     borderTopRightRadius: tokens.radius.tile,
     paddingTop: tokens.space.md,
-    shadowColor: '#0B2E4E',
+    shadowColor: tokens.color.navy,
     shadowOpacity: 0.05,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: -3 },

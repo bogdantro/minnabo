@@ -12,7 +12,7 @@ import { safePush } from '@/lib/nav';
 import { DetailTopBar } from '@/components/TopBar';
 import { StaticBottomNav } from '@/components/StaticBottomNav';
 import { AppText } from '@/components/ui/Text';
-import { CategoryChip } from '@/components/ui/CategoryChip';
+import { CategoryCircleRow, type CategoryCircle } from '@/components/CategoryCircleRow';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
 import { ListingListSkeleton } from '@/components/ui/Skeleton';
 import { SortDropdown } from '@/components/ui/SortDropdown';
@@ -125,19 +125,13 @@ export function ListingListScreen({ type }: { type: ListingType }) {
           <HomeSearchBar onPressSearch={() => safePush('/sok')} onPressFilter={() => safePush('/sok')} />
         </View>
 
-        <HScrollFade>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-            {homeCategories.map((c) => (
-              <CategoryChip
-                key={c.id}
-                label={c.label}
-                icon={c.icon as IconName}
-                active={activeSlug === c.slug}
-                onPress={() => setActiveSlug(c.slug)}
-              />
-            ))}
-          </ScrollView>
-        </HScrollFade>
+        <CategoryCircleRow
+          items={homeCategories.map(
+            (c): CategoryCircle => ({ slug: c.slug, label: c.label, icon: c.icon as IconName }),
+          )}
+          activeSlug={activeSlug}
+          onSelect={setActiveSlug}
+        />
 
         <View style={styles.allHeader}>
           <View style={styles.allHeaderText}>

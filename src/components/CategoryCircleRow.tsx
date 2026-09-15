@@ -1,13 +1,14 @@
 import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
-import { AppText } from '../ui/Text';
-import { Icon, type IconName } from '../ui/Icon';
+import { AppText } from './ui/Text';
+import { Icon, type IconName } from './ui/Icon';
 
 export type CategoryCircle = { slug: string; label: string; icon: IconName };
 
 /**
- * Circular category filter for the front page. One horizontally-scrolling row.
- * Each circle is bordered (no drop shadow); the active one fills mint green.
+ * Circular category filter, shared by the front page, search and listing
+ * lists. One horizontally-scrolling row of bordered circles (no drop shadow);
+ * the active one fills mint green.
  */
 export function CategoryCircleRow({
   items,

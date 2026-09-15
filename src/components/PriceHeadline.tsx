@@ -25,7 +25,7 @@ export function PriceHeadline({ listing }: { listing: Listing }) {
   return (
     <View style={styles.row}>
       {amount ? (
-        <AppText variant="section" weight="extrabold" color="lime">
+        <AppText variant="section" weight="extrabold">
           {amount}
         </AppText>
       ) : null}

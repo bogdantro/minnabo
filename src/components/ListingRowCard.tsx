@@ -97,7 +97,6 @@ export function ListingRowCard({
           <AppText
             variant="section"
             weight="extrabold"
-            color="lime"
             numberOfLines={1}
             style={styles.price}
           >
@@ -130,7 +129,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.color.line,
     padding: tokens.space.md,
-    ...tokens.shadow.card,
   },
   thumbWrap: { width: 96, height: 96 },
   thumb: {

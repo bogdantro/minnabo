@@ -15,7 +15,7 @@ import { safePush } from '@/lib/nav';
 import { AppText } from '@/components/ui/Text';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { BrandMark } from '@/components/BrandMark';
-import { CategoryChip } from '@/components/ui/CategoryChip';
+import { CategoryCircleRow, type CategoryCircle } from '@/components/CategoryCircleRow';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { ScreenState, type ScreenStatus } from '@/components/ui/ScreenState';
@@ -23,7 +23,6 @@ import { ListingListSkeleton } from '@/components/ui/Skeleton';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SortDropdown } from '@/components/ui/SortDropdown';
 import { DistanceSlider } from '@/components/ui/DistanceSlider';
-import { HScrollFade } from '@/components/ui/HScrollFade';
 import { TextField } from '@/components/ui/TextField';
 import { ListingRowCard } from '@/components/ListingRowCard';
 
@@ -198,19 +197,13 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
         ))}
       </View>
 
-      <HScrollFade>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {homeCategories.map((c) => (
-            <CategoryChip
-              key={c.id}
-              label={c.label}
-              icon={c.icon as IconName}
-              active={categorySlug === c.slug}
-              onPress={() => setCategorySlug(c.slug)}
-            />
-          ))}
-        </ScrollView>
-      </HScrollFade>
+      <CategoryCircleRow
+        items={homeCategories.map(
+          (c): CategoryCircle => ({ slug: c.slug, label: c.label, icon: c.icon as IconName }),
+        )}
+        activeSlug={categorySlug}
+        onSelect={setCategorySlug}
+      />
 
       <View style={styles.resultsHead}>
         <AppText variant="meta" color="navyMuted">
