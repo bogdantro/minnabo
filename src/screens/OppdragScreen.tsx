@@ -1,13 +1,21 @@
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
+import nb from '@/i18n/nb';
 import { HOME_CATEGORIES, categoryBySlug } from '@/domain/categories';
+import { useListings } from '@/api/queries';
+import { useLocationScope } from '@/lib/locationScope';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
+import { ScreenState } from '@/components/ui/ScreenState';
+import { ListingListSkeleton } from '@/components/ui/Skeleton';
+import { AppText } from '@/components/ui/Text';
+import { Button } from '@/components/ui/Button';
 import { HomeSearchBar } from '@/components/HomeSearchBar';
 import { LocationBar } from '@/components/LocationBar';
 import { HeroCard } from '@/components/home/HeroCard';
 import { CategoryCircleRow, type CategoryCircle } from '@/components/CategoryCircleRow';
+import { JobFeedCard } from '@/components/home/JobFeedCard';
 import { CommunityTeaserCard } from '@/components/home/CommunityTeaserCard';
 
 /**
@@ -24,8 +32,22 @@ const CATEGORY_CIRCLES: CategoryCircle[] = [
   },
 ];
 
+/** The homepage only teases the newest open tasks — the rest live in search. */
+const NEWEST_COUNT = 8;
+
 export function OppdragScreen() {
   const me = useCurrentUser();
+  const { municipality, municipalities, ready } = useLocationScope();
+
+  const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
+  const items = (jobs.data ?? []).filter((l) => l.owner.id !== me.id).slice(0, NEWEST_COUNT);
+
+  const loading = jobs.isLoading || !ready;
+  const refreshing = jobs.isFetching && !jobs.isLoading;
+  const emptyText =
+    municipalities.length > 0
+      ? nb.location.emptyListings(municipality ?? '')
+      : nb.state.emptyListings;
 
   const onCategory = (slug: string) =>
     safePush(slug === 'alle' ? '/sok' : `/sok?category=${slug}`);
@@ -42,6 +64,14 @@ export function OppdragScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => jobs.refetch()}
+            tintColor={tokens.color.lime}
+            colors={[tokens.color.lime]}
+          />
+        }
       >
         <HeroCard onPressCta={() => safePush('/legg-ut')} />
 
@@ -54,6 +84,38 @@ export function OppdragScreen() {
           <View style={styles.categoryBleed}>
             <CategoryCircleRow items={CATEGORY_CIRCLES} activeSlug="alle" onSelect={onCategory} />
           </View>
+        </View>
+
+        <View style={styles.jobs}>
+          <AppText variant="sectionHead" numberOfLines={1}>
+            {nb.home.nearYou}
+          </AppText>
+
+          {loading ? (
+            <ListingListSkeleton count={3} />
+          ) : jobs.isError || items.length === 0 ? (
+            <ScreenState
+              status={jobs.isError ? 'error' : 'empty'}
+              onRetry={() => jobs.refetch()}
+              emptyText={emptyText}
+            />
+          ) : (
+            <View style={styles.feed}>
+              {items.map((listing) => (
+                <JobFeedCard
+                  key={listing.id}
+                  listing={listing}
+                  onPress={() => safePush(`/oppdrag/${listing.id}`)}
+                />
+              ))}
+              <Button
+                label={nb.common.seeAll}
+                variant="secondary"
+                iconRight="arrow-right"
+                onPress={() => safePush('/oppdrag-liste')}
+              />
+            </View>
+          )}
         </View>
 
         <CommunityTeaserCard onPress={() => safePush('/fellesskap')} />
@@ -75,4 +137,6 @@ const styles = StyleSheet.create({
   // this screen's own horizontal padding to keep it flush with the content
   // above and below instead of double-padded.
   categoryBleed: { marginHorizontal: -tokens.space.xl },
+  jobs: { gap: tokens.space.md },
+  feed: { gap: tokens.space.lg },
 });

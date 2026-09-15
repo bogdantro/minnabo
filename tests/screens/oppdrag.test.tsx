@@ -16,6 +16,26 @@ test('shows the hero, location, search and category row', async () => {
   await waitFor(() => expect(screen.getByLabelText(/Lillehammer/)).toBeTruthy());
 });
 
+test('shows the newest open tasks as full-width photo cards, capped at 8', async () => {
+  await renderWithProviders(<OppdragScreen />);
+  await waitFor(() => expect(screen.getByText('Jobber nær deg')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+
+  // Only task requests ("trenger hjelp") belong in this feed, not offers.
+  expect(screen.queryByText('Jeg kan klippe plenen din')).toBeNull();
+
+  const badges = screen.getAllByText('Trenger hjelp');
+  expect(badges.length).toBeGreaterThan(0);
+  expect(badges.length).toBeLessThanOrEqual(8);
+});
+
+test('a "Se alle" button below the feed goes to the full task list', async () => {
+  await renderWithProviders(<OppdragScreen />);
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  await fireEvent.press(screen.getByText('Se alle'));
+  expect(router.push).toHaveBeenCalledWith('/oppdrag-liste');
+});
+
 test('the community teaser links to Fellesskap', async () => {
   await renderWithProviders(<OppdragScreen />);
   await waitFor(() => expect(screen.getByText('Naboer som hjelper naboer')).toBeTruthy());
