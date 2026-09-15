@@ -35,11 +35,17 @@ const SORTS = [
   { value: 'PRICE', label: nb.search.sortPrice },
 ];
 
-export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
+export function SearchScreen({
+  initialQuery = '',
+  initialCategory,
+}: {
+  initialQuery?: string;
+  initialCategory?: string;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [type, setType] = useState<TypeChoice>('ALL');
-  const [categorySlug, setCategorySlug] = useState('alle');
+  const [categorySlug, setCategorySlug] = useState(initialCategory || 'alle');
   const [maxDistanceKm, setMaxDistanceKm] = useState<number | undefined>(undefined);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState<ListingSort>('RELEVANCE');
@@ -145,7 +151,7 @@ export function SearchScreen({ initialQuery = '' }: { initialQuery?: string }) {
             onChangeText={setQuery}
             placeholder={nb.search.placeholder}
             placeholderTextColor={tokens.color.navyMuted}
-            autoFocus={!initialQuery}
+            autoFocus={!initialQuery && !initialCategory}
             returnKeyType="search"
             spellCheck={false}
             autoCorrect={false}

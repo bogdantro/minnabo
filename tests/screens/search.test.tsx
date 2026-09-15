@@ -25,6 +25,14 @@ test('results are scoped to the user kommune (Lillehammer)', async () => {
   expect(screen.queryByText('Fast eller enkeltvis rengjøring')).toBeNull();
 });
 
+test('an initialCategory (from a homepage category tap) pre-filters straight to results', async () => {
+  await renderWithProviders(<SearchScreen initialCategory="hage" />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Hage' })).toBeTruthy());
+  expect(screen.getByRole('button', { name: 'Hage' }).props.accessibilityState.selected).toBe(true);
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  expect(screen.queryByText('Hjelp med flytting')).toBeNull();
+});
+
 test('the type toggle narrows results to offers', async () => {
   await renderWithProviders(<SearchScreen initialQuery="plen" />);
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());

@@ -55,7 +55,12 @@ export function CategoryCircleRow({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: tokens.space.lg, paddingVertical: tokens.space.sm, paddingRight: tokens.space.xl },
+  row: {
+    gap: tokens.space.lg,
+    paddingVertical: tokens.space.sm,
+    paddingLeft: tokens.space.xl,
+    paddingRight: tokens.space.xl,
+  },
   item: { alignItems: 'center', gap: 7, width: 64 },
   circle: {
     width: 62,
