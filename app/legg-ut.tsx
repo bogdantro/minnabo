@@ -1,1 +1,1 @@
-export { ChoiceScreen as default } from '@/screens/LeggUt/ChoiceScreen';
+export { LeggUtIntroScreen as default } from '@/screens/LeggUt/IntroScreen';
