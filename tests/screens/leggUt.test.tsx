@@ -113,24 +113,53 @@ test('falls back to resolveKommune when municipality is blank', () => {
   expect(l.location.municipality).toBe('Ringsaker');
 });
 
-test('the task wizard blocks empty step 1 and reaches the preview', async () => {
+test('the task wizard is 2 steps: identity, then place/tid/pris/bekreft', async () => {
   await renderWithProviders(<TaskRequestForm />);
 
+  // Step 1: category/title/description are required.
   await fireEvent.press(screen.getByText('Neste'));
   await waitFor(() => expect(screen.getByText('Velg en kategori.')).toBeTruthy());
 
   await fireEvent.press(screen.getByRole('button', { name: 'Hage' }));
   await fireEvent.changeText(screen.getByLabelText('Tittel på oppdraget'), 'Vaske vinduer');
   await fireEvent.changeText(screen.getByLabelText('Beskrivelse'), 'Alle vinduer i første etasje');
-  await fireEvent.press(screen.getByText('Neste')); // -> step 2 (images)
+  await fireEvent.press(screen.getByText('Neste')); // -> step 2 (place, tid, pris, bekreft)
 
+  await waitFor(() => expect(screen.getByText('Sted, tid og pris')).toBeTruthy());
+  // Secondary fields (photos, exact time, equipment, …) start collapsed.
+  expect(screen.queryByText('Legg til bilder')).toBeNull();
+  // This is the last step now, so the button reads "Forhåndsvis oppdrag".
+  expect(screen.queryByText('Neste')).toBeNull();
+  const submit = () => fireEvent.press(screen.getByText('Forhåndsvis oppdrag'));
+
+  // Place already has a default (the user's own place) — price does not.
+  await submit();
+  await waitFor(() => expect(screen.getByText('Skriv inn et beløp.')).toBeTruthy());
+
+  await fireEvent.changeText(screen.getByLabelText('Beløp'), '450');
+  await submit();
+  await waitFor(() =>
+    expect(screen.getByText('Du må bekrefte at informasjonen er riktig.')).toBeTruthy(),
+  );
+
+  await fireEvent.press(screen.getByLabelText(/Jeg bekrefter/));
+  await submit();
+  await waitFor(() =>
+    expect(screen.queryByText('Du må bekrefte at informasjonen er riktig.')).toBeNull(),
+  );
+});
+
+test('"Flere detaljer" is collapsed by default and reveals the optional fields', async () => {
+  await renderWithProviders(<TaskRequestForm />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Hage' }));
+  await fireEvent.changeText(screen.getByLabelText('Tittel på oppdraget'), 'Vaske vinduer');
+  await fireEvent.changeText(screen.getByLabelText('Beskrivelse'), 'Alle vinduer i første etasje');
+  await fireEvent.press(screen.getByText('Neste'));
+  await waitFor(() => expect(screen.getByText('Sted, tid og pris')).toBeTruthy());
+
+  expect(screen.queryByText('Legg til bilder')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Flere detaljer' }));
   await waitFor(() => expect(screen.getByText('Legg til bilder')).toBeTruthy());
-  await fireEvent.press(screen.getByText('Neste')); // -> step 3
-
-  await waitFor(() => expect(screen.getByText('Hvor og når?')).toBeTruthy());
-  await fireEvent.press(screen.getByText('Neste')); // -> step 4 (place has a default)
-
-  await waitFor(() => expect(screen.getByText('Pris og praktisk informasjon')).toBeTruthy());
 });
 
 test('a task template pre-fills the title and description', async () => {

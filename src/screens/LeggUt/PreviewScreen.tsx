@@ -122,7 +122,7 @@ export function PreviewScreen() {
 
           {isTask ? (
             <>
-              <EditableRow title={nb.listingDetail.practicalInfo} onEdit={() => editStep(2)} />
+              <EditableRow title={nb.listingDetail.practicalInfo} onEdit={() => editStep(1)} />
               <InfoCard>
                 {listing.task?.equipment ? (
                   <InfoRow icon="feather" label={listing.task.equipment} last={!listing.task?.meetingNote} />

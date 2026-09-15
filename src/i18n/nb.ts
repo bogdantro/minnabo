@@ -307,8 +307,10 @@ const nb = {
     photoTipsTitle: 'Tips til gode bilder',
     photoTipsBody: 'Vis hele området og detaljer som kan være viktige for den som skal utføre jobben.',
     // task step 3
-    taskS3Title: 'Hvor og når?',
-    taskS3Sub: 'Velg området og tidspunktet som passer best.',
+    taskS3Title: 'Sted, tid og pris',
+    taskS3Sub: 'Det siste før du kan publisere oppdraget.',
+    moreDetails: 'Flere detaljer',
+    moreDetailsHint: 'Valgfritt — bilder, nøyaktig tidspunkt, utstyr og mer.',
     placeLabel: 'Sted',
     areaLabel: 'Område eller postnummer',
     addressPrivateNote: 'Den nøyaktige adressen vises ikke offentlig. Du kan dele den etter at et tilbud er godtatt.',

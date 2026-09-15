@@ -21,6 +21,7 @@ import { PickerPills } from '@/components/ui/PickerPills';
 import { ImagePickerField } from '@/components/ui/ImagePickerField';
 import { SelectionCard } from '@/components/ui/SelectionCard';
 import { ToggleCard, ToggleRow } from '@/components/ui/ToggleRow';
+import { ExpandableSection } from '@/components/ui/ExpandableSection';
 import { InfoBox } from '@/components/ui/InfoBox';
 import { AmountField } from '@/components/ui/AmountField';
 import { FieldGroup } from '@/components/ui/FieldGroup';
@@ -169,37 +170,25 @@ export function TaskRequestForm() {
       ),
     },
     {
-      title: nb.leggUt.imagesTitle,
-      subtitle: nb.leggUt.imagesSub,
-      render: () => (
-        <>
-          <ImagePickerField value={form.images} onChange={(v) => set('images', v)} />
-          <InfoBox icon="zap" tone="cyan">
-            <AppText variant="meta" weight="bold" color="navy">
-              {nb.leggUt.photoTipsTitle}
-            </AppText>
-            {'  '}
-            {nb.leggUt.photoTipsBody}
-          </InfoBox>
-        </>
-      ),
-    },
-    {
+      // Everything truly required to publish lives here, up front: place,
+      // a quick date choice, price (or dugnad), and the confirmation. Photos,
+      // exact timing, equipment and access are real but secondary — they're
+      // opt-in behind "Flere detaljer" instead of forcing two more screens.
       title: nb.leggUt.taskS3Title,
       subtitle: nb.leggUt.taskS3Sub,
-      validate: () => (!form.place.trim() ? nb.leggUt.errRequired : null),
+      validate: () =>
+        !form.place.trim()
+          ? nb.leggUt.errRequired
+          : !form.isDugnad && form.priceMode === 'BUDGET' && !form.amountKr.trim()
+            ? nb.leggUt.errPrice
+            : !form.confirmed
+              ? nb.leggUt.errConfirm
+              : null,
       render: () => (
         <>
           <FieldGroup title={nb.leggUt.placeLabel}>
             <KommunePicker value={form.municipality} onChange={(k) => set('municipality', k)} />
             <TextField label={nb.leggUt.placeLabel} hideLabel value={form.place} onChangeText={(t) => set('place', t)} />
-            <TextField
-              label={nb.leggUt.areaLabel}
-              floatingLabel
-              value={form.area}
-              onChangeText={(t) => set('area', t)}
-              placeholder="2615 Lillehammer"
-            />
             <InfoBox icon="shield">{nb.leggUt.addressPrivateNote}</InfoBox>
           </FieldGroup>
 
@@ -233,63 +222,6 @@ export function TaskRequestForm() {
               : null}
           </FieldGroup>
 
-          <FieldGroup title={nb.leggUt.timeLabel}>
-            <View style={styles.timeRow}>
-              <View style={styles.timeCell}>
-                <TimeField
-                  label={nb.leggUt.timeFrom}
-                  showLabel={false}
-                  placeholder={nb.leggUt.timeFrom}
-                  value={form.timeFrom || null}
-                  onChange={(v) => set('timeFrom', v)}
-                />
-              </View>
-              <View style={styles.timeCell}>
-                <TimeField
-                  label={nb.leggUt.timeTo}
-                  showLabel={false}
-                  placeholder={nb.leggUt.timeTo}
-                  value={form.timeTo || null}
-                  onChange={(v) => set('timeTo', v)}
-                />
-              </View>
-            </View>
-          </FieldGroup>
-
-          <SelectField
-            label={nb.leggUt.durationLabel}
-            placeholder="Velg varighet"
-            value={form.duration || undefined}
-            options={DURATIONS.map((v) => ({ value: v, label: v }))}
-            onChange={(v) => set('duration', v)}
-          />
-
-          <FieldGroup title={nb.leggUt.recurrenceLabel} hint={nb.leggUt.recurrenceHint}>
-            <PickerPills
-              options={[
-                { value: '', label: nb.leggUt.recurrenceOnce },
-                { value: 'WEEKLY', label: nb.leggUt.recurrenceWeekly },
-                { value: 'BIWEEKLY', label: nb.leggUt.recurrenceBiweekly },
-                { value: 'MONTHLY', label: nb.leggUt.recurrenceMonthly },
-              ]}
-              selected={[form.recurrence]}
-              onToggle={(v) => set('recurrence', v as TaskForm['recurrence'])}
-            />
-          </FieldGroup>
-        </>
-      ),
-    },
-    {
-      title: nb.leggUt.taskS4Title,
-      subtitle: nb.leggUt.taskS4Sub,
-      validate: () =>
-        !form.isDugnad && form.priceMode === 'BUDGET' && !form.amountKr.trim()
-          ? nb.leggUt.errPrice
-          : !form.confirmed
-            ? nb.leggUt.errConfirm
-            : null,
-      render: () => (
-        <>
           <ToggleCard>
             <ToggleRow
               icon="heart"
@@ -327,50 +259,108 @@ export function TaskRequestForm() {
             </FieldGroup>
           )}
 
-          <FieldGroup title={nb.leggUt.equipQuestion}>
-            <ToggleCard>
-              <ToggleRow
-                icon="feather"
-                label={nb.leggUt.equipCanBorrow}
-                value={form.equipCanBorrow}
-                onValueChange={(v) => set('equipCanBorrow', v)}
-              />
-              <ToggleRow
-                icon="tool"
-                label={nb.leggUt.equipBringOwn}
-                value={form.equipBringOwn}
-                onValueChange={(v) => set('equipBringOwn', v)}
-                last
-              />
-            </ToggleCard>
-            <TextField
-              label={nb.leggUt.equipExtra}
-              floatingLabel
-              value={form.equipExtra}
-              onChangeText={(t) => set('equipExtra', t)}
-              placeholder="Ta gjerne med kantklipper hvis du har."
-            />
-          </FieldGroup>
-
-          <FieldGroup title={nb.leggUt.whoQuestion} hint={nb.leggUt.whoHint}>
-            <SelectField
-              label={nb.leggUt.whoQuestion}
-              showLabel={false}
-              placeholder={nb.leggUt.whoAllVerified}
-              icon="users"
-              value={form.whoCanOffer}
-              options={[
-                { value: 'ALL_VERIFIED', label: nb.leggUt.whoAllVerified },
-                { value: 'BUSINESS_ONLY', label: nb.leggUt.whoBusinessOnly },
-              ]}
-              onChange={(v) => set('whoCanOffer', v as TaskForm['whoCanOffer'])}
-            />
-          </FieldGroup>
-
           <InfoBox icon="shield">{nb.leggUt.noPaymentNote}</InfoBox>
           <ConfirmCheckbox value={form.confirmed} onChange={(v) => set('confirmed', v)}>
             {nb.leggUt.confirmInfo}
           </ConfirmCheckbox>
+
+          <ExpandableSection title={nb.leggUt.moreDetails} hint={nb.leggUt.moreDetailsHint}>
+            <FieldGroup title={nb.leggUt.imagesTitle} hint={nb.leggUt.photoTipsBody}>
+              <ImagePickerField value={form.images} onChange={(v) => set('images', v)} />
+            </FieldGroup>
+
+            <TextField
+              label={nb.leggUt.areaLabel}
+              floatingLabel
+              value={form.area}
+              onChangeText={(t) => set('area', t)}
+              placeholder="2615 Lillehammer"
+            />
+
+            <FieldGroup title={nb.leggUt.timeLabel}>
+              <View style={styles.timeRow}>
+                <View style={styles.timeCell}>
+                  <TimeField
+                    label={nb.leggUt.timeFrom}
+                    showLabel={false}
+                    placeholder={nb.leggUt.timeFrom}
+                    value={form.timeFrom || null}
+                    onChange={(v) => set('timeFrom', v)}
+                  />
+                </View>
+                <View style={styles.timeCell}>
+                  <TimeField
+                    label={nb.leggUt.timeTo}
+                    showLabel={false}
+                    placeholder={nb.leggUt.timeTo}
+                    value={form.timeTo || null}
+                    onChange={(v) => set('timeTo', v)}
+                  />
+                </View>
+              </View>
+            </FieldGroup>
+
+            <SelectField
+              label={nb.leggUt.durationLabel}
+              placeholder="Velg varighet"
+              value={form.duration || undefined}
+              options={DURATIONS.map((v) => ({ value: v, label: v }))}
+              onChange={(v) => set('duration', v)}
+            />
+
+            <FieldGroup title={nb.leggUt.recurrenceLabel} hint={nb.leggUt.recurrenceHint}>
+              <PickerPills
+                options={[
+                  { value: '', label: nb.leggUt.recurrenceOnce },
+                  { value: 'WEEKLY', label: nb.leggUt.recurrenceWeekly },
+                  { value: 'BIWEEKLY', label: nb.leggUt.recurrenceBiweekly },
+                  { value: 'MONTHLY', label: nb.leggUt.recurrenceMonthly },
+                ]}
+                selected={[form.recurrence]}
+                onToggle={(v) => set('recurrence', v as TaskForm['recurrence'])}
+              />
+            </FieldGroup>
+
+            <FieldGroup title={nb.leggUt.equipQuestion}>
+              <ToggleCard>
+                <ToggleRow
+                  icon="feather"
+                  label={nb.leggUt.equipCanBorrow}
+                  value={form.equipCanBorrow}
+                  onValueChange={(v) => set('equipCanBorrow', v)}
+                />
+                <ToggleRow
+                  icon="tool"
+                  label={nb.leggUt.equipBringOwn}
+                  value={form.equipBringOwn}
+                  onValueChange={(v) => set('equipBringOwn', v)}
+                  last
+                />
+              </ToggleCard>
+              <TextField
+                label={nb.leggUt.equipExtra}
+                floatingLabel
+                value={form.equipExtra}
+                onChangeText={(t) => set('equipExtra', t)}
+                placeholder="Ta gjerne med kantklipper hvis du har."
+              />
+            </FieldGroup>
+
+            <FieldGroup title={nb.leggUt.whoQuestion} hint={nb.leggUt.whoHint}>
+              <SelectField
+                label={nb.leggUt.whoQuestion}
+                showLabel={false}
+                placeholder={nb.leggUt.whoAllVerified}
+                icon="users"
+                value={form.whoCanOffer}
+                options={[
+                  { value: 'ALL_VERIFIED', label: nb.leggUt.whoAllVerified },
+                  { value: 'BUSINESS_ONLY', label: nb.leggUt.whoBusinessOnly },
+                ]}
+                onChange={(v) => set('whoCanOffer', v as TaskForm['whoCanOffer'])}
+              />
+            </FieldGroup>
+          </ExpandableSection>
         </>
       ),
     },
