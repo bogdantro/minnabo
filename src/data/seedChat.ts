@@ -5,6 +5,23 @@ import { profiles, listings } from './seed';
 const CURRENT_USER_ID = profiles.mb.id;
 export { CURRENT_USER_ID };
 
+/**
+ * Every timestamp below was originally written as a frozen late-August 2026
+ * calendar date. That made `p-emma-klippe` (and the other still-`SENT`
+ * proposals) silently cross `PROPOSAL_TTL_DAYS` and read as expired once real
+ * time moved past that week — `OfferCard` then hides "Godta tilbud" entirely
+ * (see chat.test.tsx). Anchor the whole demo timeline to "now" instead, by
+ * shifting every original date by the same offset — this preserves every
+ * relative gap between messages/proposals/agreements, so the story still
+ * reads in order, but the newest event (Emma's proposal) always lands a few
+ * hours in the past rather than drifting into the future.
+ */
+const ANCHOR_ORIGINAL = Date.parse('2026-08-27T12:46:00Z');
+const ANCHOR_NOW = Date.now() - 6 * 60 * 60 * 1000;
+const OFFSET_MS = ANCHOR_NOW - ANCHOR_ORIGINAL;
+/** Exported so tests can derive the same "now-anchored" date the seed uses. */
+export const shift = (iso: string): string => new Date(Date.parse(iso) + OFFSET_MS).toISOString();
+
 const klippePlen = listings.find((l) => l.id === 'l-klippe-plen')!;
 const flytting = listings.find((l) => l.id === 'l-flytting')!;
 const garderobe = listings.find((l) => l.id === 'l-montere-garderobe')!;
@@ -20,7 +37,7 @@ export const proposals: Proposal[] = [
     message: 'Jeg kan gjøre jobben for 600 kr.',
     scheduledText: 'I morgen kl. 17:00',
     status: 'SENT',
-    createdAt: '2026-08-27T12:46:00Z',
+    createdAt: shift('2026-08-27T12:46:00Z'),
   },
   {
     id: 'p-martin-flytting',
@@ -32,7 +49,7 @@ export const proposals: Proposal[] = [
     message: 'Vi to stiller lørdag kl. 10.',
     scheduledText: 'Lørdag kl. 10:00',
     status: 'ACCEPTED',
-    createdAt: '2026-08-26T15:00:00Z',
+    createdAt: shift('2026-08-26T15:00:00Z'),
   },
   {
     id: 'p-fjellbygg-mur',
@@ -44,7 +61,7 @@ export const proposals: Proposal[] = [
     message: 'Tilbud på mindre murarbeid, inkl. materialer.',
     scheduledText: 'Neste uke',
     status: 'SENT',
-    createdAt: '2026-08-24T09:00:00Z',
+    createdAt: shift('2026-08-24T09:00:00Z'),
   },
 
   // Three competing proposals on my own listing "Male gjerdet"
@@ -59,7 +76,7 @@ export const proposals: Proposal[] = [
     scheduledText: 'Lørdag kl. 09:00',
     caveats: 'Forutsetter tørt vær',
     status: 'SENT',
-    createdAt: '2026-08-21T10:00:00Z',
+    createdAt: shift('2026-08-21T10:00:00Z'),
   },
   {
     id: 'p-gjerde-emma',
@@ -71,7 +88,7 @@ export const proposals: Proposal[] = [
     message: 'Grundig jobb, to strøk. Kan starte søndag morgen.',
     scheduledText: 'Søndag kl. 08:00',
     status: 'SENT',
-    createdAt: '2026-08-21T14:30:00Z',
+    createdAt: shift('2026-08-21T14:30:00Z'),
   },
   {
     id: 'p-gjerde-martin',
@@ -83,7 +100,7 @@ export const proposals: Proposal[] = [
     message: 'Rask og rimelig. Ett strøk hvis det holder.',
     scheduledText: 'Fredag ettermiddag',
     status: 'SENT',
-    createdAt: '2026-08-22T09:15:00Z',
+    createdAt: shift('2026-08-22T09:15:00Z'),
   },
 ];
 
@@ -95,7 +112,7 @@ export const agreements: AgreementSnapshot[] = [
     price: nok(1500),
     scheduledText: 'Lørdag kl. 10:00',
     description: flytting.task?.description ?? 'Flyttehjelp',
-    agreedAt: '2026-08-26T18:31:00Z',
+    agreedAt: shift('2026-08-26T18:31:00Z'),
   },
 ];
 
@@ -105,7 +122,7 @@ export const conversations: Conversation[] = [
     listing: { id: klippePlen.id, title: klippePlen.title, type: klippePlen.type, place: 'Lillehammer', imageUrl: klippePlen.images[0]?.url },
     counterpart: { ...profiles.emma, online: true },
     lastMessagePreview: 'Hei! Jeg kan komme i morgen kl. 17.',
-    lastMessageAt: '2026-08-27T12:42:00Z',
+    lastMessageAt: shift('2026-08-27T12:42:00Z'),
     unread: true,
     statusTag: 'NEW_OFFER',
   },
@@ -114,7 +131,7 @@ export const conversations: Conversation[] = [
     listing: { id: flytting.id, title: flytting.title, type: flytting.type, place: 'Lillehammer', imageUrl: flytting.images[0]?.url },
     counterpart: profiles.martin,
     lastMessagePreview: 'Da er vi enige om 1 500 kr.',
-    lastMessageAt: '2026-08-26T18:30:00Z',
+    lastMessageAt: shift('2026-08-26T18:30:00Z'),
     unread: false,
     statusTag: 'OFFER_ACCEPTED',
   },
@@ -123,7 +140,7 @@ export const conversations: Conversation[] = [
     listing: { id: garderobe.id, title: 'Montere garderobe', type: garderobe.type, place: 'Lillehammer', imageUrl: garderobe.images[0]?.url },
     counterpart: profiles.andreas,
     lastMessagePreview: 'Har du verktøy selv?',
-    lastMessageAt: '2026-08-25T10:15:00Z',
+    lastMessageAt: shift('2026-08-25T10:15:00Z'),
     unread: false,
     statusTag: null,
   },
@@ -132,7 +149,7 @@ export const conversations: Conversation[] = [
     listing: { id: 'l-mur', title: 'Mindre murarbeid', type: 'TASK_REQUEST', place: 'Lillehammer' },
     counterpart: profiles.fjellbygg,
     lastMessagePreview: 'Vi har sendt deg et tilbud.',
-    lastMessageAt: '2026-08-24T09:01:00Z',
+    lastMessageAt: shift('2026-08-24T09:01:00Z'),
     unread: true,
     statusTag: 'NEW_OFFER',
   },
@@ -140,26 +157,26 @@ export const conversations: Conversation[] = [
 
 export const messagesByConversation: Record<string, Message[]> = {
   'c-emma': [
-    m('m1', 'c-emma', profiles.emma.id, 'Hei! Jeg kan klippe plenen i morgen kl. 17.', '2026-08-27T12:42:00Z'),
-    m('m2', 'c-emma', CURRENT_USER_ID, 'Hei! Det passer bra. Har du med egen gressklipper?', '2026-08-27T12:44:00Z', 'READ'),
-    m('m3', 'c-emma', profiles.emma.id, 'Ja, det har jeg. Jeg kan gjøre jobben for 600 kr.', '2026-08-27T12:45:00Z'),
-    { id: 'm4', conversationId: 'c-emma', authorProfileId: profiles.emma.id, text: '', kind: 'PROPOSAL', proposalId: 'p-emma-klippe', createdAt: '2026-08-27T12:46:00Z', delivery: 'DELIVERED' },
+    m('m1', 'c-emma', profiles.emma.id, 'Hei! Jeg kan klippe plenen i morgen kl. 17.', shift('2026-08-27T12:42:00Z')),
+    m('m2', 'c-emma', CURRENT_USER_ID, 'Hei! Det passer bra. Har du med egen gressklipper?', shift('2026-08-27T12:44:00Z'), 'READ'),
+    m('m3', 'c-emma', profiles.emma.id, 'Ja, det har jeg. Jeg kan gjøre jobben for 600 kr.', shift('2026-08-27T12:45:00Z')),
+    { id: 'm4', conversationId: 'c-emma', authorProfileId: profiles.emma.id, text: '', kind: 'PROPOSAL', proposalId: 'p-emma-klippe', createdAt: shift('2026-08-27T12:46:00Z'), delivery: 'DELIVERED' },
   ],
   'c-martin': [
-    m('mm1', 'c-martin', CURRENT_USER_ID, 'Hei! Kan dere hjelpe med flytting på lørdag?', '2026-08-26T14:35:00Z', 'READ'),
-    m('mm2', 'c-martin', profiles.martin.id, 'Ja, vi to kan stille kl. 10.', '2026-08-26T14:50:00Z'),
-    { id: 'mm3', conversationId: 'c-martin', authorProfileId: profiles.martin.id, text: '', kind: 'PROPOSAL', proposalId: 'p-martin-flytting', createdAt: '2026-08-26T15:00:00Z', delivery: 'READ' },
-    m('mm4', 'c-martin', CURRENT_USER_ID, 'Da er vi enige om 1 500 kr.', '2026-08-26T18:30:00Z', 'READ'),
-    { id: 'mm5', conversationId: 'c-martin', authorProfileId: 'system', text: 'Tilbud godtatt', kind: 'SYSTEM', createdAt: '2026-08-26T18:31:00Z', delivery: 'READ' },
+    m('mm1', 'c-martin', CURRENT_USER_ID, 'Hei! Kan dere hjelpe med flytting på lørdag?', shift('2026-08-26T14:35:00Z'), 'READ'),
+    m('mm2', 'c-martin', profiles.martin.id, 'Ja, vi to kan stille kl. 10.', shift('2026-08-26T14:50:00Z')),
+    { id: 'mm3', conversationId: 'c-martin', authorProfileId: profiles.martin.id, text: '', kind: 'PROPOSAL', proposalId: 'p-martin-flytting', createdAt: shift('2026-08-26T15:00:00Z'), delivery: 'READ' },
+    m('mm4', 'c-martin', CURRENT_USER_ID, 'Da er vi enige om 1 500 kr.', shift('2026-08-26T18:30:00Z'), 'READ'),
+    { id: 'mm5', conversationId: 'c-martin', authorProfileId: 'system', text: 'Tilbud godtatt', kind: 'SYSTEM', createdAt: shift('2026-08-26T18:31:00Z'), delivery: 'READ' },
   ],
   'c-sara': [
-    m('ms1', 'c-sara', profiles.andreas.id, 'Hei! Jeg kan montere garderoben.', '2026-08-25T09:50:00Z'),
-    m('ms2', 'c-sara', profiles.andreas.id, 'Har du verktøy selv?', '2026-08-25T10:15:00Z'),
+    m('ms1', 'c-sara', profiles.andreas.id, 'Hei! Jeg kan montere garderoben.', shift('2026-08-25T09:50:00Z')),
+    m('ms2', 'c-sara', profiles.andreas.id, 'Har du verktøy selv?', shift('2026-08-25T10:15:00Z')),
   ],
   'c-fjellbygg': [
-    m('mf1', 'c-fjellbygg', CURRENT_USER_ID, 'Hei! Trenger hjelp med litt murarbeid ved inngangen.', '2026-08-24T08:30:00Z', 'READ'),
-    m('mf2', 'c-fjellbygg', profiles.fjellbygg.id, 'Hei! Vi har sendt deg et tilbud.', '2026-08-24T09:00:00Z'),
-    { id: 'mf3', conversationId: 'c-fjellbygg', authorProfileId: profiles.fjellbygg.id, text: '', kind: 'PROPOSAL', proposalId: 'p-fjellbygg-mur', createdAt: '2026-08-24T09:01:00Z', delivery: 'DELIVERED' },
+    m('mf1', 'c-fjellbygg', CURRENT_USER_ID, 'Hei! Trenger hjelp med litt murarbeid ved inngangen.', shift('2026-08-24T08:30:00Z'), 'READ'),
+    m('mf2', 'c-fjellbygg', profiles.fjellbygg.id, 'Hei! Vi har sendt deg et tilbud.', shift('2026-08-24T09:00:00Z')),
+    { id: 'mf3', conversationId: 'c-fjellbygg', authorProfileId: profiles.fjellbygg.id, text: '', kind: 'PROPOSAL', proposalId: 'p-fjellbygg-mur', createdAt: shift('2026-08-24T09:01:00Z'), delivery: 'DELIVERED' },
   ],
 };
 

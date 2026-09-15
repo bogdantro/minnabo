@@ -2,6 +2,7 @@ import { screen, waitFor, fireEvent, within } from '@testing-library/react-nativ
 import { InnboksScreen } from '@/screens/InnboksScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { chatRepository } from '@/data/chatRepository';
+import { shift } from '@/data/seedChat';
 import { formatDayLabel } from '@/lib/calendar';
 import { renderWithProviders } from '../testUtils';
 
@@ -131,7 +132,9 @@ test('the Send tilbud sheet sends a customised proposal', async () => {
 
 test('chat shows a day separator above the first message of a day', async () => {
   const conversation = chatRepository.getConversation('c-emma')!;
-  const firstDayLabel = formatDayLabel(new Date('2026-08-27T12:42:00Z'));
+  // seedChat anchors its dates to "now" (see seedChat.ts) so compute the
+  // label the same way, rather than off the original frozen literal.
+  const firstDayLabel = formatDayLabel(new Date(shift('2026-08-27T12:42:00Z')));
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
   // c-emma messages are all dated 2026-08-27 → exactly one divider.
   await waitFor(() => expect(screen.getByText(firstDayLabel)).toBeTruthy());
