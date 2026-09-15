@@ -32,7 +32,7 @@ export function HeroCard({ onPressCta }: { onPressCta: () => void }) {
       />
 
       <View style={styles.body}>
-        <AppText variant="display" style={styles.title}>
+        <AppText variant="display" weight="medium" style={styles.title}>
           {nb.home.heroTitle}
         </AppText>
         <AppText variant="body" weight="medium" color="navyMuted" style={styles.subtitle}>
