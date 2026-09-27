@@ -23,6 +23,7 @@ export function CategoryCircleRow({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
       contentContainerStyle={styles.row}
     >
       {items.map((c) => {
@@ -54,7 +55,14 @@ export function CategoryCircleRow({
   );
 }
 
+const CIRCLE_SIZE = 62;
+// circle + the gap to its label + the label's own line height, so the row
+// isn't left to shrink-wrap its content — react-native-web can collapse a
+// horizontal ScrollView to zero height when it isn't given an explicit one.
+const SCROLL_HEIGHT = CIRCLE_SIZE + 7 + 18 + tokens.space.sm * 2;
+
 const styles = StyleSheet.create({
+  scroll: { height: SCROLL_HEIGHT },
   row: {
     gap: tokens.space.lg,
     paddingVertical: tokens.space.sm,
@@ -63,8 +71,8 @@ const styles = StyleSheet.create({
   },
   item: { alignItems: 'center', gap: 7, width: 64 },
   circle: {
-    width: 62,
-    height: 62,
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
     borderRadius: 31,
     backgroundColor: tokens.color.surface,
     borderWidth: 1,
