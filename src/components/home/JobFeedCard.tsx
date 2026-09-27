@@ -1,7 +1,7 @@
 import { View, Image, Pressable, StyleSheet } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { formatPrice, formatFromPrice } from '@/domain/price';
-import { tokens, hitSlop } from '@/theme';
+import { tokens, hitSlop, categoryAccent } from '@/theme';
 import nb from '@/i18n/nb';
 import { useIsSaved } from '@/api/queries';
 import { AppText } from '../ui/Text';
@@ -22,6 +22,7 @@ function priceLabel(listing: Listing): string {
 export function JobFeedCard({ listing, onPress }: { listing: Listing; onPress: () => void }) {
   const [saved, toggleSaved] = useIsSaved(listing.id);
   const cover = listing.images[0]?.url;
+  const accent = categoryAccent(listing.category.slug);
 
   const km =
     typeof listing.location.distanceKm === 'number'
@@ -32,7 +33,7 @@ export function JobFeedCard({ listing, onPress }: { listing: Listing; onPress: (
     <View style={styles.wrap}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${listing.title}, ${nb.badge.needsHelp}`}
+        accessibilityLabel={`${listing.title}, ${listing.category.label}`}
         onPress={onPress}
         style={styles.card}
       >
@@ -46,7 +47,11 @@ export function JobFeedCard({ listing, onPress }: { listing: Listing; onPress: (
 
         <View style={styles.body}>
           <View style={styles.badgeRow}>
-            <StatusPill label={nb.badge.needsHelp} tone="lime" />
+            <StatusPill
+              label={listing.category.label}
+              accentColor={accent.color}
+              accentTint={accent.tint}
+            />
             {listing.task?.isDugnad ? <StatusPill label={nb.badge.dugnad} tone="lime" /> : null}
           </View>
           <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
@@ -59,7 +64,7 @@ export function JobFeedCard({ listing, onPress }: { listing: Listing; onPress: (
               {km}
             </AppText>
           </View>
-          <AppText variant="section" weight="extrabold" style={styles.price}>
+          <AppText variant="section" weight="extrabold" style={[styles.price, { color: accent.color }]}>
             {priceLabel(listing)}
           </AppText>
         </View>

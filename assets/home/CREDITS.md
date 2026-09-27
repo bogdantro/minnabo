@@ -6,7 +6,6 @@ submission, or swap in owned assets.
 
 | Where | Source | Subject | Licence |
 | --- | --- | --- | --- |
-| `HeroCard.tsx` | `upload.wikimedia.org/.../Lillehammer_City.jpg` | Lillehammer city | Wikimedia Commons — check the file page for the exact CC licence + required attribution |
 | `CommunityTeaserCard.tsx` | `images.unsplash.com/photo-1524661135-423995f22d0b` | Map / streets texture | Unsplash Licence |
 | `CommunityTeaserCard.tsx` | `photo-1544005313-94ddf0286df2` | Portrait | Unsplash Licence |
 | `CommunityTeaserCard.tsx` | `photo-1500648767791-00dcc994a43e` | Portrait | Unsplash Licence |

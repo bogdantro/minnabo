@@ -52,11 +52,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.color.line,
     paddingLeft: tokens.space.lg,
-    shadowColor: tokens.color.navy,
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
   search: {
     flex: 1,

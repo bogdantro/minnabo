@@ -64,8 +64,33 @@ export function ListingListSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+/** Placeholder that mirrors a JobFeedCard — full-width photo, text below. */
+export function JobFeedCardSkeleton() {
+  return (
+    <View style={styles.feedCard}>
+      <Skeleton width="100%" height={176} radius={0} />
+      <View style={styles.feedBody}>
+        <Skeleton width={90} height={20} radius={tokens.radius.pill} />
+        <Skeleton width="70%" height={17} />
+        <Skeleton width="45%" height={13} />
+        <Skeleton width="30%" height={19} style={styles.feedPrice} />
+      </View>
+    </View>
+  );
+}
+
+export function JobFeedListSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <View style={styles.list} accessibilityRole="progressbar" accessibilityLabel="Laster">
+      {Array.from({ length: count }).map((_, i) => (
+        <JobFeedCardSkeleton key={i} />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  list: { gap: tokens.space.md },
+  list: { gap: tokens.space.lg },
   card: {
     flexDirection: 'row',
     gap: tokens.space.md,
@@ -77,4 +102,13 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1, gap: tokens.space.sm, paddingVertical: 2 },
   price: { alignSelf: 'flex-end' },
+  feedCard: {
+    backgroundColor: tokens.color.surface,
+    borderRadius: tokens.radius.card,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    overflow: 'hidden',
+  },
+  feedBody: { padding: tokens.space.lg, gap: tokens.space.sm },
+  feedPrice: { marginTop: 2 },
 });

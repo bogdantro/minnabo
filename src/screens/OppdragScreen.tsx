@@ -8,7 +8,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { safePush } from '@/lib/nav';
 import { HomeTopBar } from '@/components/TopBar';
 import { ScreenState } from '@/components/ui/ScreenState';
-import { ListingListSkeleton } from '@/components/ui/Skeleton';
+import { JobFeedListSkeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { HomeSearchBar } from '@/components/HomeSearchBar';
@@ -92,7 +92,7 @@ export function OppdragScreen() {
           </AppText>
 
           {loading ? (
-            <ListingListSkeleton count={3} />
+            <JobFeedListSkeleton count={3} />
           ) : jobs.isError || items.length === 0 ? (
             <ScreenState
               status={jobs.isError ? 'error' : 'empty'}

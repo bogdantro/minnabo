@@ -10,6 +10,13 @@ export type StatusPillProps = {
   filled?: boolean;
   /** tinted background, coloured text, no border */
   soft?: boolean;
+  /**
+   * Raw colour override for cases outside the fixed tone palette — e.g. a
+   * per-category accent from `theme/categoryAccent.ts`. Takes precedence
+   * over `tone` when set.
+   */
+  accentColor?: string;
+  accentTint?: string;
   style?: ViewStyle;
 };
 
@@ -25,26 +32,35 @@ const toneTint: Record<PillTone, ColorToken> = {
   neutral: 'line',
 };
 
-export function StatusPill({ label, tone = 'neutral', filled = false, soft = false, style }: StatusPillProps) {
-  const color = toneColor[tone];
+export function StatusPill({
+  label,
+  tone = 'neutral',
+  filled = false,
+  soft = false,
+  accentColor,
+  accentTint,
+  style,
+}: StatusPillProps) {
+  const color = accentColor ?? tokens.color[toneColor[tone]];
+  const tint = accentTint ?? tokens.color[toneTint[tone]];
 
   return (
     <View
       style={[
         styles.pill,
         filled
-          ? { backgroundColor: tokens.color[color] }
+          ? { backgroundColor: color }
           : soft
-            ? { backgroundColor: tokens.color[toneTint[tone]] }
-            : { borderColor: tokens.color[color], borderWidth: 1, backgroundColor: tokens.color[toneTint[tone]] },
+            ? { backgroundColor: tint }
+            : { borderColor: color, borderWidth: 1, backgroundColor: tint },
         style,
       ]}
     >
       <AppText
         variant="meta"
         weight="bold"
-        color={filled ? 'white' : color}
-        style={styles.text}
+        color={filled ? 'white' : undefined}
+        style={[styles.text, !filled ? { color } : null]}
       >
         {label}
       </AppText>
