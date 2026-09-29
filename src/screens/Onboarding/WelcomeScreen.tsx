@@ -3,7 +3,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { ENV } from '@/lib/env';
 import { AppText } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 
@@ -11,7 +10,7 @@ const logo = require('../../../assets/logo-icon.png');
 
 export function WelcomeScreen() {
   const router = useRouter();
-  const start = () => router.replace(ENV.useMocks ? '/' : '/logg-inn');
+  const start = () => router.replace('/logg-inn');
   return (
     <SafeAreaView style={styles.wrap}>
       <View style={styles.hero}>

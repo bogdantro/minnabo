@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { ENV } from '@/lib/env';
 import { useSession } from '@/auth/session';
 import { chatKeys, profileKeys } from './queries';
 
@@ -13,7 +12,7 @@ export function useConversationChannel(conversationId: string): void {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (ENV.useMocks || !conversationId) return;
+    if (!conversationId) return;
     const channel = supabase
       .channel(`conv:${conversationId}`)
       .on(
@@ -69,7 +68,7 @@ export function useTypingChannel(conversationId: string): {
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (ENV.useMocks || !conversationId || !userId) return;
+    if (!conversationId || !userId) return;
     const channel = supabase.channel(`typing:${conversationId}`, {
       config: { broadcast: { self: false } },
     });
@@ -112,7 +111,7 @@ export function useInboxRealtime(): void {
   const { userId } = useSession();
 
   useEffect(() => {
-    if (ENV.useMocks || !userId) return;
+    if (!userId) return;
     const channel = supabase
       .channel(`inbox:${userId}`)
       .on(
@@ -153,7 +152,7 @@ export function usePresence(): Set<string> {
   const [online, setOnline] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    if (ENV.useMocks || !userId) return;
+    if (!userId) return;
     const channel = supabase.channel('presence:lobby', {
       config: { presence: { key: userId } },
     });

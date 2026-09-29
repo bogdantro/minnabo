@@ -3,11 +3,6 @@ import { detectKommune } from '@/lib/geo';
 
 const L = Location as jest.Mocked<typeof Location>;
 
-// jest-setup already mocks '@/lib/env' with useMocks:false; re-assert it here so
-// this suite exercises the real permission → getCurrentPositionAsync →
-// reverseGeocodeAsync path against the expo-location mock.
-jest.mock('@/lib/env', () => ({ ENV: { useMocks: false, supabaseUrl: 'x', supabaseAnonKey: 'y' } }));
-
 beforeEach(() => {
   jest.clearAllMocks();
   L.getForegroundPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true } as never);
@@ -38,22 +33,4 @@ it('returns {error:unavailable} when the fix throws', async () => {
 it('returns {error:unavailable} when the kommune cannot be resolved', async () => {
   L.reverseGeocodeAsync.mockResolvedValue([{ subregion: 'Nowhere', city: 'Nowhere' }] as never);
   await expect(detectKommune()).resolves.toEqual({ error: 'unavailable' });
-});
-
-it('short-circuits in mock mode without touching expo-location', async () => {
-  const env = require('@/lib/env').ENV as { useMocks: boolean };
-  const prev = env.useMocks;
-  env.useMocks = true;
-  try {
-    await expect(detectKommune()).resolves.toEqual({
-      municipality: 'Lillehammer',
-      place: 'Lillehammer',
-    });
-    expect(L.getForegroundPermissionsAsync).not.toHaveBeenCalled();
-    expect(L.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
-    expect(L.getCurrentPositionAsync).not.toHaveBeenCalled();
-    expect(L.reverseGeocodeAsync).not.toHaveBeenCalled();
-  } finally {
-    env.useMocks = prev;
-  }
 });

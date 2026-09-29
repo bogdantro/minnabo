@@ -8,6 +8,8 @@ import type {
   Proposal,
   PublicProfile,
   NoticeboardPost,
+  Partner,
+  Donation,
   NoticeKind,
   Rating,
   Review,
@@ -302,6 +304,44 @@ export function toAgreement(row: AgreementRow): AgreementSnapshot {
     description: row.description,
     caveats: row.caveats ?? undefined,
     agreedAt: row.agreed_at,
+  };
+}
+
+export type PartnerRow = {
+  id: string;
+  name: string;
+  blurb: string;
+  url: string | null;
+  municipality: string | null;
+  partner_placements: { surface: string; active: boolean }[] | null;
+};
+
+export function toPartner(row: PartnerRow): Partner {
+  return {
+    id: row.id,
+    name: row.name,
+    tagline: row.blurb,
+    url: row.url,
+    municipality: row.municipality,
+    featured: (row.partner_placements ?? []).some((p) => p.active && p.surface === 'fellesskap'),
+  };
+}
+
+export type DonationRow = {
+  id: string;
+  recipient: string;
+  amount_kr: number;
+  period: string;
+  transferred_at: string;
+};
+
+export function toDonation(row: DonationRow): Donation {
+  return {
+    id: row.id,
+    recipient: row.recipient,
+    amountKr: row.amount_kr,
+    period: row.period,
+    transferredAt: row.transferred_at,
   };
 }
 

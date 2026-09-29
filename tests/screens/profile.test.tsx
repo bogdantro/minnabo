@@ -4,7 +4,7 @@ import { EditProfileScreen } from '@/screens/EditProfileScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { CompletionScreen } from '@/screens/CompletionScreen';
 import { ReviewScreen } from '@/screens/ReviewScreen';
-import { profileRepository } from '@/data/profileRepository';
+import { profileRepository } from '@mocks/data/profileRepository';
 import { renderWithProviders } from '../testUtils';
 
 test('own profile shows presentation, verifications and reviews', async () => {
@@ -35,7 +35,7 @@ test('edit profile blocks saving a blank name', async () => {
 
 test('pausing the profile shows the paused banner and hides own listings', async () => {
   const meId = profileRepository.currentUserId;
-  const { repositories } = require('@/data/repositories');
+  const { repositories } = require('@mocks/data/repositories');
   const before = repositories.listings.list().filter((l: { owner: { id: string } }) => l.owner.id === meId).length;
   expect(before).toBeGreaterThan(0);
 
@@ -65,7 +65,7 @@ test('a helper profile shows their portfolio gallery', async () => {
 });
 
 test('following a helper from their profile adds them to the follow list', async () => {
-  const { followStore } = require('@/data/followStore');
+  const { followStore } = require('@mocks/data/followStore');
   await renderWithProviders(<ProfileScreen profileId="u-andreas" />);
   await waitFor(() => expect(screen.getByText('Andreas')).toBeTruthy());
 

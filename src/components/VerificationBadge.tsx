@@ -20,9 +20,12 @@ const labelFor = (v: Verification): string => {
 export function VerificationBadge({
   verification,
   showExplanation = false,
+  interactive = true,
 }: {
   verification: Verification;
   showExplanation?: boolean;
+  /** false when rendered inside another pressable (a <button> can't nest on web) */
+  interactive?: boolean;
 }) {
   const tone = verification.kind === 'BUSINESS' ? 'cyan' : 'shieldGreen';
 
@@ -33,7 +36,7 @@ export function VerificationBadge({
         <AppText variant="meta" weight="bold">
           {labelFor(verification)}
         </AppText>
-        {!showExplanation ? <Icon name="info" size={12} color="navyMuted" /> : null}
+        {!showExplanation && interactive ? <Icon name="info" size={12} color="navyMuted" /> : null}
       </View>
       {showExplanation ? (
         <AppText variant="meta" color="navyMuted">
@@ -45,7 +48,7 @@ export function VerificationBadge({
 
   // When the explanation isn't shown inline, tapping the badge surfaces it
   // (spec §16 — a badge must always be able to explain what was checked).
-  if (showExplanation) return <View style={styles.wrap}>{body}</View>;
+  if (showExplanation || !interactive) return <View style={styles.wrap}>{body}</View>;
   return (
     <Pressable
       accessibilityRole="button"

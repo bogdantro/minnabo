@@ -15,6 +15,8 @@ import type {
   Report,
   ReportTargetType,
   NoticeboardPost,
+  Partner,
+  Donation,
   NoticeKind,
   Review,
   SkillEndorsement,
@@ -173,6 +175,10 @@ export interface ApiClient {
     municipality: string;
   }): Promise<NoticeboardPost>;
   deleteNoticeboardPost(id: string): Promise<void>;
+
+  // community
+  listPartners(): Promise<Partner[]>;
+  listDonations(): Promise<Donation[]>;
 
   // saved listings & searches
   listSavedListingIds(): Promise<string[]>;

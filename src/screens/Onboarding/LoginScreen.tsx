@@ -11,7 +11,6 @@ import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
-import { DevOtpHint } from '@/components/DevOtpHint';
 
 export function LoginScreen() {
   const router = useRouter();
@@ -88,13 +87,6 @@ export function LoginScreen() {
               onChangeText={setCode}
               keyboardType="numeric"
               maxLength={6}
-            />
-            <DevOtpHint
-              email={contact.trim()}
-              onUse={(c) => {
-                setCode(c);
-                void verify(c);
-              }}
             />
           </>
         )}

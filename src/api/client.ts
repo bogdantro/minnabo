@@ -1,20 +1,10 @@
-import { ENV } from '@/lib/env';
 import type { ApiClient } from './ApiClient';
-import { MockApiClient } from './mockClient';
-
-const IS_TEST = process.env.NODE_ENV === 'test';
+import { SupabaseApiClient } from './supabaseClient';
 
 /**
- * Selects the data client. Jest and mock mode (`EXPO_PUBLIC_USE_MOCKS=true`)
- * use the in-memory `MockApiClient`; otherwise the runtime app lazily loads
- * `SupabaseApiClient` so the mock path never pulls in supabase-js queries.
+ * The app's data client — always the live Supabase backend. Jest swaps this
+ * module for the in-memory `MockApiClient` (tests/mocks, see jest-setup.ts),
+ * so test fixtures never end up in the app bundle.
  */
-function makeClient(): ApiClient {
-  if (IS_TEST || ENV.useMocks) return new MockApiClient();
-  const { SupabaseApiClient } =
-    require('./supabaseClient') as typeof import('./supabaseClient');
-  return new SupabaseApiClient();
-}
-
-export const apiClient: ApiClient = makeClient();
+export const apiClient: ApiClient = new SupabaseApiClient();
 export type { ApiClient };

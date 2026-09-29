@@ -2,8 +2,8 @@ import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { VerifiseringssenterScreen } from '@/screens/VerifiseringssenterScreen';
 import { BedriftRegistreringScreen } from '@/screens/BedriftRegistreringScreen';
 import { AdminScreen } from '@/screens/AdminScreen';
-import { profileRepository } from '@/data/profileRepository';
-import { safetyStore } from '@/data/safetyStore';
+import { profileRepository } from '@mocks/data/profileRepository';
+import { safetyStore } from '@mocks/data/safetyStore';
 import { renderWithProviders } from '../testUtils';
 
 const settle = () => new Promise((r) => setTimeout(r, 400));

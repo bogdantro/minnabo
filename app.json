@@ -15,7 +15,7 @@
     "android": {
       "package": "no.minnabo.app",
       "adaptiveIcon": {
-        "backgroundColor": "#FDFBFA",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -40,7 +40,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#FDFBFA"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       "expo-image",

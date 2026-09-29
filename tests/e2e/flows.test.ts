@@ -1,6 +1,6 @@
 import { apiClient } from '@/api/client';
-import { chatRepository } from '@/data/chatRepository';
-import { profileRepository } from '@/data/profileRepository';
+import { chatRepository } from '@mocks/data/chatRepository';
+import { profileRepository } from '@mocks/data/profileRepository';
 
 const ME = profileRepository.currentUserId;
 

@@ -4,10 +4,16 @@ import { cleanup, configure } from '@testing-library/react-native';
 // RNTL 14 + react-query settle slowly on a loaded machine; give waitFor room.
 configure({ asyncUtilTimeout: 8000 });
 
-// The app must never hit the network in tests — it always uses MockApiClient.
+// The app must never hit the network in tests. The runtime `apiClient` is the
+// Supabase one; tests swap in the in-memory MockApiClient from tests/mocks.
+jest.mock('@/api/client', () => {
+  const { MockApiClient } = require('@mocks/mockClient');
+  return { apiClient: new MockApiClient() };
+});
+
 // These mocks keep any accidental import of the supabase client harmless.
 jest.mock('@/lib/env', () => ({
-  ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key', useMocks: false },
+  ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key' },
 }));
 
 // The seeded "current user" — tests run as this profile (see src/data/seed.ts).
@@ -87,17 +93,17 @@ beforeEach(() => {
 // Reset in-memory mock stores between tests so state never leaks across suites.
 afterEach(() => {
   try {
-    require('@/data/repositories').repositories.listings._reset();
+    require('@mocks/data/repositories').repositories.listings._reset();
   } catch {
     /* module not loaded in this test */
   }
   try {
-    require('@/data/chatRepository').chatRepository._reset();
+    require('@mocks/data/chatRepository').chatRepository._reset();
   } catch {
     /* not loaded */
   }
   try {
-    require('@/data/savedStore').savedStore._reset();
+    require('@mocks/data/savedStore').savedStore._reset();
   } catch {
     /* not loaded */
   }
@@ -107,17 +113,17 @@ afterEach(() => {
     /* not loaded */
   }
   try {
-    require('@/data/savedSearchStore').savedSearchStore._reset();
+    require('@mocks/data/savedSearchStore').savedSearchStore._reset();
   } catch {
     /* not loaded */
   }
   try {
-    require('@/data/profileRepository').profileRepository._reset();
+    require('@mocks/data/profileRepository').profileRepository._reset();
   } catch {
     /* not loaded */
   }
   try {
-    require('@/data/safetyStore').safetyStore._reset();
+    require('@mocks/data/safetyStore').safetyStore._reset();
   } catch {
     /* not loaded */
   }
@@ -147,12 +153,12 @@ afterEach(() => {
     /* not loaded */
   }
   try {
-    require('@/data/endorsementsStore').endorsementsStore._reset();
+    require('@mocks/data/endorsementsStore').endorsementsStore._reset();
   } catch {
     /* not loaded */
   }
   try {
-    require('@/data/followStore').followStore._reset();
+    require('@mocks/data/followStore').followStore._reset();
   } catch {
     /* not loaded */
   }
@@ -162,12 +168,12 @@ afterEach(() => {
     /* not loaded */
   }
   try {
-    require('@/data/noticeboardStore').noticeboardStore._reset();
+    require('@mocks/data/noticeboardStore').noticeboardStore._reset();
   } catch {
     /* not loaded */
   }
   try {
-    require('@/data/jobWorkspaceStore').jobWorkspaceStore._reset();
+    require('@mocks/data/jobWorkspaceStore').jobWorkspaceStore._reset();
   } catch {
     /* not loaded */
   }

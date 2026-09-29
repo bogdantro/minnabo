@@ -6,8 +6,13 @@ import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { formatPrice, nok } from '@/domain/price';
 import { formatRelative } from '@/lib/datetime';
-import { documentedDonations } from '@/data/seedCommunity';
-import { useListings, useProfile, useReports, useResolveReport } from '@/api/queries';
+import {
+  useDonations,
+  useListings,
+  useProfile,
+  useReports,
+  useResolveReport,
+} from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from '@/lib/toast';
 import { confirm } from '@/lib/confirm';
@@ -26,6 +31,7 @@ export function AdminScreen() {
   const [tab, setTab] = useState<Tab>('reports');
   const { data: reports = [] } = useReports();
   const { data: listings = [] } = useListings({});
+  const { data: donations = [] } = useDonations();
   const resolve = useResolveReport();
 
   if (!me.isLoading && !me.isAdmin) {
@@ -134,7 +140,7 @@ export function AdminScreen() {
           : null}
 
         {tab === 'donations'
-          ? documentedDonations.map((d) => (
+          ? donations.map((d) => (
               <View key={d.id} style={styles.rowCard}>
                 <Icon name="heart" size={16} color="lime" />
                 <View style={styles.rowBody}>

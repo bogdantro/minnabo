@@ -1,7 +1,8 @@
 import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
-import { partners, documentedDonations, type Partner } from '@/data/seedCommunity';
+import type { Partner } from '@/domain/types';
+import { useDonations, usePartners } from '@/api/queries';
 import { isEnabled } from '@/config/featureFlags';
 import { formatPrice } from '@/domain/price';
 import { nok } from '@/domain/price';
@@ -19,15 +20,18 @@ import { StatusPill } from '@/components/ui/StatusPill';
 export function FellesskapScreen() {
   const me = useCurrentUser();
   const { municipalities, municipality, ready } = useLocationScope();
-  const mainPartners = partners.filter((p) => p.tier === 'MAIN').slice(0, 2);
-  // Don't surface LOCAL partners until the profile kommune has loaded — an
+  const { data: partners = [], isSuccess: partnersLoaded } = usePartners();
+  const { data: donations = [], isSuccess: donationsLoaded } = useDonations();
+  const mainPartners = partners.filter((p) => p.featured).slice(0, 2);
+  // Don't surface local partners until the profile kommune has loaded — an
   // unscoped list here would briefly show supporters from other kommuner.
   const localPartners = !ready
     ? []
     : partners.filter(
         (p) =>
-          p.tier === 'LOCAL' &&
-          (municipalities.length === 0 || municipalities.includes(p.municipality)),
+          !p.featured &&
+          (municipalities.length === 0 ||
+            (p.municipality !== null && municipalities.includes(p.municipality))),
       );
 
   return (
@@ -93,16 +97,22 @@ export function FellesskapScreen() {
 
         <View style={styles.section}>
           <SectionHeader title={nb.community.mainPartners} />
-          <View style={styles.mainGrid}>
-            {mainPartners.map((p) => (
-              <PartnerCard key={p.id} partner={p} featured />
-            ))}
-          </View>
+          {partnersLoaded && mainPartners.length === 0 ? (
+            <AppText variant="body" color="navyMuted">
+              {nb.community.noPartners}
+            </AppText>
+          ) : (
+            <View style={styles.mainGrid}>
+              {mainPartners.map((p) => (
+                <PartnerCard key={p.id} partner={p} featured />
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
           <SectionHeader title={nb.community.localSupporters} />
-          {localPartners.length === 0 && municipality ? (
+          {partnersLoaded && localPartners.length === 0 && municipality ? (
             <AppText variant="body" color="navyMuted">
               {nb.location.emptyPartners(municipality)}
             </AppText>
@@ -120,7 +130,12 @@ export function FellesskapScreen() {
           <AppText variant="meta" color="navyMuted">
             {nb.community.donationsNote}
           </AppText>
-          {documentedDonations.map((d) => (
+          {donationsLoaded && donations.length === 0 ? (
+            <AppText variant="body" color="navyMuted">
+              {nb.community.noDonations}
+            </AppText>
+          ) : null}
+          {donations.map((d) => (
             <Card key={d.id} style={styles.donation}>
               <View style={styles.donationRow}>
                 <AppText variant="body" weight="bold">
@@ -166,9 +181,11 @@ function PartnerCard({ partner, featured = false }: { partner: Partner; featured
       <AppText variant="meta" color="navyMuted" numberOfLines={2}>
         {partner.tagline}
       </AppText>
-      <AppText variant="meta" color="navyMuted">
-        {partner.town}
-      </AppText>
+      {partner.municipality ? (
+        <AppText variant="meta" color="navyMuted">
+          {partner.municipality}
+        </AppText>
+      ) : null}
     </Card>
   );
 }

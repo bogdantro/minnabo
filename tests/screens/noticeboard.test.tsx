@@ -1,6 +1,6 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { NoticeboardScreen } from '@/screens/NoticeboardScreen';
-import { noticeboardStore } from '@/data/noticeboardStore';
+import { noticeboardStore } from '@mocks/data/noticeboardStore';
 import { renderWithProviders } from '../testUtils';
 
 beforeEach(() => noticeboardStore._reset());

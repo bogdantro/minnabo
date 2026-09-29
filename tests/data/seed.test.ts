@@ -1,5 +1,5 @@
-import { listings, categories, homeCategories } from '@/data/seed';
-import { partners } from '@/data/seedCommunity';
+import { listings, categories, homeCategories } from '@mocks/data/seed';
+import { partners } from '@mocks/data/seedCommunity';
 
 test('seed contains both listing types', () => {
   expect(listings.some((l) => l.type === 'TASK_REQUEST')).toBe(true);
@@ -32,7 +32,7 @@ test('seed listings span multiple kommuner', () => {
   expect(kommuner.has('Lillehammer')).toBe(true);
 });
 
-test('every partner has a kommune', () => {
+test('every partner fixture has a kommune', () => {
   expect(
     partners.every(
       (p) => typeof p.municipality === 'string' && p.municipality.length > 0,

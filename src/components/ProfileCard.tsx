@@ -55,7 +55,7 @@ export function ProfileCard({ profile, onPress, variant = 'owner', linkLabel }: 
         {variant === 'owner'
           ? profile.verifications
               .filter((v) => v.verified)
-              .map((v) => <VerificationBadge key={v.kind} verification={v} />)
+              .map((v) => <VerificationBadge key={v.kind} verification={v} interactive={false} />)
           : null}
       </View>
 

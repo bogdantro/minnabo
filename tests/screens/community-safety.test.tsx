@@ -3,9 +3,9 @@ import { FellesskapScreen } from '@/screens/FellesskapScreen';
 import { SafetyScreen } from '@/screens/SafetyScreen';
 import { BlockedListScreen } from '@/screens/BlockedListScreen';
 import { TrustedContactsScreen } from '@/screens/TrustedContactsScreen';
-import { safetyStore } from '@/data/safetyStore';
+import { safetyStore } from '@mocks/data/safetyStore';
 import { trustedContacts } from '@/lib/trustedContacts';
-import { chatRepository } from '@/data/chatRepository';
+import { chatRepository } from '@mocks/data/chatRepository';
 import { renderWithProviders } from '../testUtils';
 
 beforeEach(() => {

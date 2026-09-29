@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react-native';
-import { listings } from '@/data/seed';
+import { listings } from '@mocks/data/seed';
 import { TaskDetailScreen } from '@/screens/TaskDetailScreen';
 import { ServiceOfferDetailScreen } from '@/screens/ServiceOfferDetailScreen';
 import { renderWithProviders } from '../testUtils';

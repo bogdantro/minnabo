@@ -458,6 +458,19 @@ export function useToggleFollow() {
   });
 }
 
+export const communityKeys = {
+  partners: ['partners'] as const,
+  donations: ['donations'] as const,
+};
+
+export function usePartners() {
+  return useQuery({ queryKey: communityKeys.partners, queryFn: () => apiClient.listPartners() });
+}
+
+export function useDonations() {
+  return useQuery({ queryKey: communityKeys.donations, queryFn: () => apiClient.listDonations() });
+}
+
 export const noticeboardKeys = {
   all: ['noticeboard'] as const,
   list: (kind?: string) => ['noticeboard', kind ?? 'all'] as const,

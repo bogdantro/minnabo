@@ -1,8 +1,8 @@
 import { screen, waitFor, fireEvent, within } from '@testing-library/react-native';
 import { InnboksScreen } from '@/screens/InnboksScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
-import { chatRepository } from '@/data/chatRepository';
-import { shift } from '@/data/seedChat';
+import { chatRepository } from '@mocks/data/chatRepository';
+import { shift } from '@mocks/data/seedChat';
 import { formatDayLabel } from '@/lib/calendar';
 import { renderWithProviders } from '../testUtils';
 
@@ -169,7 +169,7 @@ test('sending a message appends it and persists it', async () => {
 });
 
 test('cannot open a conversation about your own listing', async () => {
-  const { chatRepository: repo } = require('@/data/chatRepository');
+  const { chatRepository: repo } = require('@mocks/data/chatRepository');
   // l-male-gjerdet is owned by the current user (profiles.mb)
   expect(() => repo.findOrCreateConversationForListing('l-male-gjerdet')).toThrow(
     /kontakte deg selv/i,

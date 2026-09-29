@@ -3,7 +3,7 @@ import { MottatteTilbudScreen } from '@/screens/MottatteTilbudScreen';
 import { SammenlignTilbudScreen } from '@/screens/SammenlignTilbudScreen';
 import { TilbudDetaljScreen } from '@/screens/TilbudDetaljScreen';
 import { AvtaleSammendragScreen } from '@/screens/AvtaleSammendragScreen';
-import { chatRepository } from '@/data/chatRepository';
+import { chatRepository } from '@mocks/data/chatRepository';
 import { renderWithProviders } from '../testUtils';
 
 const settle = () => new Promise((r) => setTimeout(r, 400));

@@ -3,7 +3,7 @@ import { TaskRequestForm } from '@/screens/LeggUt/TaskRequestForm';
 import { PreviewScreen } from '@/screens/LeggUt/PreviewScreen';
 import { buildTaskListing, buildOfferListing } from '@/screens/LeggUt/buildListing';
 import { draftStore } from '@/data/draftStore';
-import { repositories } from '@/data/repositories';
+import { repositories } from '@mocks/data/repositories';
 import { renderWithProviders } from '../testUtils';
 
 const TASK = {

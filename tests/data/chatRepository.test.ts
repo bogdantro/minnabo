@@ -1,4 +1,4 @@
-import { chatRepository } from '@/data/chatRepository';
+import { chatRepository } from '@mocks/data/chatRepository';
 
 beforeEach(() => chatRepository._reset());
 

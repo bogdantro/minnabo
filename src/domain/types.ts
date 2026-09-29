@@ -90,6 +90,26 @@ export type NoticeboardPost = {
   createdAt: string;
 };
 
+/** A sponsor shown on Fellesskap. Deals and payment are handled outside the app. */
+export type Partner = {
+  id: string;
+  name: string;
+  tagline: string;
+  url: string | null;
+  municipality: string | null;
+  /** has an active placement on Fellesskap → shown as a main partner */
+  featured: boolean;
+};
+
+/** A donation that has actually been transferred (only those are shown). */
+export type Donation = {
+  id: string;
+  recipient: string;
+  amountKr: number;
+  period: string;
+  transferredAt: string;
+};
+
 export type SkillEndorsement = {
   skill: string;
   count: number;

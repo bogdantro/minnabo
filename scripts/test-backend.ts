@@ -1,12 +1,12 @@
 /**
  * Integration checks against the live Supabase project.
- * Run:  npm run test:backend      (needs a populated .env + `npm run seed:demo`)
+ * Run:  npm run test:backend      (needs a populated .env)
  *
- * Signs in as two seeded demo users and asserts the RLS boundaries and the
- * proposal RPC lifecycle. Exits non-zero on any failure. Cleans up rows it
- * created (titles are namespaced with a run id).
+ * Creates three throwaway users with the service-role key, asserts the RLS
+ * boundaries and the proposal RPC lifecycle, then deletes the users again
+ * (FK cascade removes everything they created). Exits non-zero on any failure.
  */
-import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const url = must('EXPO_PUBLIC_SUPABASE_URL');
@@ -33,21 +33,36 @@ function check(name: string, ok: boolean, extra?: unknown) {
   }
 }
 
-async function signIn(email: string): Promise<SupabaseClient> {
+const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
+const createdUserIds: string[] = [];
+
+/** Creates a confirmed throwaway user and returns a client signed in as them. */
+async function testUser(name: string): Promise<SupabaseClient> {
+  const email = `${RUN}-${name.toLowerCase()}@example.com`;
+  const password = randomUUID();
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: name },
+  });
+  if (error || !data.user) throw new Error(`Cannot create ${email}: ${error?.message}`);
+  createdUserIds.push(data.user.id);
+
   const c = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error } = await c.auth.signInWithPassword({ email, password: 'minnabo-demo' });
-  if (error) {
-    console.error(`Cannot sign in as ${email}: ${error.message}. Run: npm run seed:demo`);
-    process.exit(1);
-  }
+  const { error: signInErr } = await c.auth.signInWithPassword({ email, password });
+  if (signInErr) throw new Error(`Cannot sign in as ${email}: ${signInErr.message}`);
   return c;
 }
 
+async function cleanup() {
+  for (const id of createdUserIds) await admin.auth.admin.deleteUser(id);
+}
+
 async function main() {
-  const admin = createClient(url, service, { auth: { persistSession: false } });
-  const emma = await signIn('emma@minnabo.test');
-  const martin = await signIn('martin@minnabo.test');
-  const sara = await signIn('sara@minnabo.test');
+  const emma = await testUser('Emma');
+  const martin = await testUser('Martin');
+  const sara = await testUser('Sara');
 
   const emmaId = (await emma.auth.getUser()).data.user!.id;
   const martinId = (await martin.auth.getUser()).data.user!.id;
@@ -146,14 +161,15 @@ async function main() {
   });
   check('submit_review accepted after both confirm completion', !reviewErr, reviewErr?.message);
 
-  // cleanup
-  await admin.from('listings').delete().eq('id', listingId);
-
   console.log(fails === 0 ? '\nAll backend checks passed.' : `\n${fails} check(s) failed.`);
-  process.exit(fails === 0 ? 0 : 1);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error(e);
+    fails++;
+  })
+  .finally(async () => {
+    await cleanup();
+    process.exit(fails === 0 ? 0 : 1);
+  });

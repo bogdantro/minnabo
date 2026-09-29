@@ -1,4 +1,4 @@
-import { repositories } from '@/data/repositories';
+import { repositories } from '@mocks/data/repositories';
 
 beforeEach(() => repositories.listings._reset());
 

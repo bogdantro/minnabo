@@ -2,25 +2,16 @@
  * Device location → kommune. Coarse, one-shot, foreground only. The raw
  * coordinate never leaves this module — callers get a kommune name.
  */
-import { ENV } from '@/lib/env';
 import { resolveKommune } from '@/data/kommuner';
 
 export type DetectResult =
   | { municipality: string; place?: string }
   | { error: 'denied' | 'unavailable' };
 
-// Mirrors MockApiClient's delay() — instant under Jest, ~400 ms in mock mode.
-const IS_TEST = process.env.NODE_ENV === 'test';
-
 export async function detectKommune(): Promise<DetectResult> {
-  if (ENV.useMocks) {
-    await new Promise((r) => setTimeout(r, IS_TEST ? 0 : 400));
-    return { municipality: 'Lillehammer', place: 'Lillehammer' };
-  }
-
   try {
-    // Loaded lazily (after the ENV.useMocks branch) so mock/test runs never pull
-    // in the native module. `require` rather than `await import` — Jest's CJS VM
+    // Loaded lazily so screens that never ask for location don't pull in the
+    // native module. `require` rather than `await import` — Jest's CJS VM
     // rejects a dynamic import() callback, and Metro resolves this inline require
     // the same way. The cast keeps the call sites type-checked.
     const Location = require('expo-location') as typeof import('expo-location');

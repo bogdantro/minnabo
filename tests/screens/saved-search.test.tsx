@@ -1,7 +1,7 @@
 import { screen, fireEvent } from '@testing-library/react-native';
 import { SearchScreen } from '@/screens/SearchScreen';
 import { SavedScreen } from '@/screens/SavedScreen';
-import { savedSearchStore } from '@/data/savedSearchStore';
+import { savedSearchStore } from '@mocks/data/savedSearchStore';
 import { renderWithProviders } from '../testUtils';
 
 const settle = () => new Promise((r) => setTimeout(r, 500));

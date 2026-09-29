@@ -4,17 +4,8 @@
  * Jest mocks this module (see jest-setup.ts), so the throw never fires in tests.
  */
 
-/**
- * When true, the app runs entirely against the in-memory mock data layer and
- * skips login (auto "signed in" as the demo user). Flip to false in `.env`
- * once the Supabase backend is migrated + seeded — see BACKEND.md.
- */
-const useMocks = process.env.EXPO_PUBLIC_USE_MOCKS === 'true';
-
-const supabaseUrl =
-  process.env.EXPO_PUBLIC_SUPABASE_URL ?? (useMocks ? 'https://mock.local' : undefined);
-const supabaseAnonKey =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? (useMocks ? 'mock-anon-key' : undefined);
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -22,4 +13,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const ENV = { supabaseUrl, supabaseAnonKey, useMocks } as const;
+export const ENV = { supabaseUrl, supabaseAnonKey } as const;

@@ -12,6 +12,8 @@ import type {
   Proposal,
   PublicProfile,
   NoticeboardPost,
+  Partner,
+  Donation,
   NoticeKind,
   Report,
   Review,
@@ -38,6 +40,8 @@ import {
   toMessage,
   toNotification,
   toNoticeboardPost,
+  toPartner,
+  toDonation,
   toProfile,
   toProposal,
   toReview,
@@ -46,6 +50,8 @@ import {
   type ListingRow,
   type MessageRow,
   type NoticeRow,
+  type PartnerRow,
+  type DonationRow,
   type NotificationRow,
   type ProfileRow,
   type ProposalRow,
@@ -664,6 +670,24 @@ export class SupabaseApiClient implements ApiClient {
     const { error } = await supabase.rpc('toggle_follow', { p_followed_id: profileId });
     if (error) fail(error.message);
     return this.listFollowedProfileIds();
+  }
+
+  async listPartners(): Promise<Partner[]> {
+    const { data, error } = await supabase
+      .from('partners')
+      .select('id, name, blurb, url, municipality, partner_placements(surface, active)')
+      .order('name');
+    if (error) fail(error.message);
+    return (data as PartnerRow[]).map(toPartner);
+  }
+
+  async listDonations(): Promise<Donation[]> {
+    const { data, error } = await supabase
+      .from('donation_records')
+      .select('*')
+      .order('transferred_at', { ascending: false });
+    if (error) fail(error.message);
+    return (data as DonationRow[]).map(toDonation);
   }
 
   async listNoticeboard(kind?: NoticeKind): Promise<NoticeboardPost[]> {

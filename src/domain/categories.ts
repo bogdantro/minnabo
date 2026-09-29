@@ -2,7 +2,7 @@ import type { Category } from './types';
 
 /**
  * The fixed category catalogue (spec §5). Single source of truth for the app;
- * `supabase/seed_static.sql` mirrors the slug/label/icon rows into the DB.
+ * `supabase/migrations/0023_seed_categories.sql` mirrors the rows into the DB.
  */
 export const CATEGORIES: Category[] = [
   { id: 'c-hage', slug: 'hage', label: 'Hage', icon: 'feather' },

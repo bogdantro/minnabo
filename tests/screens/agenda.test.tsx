@@ -1,6 +1,6 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { AgendaScreen } from '@/screens/AgendaScreen';
-import { chatRepository } from '@/data/chatRepository';
+import { chatRepository } from '@mocks/data/chatRepository';
 import { renderWithProviders } from '../testUtils';
 
 beforeEach(() => chatRepository._reset());

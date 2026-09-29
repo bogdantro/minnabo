@@ -1,4 +1,4 @@
-import { jobWorkspaceStore } from '@/data/jobWorkspaceStore';
+import { jobWorkspaceStore } from '@mocks/data/jobWorkspaceStore';
 
 beforeEach(() => jobWorkspaceStore._reset());
 

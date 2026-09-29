@@ -8,7 +8,6 @@ import { shareInvite } from '@/lib/share';
 import { exportMyData } from '@/lib/dataExport';
 import { toast } from '@/lib/toast';
 import { signOut, useSession } from '@/auth/session';
-import { ENV } from '@/lib/env';
 import { PageHeader } from '@/components/TopBar';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { AppText } from '@/components/ui/Text';
@@ -74,18 +73,13 @@ export function SettingsScreen() {
     { label: nb.settings.exportData, icon: 'download', action: exportData },
     { label: nb.settings.language, icon: 'globe' },
   ];
-  if (__DEV__ && !ENV.useMocks) {
-    aboutRows.push({ label: 'Bytt testbruker', icon: 'users', route: '/dev-switch' });
-  }
-  if (!ENV.useMocks) {
-    aboutRows.push({ label: nb.settings.logOut, icon: 'log-out', action: logOut });
-    aboutRows.push({
-      label: nb.settings.deleteAccount,
-      icon: 'trash-2',
-      route: '/slett-konto',
-      danger: true,
-    });
-  }
+  aboutRows.push({ label: nb.settings.logOut, icon: 'log-out', action: logOut });
+  aboutRows.push({
+    label: nb.settings.deleteAccount,
+    icon: 'trash-2',
+    route: '/slett-konto',
+    danger: true,
+  });
 
   const groups: { title: string; rows: Row[] }[] = [
     ...BASE_GROUPS,

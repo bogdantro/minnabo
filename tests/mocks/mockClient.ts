@@ -10,6 +10,8 @@ import type {
   Message,
   Proposal,
   NoticeboardPost,
+  Partner,
+  Donation,
   NoticeKind,
   PublicProfile,
   Review,
@@ -18,16 +20,17 @@ import type {
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type { Report } from '@/domain/types';
-import { repositories } from '@/data/repositories';
-import { chatRepository } from '@/data/chatRepository';
-import { profileRepository } from '@/data/profileRepository';
-import { savedStore } from '@/data/savedStore';
-import { savedSearchStore } from '@/data/savedSearchStore';
-import { safetyStore } from '@/data/safetyStore';
-import { endorsementsStore } from '@/data/endorsementsStore';
-import { followStore } from '@/data/followStore';
-import { noticeboardStore } from '@/data/noticeboardStore';
-import { jobWorkspaceStore } from '@/data/jobWorkspaceStore';
+import { repositories } from '@mocks/data/repositories';
+import { chatRepository } from '@mocks/data/chatRepository';
+import { profileRepository } from '@mocks/data/profileRepository';
+import { savedStore } from '@mocks/data/savedStore';
+import { savedSearchStore } from '@mocks/data/savedSearchStore';
+import { safetyStore } from '@mocks/data/safetyStore';
+import { endorsementsStore } from '@mocks/data/endorsementsStore';
+import { followStore } from '@mocks/data/followStore';
+import { noticeboardStore } from '@mocks/data/noticeboardStore';
+import { jobWorkspaceStore } from '@mocks/data/jobWorkspaceStore';
+import { partners, documentedDonations } from '@mocks/data/seedCommunity';
 import type {
   ApiClient,
   ListConversationsParams,
@@ -39,7 +42,7 @@ import type {
   SubmitReportInput,
   SubmitReviewInput,
   UpdateProfilePatch,
-} from './ApiClient';
+} from '@/api/ApiClient';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const delay = (ms: number) =>
@@ -307,6 +310,16 @@ export class MockApiClient implements ApiClient {
   async toggleFollow(profileId: string): Promise<string[]> {
     await delay(70);
     return followStore.toggle(profileId);
+  }
+
+  async listPartners(): Promise<Partner[]> {
+    await delay(80);
+    return partners;
+  }
+
+  async listDonations(): Promise<Donation[]> {
+    await delay(80);
+    return documentedDonations;
   }
 
   async listNoticeboard(kind?: NoticeKind): Promise<NoticeboardPost[]> {

@@ -747,6 +747,8 @@ const nb = {
     donationsTitle: 'Dokumenterte bidrag',
     donationsNote: 'Vi viser bare bidrag som faktisk er overført.',
     transferred: 'Overført',
+    noPartners: 'Ingen samarbeidspartnere ennå.',
+    noDonations: 'Ingen overførte bidrag ennå.',
     redCrossPending:
       'Røde Kors-innhold og lenke vises når skriftlig godkjenning er på plass.',
   },

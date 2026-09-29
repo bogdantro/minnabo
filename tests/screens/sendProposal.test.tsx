@@ -7,8 +7,8 @@ import { SendProposalScreen } from '@/screens/SendProposalScreen';
 import { TaskDetailScreen } from '@/screens/TaskDetailScreen';
 import { ServiceOfferDetailScreen } from '@/screens/ServiceOfferDetailScreen';
 import { InnboksScreen } from '@/screens/InnboksScreen';
-import { chatRepository } from '@/data/chatRepository';
-import { repositories } from '@/data/repositories';
+import { chatRepository } from '@mocks/data/chatRepository';
+import { repositories } from '@mocks/data/repositories';
 import { renderWithProviders } from '../testUtils';
 
 const settle = () => new Promise((r) => setTimeout(r, 400));
