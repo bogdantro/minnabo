@@ -1,5 +1,75 @@
 # MinNabo – screen-by-screen checklist
 
+## Design file → existing route map
+
+Routes are expo-router files in `app/`; most are one-line wrappers around a component in `src/screens/`.
+Status: **exists** = a screen for this purpose is already there (still needs the re-skin) ·
+**partial** = only part of the design exists, or it lives inside another screen ·
+**missing** = nothing to build on.
+
+| Design file | Route (`app/…`) | Screen component | Status | Notes |
+|---|---|---|---|---|
+| `Admin.dc.html` | `/admin` (`admin.tsx`) | `src/screens/AdminScreen.tsx` | exists | Behind `featureFlags.adminPanel` (off). DB role is `user` \| `admin` |
+| `Avtale.dc.html` | `/avtale/[id]` | `src/screens/AvtaleSammendragScreen.tsx` | exists | Also hosts the job-day workspace today (see Jobbdag) |
+| `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | exists | Behind `featureFlags.businessRegistration` (off) |
+| `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` | exists | |
+| `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | exists | Tab |
+| `ForMeg.dc.html` | `/oppdrag-for-meg` | `src/screens/LeadBoardScreen.tsx` | exists | |
+| `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | exists | |
+| `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | exists | |
+| `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | exists | Tab |
+| `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | exists | |
+| `Jobbdag.dc.html` | – | `src/components/JobWorkspaceSection.tsx` (inside Avtale) | partial | No own route; data via `useJobWorkspace` / `useUpdateJobWorkspace` |
+| `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
+| `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | exists | |
+| `LeggUt.dc.html` | `/legg-ut/trenger-jobb` | `src/screens/LeggUt/TaskRequestForm.tsx` | partial | `/legg-ut` is `LeggUt/IntroScreen.tsx`, an intro step before the form – the FAB must go straight into the wizard (rule 2). Form is not the 9-step wizard yet |
+| `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | partial | Today: Supabase **e-mail OTP**. Must become Vipps-only (rule 3) – needs backend (Vipps OIDC) |
+| `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | exists | Anon users are redirected here from `(tabs)/_layout.tsx` |
+| `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` + `src/config/appMenu.ts` | exists | Opened from `BottomNav` inside `TabBar` |
+| `MineAvtaler.dc.html` | `/avtaler` | `src/screens/AgendaScreen.tsx` | exists | |
+| `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | exists | Menu label still says "Mine oppdrag og tjenester" |
+| `MottatteTilbud.dc.html` | `/tilbud` | `src/screens/MottatteTilbudScreen.tsx` | exists | |
+| `Nabolag.dc.html` | `/nabolag` | `src/screens/NeighbourhoodScreen.tsx` | exists | |
+| `Oppdrag.dc.html` | `/(tabs)/index` (home) | `src/screens/OppdragScreen.tsx` | exists | Default route |
+| `OppdragUng.dc.html` | – | – | **missing** | Youth shell (4 tabs, no Legg ut). No youth role in backend yet (`profiles.role` is `user` \| `admin`) |
+| `Oppdragsdetaljer.dc.html` | `/oppdrag/[id]` | `src/screens/TaskDetailScreen.tsx` | exists | Route also renders `ServiceOfferDetailScreen` for `SERVICE_OFFER` (remove, rule 1). Gi tilbud is a sheet in the design; today it is `/tilbud/ny` → `SendProposalScreen` |
+| `Oppsett.dc.html` | `/oppsett` | `src/screens/Onboarding/SetupScreen.tsx` | exists | Signed-in users without `onboardedAt` are redirected here |
+| `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | exists | |
+| `Personvern.dc.html` | `/personvern` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs consent toggle + log, data export (`src/lib/dataExport.ts` exists), retention accordion |
+| `Profil.dc.html` | `/profil`, `/profil/[id]` | `src/screens/ProfileScreen.tsx` | exists | Own vs public via `profileId` param |
+| `Publisert.dc.html` | `/legg-ut/publisert` | `src/screens/LeggUt/PublishedScreen.tsx` | exists | |
+| `Rapporter.dc.html` | `/rapporter` | `src/screens/SafetyScreen.tsx` (with `targetType`) | partial | Shares a component with Sikkerhet; design is a separate 3-step flow |
+| `RedigerProfil.dc.html` | `/profil/rediger` | `src/screens/EditProfileScreen.tsx` | exists | |
+| `Sammenlign.dc.html` | `/tilbud/sammenlign/[listingId]` | `src/screens/SammenlignTilbudScreen.tsx` | exists | |
+| `Samtykke.dc.html` | `/samtykker` | `src/screens/Onboarding/ConsentScreen.tsx` | exists | |
+| `SeAlle.dc.html` | `/oppdrag-liste` | `src/screens/ListingListScreen.tsx` (`type="TASK_REQUEST"`) | exists | |
+| `Sikkerhet.dc.html` | `/sikkerhet` | `src/screens/SafetyScreen.tsx` | exists | Blocked list is a separate route today (`/blokkerte` → `BlockedListScreen`); design has it inline |
+| `SlettKonto.dc.html` | `/slett-konto` | `src/screens/DeleteAccountScreen.tsx` | exists | Backend: `supabase/functions/delete-account` |
+| `Sok.dc.html` | `/sok` | `src/screens/SearchScreen.tsx` | exists | Has a Trenger/Tilbyr type filter (`SERVICE_OFFER`) – remove (rule 1) |
+| `StartSamtale.dc.html` | `/chat/start?listing=` | `app/chat/start.tsx` (inline, no screen) | partial | Today only a spinner that creates the conversation and redirects to `/chat/[id]` |
+| `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` | exists | |
+| `Tilstander.dc.html` | – (reference) | `src/components/ui/ScreenState.tsx`, `FallbackScreen.tsx`, `OfflineBanner.tsx` | partial | No NoAccess / Success states yet |
+| `TryggeKontakter.dc.html` | `/trygge-kontakter` | `src/screens/TrustedContactsScreen.tsx` | exists | |
+| `Ungdomskonto.dc.html` | – | – | **missing** | Needs age from Vipps + youth role/permissions on backend |
+| `Varsler.dc.html` | `/varsler` | `src/screens/NotificationsScreen.tsx` | exists | |
+| `Varslinger.dc.html` | `/varslinger` | `src/screens/NotificationPrefsScreen.tsx` | exists | |
+| `Verifisering.dc.html` | `/verifisering` | `src/screens/VerifiseringssenterScreen.tsx` | exists | |
+| `Vilkar.dc.html` | `/vilkar` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs TOC chips, progress bar, "Kort fortalt" boxes |
+| `Vurdering.dc.html` | `/vurder/[id]` | `src/screens/ReviewScreen.tsx` | exists | |
+
+Existing routes with **no** design file:
+
+| Route | Component | What to do |
+|---|---|---|
+| `/tilbydere` | `ListingListScreen` (`type="SERVICE_OFFER"`) | Service offers – remove (rule 1) |
+| `/oppdrag/[id]` for offers | `src/screens/ServiceOfferDetailScreen.tsx` | Service offers – remove (rule 1) |
+| `/legg-ut` | `src/screens/LeggUt/IntroScreen.tsx` | Intro step before the form – remove / point FAB at the wizard (rule 2) |
+| `/tilbud/ny` | `SendProposalScreen` (`mode="give"`) | Becomes the Gi tilbud sheet in Oppdragsdetaljer |
+| `/tilbud/be-om` | `SendProposalScreen` (`mode="request"`) | Only linked from `ServiceOfferDetailScreen` – goes with the service-offer flow (rule 1) |
+| `/blokkerte` | `src/screens/BlockedListScreen.tsx` | Folded into Sikkerhet in the design |
+
+---
+
 For each screen: the design file is the truth for layout, copy and behaviour. The prototype's
 `renderVals()` / `state` in each file shows exactly which interactions exist. Mock data and
 `setTimeout` "fake network" in the prototypes become real API calls.

@@ -10,6 +10,18 @@ import {
   Mulish_700Bold,
   Mulish_800ExtraBold,
 } from '@expo-google-fonts/mulish';
+import {
+  BricolageGrotesque_500Medium,
+  BricolageGrotesque_700Bold,
+  BricolageGrotesque_800ExtraBold,
+} from '@expo-google-fonts/bricolage-grotesque';
+import {
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+  Figtree_800ExtraBold,
+} from '@expo-google-fonts/figtree';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -62,6 +74,15 @@ export default function RootLayout() {
     Mulish_500Medium,
     Mulish_700Bold,
     Mulish_800ExtraBold,
+    // Redesign fonts (see theme.fonts in src/theme/theme.ts).
+    BricolageGrotesque_500Medium,
+    BricolageGrotesque_700Bold,
+    BricolageGrotesque_800ExtraBold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+    Figtree_800ExtraBold,
   });
 
   useEffect(() => {

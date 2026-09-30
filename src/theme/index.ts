@@ -1,3 +1,5 @@
+// Redesign tokens: `import { theme, colors, text, … } from '@/theme'`.
+export * from './theme';
 export { tokens } from './tokens';
 export type { ColorToken, TextVariant, FontWeight } from './tokens';
 export { categoryAccent } from './categoryAccent';
