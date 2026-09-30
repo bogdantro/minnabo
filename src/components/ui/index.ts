@@ -65,7 +65,7 @@ export type { BubbleProps, OfferCardProps, OfferCardState } from './Chat';
 export { Skeleton, ListingCardSkeleton, ListingListSkeleton, RowSkeleton } from './Skeleton';
 export { StateView, StateIllustration, EmptyState, ErrorState, NoAccess, SuccessState } from './States';
 export { DrawnCheck, Confetti } from './Celebrate';
-export { FadeUp, FadeInView, ScaleIn } from './Motion';
+export { FadeUp, FadeInView, ScaleIn, SlideIn, Shake } from './Motion';
 export { ScreenState } from './ScreenState';
 export type { ScreenStateProps, ScreenStatus } from './ScreenState';
 

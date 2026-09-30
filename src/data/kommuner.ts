@@ -14,6 +14,11 @@ export const INNLANDET_KOMMUNER = [
   'Ringebu', 'Tynset', 'Tolga',
 ] as const;
 
+/** Areas (bydeler/tettsteder) offered as quick picks in Oppsett. Approximate only – never an address. */
+export const KOMMUNE_AREAS: Partial<Record<string, readonly string[]>> = {
+  Lillehammer: ['Nordre Ål', 'Søre Ål', 'Sentrum', 'Stampesletta', 'Fåberg', 'Vingrom', 'Kanten'],
+};
+
 /** poststed / tettsted / by → kommune, where the names differ. */
 const PLACE_TO_KOMMUNE: Record<string, string> = {
   'Brumunddal': 'Ringsaker',

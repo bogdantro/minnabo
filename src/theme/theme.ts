@@ -83,6 +83,14 @@ export const colors = {
   consentOnBorder: '#CDEBA0',
   consentOnBg: '#FBFEF4',
   limeSoft: '#EEF6E4',   // --grad-soft decorative circle
+  // setup (Oppsett.dc.html)
+  radarFill: 'rgba(184,238,60,0.14)',
+  radarRing: 'rgba(184,238,60,0.35)',
+  radarSweep: 'rgba(184,238,60,0.55)',
+  onInk72: 'rgba(255,255,255,0.72)',
+  onInk12: 'rgba(255,255,255,0.12)',
+  confettiGreen: '#63E08A',
+  confettiLime: '#C6F43C',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */
@@ -195,6 +203,18 @@ export const text = {
   explain: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20.25, color: colors.ink2 },
   infoBox: { fontFamily: fonts.bodyMedium, fontSize: 13.5, lineHeight: 19.6, color: colors.cyanDeep },
   stamp: { fontFamily: fonts.bodySemi, fontSize: 12, lineHeight: 15, color: colors.okText },
+  wizardTop: { fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 14, color: colors.mute },
+  roleTitle: { fontFamily: fonts.display, fontSize: 17.5, lineHeight: 21, letterSpacing: -0.26, color: colors.ink },
+  roleDesc: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 18.9, color: colors.mute },
+  counter: { fontFamily: fonts.bodySemi, fontSize: 12.5, lineHeight: 15, color: colors.faint },
+  lockedField: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 20, color: colors.ink2 },
+  locTitle: { fontFamily: fonts.bodyBold, fontSize: 16.5, lineHeight: 19.8, color: colors.white },
+  locSub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 17.5, color: colors.onInk72 },
+  okChip: { fontFamily: fonts.bodySemi, fontSize: 14.5, lineHeight: 18, color: colors.okText },
+  optionName: { fontFamily: fonts.bodySemi, fontSize: 15.5, lineHeight: 20, color: colors.ink },
+  orLine: { fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 13, color: colors.faint },
+  tipBox: { fontFamily: fonts.bodySemi, fontSize: 13.5, lineHeight: 19.6, color: colors.limeDeep },
+  celebrate: { fontFamily: fonts.display, fontSize: 38, lineHeight: 39, letterSpacing: -1.33, color: colors.ink },
   priceLabel: { fontFamily: fonts.bodySemi, fontSize: 12, lineHeight: 12, color: colors.mute },
 } satisfies Record<string, TextStyle>;
 
@@ -255,6 +275,12 @@ export const shadow = {
   avatarRingLg: sh('0 0 0 3px #fff, 0 0 0 6px #19B8EE'),
   whiteRing2: sh('0 0 0 2px #fff'),
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
+  roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
+  roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
+  roleBothOn: sh('0 0 0 4px rgba(99,224,138,.2), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
+  locCard: sh('0 16px 30px -16px rgba(10,23,64,.7)'),
+  photoRing: sh('0 0 0 4px #fff, 0 0 0 6px #19B8EE, 0 18px 36px -14px rgba(10,23,64,.4)'),
+  radarDot: sh('0 0 0 4px rgba(184,238,60,.3)'),
   stepCurrent: sh('0 0 0 5px rgba(10,23,64,.1)'),
   logoTile: sh('0 30px 60px -20px rgba(10,23,64,.35)'),
   none: { boxShadow: 'none' } as ViewStyle,

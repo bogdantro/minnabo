@@ -33,7 +33,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Oppdrag.dc.html` | `/(tabs)/index` (home) | `src/screens/OppdragScreen.tsx` | exists | Default route |
 | `OppdragUng.dc.html` | – | – | **missing** | Youth shell (4 tabs, no Legg ut). No youth role in backend yet (`profiles.role` is `user` \| `admin`) |
 | `Oppdragsdetaljer.dc.html` | `/oppdrag/[id]` | `src/screens/TaskDetailScreen.tsx` | exists | Route also renders `ServiceOfferDetailScreen` for `SERVICE_OFFER` (remove, rule 1). Gi tilbud is a sheet in the design; today it is `/tilbud/ny` → `SendProposalScreen` |
-| `Oppsett.dc.html` | `/oppsett` | `src/screens/Onboarding/SetupScreen.tsx` | exists | Signed-in users without `onboardedAt` are redirected here |
+| `Oppsett.dc.html` | `/oppsett` | `src/screens/Onboarding/SetupScreen.tsx` | ✅ done | Signed-in users without `onboardedAt` are redirected here. "Fullt navn · Fra Vipps" field + name chips need Vipps data. Area chips: Lillehammer only (`KOMMUNE_AREAS`) |
 | `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | exists | |
 | `Personvern.dc.html` | `/personvern` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs consent toggle + log, data export (`src/lib/dataExport.ts` exists), retention accordion |
 | `Profil.dc.html` | `/profil`, `/profil/[id]` | `src/screens/ProfileScreen.tsx` | exists | Own vs public via `profileId` param |
@@ -98,7 +98,7 @@ Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
 | `Main.dc.html` | ✅ Velkommen | Centred logo at top (no "Logg inn" button). 3 slides auto-advance every 4.2 s, dots tappable, text animates in per slide. "Kom i gang" → LoggInn |
 | `LoggInn.dc.html` | Logg inn | **Vipps only** – no phone, e-mail or BankID. "Fortsett med Vipps" → sheet: Åpner Vipps (spinner) → Bekreft i Vipps-appen (pulse) → Identitet bekreftet (drawn check, name / fødselsår / telefon) → Samtykke. Under 18 → Ungdomskonto. Note: "Vipps brukes kun til innlogging – aldri til betaling." |
 | `Samtykke.dc.html` | ✅ Samtykker | Verified identity card. Required checkboxes (vilkår, personvern, alder bekreftet) + optional tips. "Godta alle". Continue disabled until required done. Expandable explanations. Consents stored with timestamp |
-| `Oppsett.dc.html` | Oppsett | 3-step wizard with progress: navn (prefilled from Vipps, photo optional) → formål (3 option cards) → kommune (GPS detect with radar animation, or searchable list, optional område). Celebration with confetti → Oppdrag |
+| `Oppsett.dc.html` | ✅ Oppsett | 3-step wizard with progress: navn (prefilled from Vipps, photo optional) → formål (3 option cards) → kommune (GPS detect with radar animation, or searchable list, optional område). Celebration with confetti → Oppdrag |
 
 ## 1b · Ungdomskonto (under 18)
 

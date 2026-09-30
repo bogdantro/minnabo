@@ -6,6 +6,7 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withDelay,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -71,5 +72,39 @@ export function ScaleIn({ children, delay = 0, playKey, style }: MotionProps) {
     opacity: Math.min(p.value * 2, 1),
     transform: [{ scale: 0.6 + 0.4 * p.value }],
   }));
+  return <Animated.View style={[style, anim]}>{children}</Animated.View>;
+}
+
+/** `.slideL` / `.slideR` – wizard step enters from the right (forward) or left (back), 400 ms. */
+export function SlideIn({
+  children,
+  direction = 'forward',
+  playKey,
+  style,
+}: MotionProps & { direction?: 'forward' | 'back' }) {
+  const reduced = useReducedMotion();
+  const p = useSharedValue(reduced ? 1 : 0);
+  useEffect(() => {
+    if (reduced) return;
+    p.set(0);
+    p.set(withTiming(1, { duration: 400, easing: ease }));
+  }, [playKey, reduced, p]);
+  const from = direction === 'forward' ? 40 : -40;
+  const anim = useAnimatedStyle(() => ({
+    opacity: p.value,
+    transform: [{ translateX: (1 - p.value) * from }],
+  }));
+  return <Animated.View style={[style, anim]}>{children}</Animated.View>;
+}
+
+/** `.shA` / `.shB` – horizontal shake (400 ms) each time `shakeKey` changes (not on mount). */
+export function Shake({ children, shakeKey = 0, style }: { children?: ReactNode; shakeKey?: number; style?: StyleProp<ViewStyle> }) {
+  const x = useSharedValue(0);
+  useEffect(() => {
+    if (!shakeKey) return;
+    const t = { duration: 100 };
+    x.set(withSequence(withTiming(-6, t), withTiming(5, t), withTiming(-3, t), withTiming(0, t)));
+  }, [shakeKey, x]);
+  const anim = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return <Animated.View style={[style, anim]}>{children}</Animated.View>;
 }

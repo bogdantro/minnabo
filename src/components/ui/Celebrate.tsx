@@ -87,17 +87,25 @@ function Piece({ left, delay, color, fall, playKey }: { left: number; delay: num
   return <Animated.View style={[styles.piece, { left, backgroundColor: color }, anim]} />;
 }
 
-/** 7 small rectangles (lime, cyan, ink, star) falling 520 px with rotation over 2.4 s. */
-export function Confetti({ playKey = 0, count = 7 }: { playKey?: number; count?: number }) {
+/** Small rectangles (default: 7 in lime, cyan, ink, star) falling 520 px with rotation over 2.4 s. */
+export function Confetti({
+  playKey = 0,
+  count = 7,
+  colors: palette = CONFETTI_COLORS,
+}: {
+  playKey?: number;
+  count?: number;
+  colors?: readonly string[];
+}) {
   const { width } = useWindowDimensions();
   const pieces = useMemo(
     () =>
       Array.from({ length: count }).map((_, i) => ({
         left: ((i + 0.5) / count) * width + ((i % 2 ? 1 : -1) * width) / (count * 4),
         delay: (i % 4) * 120,
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+        color: palette[i % palette.length],
       })),
-    [count, width],
+    [count, width, palette],
   );
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill} accessibilityElementsHidden>

@@ -56,20 +56,38 @@ test('"Godta alle" checks every consent including the optional one', async () =>
   expect(screen.getByText('Fjern alle')).toBeTruthy();
 });
 
-test('setup writes the profile and marks onboarding complete', async () => {
+test('setup validates each step before moving on', async () => {
   await renderWithProviders(<SetupScreen />);
+  await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'O');
+  await fireEvent.press(screen.getByText('Neste'));
+  expect(screen.getByText('Visningsnavnet må ha minst 2 tegn')).toBeTruthy();
+
   await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'Ola Nordmann');
-  await fireEvent.changeText(screen.getByLabelText('Kommune'), 'Hamar');
-  await fireEvent.changeText(screen.getByLabelText('Sted'), 'Hamar sentrum');
-  await fireEvent.press(screen.getByText('Fullfør'));
-  await waitFor(() => expect(supabase.from).toHaveBeenCalledWith('profiles'));
+  await fireEvent.press(screen.getByText('Neste'));
+  expect(screen.getByText('Steg 2 av 3')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Neste'));
+  expect(screen.getByText('Velg ett alternativ for å gå videre')).toBeTruthy();
 });
 
-test('"Bruk posisjonen min" fills the kommune field', async () => {
+test('setup walks navn → bruk → sted and writes the profile', async () => {
   await renderWithProviders(<SetupScreen />);
-  await fireEvent.press(screen.getByText(nb.home.useMyLocation));
-  await waitFor(() =>
-    expect(screen.getByLabelText(nb.onboarding.municipalityLabel).props.value).toBe('Lillehammer'),
-  );
-  expect(screen.getByLabelText(nb.onboarding.placeLabel).props.value).toBe('Lillehammer');
+  await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'Ola Nordmann');
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Jeg trenger hjelp'));
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Hamar'));
+  await fireEvent.press(screen.getByText('Fullfør'));
+  await waitFor(() => expect(supabase.from).toHaveBeenCalledWith('profiles'));
+  await waitFor(() => expect(screen.getByText('Velkommen til nabolaget, Ola!')).toBeTruthy());
+});
+
+test('"Bruk posisjonen min" picks the kommune', async () => {
+  await renderWithProviders(<SetupScreen />);
+  await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'Ola Nordmann');
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Begge deler'));
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText(nb.setup.locIdle));
+  await waitFor(() => expect(screen.getAllByText('Fant deg: Lillehammer kommune').length).toBeGreaterThan(0));
+  expect(screen.getByText('Din posisjon')).toBeTruthy();
 });
