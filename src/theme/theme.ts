@@ -79,6 +79,10 @@ export const colors = {
   // welcome (Main.dc.html)
   welcomeBlob: '#E6F4FB',
   accentBlue: '#1E86F4',
+  // consent (Samtykke.dc.html)
+  consentOnBorder: '#CDEBA0',
+  consentOnBg: '#FBFEF4',
+  limeSoft: '#EEF6E4',   // --grad-soft decorative circle
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */
@@ -184,6 +188,13 @@ export const text = {
   fact: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 13 },
   offerDesc: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20.3, color: colors.ink2 },
   small: { fontFamily: fonts.body, fontSize: 12, lineHeight: 15, color: colors.mute },
+  stepLabel: { fontFamily: fonts.bodyBold, fontSize: 12.5, lineHeight: 12.5 },
+  stepNum: { fontFamily: fonts.display, fontSize: 14, lineHeight: 14 },
+  consent: { fontFamily: fonts.bodySemi, fontSize: 15.5, lineHeight: 21.7, color: colors.ink },
+  more: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 13, color: colors.mute },
+  explain: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20.25, color: colors.ink2 },
+  infoBox: { fontFamily: fonts.bodyMedium, fontSize: 13.5, lineHeight: 19.6, color: colors.cyanDeep },
+  stamp: { fontFamily: fonts.bodySemi, fontSize: 12, lineHeight: 15, color: colors.okText },
   priceLabel: { fontFamily: fonts.bodySemi, fontSize: 12, lineHeight: 12, color: colors.mute },
 } satisfies Record<string, TextStyle>;
 
@@ -244,6 +255,7 @@ export const shadow = {
   avatarRingLg: sh('0 0 0 3px #fff, 0 0 0 6px #19B8EE'),
   whiteRing2: sh('0 0 0 2px #fff'),
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
+  stepCurrent: sh('0 0 0 5px rgba(10,23,64,.1)'),
   logoTile: sh('0 30px 60px -20px rgba(10,23,64,.35)'),
   none: { boxShadow: 'none' } as ViewStyle,
 } as const;

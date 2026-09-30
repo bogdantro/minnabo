@@ -35,18 +35,25 @@ test('login rejects an invalid email before sending', async () => {
   expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
 });
 
-test('consent screen blocks until all boxes are checked, then records consent', async () => {
+test('consent screen blocks until the required boxes are checked, then records consent', async () => {
   await renderWithProviders(<ConsentScreen />);
-  await fireEvent.press(screen.getByText('Fortsett'));
-  await waitFor(() => expect(screen.getByText(/må godta alle/)).toBeTruthy());
+  expect(screen.getByText('3 påkrevde samtykker gjenstår')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Fortsett til oppsett'));
+  expect(supabase.from).not.toHaveBeenCalledWith('consent_records');
 
-  await fireEvent.press(screen.getByLabelText('Jeg godtar vilkårene'));
+  await fireEvent.press(screen.getByLabelText('Jeg godtar vilkårene for MinNabo'));
   await fireEvent.press(screen.getByLabelText('Jeg har lest personvernerklæringen'));
-  await fireEvent.press(
-    screen.getByLabelText('Jeg er over aldersgrensen (eller har samtykke fra foresatte)'),
-  );
-  await fireEvent.press(screen.getByText('Fortsett'));
+  await fireEvent.press(screen.getByLabelText('Alderen min er bekreftet (18 år eller eldre)'));
+  expect(screen.getByText('Alt klart – du kan gå videre')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Fortsett til oppsett'));
   await waitFor(() => expect(supabase.from).toHaveBeenCalledWith('consent_records'));
+});
+
+test('"Godta alle" checks every consent including the optional one', async () => {
+  await renderWithProviders(<ConsentScreen />);
+  await fireEvent.press(screen.getByText('Godta alle'));
+  expect(screen.getByText('3 av 3 påkrevde')).toBeTruthy();
+  expect(screen.getByText('Fjern alle')).toBeTruthy();
 });
 
 test('setup writes the profile and marks onboarding complete', async () => {

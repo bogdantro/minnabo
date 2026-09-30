@@ -10,6 +10,8 @@ export type ToastItem = {
   icon?: IconName;
   /** Right-hand action, e.g. "Angre". */
   action?: ToastAction;
+  /** Distance from the bottom edge, for screens with a sticky footer (design: 150). */
+  bottom?: number;
 };
 
 type Listener = (t: ToastItem) => void;
@@ -17,7 +19,7 @@ type Listener = (t: ToastItem) => void;
 let seq = 0;
 const listeners = new Set<Listener>();
 
-type Extra = { icon?: IconName; action?: ToastAction };
+type Extra = { icon?: IconName; action?: ToastAction; bottom?: number };
 
 function push(kind: ToastKind, text: string, extra?: Extra) {
   const item: ToastItem = { id: ++seq, kind, text, ...extra };

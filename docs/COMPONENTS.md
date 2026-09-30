@@ -29,6 +29,7 @@ All in `src/components/ui/`, exported from `@/components/ui`. Live preview of ev
 | `Sheet.tsx` · `Dialog.tsx` · `../ToastHost.tsx` + `@/lib/toast` | Sheet, Dialog, Toast (`toast.success(text, { icon, action })`) |
 | `Chat.tsx` | Bubble, SystemMessage, TypingIndicator, OfferCard, PaymentNote, Note |
 | `Skeleton.tsx` · `States.tsx` · `Celebrate.tsx` | Skeleton (+ ListingCardSkeleton, RowSkeleton), EmptyState, ErrorState, SuccessState, NoAccess, DrawnCheck, Confetti |
+| `Motion.tsx` | FadeUp (`.au`), FadeInView (`.ai`), ScaleIn (`.as`) – use these instead of Reanimated `entering` inside scroll views (web keeps those views absolutely positioned) |
 | `Txt.tsx` · `Icon.tsx` · `PressableScale.tsx` · `Spinner.tsx` | typography (`theme.text`), icons (`theme.icons` keys), press-scale, spinner |
 
 Shadows are CSS `boxShadow` strings (`theme.shadow`), rendered natively on iOS, Android (new architecture) and web.

@@ -6,7 +6,11 @@ configure({ asyncUtilTimeout: 8000 });
 
 // Reanimated 4 / worklets have no native runtime under jest: use their mocks.
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
-jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+jest.mock('react-native-reanimated', () => ({
+  ...require('react-native-reanimated/mock'),
+  // not in the official mock
+  useReducedMotion: () => false,
+}));
 jest.mock('@gorhom/bottom-sheet', () => require('@mocks/bottomSheet'));
 
 // The app must never hit the network in tests. The runtime `apiClient` is the

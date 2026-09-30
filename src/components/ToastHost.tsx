@@ -54,7 +54,7 @@ export function ToastHost() {
 
   if (!item) return null;
 
-  const bottom = (TAB_ROUTES.has(pathname) ? 108 : 30) + insets.bottom;
+  const bottom = (item.bottom ?? (TAB_ROUTES.has(pathname) ? 108 : 30)) + insets.bottom;
   const error = item.kind === 'error';
 
   return (
