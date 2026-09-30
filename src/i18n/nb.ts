@@ -698,6 +698,31 @@ const nb = {
     submitted: 'Takk for vurderingen!',
   },
 
+  welcome: {
+    slides: [
+      {
+        title: 'Småjobber\nnær deg.',
+        body: 'Få hjelp med plenen, flyttelasset eller datamaskinen — av folk som bor i nærheten.',
+      },
+      {
+        title: 'Ta en småjobb\ni nabolaget.',
+        body: 'Finn oppdrag i din egen kommune, gi et tilbud og avtal resten i chatten.',
+      },
+      {
+        title: 'Enkelt, trygt\nog lokalt.',
+        body: 'Verifiserte profiler, ærlige vurderinger og avtaler i chatten. Pris og betaling avtaler dere direkte.',
+      },
+    ],
+    start: 'Kom i gang',
+    region: 'Innlandet · Lillehammer, Hamar, Gjøvik og omegn',
+    showSlide: (n: number) => `Vis side ${n}`,
+    cardNeed: 'Trenger hjelp',
+    cardTitle: 'Klippe plen',
+    cardPrice: '400 kr',
+    offerFrom: 'Jonas ga et tilbud',
+    chat: 'Jeg kan ta det lørdag!',
+    accepted: 'Tilbud godtatt',
+  },
   onboarding: {
     welcomeTitle: 'Velkommen til MinNabo',
     tagline: 'Småjobber nær deg. Enkelt, trygt og lokalt.',

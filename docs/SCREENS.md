@@ -24,7 +24,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | exists | |
 | `LeggUt.dc.html` | `/legg-ut/trenger-jobb` | `src/screens/LeggUt/TaskRequestForm.tsx` | partial | `/legg-ut` is `LeggUt/IntroScreen.tsx`, an intro step before the form – the FAB must go straight into the wizard (rule 2). Form is not the 9-step wizard yet |
 | `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | partial | Today: Supabase **e-mail OTP**. Must become Vipps-only (rule 3) – needs backend (Vipps OIDC) |
-| `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | exists | Anon users are redirected here from `(tabs)/_layout.tsx` |
+| `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
 | `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` + `src/config/appMenu.ts` | exists | Opened from `BottomNav` inside `TabBar` |
 | `MineAvtaler.dc.html` | `/avtaler` | `src/screens/AgendaScreen.tsx` | exists | |
 | `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | exists | Menu label still says "Mine oppdrag og tjenester" |
@@ -74,7 +74,7 @@ For each screen: the design file is the truth for layout, copy and behaviour. Th
 `renderVals()` / `state` in each file shows exactly which interactions exist. Mock data and
 `setTimeout` "fake network" in the prototypes become real API calls.
 
-Tick a screen off only when: layout matches the design side by side, every interaction listed
+Done screens are marked ✅ (in both tables). Tick a screen off only when: layout matches the design side by side, every interaction listed
 works, loading / empty / error states exist, and all copy is identical (norsk bokmål).
 
 Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
@@ -95,7 +95,7 @@ Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
 
 | Design file | Screen | Must work |
 |---|---|---|
-| `Main.dc.html` | Velkommen | Centred logo at top (no "Logg inn" button). 3 slides auto-advance every 4.2 s, dots tappable, text animates in per slide. "Kom i gang" → LoggInn |
+| `Main.dc.html` | ✅ Velkommen | Centred logo at top (no "Logg inn" button). 3 slides auto-advance every 4.2 s, dots tappable, text animates in per slide. "Kom i gang" → LoggInn |
 | `LoggInn.dc.html` | Logg inn | **Vipps only** – no phone, e-mail or BankID. "Fortsett med Vipps" → sheet: Åpner Vipps (spinner) → Bekreft i Vipps-appen (pulse) → Identitet bekreftet (drawn check, name / fødselsår / telefon) → Samtykke. Under 18 → Ungdomskonto. Note: "Vipps brukes kun til innlogging – aldri til betaling." |
 | `Samtykke.dc.html` | Samtykker | Verified identity card. Required checkboxes (vilkår, personvern, alder bekreftet) + optional tips. "Godta alle". Continue disabled until required done. Expandable explanations. Consents stored with timestamp |
 | `Oppsett.dc.html` | Oppsett | 3-step wizard with progress: navn (prefilled from Vipps, photo optional) → formål (3 option cards) → kommune (GPS detect with radar animation, or searchable list, optional område). Celebration with confetti → Oppdrag |

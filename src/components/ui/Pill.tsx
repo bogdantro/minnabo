@@ -7,7 +7,8 @@ export type PillTone = 'need' | 'offer' | 'neutral' | 'line' | 'dark' | 'warn' |
 export type PillProps = {
   label: string;
   tone?: PillTone;
-  size?: 'md' | 'lg';
+  /** sm = 20 px (collage / dense cards), md = 26, lg = 32. */
+  size?: 'sm' | 'md' | 'lg';
   /** Leading status dot (need/offer tones get a white ring). */
   dot?: boolean;
   /** Override the dot colour (e.g. lime dot on the dark "Nytt tilbud" pill). */
@@ -34,12 +35,13 @@ const TONES: Record<PillTone, { bg: string; fg: string; border?: string; dot: st
 export function Pill({ label, tone = 'neutral', size = 'md', dot, dotColor, icon, style, testID }: PillProps) {
   const t = TONES[tone];
   const lg = size === 'lg';
+  const sm = size === 'sm';
   return (
     <View
       testID={testID}
       style={[
         styles.base,
-        { backgroundColor: t.bg, height: lg ? 32 : sizes.pill, paddingHorizontal: lg ? 13 : 10 },
+        { backgroundColor: t.bg, height: lg ? 32 : sm ? 20 : sizes.pill, paddingHorizontal: lg ? 13 : sm ? 8 : 10 },
         t.border ? { borderWidth: 1, borderColor: t.border } : null,
         style,
       ]}
@@ -54,7 +56,7 @@ export function Pill({ label, tone = 'neutral', size = 'md', dot, dotColor, icon
         />
       ) : null}
       {icon ? <Icon name={icon} size={14} color={t.fg} /> : null}
-      <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[lg ? text.pillLg : text.pill, { color: t.fg }]}>
+      <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[lg ? text.pillLg : text.pill, sm && styles.smText, { color: t.fg }]}>
         {label}
       </Text>
     </View>
@@ -71,5 +73,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
+  smText: { fontSize: 10.5, lineHeight: 10.5 },
   ring: { borderWidth: 0, boxShadow: `0 0 0 2px ${colors.white}` },
 });

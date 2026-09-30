@@ -76,6 +76,9 @@ export const colors = {
   offerAcceptedBorder: '#8FD3A6',
   offerDeclinedIcon: '#9AA2B3',
   caveatText: '#6E4300',
+  // welcome (Main.dc.html)
+  welcomeBlob: '#E6F4FB',
+  accentBlue: '#1E86F4',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */
@@ -241,6 +244,7 @@ export const shadow = {
   avatarRingLg: sh('0 0 0 3px #fff, 0 0 0 6px #19B8EE'),
   whiteRing2: sh('0 0 0 2px #fff'),
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
+  logoTile: sh('0 30px 60px -20px rgba(10,23,64,.35)'),
   none: { boxShadow: 'none' } as ViewStyle,
 } as const;
 
