@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Slett konto</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.drow{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;position:relative}
+.drow+.drow::before{content:"";position:absolute;top:0;left:62px;right:0;height:1px;background:var(--line2)}
+.drow .icirc{width:32px;height:32px;background:var(--danger-t);color:var(--danger)}
+.drow b{display:block;font:600 15px/1.3 var(--fb)}
+.drow small{display:block;font-size:13px;color:var(--mute);margin-top:2px;line-height:1.35}
+.confirm{height:72px;text-align:center;font:800 30px var(--fd);letter-spacing:.2em;text-transform:none}
+.confirm.ok{border-color:var(--danger);box-shadow:0 0 0 4px rgba(194,48,41,.1)}
+.shake{animation:shake .35s}
+.btn.off{opacity:.38;box-shadow:none}
+.letters{display:flex;gap:6px;justify-content:center}
+.letters span{width:34px;height:40px;border-radius:10px;background:#fff;border:1.5px solid var(--line);display:grid;place-items:center;font:800 17px var(--fd);color:var(--faint);transition:all .2s}
+.letters span.on{background:var(--danger);border-color:var(--danger);color:#fff}
+.bye{position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;padding:0 28px 40px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <sc-if value="{{notDone}}" hint-placeholder-val="{{ true }}">
+  <div class="scroll">
+    <div class="subbar">
+      <sc-if value="{{s1}}" hint-placeholder-val="{{ true }}"><a href="Innstillinger.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a></sc-if>
+      <sc-if value="{{notS1}}" hint-placeholder-val="{{ false }}"><button class="iconbtn" onClick="{{back}}" aria-label="Tilbake"><i class="i i-back"></i></button></sc-if>
+      <div class="title">Slett konto</div>
+      <a href="Innstillinger.dc.html" class="iconbtn ghost" aria-label="Avbryt"><i class="i i-x s18"></i></a>
+    </div>
+    <div class="px" style="margin-top: 6px">
+      <div class="steps"><sc-for list="{{bars}}" as="b" hint-placeholder-count="3"><i class="{{b.cls}}"></i></sc-for></div>
+      <div class="meta" style="margin-top: 8px">Steg {{step}} av 3</div>
+    </div>
+
+    <!-- STEP 1 -->
+    <sc-if value="{{s1}}" hint-placeholder-val="{{ true }}">
+      <div class="px slideL" style="margin-top: 18px">
+        <span class="icirc as" style="width: 64px; height: 64px; background: #FDEBE9; color: #C23029"><i class="i i-trash s28"></i></span>
+        <h1 class="h1" style="margin-top: 16px">Dette blir slettet</h1>
+        <p class="body p" style="color: #34405F; margin-top: 8px">Når kontoen er slettet, kan den ikke gjenopprettes.</p>
+        <div class="list" style="margin-top: 18px">
+          <div class="drow"><span class="icirc"><i class="i i-user s16"></i></span><span><b>Profilen din</b><small>Navn, bilde, beskrivelse og Vipps-bekreftelsen</small></span></div>
+          <div class="drow"><span class="icirc"><i class="i i-clip s16"></i></span><span><b>Oppføringene dine</b><small>Male gjerdet i hagen, Datahjelp og oppsett av mobil, Barnevakt fredagskvelder</small></span></div>
+          <div class="drow"><span class="icirc"><i class="i i-msg s16"></i></span><span><b>Meldinger og samtaler</b><small>Andre ser «Slettet bruker» i sine samtaler</small></span></div>
+          <div class="drow"><span class="icirc"><i class="i i-star s16"></i></span><span><b>Vurderingene dine</b><small>11 vurderinger og 14 fullførte jobber</small></span></div>
+          <div class="drow"><span class="icirc"><i class="i i-heart s16"></i></span><span><b>Lagrede og innstillinger</b><small>Lagrede oppføringer, varsler og trygge kontakter</small></span></div>
+        </div>
+        <div class="note" style="margin-top: 10px"><i class="i i-info"></i><span>Noen opplysninger kan vi være pålagt å lagre en tid. [Endelig tekst settes inn av jurist]</span></div>
+
+        <a href="Personvern.dc.html" class="card" style="margin-top: 16px; display: flex; align-items: center; gap: 14px; padding: 16px; text-decoration: none; color: #0A1740; background: var(--grad-soft)">
+          <span class="icirc" style="width: 44px; height: 44px; background: #ffffff; color: #065C8F"><i class="i i-download s18"></i></span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><b style="font-size: 15.5px">Last ned dataene dine først</b><span class="meta">Få en kopi av alt vi har lagret om deg</span></span>
+          <i class="i i-right" style="color: #8A93A8"></i>
+        </a>
+
+        <div class="label" style="margin: 26px 0 10px">Hvorfor vil du slette? <small>Valgfritt</small></div>
+        <div class="stack" style="gap: 8px" role="radiogroup" aria-label="Grunn">
+          <sc-for list="{{reasons}}" as="r" hint-placeholder-count="5">
+            <button class="{{r.cls}}" onClick="{{r.pick}}" role="radio" aria-checked="{{r.checked}}" style="padding: 13px 14px"><span class="{{r.radCls}}"></span><span style="flex: 1; font: 600 15px var(--fb)">{{r.label}}</span></button>
+          </sc-for>
+        </div>
+        <sc-if value="{{isOther}}" hint-placeholder-val="{{ false }}">
+          <textarea class="input au" style="margin-top: 10px; min-height: 90px" placeholder="Fortell gjerne litt mer (valgfritt)" value="{{other}}" onChange="{{onOther}}" aria-label="Annen grunn"></textarea>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- STEP 2 -->
+    <sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+      <div class="px slideL" style="margin-top: 18px">
+        <span class="icirc as" style="width: 64px; height: 64px; background: #FFF2D9; color: #9A5B00"><i class="i i-alert s28"></i></span>
+        <h1 class="h1" style="margin-top: 16px">Du har 1 aktiv avtale</h1>
+        <p class="body p" style="color: #34405F; margin-top: 8px">Hvis du sletter kontoen nå, blir avtalen avlyst, og Jonas får beskjed. Det er fint å gi beskjed i chatten først.</p>
+        <div class="card au d2" style="margin-top: 18px; padding: 14px; display: flex; gap: 14px">
+          <div class="art art-maling" style="width: 76px; height: 86px; border-radius: 16px; flex: none"><i class="i i-maling" style="width: 28px; height: 28px"></i></div>
+          <div class="stack" style="gap: 6px; flex: 1; min-width: 0">
+            <span class="pill pill-ok" style="align-self: flex-start; height: 22px; font-size: 11px"><i class="i i-checks s14"></i>Avtalt</span>
+            <b style="font-size: 16px">Male gjerdet i hagen</b>
+            <span class="lmeta"><i class="i i-cal"></i>Lør 10. okt · kl. 10:00</span>
+            <span class="lmeta"><span class="av av-b s28 plain" style="width: 20px; height: 20px; font-size: 9px">JL</span>Jonas Lie · 1 400 kr</span>
+          </div>
+        </div>
+        <div class="note au d2" style="margin-top: 10px"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+        <a href="MineAvtaler.dc.html" class="btn btn-ghost btn-block au d3" style="margin-top: 14px"><i class="i i-cal s18"></i>Se avtalen</a>
+        <a href="Chat.dc.html" class="btn btn-text btn-block au d4" style="margin-top: 2px">Skriv til Jonas</a>
+      </div>
+    </sc-if>
+
+    <!-- STEP 3 -->
+    <sc-if value="{{s3}}" hint-placeholder-val="{{ false }}">
+      <div class="px slideL" style="margin-top: 18px">
+        <span class="icirc as" style="width: 64px; height: 64px; background: #FDEBE9; color: #C23029"><i class="i i-lock s28"></i></span>
+        <h1 class="h1" style="margin-top: 16px">Bekreft sletting</h1>
+        <p class="body p" style="color: #34405F; margin-top: 8px">Skriv <b style="color: #C23029">SLETT</b> med store bokstaver for å bekrefte at du vil slette kontoen for godt.</p>
+        <div class="letters au d2" style="margin-top: 20px" aria-hidden="true">
+          <sc-for list="{{letters}}" as="l" hint-placeholder-count="5"><span class="{{l.cls}}">{{l.c}}</span></sc-for>
+        </div>
+        <div class="{{wrapCls}}" style="margin-top: 16px">
+          <input class="{{inputCls}}" value="{{typed}}" onChange="{{onType}}" placeholder="SLETT" maxlength="10" autocomplete="off" aria-label="Skriv SLETT for å bekrefte">
+        </div>
+        <sc-if value="{{wrong}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: 10px"><i class="i i-alert s14"></i>Det stemmer ikke. Skriv SLETT med store bokstaver.</div></sc-if>
+        <sc-if value="{{match}}" hint-placeholder-val="{{ false }}"><div class="au" style="margin-top: 10px; display: flex; gap: 8px; align-items: center; color: #C23029; font: 600 13.5px var(--fb)"><i class="i i-check s16"></i>Klar. Dette kan ikke angres.</div></sc-if>
+      </div>
+    </sc-if>
+
+    <div class="spacer-foot" style="height: 170px"></div>
+  </div>
+
+  <div class="foot">
+    <sc-if value="{{s1}}" hint-placeholder-val="{{ true }}">
+      <button class="btn btn-ink btn-block btn-lg" onClick="{{next}}">Fortsett<i class="i i-arrow s18"></i></button>
+      <a href="Innstillinger.dc.html" class="btn btn-text btn-block">Avbryt</a>
+    </sc-if>
+    <sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-dangerghost btn-block btn-lg" onClick="{{next}}">Fortsett likevel</button>
+      <a href="Innstillinger.dc.html" class="btn btn-text btn-block">Behold kontoen</a>
+    </sc-if>
+    <sc-if value="{{s3}}" hint-placeholder-val="{{ false }}">
+      <button class="{{delCls}}" onClick="{{del}}" aria-disabled="{{delDisabled}}">
+        <sc-if value="{{deleting}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: #ffffff"></span>Sletter kontoen …</sc-if>
+        <sc-if value="{{notDeleting}}" hint-placeholder-val="{{ true }}"><i class="i i-trash s18"></i>Slett kontoen for godt</sc-if>
+      </button>
+      <a href="Innstillinger.dc.html" class="btn btn-text btn-block">Behold kontoen</a>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- STEP 4: done -->
+  <sc-if value="{{done}}" hint-placeholder-val="{{ false }}">
+    <div class="bye">
+      <div style="position: absolute; inset: 0; background: none"></div>
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 14px; position: relative">
+        <div class="as" style="width: 112px; height: 112px; border-radius: 50%; background: #ffffff; box-shadow: 0 24px 50px -20px rgba(10,23,64,.35); display: grid; place-items: center">
+          <svg class="checkdraw" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#EDF8D6"></circle><path d="M17 29l7 7 15-16" fill="none" stroke="#3B7300" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <h1 class="h1 au d3" style="margin-top: 12px">Kontoen din er slettet</h1>
+        <p class="body p au d4" style="color: #34405F; max-width: 300px">Takk for at du var en del av nabolaget, Mari. Du er alltid velkommen tilbake.</p>
+        <p class="meta p au d5">Vi har sendt en bekreftelse til e-posten din.</p>
+      </div>
+      <div class="au d6" style="position: relative; display: flex; flex-direction: column; gap: 10px; align-items: center">
+        <img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="" style="width: 36px; height: 36px; opacity: .7">
+        <a href="Main.dc.html" class="btn btn-ink btn-block btn-lg">Til startsiden</a>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 1, reason: null, other: '', typed: '', wrong: false, shake: false, deleting: false };
+  }
+  componentWillUnmount() { clearTimeout(this.st); clearTimeout(this.dt); }
+  doShake() {
+    clearTimeout(this.st);
+    this.setState({ shake: false, wrong: true });
+    this.st = setTimeout(() => {
+      this.setState({ shake: true });
+      this.st = setTimeout(() => this.setState({ shake: false }), 400);
+    }, 20);
+  }
+  renderVals() {
+    const S = this.state;
+    const REASONS = ['Jeg bruker ikke appen lenger', 'Jeg fant ikke det jeg trengte', 'Jeg er bekymret for personvernet', 'Jeg har en annen konto', 'Annet'];
+    const match = S.typed === 'SLETT';
+    const T = 'SLETT';
+    return {
+      step: Math.min(S.step, 3),
+      s1: S.step === 1, s2: S.step === 2, s3: S.step === 3, notS1: S.step !== 1,
+      done: S.step === 4, notDone: S.step !== 4,
+      bars: [1, 2, 3].map((i) => ({ cls: i <= S.step ? 'on' : '' })),
+      back: () => this.setState({ step: Math.max(1, S.step - 1), typed: '', wrong: false }),
+      next: () => this.setState({ step: S.step + 1 }),
+      reasons: REASONS.map((label, i) => ({
+        label, cls: 'optcard' + (S.reason === i ? ' on' : ''), radCls: 'rad' + (S.reason === i ? ' on' : ''),
+        checked: S.reason === i ? 'true' : 'false',
+        pick: () => this.setState({ reason: S.reason === i ? null : i })
+      })),
+      isOther: S.reason === 4, other: S.other,
+      onOther: (e) => this.setState({ other: e.target.value }),
+      typed: S.typed,
+      onType: (e) => {
+        const v = e.target.value;
+        this.setState({ typed: v, wrong: false });
+        if (v.length >= 5 && v !== T) this.doShake();
+      },
+      letters: T.split('').map((c, i) => ({ c, cls: S.typed[i] === c ? 'on' : '' })),
+      wrong: S.wrong && !match, match,
+      wrapCls: S.shake ? 'shake' : '',
+      inputCls: 'input confirm' + (match ? ' ok' : S.wrong ? ' err' : ''),
+      delCls: 'btn btn-danger btn-block btn-lg' + (match ? '' : ' off'),
+      delDisabled: match ? 'false' : 'true',
+      del: () => {
+        if (S.deleting) return;
+        if (!match) { this.doShake(); return; }
+        this.setState({ deleting: true });
+        this.dt = setTimeout(() => this.setState({ step: 4, deleting: false }), 1700);
+      },
+      deleting: S.deleting, notDeleting: !S.deleting
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Vurdering</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.who{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px}
+.who .ctx{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px 0 5px;border-radius:999px;background:#fff;border:1px solid var(--line);font:600 12.5px/1 var(--fb);color:var(--ink2)}
+.who .ctx .art{width:22px;height:22px;border-radius:50%}
+.who .ctx .art .i{width:12px;height:12px}
+.starrow{display:flex;justify-content:center;gap:8px;margin-top:4px}
+.star{width:58px;height:58px;border-radius:20px;border:0;background:#fff;box-shadow:var(--sh);display:grid;place-items:center;cursor:pointer;color:#C9CFD9;transition:background .25s,color .25s,transform .2s var(--spring),box-shadow .25s}
+.star:active{transform:scale(.88)}
+.star .i{width:32px;height:32px}
+.star.on{background:#FFF4D6;color:var(--star);box-shadow:0 10px 22px -12px rgba(240,165,0,.8)}
+.star.on .i{animation:starPop .55s var(--spring) both;animation-delay:var(--d,0s)}
+@keyframes starPop{0%{transform:scale(.4) rotate(-25deg)}60%{transform:scale(1.28) rotate(8deg)}100%{transform:none}}
+.rlabel{height:30px;display:flex;justify-content:center;align-items:center;margin-top:12px}
+.rlabel span{font:700 20px/1 var(--fd);letter-spacing:-.02em;animation:scaleIn .45s var(--spring) both}
+.tagwrap{display:flex;flex-wrap:wrap;gap:8px}
+.tagwrap .chip{padding:0 14px}
+.tagwrap .chip .i{transition:transform .25s var(--spring)}
+.counter{font:600 12px/1 var(--fb);color:var(--mute);text-align:right;margin-top:6px}
+.counter.warn{color:var(--warn)}
+.seg button{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.hint{text-align:center;font-size:12.5px;color:var(--mute)}
+.spinr{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(10,23,64,.2);border-top-color:#0A1740}
+.okbadge{width:104px;height:104px;border-radius:34px;background:#F0A500;display:grid;place-items:center;color:#fff;box-shadow:0 26px 50px -18px rgba(240,165,0,.7);margin:0 auto}
+.okbadge .i{width:52px;height:52px}
+.review{padding:18px;border-radius:24px;background:#fff;box-shadow:var(--sh-m);border:1px solid rgba(10,23,64,.04);position:relative;overflow:hidden}
+.review::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+.review .rs{display:flex;gap:2px;color:var(--star)}
+.review .rs .i{width:17px;height:17px}
+.review .rs .off{color:#DDE1E7}
+.rtags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.rtags span{height:26px;padding:0 10px;border-radius:999px;background:var(--lime-t);color:var(--lime-d);font:700 12px/26px var(--fb)}
+.confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:50}
+.pubrow{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:var(--ok-t);color:#1D6E3A;font:600 13.5px/1.35 var(--fb)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh"></div>
+
+    <div class="subbar">
+      <a href="Fullforing.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">{{title}}</div>
+      <span></span>
+    </div>
+
+    <!-- FORM -->
+    <sc-if value="{{isForm}}" hint-placeholder-val="{{ true }}">
+      <div class="px who au" style="position: relative; margin-top: 8px">
+        <span class="av av-b s88">JL<span class="on-dot" style="width: 18px; height: 18px; border-width: 3px"></span></span>
+        <div class="ctx"><span class="art art-maling"><i class="i i-maling"></i></span>Male gjerdet i hagen · Lør 10. okt</div>
+        <h1 class="h2" style="max-width: 320px; text-wrap: balance">Hvordan var det å få hjelp av Jonas?</h1>
+      </div>
+
+      <div class="px au d2" style="position: relative; margin-top: 18px">
+        <div class="starrow" role="radiogroup" aria-label="Antall stjerner">
+          <sc-for list="{{stars}}" as="s" hint-placeholder-count="5">
+            <button class="{{s.cls}}" onClick="{{s.pick}}" role="radio" aria-checked="{{s.checked}}" aria-label="{{s.label}}" style="display: grid; {{s.st}}"><i class="{{s.icon}}"></i></button>
+          </sc-for>
+        </div>
+        <div class="rlabel" aria-live="polite">
+          <sc-if value="{{r0}}" hint-placeholder-val="{{ true }}"><span style="font: 600 14.5px var(--fb); color: #5F6983">Trykk på en stjerne</span></sc-if>
+          <sc-if value="{{r1}}" hint-placeholder-val="{{ false }}"><span style="color: #C23029">Dårlig</span></sc-if>
+          <sc-if value="{{r2}}" hint-placeholder-val="{{ false }}"><span style="color: #9A5B00">Ikke bra</span></sc-if>
+          <sc-if value="{{r3}}" hint-placeholder-val="{{ false }}"><span style="color: #34405F">Greit</span></sc-if>
+          <sc-if value="{{r4}}" hint-placeholder-val="{{ false }}"><span style="color: #3B7300">Bra</span></sc-if>
+          <sc-if value="{{r5}}" hint-placeholder-val="{{ false }}"><span style="color: #3B7300">Fantastisk!</span></sc-if>
+        </div>
+      </div>
+
+      <div class="px au d3" style="position: relative; margin-top: 22px">
+        <div class="label" style="margin-bottom: 10px">Hva var bra? <small>Velg så mange du vil</small></div>
+        <div class="tagwrap">
+          <sc-for list="{{tags}}" as="t" hint-placeholder-count="6">
+            <button class="{{t.cls}}" onClick="{{t.pick}}" aria-pressed="{{t.pressed}}"><sc-if value="{{t.on}}" hint-placeholder-val="{{ false }}"><i class="i i-check s16 as"></i></sc-if>{{t.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="px au d4" style="position: relative; margin-top: 22px">
+        <div class="field">
+          <label class="label" for="kommentar">Kommentar <small>Valgfritt</small></label>
+          <textarea id="kommentar" class="input" rows="4" maxlength="400" placeholder="Fortell naboene hvordan det gikk …" value="{{comment}}" onChange="{{onComment}}"></textarea>
+        </div>
+        <div class="{{counterCls}}">{{counter}}</div>
+      </div>
+
+      <div class="px au d5" style="position: relative; margin-top: 18px">
+        <div class="label" style="margin-bottom: 10px">Vil du anbefale Jonas til naboer?</div>
+        <div class="seg" role="radiogroup" aria-label="Anbefale Jonas">
+          <button class="{{recJaCls}}" onClick="{{recJa}}" role="radio" aria-checked="{{recJaStr}}"><i class="i i-thumb s16"></i>Ja</button>
+          <button class="{{recNeiCls}}" onClick="{{recNei}}" role="radio" aria-checked="{{recNeiStr}}">Nei</button>
+        </div>
+      </div>
+
+      <div class="px au d6" style="position: relative; margin-top: 16px">
+        <div class="note"><i class="i i-info"></i><span>Vurderingen vises på profilen hans. Én vurdering per avtale.</span></div>
+      </div>
+      <div class="spacer-foot" style="height: 160px"></div>
+    </sc-if>
+
+    <!-- DONE -->
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <div class="px" style="position: relative; margin-top: 10px; text-align: center">
+        <div class="as"><div class="okbadge"><i class="i i-star"></i></div></div>
+        <h1 class="display au d3" style="font-size: 36px; margin-top: 22px">Takk for vurderingen!</h1>
+        <p class="body p muted au d4" style="margin-top: 8px">Den er publisert på profilen til Jonas og hjelper naboer å velge trygt.</p>
+      </div>
+
+      <div class="px au d5" style="position: relative; margin-top: 22px">
+        <div class="eyebrow" style="margin-bottom: 10px">Slik vises den</div>
+        <div class="review">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span class="av av-me s40 plain">MH</span>
+            <div style="flex: 1">
+              <b style="display: block; font: 700 15px/1.2 var(--fb)">Mari H.</b>
+              <span class="meta">Nordre Ål · 10. okt 2026</span>
+            </div>
+            <span class="vbadge"><i class="i i-verified s16"></i>Avtale</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px">
+            <div class="rs">
+              <sc-for list="{{pubStars}}" as="p" hint-placeholder-count="5"><i class="{{p.cls}}"></i></sc-for>
+            </div>
+            <b style="font: 700 14px var(--fb)">{{ratingWord}}</b>
+          </div>
+          <sc-if value="{{hasComment}}" hint-placeholder-val="{{ true }}">
+            <p class="body p" style="margin-top: 10px; color: #34405F">«{{commentTrim}}»</p>
+          </sc-if>
+          <sc-if value="{{hasTags}}" hint-placeholder-val="{{ true }}">
+            <div class="rtags">
+              <sc-for list="{{pubTags}}" as="t" hint-placeholder-count="3"><span>{{t.label}}</span></sc-for>
+            </div>
+          </sc-if>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #EEF1F4">
+            <span class="meta" style="display: inline-flex; align-items: center; gap: 6px"><i class="i i-maling s14"></i>Male gjerdet i hagen</span>
+            <sc-if value="{{recommends}}" hint-placeholder-val="{{ true }}"><span class="pill pill-ok"><i class="i i-thumb s14"></i>Anbefaler</span></sc-if>
+          </div>
+        </div>
+      </div>
+
+      <div class="px au d6" style="position: relative; margin-top: 12px">
+        <div class="pubrow"><i class="i i-award s18"></i><span>Jonas har nå <b>33 vurderinger</b>. Han får beskjed og kan gi deg en vurdering også.</span></div>
+      </div>
+      <div class="spacer-foot" style="height: 170px"></div>
+    </sc-if>
+  </div>
+
+  <!-- foot -->
+  <div class="foot">
+    <sc-if value="{{isFormOrSending}}" hint-placeholder-val="{{ true }}">
+      <button class="btn btn-lime btn-block btn-lg" onClick="{{submit}}" disabled="{{noRating}}" aria-busy="{{busyStr}}">
+        <sc-if value="{{sending}}" hint-placeholder-val="{{ false }}"><span class="spinr spin"></span>Publiserer …</sc-if>
+        <sc-if value="{{notSending}}" hint-placeholder-val="{{ true }}"><i class="i i-send s18"></i>Send vurdering</sc-if>
+      </button>
+      <sc-if value="{{noRating}}" hint-placeholder-val="{{ true }}"><p class="hint p">Velg antall stjerner for å sende</p></sc-if>
+    </sc-if>
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <a href="Oppdrag.dc.html" class="btn btn-lime btn-block btn-lg au">Tilbake til Oppdrag<i class="i i-arrow s18"></i></a>
+      <a href="Oppdragsdetaljer.dc.html" class="btn btn-text au d2" style="align-self: center">Se profilen til Jonas</a>
+    </sc-if>
+  </div>
+
+  <!-- confetti -->
+  <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+    <div class="confetti" aria-hidden="true">
+      <sc-for list="{{confetti}}" as="c" hint-placeholder-count="12">
+        <i style="position: absolute; {{c.st}}"></i>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { rating: 0, tags: {}, comment: '', rec: null, phase: 'form' };
+  }
+  componentWillUnmount() { clearTimeout(this.t1); }
+  renderVals() {
+    const S = this.state;
+    const WORDS = ['', 'Dårlig', 'Ikke bra', 'Greit', 'Bra', 'Fantastisk!'];
+    const TAGS = ['Punktlig', 'Ryddig', 'Vennlig', 'Grundig', 'God kommunikasjon', 'Anbefales'];
+    const stars = [1, 2, 3, 4, 5].map((n) => {
+      const on = n <= S.rating;
+      return {
+        cls: 'star' + (on ? ' on' : ''),
+        icon: on ? 'i i-star' : 'i i-staro',
+        label: n + (n === 1 ? ' stjerne' : ' stjerner') + ' – ' + WORDS[n],
+        checked: S.rating === n ? 'true' : 'false',
+        st: '--d: ' + ((n - 1) * 0.05).toFixed(2) + 's',
+        pick: () => this.setState({ rating: n })
+      };
+    });
+    const len = S.comment.length;
+    const COLORS = ['#B8EE3C', '#19B8EE', '#1E86F4', '#63E08A', '#F0A500', '#0A1740', '#FFE08A'];
+    const confetti = [];
+    for (let i = 0; i < 40; i++) {
+      const left = (i * 41 + (i % 4) * 7) % 100;
+      confetti.push({
+        st: 'left: ' + left + '%; width: ' + (6 + (i % 4) * 2) + 'px; height: ' + (10 + (i % 3) * 4) + 'px; background: ' + COLORS[i % COLORS.length] +
+          '; border-radius: ' + (i % 4 === 0 ? '50%' : '2px') + '; animation-delay: ' + ((i % 10) * 0.07).toFixed(2) + 's; animation-duration: ' + (2 + (i % 5) * 0.25).toFixed(2) + 's'
+      });
+    }
+    const chosen = TAGS.filter((t) => S.tags[t]);
+    const phase = S.phase;
+    return {
+      title: phase === 'done' ? 'Vurdering sendt' : 'Gi vurdering',
+      isForm: phase !== 'done', isDone: phase === 'done', isFormOrSending: phase !== 'done',
+      sending: phase === 'sending', notSending: phase !== 'sending', busyStr: phase === 'sending' ? 'true' : 'false',
+      stars: stars,
+      r0: S.rating === 0, r1: S.rating === 1, r2: S.rating === 2, r3: S.rating === 3, r4: S.rating === 4, r5: S.rating === 5,
+      tags: TAGS.map((t) => ({
+        label: t, on: !!S.tags[t],
+        cls: 'chip plain lime' + (S.tags[t] ? ' on' : ''),
+        pressed: S.tags[t] ? 'true' : 'false',
+        pick: () => { const g = Object.assign({}, this.state.tags); g[t] = !g[t]; this.setState({ tags: g }); }
+      })),
+      comment: S.comment,
+      onComment: (e) => this.setState({ comment: e.target.value.slice(0, 400) }),
+      counter: len + '/400',
+      counterCls: 'counter' + (len > 360 ? ' warn' : ''),
+      recJaCls: S.rec === 'ja' ? 'on' : '', recNeiCls: S.rec === 'nei' ? 'on' : '',
+      recJaStr: S.rec === 'ja' ? 'true' : 'false', recNeiStr: S.rec === 'nei' ? 'true' : 'false',
+      recJa: () => this.setState({ rec: 'ja' }),
+      recNei: () => this.setState({ rec: 'nei' }),
+      noRating: S.rating === 0,
+      submit: () => {
+        if (this.state.rating === 0 || this.state.phase !== 'form') return;
+        this.setState({ phase: 'sending' });
+        this.t1 = setTimeout(() => this.setState({ phase: 'done' }), 1300);
+      },
+      pubStars: [1, 2, 3, 4, 5].map((n) => ({ cls: 'i i-star' + (n <= S.rating ? '' : ' off') })),
+      ratingWord: WORDS[S.rating] || '',
+      hasComment: S.comment.trim().length > 0,
+      commentTrim: S.comment.trim(),
+      hasTags: chosen.length > 0,
+      pubTags: chosen.map((t) => ({ label: t })),
+      recommends: S.rec === 'ja',
+      confetti: confetti
+    };
+  }
+}
+</script>
+</body>
+</html>

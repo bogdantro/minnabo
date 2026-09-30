@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Lagrede</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.lcard,.ss{max-height:320px;overflow:hidden}
+.gone{animation:lgOut .45s var(--ease) forwards}
+@keyframes lgOut{0%{opacity:1;transform:none}40%{opacity:0;transform:scale(.94);max-height:320px}100%{opacity:0;transform:scale(.94);max-height:0;margin-top:-12px;padding-top:0;padding-bottom:0}}
+.ss{background:#fff;border-radius:26px;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035);padding:16px;display:flex;flex-direction:column;gap:12px}
+.ss .q{font:700 18px/1.2 var(--fd);letter-spacing:-.02em;margin:0}
+.ss .fl{display:flex;flex-wrap:wrap;gap:6px}
+.ss .fl span{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:10px;background:var(--surf2);border:1px solid var(--line2);font:600 12.5px/1 var(--fb);color:var(--ink2)}
+.bellt{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--mute);transition:background .25s,color .25s,border-color .25s,transform .15s;padding:0;flex:none}
+.bellt:active{transform:scale(.9)}
+.bellt.on{background:var(--lime-t);color:var(--lime-d);border-color:#BFE07F}
+.bellt.on .i{animation:wiggle .6s ease}
+.newb{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;background:var(--grad);color:var(--ink);font:800 11.5px/1 var(--fb)}
+.newb i{width:6px;height:6px;border-radius:50%;background:var(--ink);display:block}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh"></div>
+    <div class="subbar">
+      <a href="Meny.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Lagrede</div>
+      <a href="Sok.dc.html" class="iconbtn" aria-label="Søk"><i class="i i-search s18"></i></a>
+    </div>
+
+    <div class="px au" style="position: relative; padding-top: 8px">
+      <h1 class="h1">Lagrede</h1>
+      <p class="meta p" style="margin-top: 8px">Oppføringer du har hjertet og søk du følger med på.</p>
+    </div>
+
+    <div class="px au d2" style="position: relative; margin-top: 18px">
+      <div class="seg" role="tablist" aria-label="Lagrede">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+          <button class="{{t.cls}}" onClick="{{t.pick}}" role="tab" aria-selected="{{t.sel}}">{{t.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- LISTINGS -->
+    <sc-if value="{{tabList}}" hint-placeholder-val="{{ true }}">
+      <div class="au d3" style="margin-top: 14px">
+        <div class="chips" aria-label="Type">
+          <sc-for list="{{types}}" as="c" hint-placeholder-count="3">
+            <button class="{{c.cls}}" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}">{{c.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div class="px stack" style="gap: 12px; margin-top: 8px">
+        <sc-for list="{{listings}}" as="it" hint-placeholder-count="4">
+          <div class="{{it.cls}}">
+            <a href="{{it.href}}">
+              <div class="{{it.artCls}}"><i class="{{it.icon}}"></i></div>
+              <div class="lbody">
+                <div class="lbadges">
+                  <sc-if value="{{it.isOffer}}" hint-placeholder-val="{{ true }}"><span class="pill pill-offer"><span class="pd"></span>Tilbyr hjelp</span></sc-if>
+                  <sc-if value="{{it.isNeed}}" hint-placeholder-val="{{ false }}"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></sc-if>
+                </div>
+                <p class="ltitle">{{it.title}}</p>
+                <div class="lmeta"><b>{{it.who}}</b><span class="stars"><i class="i i-star"></i>{{it.rating}}</span></div>
+                <div class="lmeta"><i class="i i-pin"></i>{{it.place}}</div>
+                <div class="lmeta"><i class="i i-clock"></i>{{it.when}}</div>
+                <div class="lprice"><span class="l">{{it.plabel}}</span><span class="v">{{it.price}}</span></div>
+              </div>
+            </a>
+            <button class="save on" onClick="{{it.unsave}}" aria-label="{{it.aria}}"><i class="i i-heartf s18"></i></button>
+          </div>
+        </sc-for>
+        <sc-if value="{{noListings}}" hint-placeholder-val="{{ false }}">
+          <div class="dash-card as" style="padding: 30px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: rgba(255,255,255,.55)">
+            <span class="icirc" style="width: 60px; height: 60px; background: #FDECEC; color: #E5484D"><i class="i i-heart s24"></i></span>
+            <b style="font: 700 17px/1.25 var(--fd)">{{emptyListTitle}}</b>
+            <span class="meta" style="max-width: 250px">Trykk på hjertet på et oppdrag eller tilbud for å samle det her.</span>
+            <a href="Oppdrag.dc.html" class="btn btn-sm btn-ink" style="margin-top: 6px">Utforsk i nabolaget<i class="i i-arrow s16"></i></a>
+          </div>
+        </sc-if>
+        <div class="note" style="justify-content: center; text-align: center; margin-top: 8px"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+      </div>
+    </sc-if>
+
+    <!-- SEARCHES -->
+    <sc-if value="{{tabSearch}}" hint-placeholder-val="{{ false }}">
+      <div class="px stack" style="gap: 12px; margin-top: 18px">
+        <div class="note au"><i class="i i-bell"></i><span>Slå på varsel, så sier vi fra når det dukker opp nye treff i søkene dine.</span></div>
+        <sc-for list="{{searches}}" as="s" hint-placeholder-count="3">
+          <article class="{{s.cls}}">
+            <div style="display: flex; gap: 12px; align-items: flex-start">
+              <span class="icirc" style="width: 44px; height: 44px; background: #F3F5F1"><i class="i i-search s18"></i></span>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+                <p class="q">«{{s.q}}»</p>
+                <sc-if value="{{s.hasNew}}" hint-placeholder-val="{{ true }}"><span class="newb" style="align-self: flex-start"><i></i>{{s.newLabel}}</span></sc-if>
+                <sc-if value="{{s.noNew}}" hint-placeholder-val="{{ false }}"><span class="meta" style="font-size: 12.5px">Ingen nye treff siden sist</span></sc-if>
+              </div>
+              <button class="{{s.bellCls}}" onClick="{{s.toggleBell}}" aria-pressed="{{s.bellPressed}}" aria-label="{{s.bellAria}}"><i class="{{s.bellIcon}}"></i></button>
+            </div>
+            <div class="fl">
+              <sc-for list="{{s.filters}}" as="f" hint-placeholder-count="3"><span><i class="{{f.icon}}"></i>{{f.label}}</span></sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px; border-top: 1px solid #EEF1F4">
+              <span class="meta" style="flex: 1; font-size: 12.5px; padding-top: 8px">{{s.meta}}</span>
+              <button class="iconbtn ghost" onClick="{{s.remove}}" aria-label="{{s.delAria}}" style="margin-top: 6px; color: #C23029"><i class="i i-trash s18"></i></button>
+              <a href="Sok.dc.html" class="btn btn-sm btn-ink" style="margin-top: 6px">Kjør søk<i class="i i-arrow s16"></i></a>
+            </div>
+          </article>
+        </sc-for>
+        <sc-if value="{{noSearches}}" hint-placeholder-val="{{ false }}">
+          <div class="dash-card as" style="padding: 30px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: rgba(255,255,255,.55)">
+            <span class="icirc" style="width: 60px; height: 60px; background: #DFF2FB; color: #065C8F"><i class="i i-bookmark s24"></i></span>
+            <b style="font: 700 17px/1.25 var(--fd)">Ingen lagrede søk</b>
+            <span class="meta" style="max-width: 250px">Lagre et søk med filtrene dine, så kan du få varsel om nye treff.</span>
+            <a href="Sok.dc.html" class="btn btn-sm btn-ink" style="margin-top: 6px"><i class="i i-search s16"></i>Gå til søk</a>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div style="height: 60px"></div>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tab: 'list', type: 'alle', leaving: {}, last: null, toast: null, toastIcon: 'i i-check s16', toastUndo: false,
+      listings: [
+        { id: 'l1', kind: 'need', cat: 'flytting', title: 'Bære sofa til 3. etasje', who: 'Magnus Aas', rating: '4,7', place: 'Stampesletta · ca. 2,8 km', when: 'Tor 1. okt · ettermiddag', plabel: 'Budsjett', price: '350 kr' },
+        { id: 'l2', kind: 'need', cat: 'montering', title: 'Montere garderobeskap', who: 'Thea Lund', rating: '5,0', place: 'Søre Ål · ca. 3,1 km', when: 'Denne uka · fleksibel', plabel: '', price: 'Ønsker tilbud' },
+        { id: 'l3', kind: 'need', cat: 'rengjoring', title: 'Flyttevask av 3-roms', who: 'Ida Sæther', rating: '4,9', place: 'Kanten · ca. 3,4 km', when: 'Fre 9. okt', plabel: 'Budsjett', price: '1 200 kr' },
+        { id: 'l4', kind: 'need', cat: 'hage', title: 'Klippe plen og rake løv', who: 'Kari Holm', rating: '4,9', place: 'Nordre Ål · ca. 1,2 km', when: 'Lør 3. okt · ca. 2 t', plabel: 'Budsjett', price: '400 kr' },
+        { id: 'l5', kind: 'need', cat: 'dyrepass', title: 'Passe katten i høstferien', who: 'Thea Lund', rating: '5,0', place: 'Fåberg · ca. 4,2 km', when: 'Man 5.–fre 9. okt', plabel: '', price: 'Ønsker tilbud' }
+      ],
+      searches: [
+        { id: 's1', q: 'plen', filters: [['i i-hage s14', 'Hage'], ['i i-pin s14', 'Lillehammer + nabokommuner'], ['i i-shield s14', 'Kun verifiserte']], nye: 3, alert: true, meta: 'Lagret 14. sep · sist kjørt i går' },
+        { id: 's2', q: 'flyttehjelp', filters: [['i i-flytting s14', 'Flytting/bæring'], ['i i-pin s14', 'Lillehammer'], ['i i-shield s14', 'Kun verifiserte']], nye: 0, alert: false, meta: 'Lagret 2. sep · sist kjørt 20. sep' },
+        { id: 's3', q: 'datahjelp', filters: [['i i-data s14', 'Datahjelp'], ['i i-map s14', 'Hele Innlandet'], ['i i-clock s14', 'Nyeste først']], nye: 1, alert: true, meta: 'Lagret 28. aug · sist kjørt 26. sep' }
+      ]
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.lt); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 3000);
+  }
+  removeFrom(key, id, msg, icon) {
+    const arr = this.state[key];
+    const idx = arr.findIndex((x) => x.id === id);
+    const item = arr[idx];
+    const leaving = Object.assign({}, this.state.leaving);
+    leaving[id] = true;
+    this.setState({ leaving });
+    this.lt = setTimeout(() => {
+      const l = Object.assign({}, this.state.leaving);
+      delete l[id];
+      const patch = { leaving: l, last: { key, item, idx } };
+      patch[key] = this.state[key].filter((x) => x.id !== id);
+      this.setState(patch);
+      this.flash(msg, icon, true);
+    }, 430);
+  }
+  renderVals() {
+    const S = this.state;
+    const TYPES = [];
+    const list = S.listings.filter((x) => S.type === 'alle' || x.kind === S.type);
+    return {
+      tabs: [['list', 'Oppføringer (' + S.listings.length + ')'], ['search', 'Søk (' + S.searches.length + ')']].map(([id, label]) => ({ label, cls: S.tab === id ? 'on' : '', sel: S.tab === id ? 'true' : 'false', pick: () => this.setState({ tab: id }) })),
+      tabList: S.tab === 'list', tabSearch: S.tab === 'search',
+      types: TYPES.map(([id, label]) => ({ label, cls: 'chip plain sm' + (S.type === id ? (id === 'need' ? ' lime on' : id === 'offer' ? ' cyan on' : ' on') : ''), pressed: S.type === id ? 'true' : 'false', pick: () => this.setState({ type: id }) })),
+      listings: list.map((x) => ({
+        cls: 'lcard' + (S.leaving[x.id] ? ' gone' : ' au'),
+        href: x.kind === 'offer' ? 'Oppdragsdetaljer.dc.html' : 'Oppdragsdetaljer.dc.html',
+        artCls: 'lthumb art art-' + x.cat, icon: 'i i-' + x.cat,
+        isOffer: x.kind === 'offer', isNeed: x.kind === 'need',
+        title: x.title, who: x.who, rating: x.rating, place: x.place, when: x.when, plabel: x.plabel, price: x.price,
+        aria: 'Fjern ' + x.title + ' fra lagrede',
+        unsave: () => { if (!S.leaving[x.id]) this.removeFrom('listings', x.id, 'Fjernet fra Lagrede', 'i i-heart s14'); }
+      })),
+      noListings: list.length === 0,
+      emptyListTitle: S.type === 'offer' ? 'Ingen lagrede tilbud' : S.type === 'need' ? 'Ingen lagrede oppdrag' : 'Ingen lagrede oppføringer',
+      searches: S.searches.map((s) => ({
+        cls: 'ss' + (S.leaving[s.id] ? ' gone' : ' au'),
+        q: s.q, hasNew: s.nye > 0, noNew: s.nye === 0,
+        newLabel: s.nye + (s.nye === 1 ? ' nytt treff' : ' nye treff'),
+        filters: s.filters.map((f) => ({ icon: f[0], label: f[1] })),
+        meta: s.meta + (s.alert ? ' · varsel på' : ''),
+        bellCls: 'bellt' + (s.alert ? ' on' : ''), bellIcon: s.alert ? 'i i-bell s18' : 'i i-bell s18',
+        bellPressed: s.alert ? 'true' : 'false',
+        bellAria: (s.alert ? 'Slå av varsel for ' : 'Slå på varsel for ') + s.q,
+        toggleBell: () => {
+          const on = !s.alert;
+          this.setState({ searches: S.searches.map((x) => (x.id === s.id ? Object.assign({}, x, { alert: on }) : x)) });
+          this.flash(on ? 'Varsel på for «' + s.q + '»' : 'Varsel av for «' + s.q + '»', on ? 'i i-bell s14' : 'i i-x s14');
+        },
+        delAria: 'Slett søket ' + s.q,
+        remove: () => { if (!S.leaving[s.id]) this.removeFrom('searches', s.id, 'Søket «' + s.q + '» er slettet', 'i i-trash s14'); }
+      })),
+      noSearches: S.searches.length === 0,
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo,
+      undo: () => {
+        const L = S.last;
+        if (!L) return;
+        const arr = S[L.key].slice();
+        arr.splice(Math.min(L.idx, arr.length), 0, L.item);
+        const patch = { last: null, toast: null };
+        patch[L.key] = arr;
+        this.setState(patch);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

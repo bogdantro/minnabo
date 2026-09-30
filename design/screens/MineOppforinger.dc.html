@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Mine oppføringer</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.mo{background:#fff;border-radius:26px;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035);padding:14px;display:flex;flex-direction:column;gap:12px;overflow:hidden;max-height:360px}
+.mo.gone{animation:moOut .45s var(--ease) forwards}
+@keyframes moOut{0%{opacity:1;transform:none}40%{opacity:0;transform:translateX(56px) scale(.96);max-height:360px}100%{opacity:0;transform:translateX(56px) scale(.96);max-height:0;margin-top:-12px;padding-top:0;padding-bottom:0}}
+.mo .thumb{width:66px;height:66px;border-radius:18px;flex:none}
+.mo .thumb .i{width:26px;height:26px}
+.mo .t{font:700 16.5px/1.25 var(--fb);margin:0}
+.mstats{display:flex;gap:6px;flex-wrap:wrap}
+.mstat{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:10px;background:var(--surf2);font:600 12.5px/1 var(--fb);color:var(--ink2)}
+.mstat .i{width:14px;height:14px;color:var(--faint)}
+.mstat.hot{background:var(--lime-t);color:var(--lime-d)}
+.mstat.hot .i{color:var(--lime-d)}
+.act{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:18px;background:none;border:0;width:100%;cursor:pointer;font:inherit;color:var(--ink);text-align:left;text-decoration:none;min-height:60px;transition:background .2s}
+.act:hover,.act:active{background:#F3F5F1}
+.act .icirc{width:42px;height:42px;background:#F3F5F1}
+.act b{display:block;font:700 15.5px/1.25 var(--fb)}
+.act small{display:block;font-size:12.5px;color:var(--mute);margin-top:2px}
+.act.danger{color:var(--danger)}
+.act.danger .icirc{background:var(--danger-t)}
+.chips .ci{background:#F3F5F1}
+.mini{display:flex;flex-direction:column;gap:4px;flex:1;padding:12px;border-radius:18px;background:rgba(255,255,255,.8);border:1px solid #E4E8EE}
+.mini b{font:700 20px/1 var(--fd);letter-spacing:-.02em}
+.mini span{font-size:12px;color:var(--mute)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+    <div class="subbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Mine oppføringer</div>
+      <a href="LeggUt.dc.html" class="iconbtn dark" aria-label="Legg ut ny"><i class="i i-plus s18"></i></a>
+    </div>
+
+    <div class="px au" style="position: relative; padding-top: 8px">
+      <h1 class="h1">Mine oppdrag</h1>
+      <p class="meta p" style="margin-top: 8px">Det du trenger hjelp med, og det du tilbyr naboene.</p>
+    </div>
+
+    <div class="px au d2" style="position: relative; display: flex; gap: 8px; margin-top: 16px">
+      <div class="mini"><b>{{activeCount}}</b><span>aktive</span></div>
+      <div class="mini"><b>7</b><span>tilbud mottatt</span></div>
+      <div class="mini"><b>160</b><span>visninger denne uka</span></div>
+    </div>
+
+
+
+    <div class="au d4" style="margin-top: 14px">
+      <div class="chips" aria-label="Status">
+        <sc-for list="{{statuses}}" as="s" hint-placeholder-count="3">
+          <button class="{{s.cls}}" onClick="{{s.pick}}" aria-pressed="{{s.pressed}}"><span class="{{s.ciCls}}"><i class="{{s.icon}}"></i></span>{{s.label}}<span style="min-width: 22px; height: 22px; border-radius: 11px; background: rgba(10,23,64,.08); display: inline-grid; place-items: center; font: 800 11.5px/1 var(--fb); padding: 0 6px">{{s.n}}</span></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="px stack" style="gap: 12px; margin-top: 10px">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="3">
+        <article class="{{it.cls}}">
+          <div style="display: flex; gap: 12px; align-items: flex-start">
+            <div class="{{it.art}}"><i class="{{it.icon}}"></i></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px">
+              <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                <span class="{{it.typeCls}}"><span class="pd"></span>{{it.typeLabel}}</span>
+                <span class="{{it.stCls}}"><i class="{{it.stIcon}}"></i>{{it.stLabel}}</span>
+              </div>
+              <p class="t">{{it.title}}</p>
+              <span class="meta" style="font-size: 12.5px">{{it.sub}}</span>
+            </div>
+            <button class="iconbtn ghost" onClick="{{it.more}}" aria-label="{{it.moreLabel}}" style="margin: -6px -6px 0 0"><i class="i i-more"></i></button>
+          </div>
+          <div class="mstats">
+            <sc-for list="{{it.stats}}" as="s" hint-placeholder-count="3">
+              <span class="{{s.cls}}"><i class="{{s.icon}}"></i>{{s.label}}</span>
+            </sc-for>
+          </div>
+          <sc-if value="{{it.hasLink}}" hint-placeholder-val="{{ true }}">
+            <a href="{{it.href}}" class="{{it.linkCls}}">{{it.linkLabel}}<i class="i i-arrow s16"></i></a>
+          </sc-if>
+          <sc-if value="{{it.canActivate}}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-sm btn-ghost btn-block" onClick="{{it.activate}}"><i class="i i-play s14"></i>Aktiver igjen</button>
+          </sc-if>
+        </article>
+      </sc-for>
+
+      <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+        <div class="dash-card as" style="padding: 28px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: rgba(255,255,255,.55)">
+          <span class="icirc" style="width: 58px; height: 58px; background: #ffffff; color: #5F6983; box-shadow: var(--sh)"><i class="{{emptyIcon}}"></i></span>
+          <b style="font: 700 17px/1.25 var(--fd)">{{emptyTitle}}</b>
+          <span class="meta" style="max-width: 260px">{{emptyText}}</span>
+          <a href="LeggUt.dc.html" class="btn btn-sm btn-ink" style="margin-top: 6px"><i class="i i-plus s16"></i>Legg ut ny</a>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="px" style="margin-top: 18px">
+      <div class="note" style="justify-content: center; text-align: center"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    </div>
+    <div class="spacer-foot"></div>
+  </div>
+
+  <div class="foot">
+    <a href="LeggUt.dc.html" class="btn btn-ink btn-lg btn-block"><i class="i i-plus"></i>Legg ut ny</a>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 124px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+
+  <!-- action sheet -->
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Valg for oppføring">
+      <div class="grab"></div>
+      <div style="display: flex; gap: 12px; align-items: center; padding: 4px 4px 16px; border-bottom: 1px solid #EEF1F4; margin-bottom: 8px">
+        <div class="{{sh.art}}" style="width: 48px; height: 48px; border-radius: 14px"><i class="{{sh.icon}}" style="width: 22px; height: 22px"></i></div>
+        <div style="flex: 1; min-width: 0">
+          <b style="display: block; font: 700 16px/1.25 var(--fb)">{{sh.title}}</b>
+          <span class="meta">{{sh.typeLabel}} · {{sh.stLabel}}</span>
+        </div>
+        <button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <a href="{{sh.editHref}}" class="act"><span class="icirc"><i class="i i-edit s18"></i></span><span><b>Rediger</b><small>Endre tekst, tid, sted og bilder</small></span></a>
+      <sc-if value="{{sh.canPause}}" hint-placeholder-val="{{ true }}">
+        <button class="act" onClick="{{doPause}}"><span class="icirc"><i class="i i-pause s18"></i></span><span><b>Pause</b><small>Skjules fra søk. Tilbud og chatter beholdes.</small></span></button>
+      </sc-if>
+      <sc-if value="{{sh.canActivate}}" hint-placeholder-val="{{ false }}">
+        <button class="act" onClick="{{doActivate}}"><span class="icirc" style="background: #E3F5E8; color: #2B8F4E"><i class="i i-play s18"></i></span><span><b>{{sh.activateLabel}}</b><small>Synlig for naboer igjen</small></span></button>
+      </sc-if>
+      <sc-if value="{{sh.canArchive}}" hint-placeholder-val="{{ true }}">
+        <button class="act" onClick="{{doArchive}}"><span class="icirc"><i class="i i-archive s18"></i></span><span><b>Arkiver</b><small>Flyttes til Arkivert. Du kan hente den fram igjen.</small></span></button>
+      </sc-if>
+      <button class="act danger" onClick="{{askDelete}}"><span class="icirc"><i class="i i-trash s18"></i></span><span><b>Slett</b><small style="color: #C23029; opacity: .8">Fjernes for godt</small></span></button>
+    </div>
+  </sc-if>
+
+  <!-- confirm delete -->
+  <sc-if value="{{confirmOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{cancelDelete}}" aria-label="Lukk"></button>
+    <div class="dialog" role="alertdialog" aria-label="Bekreft sletting">
+      <span class="icirc as" style="width: 60px; height: 60px; background: #FDEBE9; color: #C23029; margin: 0 auto 14px"><i class="i i-trash s24"></i></span>
+      <h2 class="h3">Slette «{{sh.title}}»?</h2>
+      <p class="meta p" style="margin-top: 8px; font-size: 14px">{{deleteText}}</p>
+      <div class="stack" style="gap: 8px; margin-top: 20px">
+        <button class="btn btn-danger btn-block" onClick="{{doDelete}}">Slett oppføringen</button>
+        <button class="btn btn-ghost btn-block" onClick="{{cancelDelete}}">Avbryt</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tab: 'alle', status: 'aktiv', sheet: null, confirm: false, leaving: {}, last: null,
+      toast: null, toastIcon: 'i i-check s16', toastUndo: false,
+      items: [
+        { id: 'm1', type: 'oppdrag', cat: 'maling', title: 'Male gjerdet i hagen', status: 'aktiv', sub: 'Nordre Ål · uke 41, fleksibel · Ønsker tilbud', stats: [['i i-tag', '3 tilbud', true], ['i i-eye', '48 visninger'], ['i i-heart', '2 lagret']], href: 'MottatteTilbud.dc.html', link: 'Se 3 tilbud', linkCls: 'btn btn-sm btn-lime btn-block' },
+        { id: 'm2', type: 'oppdrag', cat: 'data', title: 'Koble opp ny ruter og skriver', status: 'aktiv', sub: 'Nordre Ål · Fre 2. okt, kveld · Budsjett 300 kr', stats: [['i i-tag', '1 tilbud', true], ['i i-eye', '21 visninger'], ['i i-heart', '1 lagret']] },
+        { id: 'm4', type: 'oppdrag', cat: 'flytting', title: 'Bære kjøleskap', status: 'arkivert', done: true, sub: 'Fullført 2. sep med Erik Moen · Budsjett 300 kr', stats: [['i i-tag', '2 tilbud'], ['i i-star', 'Du ga 5 stjerner']], href: 'MineAvtaler.dc.html', link: 'Se avtalen', linkCls: 'btn btn-sm btn-ghost btn-block' }
+      ]
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.lt); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 3000);
+  }
+  leave(id, after) {
+    const leaving = Object.assign({}, this.state.leaving);
+    leaving[id] = true;
+    this.setState({ leaving, sheet: null, confirm: false });
+    this.lt = setTimeout(() => {
+      const l = Object.assign({}, this.state.leaving);
+      delete l[id];
+      this.setState({ leaving: l });
+      after();
+    }, 430);
+  }
+  setStatus(id, status, msg, icon) {
+    const it = this.state.items.find((x) => x.id === id);
+    const prev = it.status;
+    this.leave(id, () => {
+      this.setState({ items: this.state.items.map((x) => (x.id === id ? Object.assign({}, x, { status }) : x)), last: { kind: 'status', id, prev } });
+      this.flash(msg, icon, true);
+    });
+  }
+  renderVals() {
+    const S = this.state;
+    const TABS = [['alle', 'Alle'], ['oppdrag', 'Oppdrag'], ['tjeneste', 'Tjenester']];
+    const ST = [['aktiv', 'Aktive', 'i i-zap'], ['pauset', 'Pauset', 'i i-pause'], ['arkivert', 'Arkivert', 'i i-archive']];
+    const byTab = S.items.filter((x) => S.tab === 'alle' || x.type === S.tab);
+    const shown = byTab.filter((x) => x.status === S.status);
+    const stInfo = (x) => {
+      if (x.status === 'aktiv') return ['pill pill-ok', 'i i-zap s14', 'Aktiv'];
+      if (x.status === 'pauset') return ['pill pill-warn', 'i i-pause s14', 'Pauset'];
+      return ['pill pill-neutral', x.done ? 'i i-check s14' : 'i i-archive s14', x.done ? 'Fullført' : 'Arkivert'];
+    };
+    const sel = S.items.find((x) => x.id === S.sheet) || S.items[0];
+    const selSt = stInfo(sel);
+    const EMPTY = {
+      aktiv: ['i i-zap s24', 'Ingen aktive oppføringer', 'Legg ut et oppdrag eller tilby hjelp, så dukker det opp her.'],
+      pauset: ['i i-pause s24', 'Ingen pausede oppføringer', 'Pauser du en oppføring, skjules den fra søk til du aktiverer den igjen.'],
+      arkivert: ['i i-archive s24', 'Arkivet er tomt', 'Fullførte og arkiverte oppføringer samles her.']
+    };
+    const tabWord = S.tab === 'oppdrag' ? ' oppdrag' : S.tab === 'tjeneste' ? ' tjenester' : '';
+    const e = EMPTY[S.status];
+    return {
+      activeCount: S.items.filter((x) => x.status === 'aktiv').length,
+      tabs: TABS.map(([id, label]) => ({ label, cls: S.tab === id ? 'on' : '', sel: S.tab === id ? 'true' : 'false', pick: () => this.setState({ tab: id }) })),
+      statuses: ST.map(([id, label, icon]) => ({
+        label, icon: icon + ' s16', n: byTab.filter((x) => x.status === id).length,
+        cls: 'chip' + (S.status === id ? ' on' : ''), ciCls: 'ci', pressed: S.status === id ? 'true' : 'false',
+        pick: () => this.setState({ status: id })
+      })),
+      items: shown.map((x) => {
+        const st = stInfo(x);
+        return {
+          cls: 'mo' + (S.leaving[x.id] ? ' gone' : ' au'),
+          art: 'thumb art art-' + x.cat, icon: 'i i-' + x.cat,
+          typeCls: x.type === 'oppdrag' ? 'pill pill-need' : 'pill pill-offer',
+          typeLabel: x.type === 'oppdrag' ? 'Trenger hjelp' : 'Tilbyr hjelp',
+          stCls: st[0], stIcon: st[1], stLabel: st[2],
+          title: x.title, sub: x.sub,
+          stats: x.stats.map((s) => ({ icon: s[0], label: s[1], cls: 'mstat' + (s[2] && x.status === 'aktiv' ? ' hot' : '') })),
+          hasLink: !!x.href && x.status !== 'pauset', href: x.href || 'Oppdrag.dc.html', linkLabel: x.link || '', linkCls: x.linkCls || '',
+          canActivate: x.status === 'pauset',
+          activate: () => this.setStatus(x.id, 'aktiv', '«' + x.title + '» er aktiv igjen', 'i i-play s14'),
+          more: () => this.setState({ sheet: x.id }),
+          moreLabel: 'Flere valg for ' + x.title
+        };
+      }),
+      empty: shown.length === 0,
+      emptyIcon: e[0], emptyTitle: e[1].replace('oppføringer', tabWord ? tabWord.trim() : 'oppføringer'), emptyText: e[2],
+      sheetOpen: !!S.sheet && !S.confirm,
+      closeSheet: () => this.setState({ sheet: null }),
+      sh: {
+        title: sel.title, art: 'art art-' + sel.cat, icon: 'i i-' + sel.cat,
+        typeLabel: sel.type === 'oppdrag' ? 'Oppdrag' : 'Tjeneste', stLabel: selSt[2],
+        editHref: sel.type === 'oppdrag' ? 'LeggUt.dc.html' : 'LeggUt.dc.html',
+        canPause: sel.status === 'aktiv', canActivate: sel.status !== 'aktiv', canArchive: sel.status !== 'arkivert',
+        activateLabel: sel.status === 'arkivert' ? 'Gjenopprett som aktiv' : 'Aktiver'
+      },
+      doPause: () => this.setStatus(sel.id, 'pauset', 'Flyttet til Pauset', 'i i-pause s14'),
+      doActivate: () => this.setStatus(sel.id, 'aktiv', '«' + sel.title + '» er aktiv igjen', 'i i-play s14'),
+      doArchive: () => this.setStatus(sel.id, 'arkivert', 'Flyttet til Arkivert', 'i i-archive s14'),
+      askDelete: () => this.setState({ confirm: true }),
+      confirmOpen: S.confirm,
+      deleteText: sel.type === 'oppdrag' ? 'Oppføringen og tilbudene du har fått fjernes for godt. Chatter med naboer beholdes.' : 'Tjenesten fjernes for godt. Chatter og tidligere avtaler beholdes.',
+      cancelDelete: () => this.setState({ confirm: false }),
+      doDelete: () => {
+        const id = sel.id;
+        const idx = S.items.findIndex((x) => x.id === id);
+        const item = sel;
+        this.leave(id, () => {
+          this.setState({ items: this.state.items.filter((x) => x.id !== id), last: { kind: 'del', item, idx } });
+          this.flash('Oppføringen er slettet', 'i i-trash s14', true);
+        });
+      },
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo,
+      undo: () => {
+        const L = S.last;
+        if (!L) return;
+        if (L.kind === 'status') {
+          this.setState({ items: S.items.map((x) => (x.id === L.id ? Object.assign({}, x, { status: L.prev }) : x)), last: null, toast: null });
+        } else {
+          const arr = S.items.slice();
+          arr.splice(L.idx, 0, L.item);
+          this.setState({ items: arr, last: null, toast: null });
+        }
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

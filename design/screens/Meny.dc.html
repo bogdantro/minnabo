@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Meny</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+a.scrim{display:block}
+.msheet{height:89%;max-height:89%;padding:10px 16px 36px;background:#F3F5F1}
+.msheet .grab{margin-bottom:12px}
+.uhead{display:block;border-radius:26px;background:#fff;box-shadow:var(--sh);padding:16px;position:relative;overflow:hidden;color:inherit;text-decoration:none}
+.uhead .bgc{position:absolute;right:-70px;top:-90px;width:210px;height:210px;border-radius:50%;background:var(--grad-soft)}
+.ulink{display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none;position:relative}
+.ustat{display:inline-flex;align-items:center;gap:5px;font:700 13px/1 var(--fb);color:var(--ink)}
+.ustat .i{color:var(--star)}
+.avail{position:relative;display:flex;align-items:center;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line2)}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mtile{position:relative;display:flex;flex-direction:column;gap:12px;padding:14px;min-height:112px;border-radius:22px;background:#fff;box-shadow:var(--sh);text-decoration:none;color:var(--ink);transition:transform .15s var(--ease)}
+.mtile:active{transform:scale(.97)}
+.mtile .ti{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;position:relative}
+.mtile b{font:700 16px/1.15 var(--fd);letter-spacing:-.015em;display:block}
+.mtile small{display:block;font-size:12.5px;color:var(--mute);margin-top:3px}
+.mtile .count{top:-5px;right:-7px}
+.mtile .go{position:absolute;right:12px;top:14px;color:var(--faint)}
+.mtile.grad{background:var(--ink);color:#fff;overflow:hidden}
+.mtile.grad small{color:rgba(255,255,255,.7)}
+.mtile.grad .go{color:rgba(255,255,255,.6)}
+.mtile.grad::before{content:"";position:absolute;right:-40px;bottom:-50px;width:130px;height:130px;border-radius:50%;background:var(--grad);opacity:.4}
+.msec{font:700 12px/1 var(--fb);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:24px 6px 10px}
+.rbadge{min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:#F2542D;color:#fff;font:800 12px/22px var(--fb);text-align:center}
+.lrow.au{animation-fill-mode:both}
+.bghome{position:absolute;inset:0;pointer-events:none}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+
+  <!-- simplified home behind the sheet -->
+  <div class="bghome" aria-hidden="true">
+    <div class="mesh"></div>
+    <div class="topbar">
+      <div class="brand"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</div>
+      <div class="tb-r">
+        <span class="iconbtn"><i class="i i-bell"></i><span class="dot"></span></span>
+        <span class="avbtn"><span class="av av-me">MH</span></span>
+      </div>
+    </div>
+    <div class="px" style="position: relative; padding-top: 14px; display: flex; flex-direction: column; gap: 8px">
+      <span class="eyebrow">Hei, Mari</span>
+      <h1 class="h1" style="font-size: 33px">Finn hjelp eller en småjobb nær deg</h1>
+    </div>
+    <div class="px" style="position: relative; margin-top: 20px">
+      <div class="lcard">
+        <div class="lthumb art art-hage"><i class="i i-hage"></i></div>
+        <div class="lbody">
+          <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div>
+          <p class="ltitle">Klippe plen og rake løv</p>
+          <div class="lmeta"><b>Kari Holm</b><span class="stars"><i class="i i-star"></i>4,9</span></div>
+          <div class="lmeta"><i class="i i-pin"></i>Nordre Ål · 1,2 km</div>
+          <div class="lmeta"><i class="i i-clock"></i>Lør 3. okt · ca. 2 t</div>
+          <div class="lprice"><span class="l">Budsjett</span><span class="v">400 kr</span></div>
+        </div>
+      </div>
+    </div>
+    <nav class="nav" aria-label="Hovedmeny">
+      <a href="Oppdrag.dc.html" tabindex="-1"><span class="ni"><i class="i i-clip"></i></span>Oppdrag</a>
+      <a href="Fellesskap.dc.html" tabindex="-1"><span class="ni"><i class="i i-users"></i></span>Fellesskap</a>
+      <a href="LeggUt.dc.html" class="fabw" tabindex="-1" aria-label="Legg ut"><span class="fab"><i class="i i-plus"></i></span>Legg ut</a>
+      <a href="Innboks.dc.html" tabindex="-1" aria-label="Innboks, 3 uleste"><span class="ni"><i class="i i-msg"></i><b class="count">3</b></span>Innboks</a>
+      <a href="Meny.dc.html" class="on" aria-current="page" tabindex="-1"><span class="ni"><i class="i i-menu"></i></span>Meny</a>
+    </nav>
+  </div>
+
+  <a href="Oppdrag.dc.html" class="scrim" aria-label="Lukk meny"></a>
+
+  <!-- menu sheet -->
+  <div class="sheet msheet" role="dialog" aria-label="Meny">
+    <div class="grab"></div>
+    <div class="sheet-h" style="padding: 0 4px">
+      <h2 class="h2">Meny</h2>
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Lukk meny"><i class="i i-x s18"></i></a>
+    </div>
+
+    <!-- user header -->
+    <div class="uhead au d1">
+      <div class="bgc"></div>
+      <a href="Profil.dc.html" class="ulink">
+        <span class="av av-me s56">MH</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+          <span style="display: flex; align-items: center; gap: 6px"><b class="h3" style="font-size: 19px">Mari Haugen</b><i class="i i-verified s18" style="color: #2B8F4E"></i></span>
+          <span style="display: flex; align-items: center; gap: 10px">
+            <span class="ustat"><i class="i i-star s14"></i>4,9</span>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: #C3C9D4"></span>
+            <span class="ustat" style="font-weight: 600; color: #34405F">14 jobber</span>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: #C3C9D4"></span>
+            <span class="meta">Nordre Ål</span>
+          </span>
+          <span style="font: 700 13.5px/1 var(--fb); color: #065C8F; display: inline-flex; align-items: center; gap: 3px; margin-top: 2px">Se profilen din<i class="i i-right s14"></i></span>
+        </span>
+      </a>
+      <div class="avail">
+        <span class="icirc" style="width: 34px; height: 34px; background: #DFF2FB; color: #065C8F"><i class="i i-hand s16"></i></span>
+        <span style="flex: 1; min-width: 0">
+          <b style="display: block; font: 700 14.5px/1.25 var(--fb)">Tilgjengelig for småjobber</b>
+          <span class="meta">{{availSub}}</span>
+        </span>
+        <button class="{{availCls}}" onClick="{{toggleAvail}}" aria-pressed="{{availPressed}}" aria-label="Tilgjengelig for småjobber"></button>
+      </div>
+    </div>
+
+    <!-- Utforsk -->
+    <div class="msec au d2">Utforsk</div>
+    <div class="mgrid">
+      <a href="Oppdrag.dc.html" class="mtile au d2">
+        <span class="ti" style="background: #EDF8D6; color: #3B7300"><i class="i i-clip"></i></span>
+        <span><b>Oppdrag</b><small>Finn og gi tilbud</small></span>
+        <i class="i i-arrowur s16 go"></i>
+      </a>
+      <a href="Fellesskap.dc.html" class="mtile au d3">
+        <span class="ti" style="background: #DFF2FB; color: #065C8F"><i class="i i-users"></i></span>
+        <span><b>Fellesskap</b><small>Nabolag og oppslag</small></span>
+        <i class="i i-arrowur s16 go"></i>
+      </a>
+      <a href="Innboks.dc.html" class="mtile au d4" aria-label="Innboks, 3 uleste">
+        <span class="ti" style="background: #E8E3FB; color: #46379E"><i class="i i-msg"></i><b class="count">3</b></span>
+        <span><b>Innboks</b><small>3 uleste meldinger</small></span>
+        <i class="i i-arrowur s16 go"></i>
+      </a>
+      <a href="LeggUt.dc.html" class="mtile grad au d5">
+        <span class="ti" style="background: var(--grad); color: #0A1740"><i class="i i-plus"></i></span>
+        <span style="position: relative"><b>Legg ut</b><small>Oppdrag eller tilbud</small></span>
+        <i class="i i-arrowur s16 go"></i>
+      </a>
+    </div>
+
+    <!-- Mitt -->
+    <div class="msec au d5">Mitt</div>
+    <div class="list">
+      <a href="Profil.dc.html" class="lrow au d5"><span class="ri" style="background: #0A1740; color: #ffffff"><i class="i i-user s18"></i></span><span class="rt"><b>Min profil</b><small>Vurderinger, ferdigheter og område</small></span><i class="i i-right chev"></i></a>
+      <a href="MineAvtaler.dc.html" class="lrow au d6"><span class="ri" style="background: #E3F5E8; color: #2B8F4E"><i class="i i-cal s18"></i></span><span class="rt"><b>Mine avtaler</b><small>Neste: Lør 10. okt kl. 10:00</small></span><i class="i i-right chev"></i></a>
+      <a href="MineOppforinger.dc.html" class="lrow au d6"><span class="ri" style="background: #EDF8D6; color: #3B7300"><i class="i i-list s18"></i></span><span class="rt"><b>Mine oppdrag</b><small>2 aktive · 1 pauset</small></span><i class="i i-right chev"></i></a>
+      <a href="MottatteTilbud.dc.html" class="lrow au d7" aria-label="Mottatte tilbud, 3 nye"><span class="ri" style="background: #DFF2FB; color: #065C8F"><i class="i i-tag s18"></i></span><span class="rt"><b>Mottatte tilbud</b><small>På «Male gjerdet i hagen»</small></span><span class="rbadge">3</span><i class="i i-right chev"></i></a>
+      <a href="Lagrede.dc.html" class="lrow au d7"><span class="ri" style="background: #FDECEC; color: #E5484D"><i class="i i-heart s18"></i></span><span class="rt"><b>Lagrede oppføringer og søk</b><small>5 oppføringer · 2 søk</small></span><i class="i i-right chev"></i></a>
+      <a href="Varsler.dc.html" class="lrow au d8" aria-label="Varsler, 2 uleste"><span class="ri" style="background: #FFF2D9; color: #9A5B00"><i class="i i-bell s18"></i></span><span class="rt"><b>Varsler</b><small>Tilbud, meldinger og avtaler</small></span><span class="rbadge">2</span><i class="i i-right chev"></i></a>
+    </div>
+
+    <!-- Tillit -->
+    <div class="msec au d8">Tillit og trygghet</div>
+    <div class="list">
+      <a href="Verifisering.dc.html" class="lrow au d8"><span class="ri" style="background: #E3F5E8; color: #2B8F4E"><i class="i i-shield s18"></i></span><span class="rt"><b>Vurderinger og verifisering</b><small>Vipps, telefon og e-post bekreftet</small></span><i class="i i-right chev"></i></a>
+      <a href="Sikkerhet.dc.html" class="lrow au d9"><span class="ri" style="background: #FDEBE9; color: #C23029"><i class="i i-flag s18"></i></span><span class="rt"><b>Sikkerhet, rapportering og blokkering</b><small>Trygge kontakter og råd</small></span><i class="i i-right chev"></i></a>
+    </div>
+
+    <!-- Innstillinger -->
+    <div class="msec au d9">Innstillinger</div>
+    <div class="list">
+      <a href="Innstillinger.dc.html" class="lrow au d9"><span class="ri"><i class="i i-gear s18"></i></span><span class="rt"><b>Innstillinger</b></span><i class="i i-right chev"></i></a>
+      <a href="Personvern.dc.html" class="lrow au d9"><span class="ri" style="background: #E8E3FB; color: #46379E"><i class="i i-lock s18"></i></span><span class="rt"><b>Personvern</b><small>Samtykker og dine data</small></span><i class="i i-right chev"></i></a>
+      <a href="Vilkar.dc.html" class="lrow au d10"><span class="ri"><i class="i i-file s18"></i></span><span class="rt"><b>Vilkår</b></span><i class="i i-right chev"></i></a>
+      <a href="Varslinger.dc.html" class="lrow au d10"><span class="ri" style="background: #FFF2D9; color: #9A5B00"><i class="i i-sliders s18"></i></span><span class="rt"><b>Varslinger</b><small>Velg hva du vil bli varslet om</small></span><i class="i i-right chev"></i></a>
+      <a href="Bedrift.dc.html" class="lrow au d10"><span class="ri" style="background: #DFF2FB; color: #065C8F"><i class="i i-building s18"></i></span><span class="rt"><b>For bedrifter</b><small>Borettslag, lag og foreninger</small></span><i class="i i-right chev"></i></a>
+      <a href="Admin.dc.html" class="lrow au d10"><span class="ri" style="background: #0A1740; color: #B8EE3C"><i class="i i-key s18"></i></span><span class="rt"><b>Adminpanel</b><small>Moderering og rapporter</small></span><span class="pill pill-dark" style="height: 22px; font-size: 11px">Admin</span><i class="i i-right chev"></i></a>
+    </div>
+
+    <div class="list au d10" style="margin-top: 14px">
+      <button class="lrow" onClick="{{askLogout}}"><span class="ri" style="background: #FDEBE9; color: #C23029"><i class="i i-logout s18"></i></span><span class="rt"><b style="color: #C23029">Logg ut</b></span></button>
+    </div>
+
+    <p class="meta p" style="text-align: center; margin-top: 18px">MinNabo · versjon 1.0 · Innlandet</p>
+    <p class="note p" style="justify-content: center; text-align: center; margin-top: 6px"><i class="i i-info"></i><span>MinNabo håndterer ikke betaling.</span></p>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 40px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- logout dialog -->
+  <sc-if value="{{logoutOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" style="z-index: 50" onClick="{{cancelLogout}}" aria-label="Lukk"></button>
+    <div class="dialog" role="alertdialog" aria-label="Logg ut" style="z-index: 51">
+      <span class="icirc as" style="width: 64px; height: 64px; margin: 0 auto; background: #FDEBE9; color: #C23029"><i class="i i-logout s28"></i></span>
+      <h2 class="h3" style="margin-top: 16px">Logg ut av MinNabo?</h2>
+      <p class="meta p" style="margin-top: 8px">Du kan logge inn igjen med Vipps når som helst. Utkast du ikke har publisert, lagres på denne telefonen.</p>
+      <div style="display: flex; gap: 10px; margin-top: 22px">
+        <button class="btn btn-ghost" style="flex: 1" onClick="{{cancelLogout}}">Avbryt</button>
+        <a href="Main.dc.html" class="btn btn-danger" style="flex: 1">Logg ut</a>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { avail: true, logoutOpen: false, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    return {
+      availCls: 'tgl' + (S.avail ? ' on' : ''),
+      availPressed: S.avail ? 'true' : 'false',
+      availSub: S.avail ? 'Naboer kan be deg om tilbud' : 'Du er skjult som hjelper',
+      toggleAvail: () => {
+        const on = !S.avail;
+        this.setState({ avail: on });
+        this.flash(on ? 'Du er synlig som hjelper igjen' : 'Du er satt som utilgjengelig', on ? 'i i-eye s14' : 'i i-pause s14');
+      },
+      logoutOpen: S.logoutOpen,
+      askLogout: () => this.setState({ logoutOpen: true }),
+      cancelLogout: () => this.setState({ logoutOpen: false }),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

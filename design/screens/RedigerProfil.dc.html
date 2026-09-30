@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Rediger profil</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.sec{background:#fff;border-radius:24px;box-shadow:var(--sh);padding:18px;display:flex;flex-direction:column;gap:18px}
+.sec-h{display:flex;align-items:center;gap:10px}
+.sec-h .icirc{width:32px;height:32px;border-radius:11px}
+.sec-h b{font:700 16px/1.2 var(--fb)}
+.lockchip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:#FFE6DC;color:#B23A0E;font:700 11.5px/1 var(--fb)}
+.input[disabled]{background:#F7F8FA;color:#34405F;border-style:dashed}
+.cnt{font:600 12px/1 var(--fb);color:var(--mute);text-align:right}
+.cnt.warn{color:var(--warn)}
+.cnt.err{color:var(--danger)}
+.ptl{position:relative;aspect-ratio:1;border-radius:18px;overflow:visible}
+.ptl .art{position:absolute;inset:0;border-radius:18px}
+.ptl .art .i{width:26px;height:26px}
+.ptl .rm{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;border:3px solid #fff;display:grid;place-items:center;cursor:pointer;padding:0;z-index:3;transition:transform .15s}
+.ptl .rm:active{transform:scale(.85)}
+.ptl .cap{position:absolute;left:6px;right:6px;bottom:6px;height:20px;border-radius:8px;background:rgba(255,255,255,.88);font:700 10.5px/20px var(--fb);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 5px;z-index:2}
+.pickrow{display:flex;align-items:center;gap:14px;padding:14px;border-radius:18px;background:#F7F8FA;border:0;width:100%;cursor:pointer;font:600 15.5px var(--fb);color:var(--ink);text-align:left;min-height:56px;transition:background .2s,transform .15s}
+.pickrow:active{transform:scale(.98);background:#EEF1F4}
+.selwrap{position:relative}
+.selwrap select{appearance:none;-webkit-appearance:none;padding-right:44px;cursor:pointer}
+.selwrap .i{position:absolute;right:16px;top:50%;margin-top:-10px;pointer-events:none;color:var(--mute)}
+.dirty{display:inline-flex;align-items:center;gap:6px;font:600 12.5px/1 var(--fb);color:var(--warn)}
+.dirty i{width:7px;height:7px;border-radius:50%;background:#F0A500;display:block}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+    <div class="subbar">
+      <a href="Profil.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Rediger profil</div>
+      <span></span>
+    </div>
+
+    <!-- avatar -->
+    <div class="px as" style="position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 10px">
+      <div style="position: relative">
+        <span class="{{avCls}}" style="display: grid; {{avStyle}}">MH</span>
+        <button onClick="{{openPhoto}}" aria-label="Endre profilbilde" class="icirc" style="position: absolute; right: -8px; bottom: -6px; width: 44px; height: 44px; background: #B8EE3C; color: #0A1740; border: 3px solid #ffffff; cursor: pointer; padding: 0; box-shadow: 0 8px 18px -8px rgba(10,23,64,.4)"><i class="i i-camera s18"></i></button>
+      </div>
+      <span class="meta" style="margin-top: 16px">{{photoNote}}</span>
+    </div>
+
+    <div class="px stack" style="gap: 14px; margin-top: 20px">
+
+      <!-- identity -->
+      <section class="sec au d1">
+        <div class="sec-h"><span class="icirc" style="background: #DFF2FB; color: #065C8F"><i class="i i-user s16"></i></span><b>Navn</b></div>
+        <div class="field">
+          <label class="label" for="fn">Fullt navn <span class="lockchip"><i class="i i-lock s14"></i>Fra Vipps</span></label>
+          <input id="fn" class="input" value="Mari Haugen" disabled>
+          <span class="help">Navnet er bekreftet med Vipps og kan ikke endres her.</span>
+        </div>
+        <div class="field">
+          <label class="label" for="dn">Visningsnavn <small>Vises på oppføringer</small></label>
+          <input id="dn" class="{{dnCls}}" value="{{dn}}" onChange="{{onDn}}" placeholder="F.eks. Mari H." maxlength="30">
+          <sc-if value="{{dnErr}}" hint-placeholder-val="{{ false }}"><span class="errtxt"><i class="i i-alert s14"></i>Skriv inn et visningsnavn</span></sc-if>
+          <sc-if value="{{dnOk}}" hint-placeholder-val="{{ true }}"><span class="help">Tips: fornavn og første bokstav i etternavnet.</span></sc-if>
+        </div>
+      </section>
+
+      <!-- about -->
+      <section class="sec au d2">
+        <div class="sec-h"><span class="icirc" style="background: #EDF8D6; color: #3B7300"><i class="i i-smile s16"></i></span><b>Om meg</b></div>
+        <div class="field">
+          <label class="label" for="bio">Presentasjon <small>Hva kan du, og hvem er du?</small></label>
+          <textarea id="bio" class="{{bioCls}}" value="{{bio}}" onChange="{{onBio}}" rows="5" style="min-height: 140px"></textarea>
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <span class="help">Ikke skriv adresse eller telefonnummer her.</span>
+            <span class="{{cntCls}}">{{bioCount}}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- location -->
+      <section class="sec au d3">
+        <div class="sec-h"><span class="icirc" style="background: #EDF8D6; color: #3B7300"><i class="i i-pin s16"></i></span><b>Hvor du bor</b></div>
+        <div class="field">
+          <label class="label" for="kom">Kommune</label>
+          <div class="selwrap">
+            <select id="kom" class="input" value="{{kom}}" onChange="{{onKom}}">
+              <option value="Lillehammer">Lillehammer</option>
+              <option value="Øyer">Øyer</option>
+              <option value="Gausdal">Gausdal</option>
+              <option value="Ringsaker">Ringsaker</option>
+              <option value="Hamar">Hamar</option>
+              <option value="Gjøvik">Gjøvik</option>
+            </select>
+            <i class="i i-down s18"></i>
+          </div>
+        </div>
+        <div class="field">
+          <div class="label">Område <small>Vises som omtrentlig område</small></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{areas}}" as="a" hint-placeholder-count="6">
+              <button class="{{a.cls}}" onClick="{{a.pick}}" aria-pressed="{{a.pressed}}">{{a.label}}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #F7F8FA; margin-top: 4px">
+            <div style="position: relative; width: 40px; height: 40px; flex: none">
+              <span style="position: absolute; inset: 0; border-radius: 50%; background: rgba(184,238,60,.3); border: 1.5px solid #8FD12A"></span>
+              <span style="position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #0A1740"></span>
+            </div>
+            <span style="font-size: 13.5px; line-height: 1.4; color: #34405F">Andre ser <b>{{placeLabel}}</b> – aldri gateadressen din.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- home notes -->
+      <section class="sec au d4" style="background: #ffffff">
+        <div class="sec-h" style="justify-content: space-between">
+          <div style="display: flex; align-items: center; gap: 10px"><span class="icirc" style="background: #0A1740; color: #B8EE3C"><i class="i i-key s16"></i></span><b>Hjemmenotater</b></div>
+          <span class="pill pill-dark" style="height: 24px; font-size: 11px"><i class="i i-lock s14"></i>Privat</span>
+        </div>
+        <div class="field">
+          <label class="label" for="notes" style="font-weight: 600; color: #5F6983; font-size: 13px">Vises bare for den du har avtale med</label>
+          <textarea id="notes" class="input" value="{{notes}}" onChange="{{onNotes}}" placeholder="F.eks. hvor inngangen er, parkering eller dyr i huset" style="min-height: 104px"></textarea>
+        </div>
+        <div class="note"><i class="i i-shield"></i><span>Notatene deles automatisk i chatten når en avtale er bekreftet, og skjules igjen når jobben er fullført.</span></div>
+      </section>
+
+      <!-- portfolio -->
+      <section class="sec au d5">
+        <div class="sec-h" style="justify-content: space-between">
+          <div style="display: flex; align-items: center; gap: 10px"><span class="icirc" style="background: #F8DCE7; color: #9E335E"><i class="i i-image s16"></i></span><b>Portefølje</b></div>
+          <span class="meta">{{portCount}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px">
+          <sc-for list="{{port}}" as="p" hint-placeholder-count="4">
+            <div class="ptl as">
+              <div class="{{p.art}}"><i class="{{p.icon}}"></i></div>
+              <span class="cap">{{p.label}}</span>
+              <button class="rm" onClick="{{p.remove}}" aria-label="{{p.aria}}"><i class="i i-x s14"></i></button>
+            </div>
+          </sc-for>
+          <sc-if value="{{canAdd}}" hint-placeholder-val="{{ true }}">
+            <button class="photo-add" onClick="{{addPort}}" style="aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center" aria-label="Legg til bilde i porteføljen">
+              <span class="icirc" style="width: 34px; height: 34px; background: #F3F5F1"><i class="i i-plus s18"></i></span>Legg til
+            </button>
+          </sc-if>
+        </div>
+        <span class="help">Legg gjerne til før- og etterbilder. Maks 9 bilder. Ikke vis personer uten samtykke.</span>
+      </section>
+
+      <div class="spacer-foot"></div>
+    </div>
+  </div>
+
+  <!-- sticky save -->
+  <div class="foot">
+    <div style="display: flex; justify-content: space-between; align-items: center; min-height: 18px">
+      <sc-if value="{{isDirty}}" hint-placeholder-val="{{ false }}"><span class="dirty ai"><i></i>Ulagrede endringer</span></sc-if>
+      <sc-if value="{{isClean}}" hint-placeholder-val="{{ true }}"><span class="meta" style="font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px"><i class="i i-check s14" style="color: #2B8F4E"></i>Alt er lagret</span></sc-if>
+      <sc-if value="{{isDirty}}" hint-placeholder-val="{{ false }}"><button class="link" style="min-height: 28px; font-size: 13px" onClick="{{reset}}">Forkast</button></sc-if>
+    </div>
+    <button class="{{saveCls}}" disabled="{{saveDisabled}}" onClick="{{save}}">
+      <sc-if value="{{saving}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #B8EE3C"></span>Lagrer …</sc-if>
+      <sc-if value="{{notSaving}}" hint-placeholder-val="{{ true }}">Lagre endringer</sc-if>
+    </button>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 150px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+
+  <!-- photo sheet -->
+  <sc-if value="{{photoOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closePhoto}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Profilbilde">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Profilbilde</h2>
+        <button class="iconbtn" onClick="{{closePhoto}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <p class="meta p" style="margin: -6px 0 16px">Et tydelig bilde av ansiktet gjør det lettere for naboer å kjenne deg igjen.</p>
+      <div class="stack" style="gap: 8px">
+        <button class="pickrow" onClick="{{takePhoto}}"><span class="icirc" style="width: 40px; height: 40px; background: #EDF8D6; color: #3B7300"><i class="i i-camera s18"></i></span>Ta bilde</button>
+        <button class="pickrow" onClick="{{pickAlbum}}"><span class="icirc" style="width: 40px; height: 40px; background: #DFF2FB; color: #065C8F"><i class="i i-image s18"></i></span>Velg fra album</button>
+        <sc-if value="{{hasPhoto}}" hint-placeholder-val="{{ false }}">
+          <button class="pickrow" onClick="{{removePhoto}}" style="color: #C23029"><span class="icirc" style="width: 40px; height: 40px; background: #FDEBE9; color: #C23029"><i class="i i-trash s18"></i></span>Fjern bilde</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const base = {
+      dn: 'Mari H.',
+      bio: 'Hei! Jeg er Mari og bor i Nordre Ål med samboer og hunden Luna. Til daglig jobber jeg med IT, og hjelper gjerne naboer med mobil, PC og smarthus.',
+      kom: 'Lillehammer', area: 'Nordre Ål',
+      notes: 'Porten er på baksiden. Hunden Luna er snill.',
+      photo: false,
+      port: [{ id: 'p1', cat: 'maling', label: 'Terrasse' }, { id: 'p2', cat: 'hage', label: 'Hagebed' }, { id: 'p3', cat: 'data', label: 'Smarthus' }, { id: 'p4', cat: 'montering', label: 'Hyller' }]
+    };
+    this.state = Object.assign({ base: base, photoOpen: false, saving: false, touched: false, toast: null, toastIcon: 'i i-check s16', toastUndo: false, lastRemoved: null, nextId: 5 }, JSON.parse(JSON.stringify(base)));
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.st); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  snap(o) { return JSON.stringify([o.dn, o.bio, o.kom, o.area, o.notes, o.photo, o.port.map((p) => p.id)]); }
+  renderVals() {
+    const S = this.state;
+    const AREAS = {
+      'Lillehammer': ['Nordre Ål', 'Søre Ål', 'Sentrum', 'Stampesletta', 'Fåberg', 'Vingrom', 'Kanten', 'Jørstadmoen'],
+      'Øyer': ['Tingberg', 'Hafjell', 'Hele kommunen'],
+      'Gausdal': ['Follebu', 'Segalstad bru', 'Hele kommunen'],
+      'Ringsaker': ['Brumunddal', 'Moelv', 'Hele kommunen'],
+      'Hamar': ['Sentrum', 'Ridabu', 'Hele kommunen'],
+      'Gjøvik': ['Sentrum', 'Biri', 'Hele kommunen']
+    };
+    const dirty = this.snap(S) !== this.snap(S.base);
+    const dnBad = S.dn.trim().length === 0;
+    const len = S.bio.length;
+    const MAX = 400;
+    const NEWP = [['arrangement', 'Bursdag'], ['rengjoring', 'Vinduer'], ['snomaking', 'Innkjørsel'], ['flytting', 'Bod'], ['hage', 'Plen']];
+    return {
+      avCls: S.photo ? 'av s88 as' : 'av av-me s88',
+      avStyle: S.photo ? 'background: #B8EE3C; color: #0A1740' : 'color: #ffffff',
+      photoNote: S.photo ? 'Nytt bilde valgt – lagre for å bruke det' : 'Du har ikke lagt til profilbilde ennå',
+      hasPhoto: S.photo,
+      openPhoto: () => this.setState({ photoOpen: true }),
+      closePhoto: () => this.setState({ photoOpen: false }),
+      takePhoto: () => { this.setState({ photo: true, photoOpen: false }); this.flash('Bilde tatt', 'i i-camera s14'); },
+      pickAlbum: () => { this.setState({ photo: true, photoOpen: false }); this.flash('Bilde valgt fra album', 'i i-image s14'); },
+      removePhoto: () => { this.setState({ photo: false, photoOpen: false }); this.flash('Bildet er fjernet', 'i i-trash s14'); },
+      dn: S.dn,
+      dnCls: 'input' + (dnBad ? ' err' : ''),
+      dnErr: dnBad, dnOk: !dnBad,
+      onDn: (e) => this.setState({ dn: e.target.value }),
+      bio: S.bio,
+      bioCls: 'input' + (len > MAX ? ' err' : ''),
+      onBio: (e) => this.setState({ bio: e.target.value }),
+      bioCount: len + ' / ' + MAX,
+      cntCls: 'cnt' + (len > MAX ? ' err' : len > MAX - 40 ? ' warn' : ''),
+      kom: S.kom,
+      onKom: (e) => { const k = e.target.value; this.setState({ kom: k, area: AREAS[k][0] }); },
+      areas: AREAS[S.kom].map((a) => ({ label: a, cls: 'chip plain sm' + (S.area === a ? ' on' : ''), pressed: S.area === a ? 'true' : 'false', pick: () => this.setState({ area: a }) })),
+      placeLabel: S.area === 'Hele kommunen' ? S.kom : S.area + ', ' + S.kom,
+      notes: S.notes,
+      onNotes: (e) => this.setState({ notes: e.target.value }),
+      port: S.port.map((p) => ({
+        art: 'art art-' + p.cat, icon: 'i i-' + p.cat, label: p.label, aria: 'Fjern ' + p.label + ' fra porteføljen',
+        remove: () => {
+          const idx = S.port.findIndex((x) => x.id === p.id);
+          this.setState({ port: S.port.filter((x) => x.id !== p.id), lastRemoved: { item: p, idx } });
+          this.flash(p.label + ' er fjernet', 'i i-trash s14', true);
+        }
+      })),
+      portCount: S.port.length + ' av 9 bilder',
+      canAdd: S.port.length < 9,
+      addPort: () => {
+        const n = NEWP[(S.nextId - 5) % NEWP.length];
+        this.setState({ port: S.port.concat([{ id: 'p' + S.nextId, cat: n[0], label: n[1] }]), nextId: S.nextId + 1 });
+      },
+      undo: () => {
+        if (!S.lastRemoved) return;
+        const arr = S.port.slice();
+        arr.splice(S.lastRemoved.idx, 0, S.lastRemoved.item);
+        this.setState({ port: arr, lastRemoved: null, toast: null });
+      },
+      isDirty: dirty && !S.saving, isClean: !dirty && !S.saving,
+      reset: () => this.setState(JSON.parse(JSON.stringify(S.base))),
+      saving: S.saving, notSaving: !S.saving,
+      saveCls: 'btn btn-ink btn-lg btn-block' + (!S.saving && (!dirty || dnBad || len > MAX) ? ' disabled' : ''),
+      saveDisabled: !S.saving && (!dirty || dnBad || len > MAX),
+      save: () => {
+        if (!dirty || dnBad || len > MAX || S.saving) return;
+        this.setState({ saving: true });
+        this.st = setTimeout(() => {
+          const cur = this.state;
+          const base = JSON.parse(JSON.stringify({ dn: cur.dn, bio: cur.bio, kom: cur.kom, area: cur.area, notes: cur.notes, photo: cur.photo, port: cur.port }));
+          this.setState({ saving: false, base });
+          this.flash('Profilen er oppdatert', 'i i-check s16');
+        }, 1300);
+      },
+      photoOpen: S.photoOpen,
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo
+    };
+  }
+}
+</script>
+</body>
+</html>

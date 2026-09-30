@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Rapporter</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.ctx{background:#fff;border-radius:24px;box-shadow:var(--sh);padding:14px;display:flex;gap:12px;align-items:center}
+.ctx .th{width:64px;height:64px;border-radius:16px;flex:none}
+.ctx .th .i{width:26px;height:26px}
+.rsn{align-items:flex-start}
+.rsn .rt b{display:block;font:700 15px/1.3 var(--fb)}
+.rsn .rt small{display:block;font-size:12.5px;color:var(--mute);margin-top:3px;line-height:1.35}
+.tl{position:relative;display:flex;gap:14px;padding-bottom:22px}
+.tl:last-child{padding-bottom:0}
+.tl::before{content:"";position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--line)}
+.tl:last-child::before{display:none}
+.tl.done::before{background:#2B8F4E}
+.tl .dot{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;position:relative;z-index:1}
+.tl b{display:block;font:700 15px/1.3 var(--fb)}
+.tl small{display:block;font-size:12.5px;color:var(--mute);margin-top:3px}
+.attach{position:relative;height:84px;border-radius:18px;display:flex;align-items:center;gap:12px;padding:10px;background:#fff;border:1.5px solid var(--line)}
+.shot{width:60px;height:64px;border-radius:12px;background:linear-gradient(180deg,#F3F5F1 0 20%,#fff 20%);border:1px solid var(--line);position:relative;overflow:hidden;flex:none}
+.shot i{position:absolute;left:8px;right:14px;height:7px;border-radius:4px;background:#DDE1E7;display:block}
+.shot i.b{background:#0A1740;left:18px;right:6px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+    <div class="subbar">
+      <sc-if value="{{backLink}}" hint-placeholder-val="{{ true }}"><a href="Sikkerhet.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a></sc-if>
+      <sc-if value="{{backBtn}}" hint-placeholder-val="{{ false }}"><button class="iconbtn" onClick="{{prev}}" aria-label="Forrige steg"><i class="i i-back"></i></button></sc-if>
+      <div class="title">Rapporter</div>
+      <sc-if value="{{inFlow}}" hint-placeholder-val="{{ true }}"><a href="Sikkerhet.dc.html" class="iconbtn ghost" aria-label="Avbryt rapportering"><i class="i i-x"></i></a></sc-if>
+      <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}"><span></span></sc-if>
+    </div>
+
+    <sc-if value="{{inFlow}}" hint-placeholder-val="{{ true }}">
+      <div class="px" style="position: relative; padding-top: 6px">
+        <div class="steps" aria-hidden="true"><sc-for list="{{stepBars}}" as="s" hint-placeholder-count="3"><i class="{{s.cls}}"></i></sc-for></div>
+        <span class="eyebrow" style="display: block; margin-top: 12px">{{stepLabel}}</span>
+      </div>
+    </sc-if>
+
+    <!-- STEP 1 -->
+    <sc-if value="{{s1}}" hint-placeholder-val="{{ true }}">
+      <div class="px slideL" style="position: relative; margin-top: 10px">
+        <h1 class="h1">Hva vil du rapportere?</h1>
+        <p class="meta p" style="margin-top: 8px">Den du rapporterer får ikke vite at det var deg.</p>
+      </div>
+      <div class="au d2" style="margin-top: 18px">
+        <div class="chips" style="flex-wrap: wrap" role="radiogroup" aria-label="Type">
+          <sc-for list="{{types}}" as="t" hint-placeholder-count="5">
+            <button class="{{t.cls}}" onClick="{{t.pick}}" role="radio" aria-checked="{{t.checked}}"><span class="ci" style="background: #F3F5F1"><i class="{{t.icon}}"></i></span>{{t.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div class="px" style="margin-top: 18px">
+        <div class="label" style="margin-bottom: 10px">Du rapporterer</div>
+        <sc-if value="{{tBruker}}" hint-placeholder-val="{{ false }}">
+          <div class="ctx as">
+            <span class="av s56 plain" style="background: #ECEFF3; color: #5F6983">TO</span>
+            <div style="flex: 1; min-width: 0"><b style="display: block; font: 700 16px/1.25 var(--fb)">Tor O.</b><span class="meta">Medlem siden sep 2026 · Sentrum</span><div style="margin-top: 6px"><span class="pill pill-warn" style="height: 22px; font-size: 11px"><i class="i i-alert s14"></i>Ikke verifisert</span></div></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{tOppforing}}" hint-placeholder-val="{{ true }}">
+          <div class="ctx as">
+            <div class="th art art-annet"><i class="i i-annet"></i></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+              <span class="pill pill-need" style="align-self: flex-start; height: 22px; font-size: 11px"><span class="pd"></span>Oppdrag</span>
+              <b style="font: 700 15.5px/1.25 var(--fb)">«Rask hjelp – betal på forhånd»</b>
+              <span class="meta" style="font-size: 12.5px">Tor O. · Sentrum · Fra 200 kr</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{tTilbud}}" hint-placeholder-val="{{ false }}">
+          <div class="ctx as">
+            <span class="av s48 plain" style="background: #ECEFF3; color: #5F6983">TO</span>
+            <div style="flex: 1; min-width: 0"><span class="meta" style="font-size: 12px">Tilbud på «Male gjerdet i hagen»</span><b style="display: block; font: 700 15.5px/1.3 var(--fb); margin-top: 2px">Tor O. · 900 kr</b><span class="meta" style="font-size: 12.5px">«Må ha halve beløpet på forhånd.»</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{tMelding}}" hint-placeholder-val="{{ false }}">
+          <div class="ctx as" style="flex-direction: column; align-items: stretch">
+            <div style="display: flex; align-items: center; gap: 10px"><span class="av s32 plain" style="background: #ECEFF3; color: #5F6983">TO</span><b style="font-size: 14.5px">Tor O.</b><span class="meta" style="margin-left: auto; font-size: 12px">I går kl. 21:14</span></div>
+            <div class="bub bub-in" style="max-width: 100%; background: #F7F8FA">Send 500 kr på forhånd, så holder jeg av lørdag til deg. Ellers tar jeg en annen jobb.</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{tVurdering}}" hint-placeholder-val="{{ false }}">
+          <div class="ctx as" style="flex-direction: column; align-items: stretch; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 10px"><span class="av s32 plain" style="background: #ECEFF3; color: #5F6983">TO</span><b style="font-size: 14.5px">Tor O. vurderte deg</b><span style="margin-left: auto; display: inline-flex; color: #F0A500"><i class="i i-star s14"></i><i class="i i-staro s14"></i><i class="i i-staro s14"></i><i class="i i-staro s14"></i><i class="i i-staro s14"></i></span></div>
+            <p class="p" style="font-size: 14px; line-height: 1.45">«Ikke bruk denne personen.»</p>
+            <span class="meta" style="font-size: 12px">Ingen fullført avtale funnet mellom dere</span>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- STEP 2 -->
+    <sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+      <div class="px slideL" style="position: relative; margin-top: 10px">
+        <h1 class="h1">Hva er galt?</h1>
+        <p class="meta p" style="margin-top: 8px">Velg det som passer best. Du kan forklare mer i neste steg.</p>
+        <div class="stack" style="gap: 8px; margin-top: 18px" role="radiogroup" aria-label="Årsak">
+          <sc-for list="{{reasons}}" as="r" hint-placeholder-count="6">
+            <button class="{{r.cls}}" onClick="{{r.pick}}" role="radio" aria-checked="{{r.checked}}">
+              <span class="{{r.rad}}" style="margin-top: 1px"></span>
+              <span class="rt" style="flex: 1"><b>{{r.label}}</b><small>{{r.sub}}</small></span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- STEP 3 -->
+    <sc-if value="{{s3}}" hint-placeholder-val="{{ false }}">
+      <div class="px slideL" style="position: relative; margin-top: 10px">
+        <h1 class="h1">Fortell litt mer</h1>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px">
+          <span class="pill pill-line"><i class="{{typeIcon}}"></i>{{typeLabel}}</span>
+          <span class="pill pill-danger"><i class="i i-flag s14"></i>{{reasonLabel}}</span>
+        </div>
+        <div class="field" style="margin-top: 18px">
+          <label class="label" for="det">Detaljer <small>{{detHint}}</small></label>
+          <textarea id="det" class="{{detCls}}" value="{{details}}" onChange="{{onDetails}}" placeholder="Hva skjedde? Når? Skrev personen noe i chatten?" style="min-height: 132px"></textarea>
+          <div style="display: flex; justify-content: space-between">
+            <sc-if value="{{detErr}}" hint-placeholder-val="{{ false }}"><span class="errtxt"><i class="i i-alert s14"></i>Beskriv kort hva som skjedde</span></sc-if>
+            <span class="meta" style="margin-left: auto; font-size: 12px">{{detCount}}</span>
+          </div>
+        </div>
+        <div class="label" style="margin: 16px 0 8px">Skjermbilde <small>Valgfritt</small></div>
+        <sc-if value="{{noAttach}}" hint-placeholder-val="{{ true }}">
+          <button class="photo-add" onClick="{{addShot}}" style="width: 100%; height: 84px; display: flex; gap: 10px; align-items: center; justify-content: center; font-size: 14.5px"><i class="i i-image s22"></i>Legg ved skjermbilde</button>
+        </sc-if>
+        <sc-if value="{{hasAttach}}" hint-placeholder-val="{{ false }}">
+          <div class="attach as">
+            <div class="shot"><i style="top: 18px"></i><i class="b" style="top: 30px"></i><i style="top: 42px"></i></div>
+            <div style="flex: 1; min-width: 0"><b style="display: block; font-size: 14.5px">Skjermbilde_29-09.png</b><span class="meta" style="font-size: 12px">412 kB · lagt ved</span></div>
+            <button class="iconbtn" onClick="{{removeShot}}" aria-label="Fjern skjermbilde"><i class="i i-x s18"></i></button>
+          </div>
+        </sc-if>
+        <div class="card" style="margin-top: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 14px">
+          <span class="icirc" style="width: 40px; height: 40px; background: #ECEFF3; color: #34405F"><i class="i i-ban s18"></i></span>
+          <div style="flex: 1"><b style="display: block; font: 700 15px/1.25 var(--fb)">Blokker også Tor O.</b><span class="meta" style="font-size: 12.5px">Dere kan ikke se hverandres oppføringer eller sende meldinger</span></div>
+          <button class="{{blockTgl}}" onClick="{{toggleBlock}}" role="switch" aria-checked="{{blockAria}}" aria-label="Blokker også brukeren"></button>
+        </div>
+        <div class="note" style="margin-top: 14px"><i class="i i-lock"></i><span>Rapporten behandles fortrolig av MinNabo. Misbruk av rapportering kan føre til utestengelse.</span></div>
+      </div>
+    </sc-if>
+
+    <!-- DONE -->
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <div class="px" style="position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 18px">
+        <div class="as" style="width: 104px; height: 104px; border-radius: 50%; background: #E3F5E8; display: grid; place-items: center; box-shadow: 0 0 0 10px rgba(43,143,78,.08)">
+          <svg class="checkdraw" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#2B8F4E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+        </div>
+        <h1 class="h1 au d3" style="margin-top: 22px">Takk – vi ser på saken</h1>
+        <p class="body p au d4" style="margin-top: 8px; color: #34405F; max-width: 300px">Du får varsel i appen når saken er avgjort. Du trenger ikke gjøre noe mer nå.</p>
+        <span class="pill pill-line au d4" style="margin-top: 12px"><i class="i i-file s14"></i>Saksnr. {{caseNo}}</span>
+      </div>
+      <div class="px au d5" style="margin-top: 22px">
+        <div class="card pad">
+          <div class="tl done">
+            <span class="dot" style="background: #2B8F4E; color: #ffffff"><i class="i i-check s16"></i></span>
+            <div><b>Mottatt</b><small>I dag kl. {{sentAt}}</small></div>
+          </div>
+          <div class="tl">
+            <span class="dot pulse" style="background: #19B8EE; color: #ffffff"><i class="i i-hourglass s16"></i></span>
+            <div><b>Under behandling</b><small>Vi går gjennom rapporten og eventuelle meldinger</small></div>
+          </div>
+          <div class="tl">
+            <span class="dot" style="background: #EEF1F4; color: #8A93A8"><i class="i i-flag s16"></i></span>
+            <div><b style="color: #5F6983">Avgjort</b><small>Du får beskjed om utfallet</small></div>
+          </div>
+        </div>
+        <sc-if value="{{blocked}}" hint-placeholder-val="{{ true }}">
+          <div class="au d6" style="margin-top: 12px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: #ffffff; border: 1px solid #E4E8EE">
+            <span class="icirc" style="width: 34px; height: 34px; background: #ECEFF3"><i class="i i-ban s16"></i></span>
+            <span style="font-size: 14px">Tor O. er blokkert. Du finner blokkeringen under Sikkerhet.</span>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div class="spacer-foot"></div>
+  </div>
+
+  <div class="foot">
+    <sc-if value="{{inFlow}}" hint-placeholder-val="{{ true }}">
+      <button class="{{nextCls}}" disabled="{{nextDisabled}}" onClick="{{next}}">
+        <sc-if value="{{sending}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #B8EE3C"></span>Sender …</sc-if>
+        <sc-if value="{{notSending}}" hint-placeholder-val="{{ true }}">{{nextLabel}}</sc-if>
+      </button>
+    </sc-if>
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <a href="Sikkerhet.dc.html" class="btn btn-ink btn-lg btn-block">Ferdig</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 1, type: 'oppforing', reason: null, details: '', attach: false, block: false, sending: false, sentAt: '', tried: false };
+  }
+  componentWillUnmount() { clearTimeout(this.st); }
+  renderVals() {
+    const S = this.state;
+    const pad = (n) => (n < 10 ? '0' : '') + n;
+    const TYPES = [['bruker', 'Bruker', 'i i-user'], ['oppforing', 'Oppføring', 'i i-clip'], ['tilbud', 'Tilbud', 'i i-tag'], ['melding', 'Melding', 'i i-msg'], ['vurdering', 'Vurdering', 'i i-star']];
+    const REASONS = [
+      ['svindel', 'Svindel eller krav om forhåndsbetaling', 'Ber om penger før jobben er gjort, eller lenker til betaling'],
+      ['upassende', 'Upassende innhold', 'Støtende tekst eller bilder'],
+      ['trakassering', 'Trakassering', 'Truer, presser eller plager deg'],
+      ['falsk', 'Falsk profil', 'Utgir seg for å være noen andre'],
+      ['farlig', 'Farlig oppdrag', 'Jobben kan skade noen eller er ulovlig'],
+      ['annet', 'Annet', 'Noe annet som bryter reglene']
+    ];
+    const t = TYPES.find((x) => x[0] === S.type);
+    const r = REASONS.find((x) => x[0] === S.reason);
+    const needDetails = S.reason === 'annet';
+    const detOk = !needDetails || S.details.trim().length >= 10;
+    const canNext = S.step === 1 || (S.step === 2 && !!S.reason) || (S.step === 3 && detOk);
+    const inFlow = S.step <= 3;
+    return {
+      backLink: S.step === 1 || S.step === 4, backBtn: S.step === 2 || S.step === 3,
+      prev: () => this.setState({ step: S.step - 1 }),
+      inFlow, isDone: S.step === 4,
+      s1: S.step === 1, s2: S.step === 2, s3: S.step === 3,
+      stepBars: [1, 2, 3].map((i) => ({ cls: i <= S.step ? 'on' : '' })),
+      stepLabel: 'Steg ' + Math.min(S.step, 3) + ' av 3',
+      types: TYPES.map(([id, label, icon]) => ({ label, icon: icon + ' s16', cls: 'chip' + (S.type === id ? ' on' : ''), checked: S.type === id ? 'true' : 'false', pick: () => this.setState({ type: id }) })),
+      tBruker: S.type === 'bruker', tOppforing: S.type === 'oppforing', tTilbud: S.type === 'tilbud', tMelding: S.type === 'melding', tVurdering: S.type === 'vurdering',
+      reasons: REASONS.map(([id, label, sub]) => ({ label, sub, cls: 'optcard rsn' + (S.reason === id ? ' on' : ''), rad: 'rad' + (S.reason === id ? ' on' : ''), checked: S.reason === id ? 'true' : 'false', pick: () => this.setState({ reason: id, block: id === 'svindel' || id === 'trakassering' ? true : S.block }) })),
+      typeIcon: t[2] + ' s14', typeLabel: t[1], reasonLabel: r ? r[1] : '',
+      details: S.details,
+      detHint: needDetails ? 'Påkrevd for «Annet»' : 'Valgfritt',
+      detCls: 'input' + (S.tried && !detOk ? ' err' : ''),
+      detErr: S.tried && !detOk,
+      onDetails: (e) => this.setState({ details: e.target.value.slice(0, 500) }),
+      detCount: S.details.length + ' / 500',
+      noAttach: !S.attach, hasAttach: S.attach,
+      addShot: () => this.setState({ attach: true }),
+      removeShot: () => this.setState({ attach: false }),
+      blockTgl: 'tgl' + (S.block ? ' on' : ''), blockAria: S.block ? 'true' : 'false',
+      toggleBlock: () => this.setState({ block: !S.block }),
+      sending: S.sending, notSending: !S.sending,
+      nextLabel: S.step === 3 ? 'Send rapport' : 'Neste',
+      nextCls: 'btn btn-lg btn-block ' + (S.step === 3 ? 'btn-danger' : 'btn-ink') + (!canNext && S.step !== 3 ? ' disabled' : ''),
+      nextDisabled: !canNext && S.step !== 3,
+      next: () => {
+        if (S.sending) return;
+        if (S.step < 3) { if (canNext) this.setState({ step: S.step + 1 }); return; }
+        if (!detOk) { this.setState({ tried: true }); return; }
+        const d = new Date();
+        this.setState({ sending: true, sentAt: pad(d.getHours()) + ':' + pad(d.getMinutes()) });
+        this.st = setTimeout(() => this.setState({ sending: false, step: 4 }), 1500);
+      },
+      caseNo: 'MN-48213',
+      sentAt: S.sentAt,
+      blocked: S.block
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Sammenlign tilbud</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.cols{display:flex;gap:12px;overflow-x:auto;padding:8px 20px 18px;scroll-snap-type:x mandatory;scroll-padding:0 20px;scrollbar-width:none}
+.cols::-webkit-scrollbar{display:none}
+.col{flex:none;width:164px;scroll-snap-align:start;background:#fff;border-radius:26px;border:2px solid transparent;box-shadow:var(--sh);padding:12px 12px 6px;text-align:left;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;transition:border-color .25s,box-shadow .25s}
+.col.on{border-color:var(--ink);box-shadow:0 0 0 4px rgba(184,238,60,.6),var(--sh-m)}
+.col .top{display:flex;justify-content:space-between;align-items:flex-start;height:28px}
+.mk{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:999px;font:700 11px/1 var(--fb);white-space:nowrap}
+.mk .i{width:12px;height:12px}
+.mk.low{background:var(--ok-t);color:#1D6E3A}
+.mk.best{background:#FFF2D9;color:#8A5200}
+.who{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 0 12px;text-align:center}
+.who b{font:700 15px/1.2 var(--fb)}
+.pbar{height:8px;border-radius:4px;background:#EEF1F4;overflow:hidden;margin:8px 0 12px}
+.pbar i{display:block;height:100%;border-radius:4px}
+.ga{animation:growA 1s .15s var(--ease) both}.gb{animation:growB 1s .15s var(--ease) both}
+@keyframes growA{from{width:0}}@keyframes growB{from{width:0}}
+.cell{padding:10px 0;border-top:1px solid var(--line2);display:flex;flex-direction:column;gap:4px;min-height:60px}
+.cell small{font:700 10.5px/1 var(--fb);letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+.cell b{font:700 14px/1.3 var(--fb)}
+.cell .sub{font-size:12.5px;color:var(--mute)}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:500 13px/1.35 var(--fb);color:var(--ink2)}
+.track{position:relative;height:64px;margin-top:10px}
+.track .ln{position:absolute;left:0;right:0;top:30px;height:6px;border-radius:3px;background:var(--grad);opacity:.45}
+.track .pt{position:absolute;top:18px;margin-left:-14px}
+.track .bd{position:absolute;top:10px;bottom:0;width:2px;background:#0A1740;border-radius:1px}
+.track .bdl{position:absolute;top:-8px;transform:translateX(-50%);font:700 11px/1 var(--fb);color:var(--ink);white-space:nowrap;background:#fff;padding:3px 7px;border-radius:999px;border:1px solid var(--line)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+
+    <div class="subbar">
+      <a href="MottatteTilbud.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Sammenlign tilbud</div>
+      <span></span>
+    </div>
+
+    <!-- context + price range -->
+    <div class="px au d1" style="position: relative; margin-top: 6px">
+      <div class="card" style="padding: 16px 18px 12px">
+        <div class="rowf" style="gap: 12px">
+          <span class="art art-maling" style="width: 48px; height: 48px; border-radius: 15px"><i class="i i-maling s22"></i></span>
+          <div class="stack" style="gap: 5px; flex: 1; min-width: 0">
+            <span class="pill pill-need" style="align-self: flex-start; height: 22px; font-size: 11px"><span class="pd"></span>Trenger hjelp</span>
+            <b style="font-size: 15.5px">Male gjerdet i hagen</b>
+          </div>
+          <span class="pill pill-line">3 tilbud</span>
+        </div>
+        <div class="rowf" style="justify-content: space-between; margin-top: 16px">
+          <span class="eyebrow">Prisspenn</span>
+          <span class="num" style="font-size: 16px">1 250 – 1 800 kr</span>
+        </div>
+        <div class="track" aria-hidden="true">
+          <div class="ln"></div>
+          <span class="bd" style="left: 50%"><span class="bdl">Budsjett ca. 1 500</span></span>
+          <span class="pt as d3" style="left: 19%"><span class="av s28 av-e">LB</span></span>
+          <span class="pt as d4" style="left: 37%"><span class="av s28 av-b">JL</span></span>
+          <span class="pt as d5" style="left: 87%"><span class="av s28 av-c">EM</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- sort -->
+    <div class="px au d2" style="position: relative; margin-top: 18px">
+      <div class="rowf" style="justify-content: space-between; margin-bottom: 10px">
+        <span class="eyebrow">Sorter etter</span>
+        <span class="meta rowf" style="gap: 4px">Sveip for å se alle<i class="i i-arrow s14"></i></span>
+      </div>
+      <div class="seg" role="tablist" aria-label="Sorter tilbud">
+        <sc-for list="{{sorts}}" as="s" hint-placeholder-count="3">
+          <button class="{{s.cls}}" onClick="{{s.pick}}" role="tab" aria-selected="{{s.sel}}">{{s.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- columns -->
+    <div class="cols" role="radiogroup" aria-label="Velg tilbud" style="position: relative; margin-top: 8px">
+      <sc-for list="{{cols}}" as="c" hint-placeholder-count="3">
+        <button class="{{c.cls}}" onClick="{{c.pick}}" role="radio" aria-checked="{{c.checked}}" aria-label="{{c.aria}}">
+          <span class="top">
+            <span class="stack" style="gap: 4px">
+              <sc-if value="{{c.low}}" hint-placeholder-val="{{ false }}"><span class="mk low"><i class="i i-tag"></i>Lavest pris</span></sc-if>
+              <sc-if value="{{c.best}}" hint-placeholder-val="{{ false }}"><span class="mk best"><i class="i i-star"></i>Best vurdert</span></sc-if>
+            </span>
+            <span class="{{c.radCls}}"></span>
+          </span>
+          <span class="who">
+            <span class="{{c.avCls}}">{{c.ini}}</span>
+            <b>{{c.name}}</b>
+          </span>
+          <span class="num" style="font-size: 25px; display: block">{{c.price}}</span>
+          <span class="pbar" style="display: block"><i class="{{c.barCls}}" style="display: block; {{c.barStyle}}"></i></span>
+          <span class="cell"><small>Dato</small><b>{{c.date}}</b><span class="sub">{{c.time}}</span></span>
+          <span class="cell"><small>Varighet</small><b>{{c.dur}}</b></span>
+          <span class="cell"><small>Vurdering</small><span class="stars"><i class="i i-star"></i>{{c.rating}} <span>({{c.n}})</span></span></span>
+          <span class="cell"><small>Fullførte jobber</small><b>{{c.jobs}}</b></span>
+          <span class="cell"><small>Svartid</small><b>{{c.reply}}</b></span>
+          <span class="cell" style="min-height: 74px"><small>Forbehold</small><span class="clamp">{{c.forbehold}}</span></span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div class="px au d6" style="display: flex; flex-direction: column; gap: 12px">
+      <div class="card flat" style="padding: 14px 16px; background: #ffffff; display: flex; gap: 12px; align-items: flex-start">
+        <span class="icirc" style="width: 34px; height: 34px; background: #DFF2FB; color: #065C8F"><i class="i i-sparkle s16"></i></span>
+        <div class="stack" style="gap: 3px">
+          <b style="font-size: 14.5px">Se på mer enn prisen</b>
+          <span class="meta">Tidspunkt, erfaring og forbehold betyr ofte like mye. Still gjerne spørsmål i chatten før du bestemmer deg.</span>
+        </div>
+      </div>
+      <div class="note"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    </div>
+    <div style="height: 180px"></div>
+  </div>
+
+  <!-- foot -->
+  <div class="foot">
+    <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+      <div class="rowf au" style="gap: 12px">
+        <span class="{{selAv}}">{{selIni}}</span>
+        <div class="stack" style="gap: 2px; flex: 1">
+          <b style="font-size: 14.5px">{{selName}}</b>
+          <span class="meta">{{selWhen}}</span>
+        </div>
+        <span class="num" style="font-size: 19px">{{selPrice}}</span>
+        <button class="iconbtn ghost" onClick="{{clearSel}}" aria-label="Fjern valg"><i class="i i-x s16"></i></button>
+      </div>
+      <a href="TilbudDetaljer.dc.html" class="btn btn-lime btn-lg btn-block">Gå videre med {{selFirst}}<i class="i i-arrow"></i></a>
+    </sc-if>
+    <sc-if value="{{noSel}}" hint-placeholder-val="{{ false }}">
+      <div class="meta rowf" style="gap: 8px; justify-content: center"><i class="i i-hand s16"></i>Trykk på et tilbud for å velge det</div>
+      <button class="btn btn-lime btn-lg btn-block disabled" aria-disabled="true">Gå videre</button>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sort: 'pris', sel: null, tick: 0 };
+  }
+  renderVals() {
+    const S = this.state;
+    const OFFERS = [
+      { id: 'jonas', ini: 'JL', c: 'b', name: 'Jonas Lie', first: 'Jonas', price: 1400, priceL: '1 400 kr', date: 'Lør 10. okt', time: 'kl. 10:00', day: 10, dur: 'ca. 5 t', rating: 4.9, ratingL: '4,9', n: '32', jobs: '38', reply: 'ca. 1 t', forbehold: 'Maling/beis kjøpes av deg. Utsettes ved regn.' },
+      { id: 'erik', ini: 'EM', c: 'c', name: 'Erik Moen', first: 'Erik', price: 1800, priceL: '1 800 kr', date: 'Søn 11. okt', time: 'kl. 09:00', day: 11, dur: 'ca. 4 t', rating: 4.8, ratingL: '4,8', n: '41', jobs: '52', reply: 'ca. 3 t', forbehold: 'Inkluderer vask av gjerdet først.' },
+      { id: 'lise', ini: 'LB', c: 'e', name: 'Lise Brekke', first: 'Lise', price: 1250, priceL: '1 250 kr', date: 'Fre 9. okt', time: 'kl. 15:00', day: 9, dur: 'ca. 6 t', rating: 4.6, ratingL: '4,6', n: '5', jobs: '6', reply: 'Samme dag', forbehold: 'Ingen forbehold oppgitt.' }
+    ];
+    const max = Math.max.apply(null, OFFERS.map((o) => o.price));
+    const minP = Math.min.apply(null, OFFERS.map((o) => o.price));
+    const bestR = Math.max.apply(null, OFFERS.map((o) => o.rating));
+    const sorted = OFFERS.slice().sort((a, b) => {
+      if (S.sort === 'vurdering') return b.rating - a.rating;
+      if (S.sort === 'dato') return a.day - b.day;
+      return a.price - b.price;
+    });
+    const flip = S.tick % 2 === 1;
+    const cols = sorted.map((o, i) => {
+      const on = S.sel === o.id;
+      const low = o.price === minP;
+      return {
+        ini: o.ini, name: o.name, price: o.priceL, date: o.date, time: o.time, dur: o.dur,
+        rating: o.ratingL, n: o.n, jobs: o.jobs, reply: o.reply, forbehold: o.forbehold,
+        low, best: o.rating === bestR,
+        avCls: 'av s56 av-' + o.c,
+        cls: 'col ' + (flip ? 'slideL' : 'au') + ' d' + (i + 2) + (on ? ' on' : ''),
+        radCls: 'rad' + (on ? ' on' : ''),
+        checked: on ? 'true' : 'false',
+        aria: o.name + ', ' + o.priceL,
+        barCls: flip ? 'gb' : 'ga',
+        barStyle: 'width: ' + Math.round((o.price / max) * 100) + '%; background: ' + (low ? '#8FD12A' : (on ? '#0A1740' : '#9AA3B5')),
+        pick: () => this.setState({ sel: on ? null : o.id })
+      };
+    });
+    const selO = OFFERS.filter((o) => o.id === S.sel)[0];
+    const SORTS = [['pris', 'Pris'], ['vurdering', 'Vurdering'], ['dato', 'Dato']];
+    return {
+      sorts: SORTS.map(([id, label]) => ({
+        label,
+        cls: S.sort === id ? 'on' : '',
+        sel: S.sort === id ? 'true' : 'false',
+        pick: () => { if (S.sort !== id) this.setState({ sort: id, tick: S.tick + 1 }); }
+      })),
+      cols,
+      hasSel: !!selO, noSel: !selO,
+      selAv: selO ? 'av av-' + selO.c : 'av',
+      selIni: selO ? selO.ini : '',
+      selName: selO ? selO.name : '',
+      selFirst: selO ? selO.first : '',
+      selPrice: selO ? selO.priceL : '',
+      selWhen: selO ? selO.date + ' ' + selO.time + ' · ' + selO.dur : '',
+      clearSel: () => this.setState({ sel: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

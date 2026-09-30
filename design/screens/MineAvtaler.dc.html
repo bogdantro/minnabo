@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Mine avtaler</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.week{display:flex;gap:6px;overflow-x:auto;padding:4px 20px 10px;scrollbar-width:none;scroll-snap-type:x mandatory;scroll-padding:0 20px}
+.week::-webkit-scrollbar{display:none}
+.wd{flex:none;width:46px;height:68px;border-radius:18px;border:1.5px solid var(--line);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;font:inherit;color:var(--ink2);position:relative;transition:background .25s,color .25s,border-color .25s,transform .15s;padding:0}
+.wd:active{transform:scale(.94)}
+.wd small{font:700 11px/1 var(--fb);letter-spacing:.02em;color:var(--mute)}
+.wd b{font:700 18px/1 var(--fd);letter-spacing:-.02em;color:var(--ink)}
+.wd .dt{width:6px;height:6px;border-radius:50%;background:transparent}
+.wd .dt.l{background:#8BD21E}
+.wd .dt.c{background:#19B8EE}
+.wd.snap{scroll-snap-align:start}
+.wd.today{border-color:#9BDD2C;background:#F8FDEB}
+.wd.past b,.wd.past small{opacity:.45}
+.wd.on{background:var(--ink);border-color:var(--ink)}
+.wd.on b,.wd.on small{color:#fff;opacity:1}
+.wd.wk2{margin-left:13px}
+.wd.wk2::before{content:"";position:absolute;left:-10px;top:12px;bottom:12px;width:1px;background:var(--line)}
+.acard{display:flex;gap:14px;padding:14px;background:#fff;border-radius:24px;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035);text-decoration:none;color:inherit;position:relative;transition:transform .2s var(--ease)}
+.acard:active{transform:scale(.985)}
+.tcol{width:58px;flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding-right:12px;border-right:3px solid var(--line)}
+.tcol.l{border-right-color:#9BDD2C}
+.tcol.c{border-right-color:#19B8EE}
+.dh{display:flex;align-items:baseline;justify-content:space-between;margin:22px 4px 10px}
+.dh b{font:700 17px/1 var(--fd);letter-spacing:-.02em}
+.fcard{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;background:#fff;border-radius:22px;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035)}
+.fcard > a.main{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-decoration:none;color:inherit;min-height:52px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh"></div>
+
+    <div class="subbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Mine avtaler</div>
+      <button class="iconbtn" onClick="{{syncCal}}" aria-label="Legg alle i kalenderen"><i class="i i-cal s18"></i></button>
+    </div>
+
+    <div class="px au" style="position: relative; margin-top: 4px">
+      <div class="seg" role="tablist" aria-label="Vis avtaler">
+        <sc-for list="{{segs}}" as="s" hint-placeholder-count="2">
+          <button class="{{s.cls}}" onClick="{{s.pick}}" role="tab" aria-selected="{{s.sel}}">{{s.label}} <span style="opacity: .55">{{s.n}}</span></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- KOMMENDE -->
+    <sc-if value="{{isUp}}" hint-placeholder-val="{{ true }}">
+      <div style="position: relative">
+        <div class="px rowf au d1" style="justify-content: space-between; margin: 20px 0 10px">
+          <div class="stack" style="gap: 4px">
+            <b style="font: 700 19px/1 var(--fd); letter-spacing: -.02em">{{monthLabel}}</b>
+            <span class="meta">{{weekLabel}}</span>
+          </div>
+          <sc-if value="{{hasDay}}" hint-placeholder-val="{{ false }}">
+            <button class="chip plain sm as" onClick="{{clearDay}}"><i class="i i-x s14"></i>Vis alle</button>
+          </sc-if>
+        </div>
+        <div class="week au d2" role="listbox" aria-label="Velg dag">
+          <sc-for list="{{days}}" as="d" hint-placeholder-count="14">
+            <button class="{{d.cls}}" onClick="{{d.pick}}" role="option" aria-selected="{{d.sel}}" aria-label="{{d.aria}}">
+              <small>{{d.wd}}</small><b>{{d.n}}</b><span class="{{d.dotCls}}"></span>
+            </button>
+          </sc-for>
+        </div>
+        <div class="px rowf au d3" style="gap: 14px; margin-top: 2px">
+          <span class="meta rowf" style="gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #8BD21E"></span>Du hjelper</span>
+          <span class="meta rowf" style="gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #19B8EE"></span>Du får hjelp</span>
+        </div>
+
+        <div class="px">
+          <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+            <div class="au">
+              <div class="dh"><b>{{g.label}}</b><span class="meta">{{g.rel}}</span></div>
+              <div class="stack" style="gap: 10px">
+                <sc-for list="{{g.items}}" as="it" hint-placeholder-count="1">
+                  <a href="Avtale.dc.html" class="{{it.cls}}">
+                    <div class="{{it.tcolCls}}">
+                      <span class="num" style="font-size: 20px">{{it.time}}</span>
+                      <span class="meta">{{it.dur}}</span>
+                    </div>
+                    <div class="stack" style="gap: 7px; flex: 1; min-width: 0">
+                      <span class="{{it.roleCls}}"><i class="{{it.roleIcon}}"></i>{{it.role}}</span>
+                      <b style="font-size: 16px; line-height: 1.25">{{it.title}}</b>
+                      <span class="rowf" style="gap: 8px; font-size: 13.5px; color: #34405F">
+                        <span class="{{it.avCls}}">{{it.ini}}</span>{{it.who}}
+                      </span>
+                      <span class="lmeta"><i class="i i-pin"></i>{{it.place}} · <b>{{it.price}}</b></span>
+                    </div>
+                    <i class="i i-right s18" style="color: #8A93A8; align-self: center"></i>
+                  </a>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{dayEmpty}}" hint-placeholder-val="{{ false }}">
+            <div class="dash-card as" style="margin-top: 20px; padding: 26px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: rgba(255,255,255,.6)">
+              <span class="icirc" style="width: 58px; height: 58px; background: #DFF2FB; color: #065C8F"><i class="i i-cal s24"></i></span>
+              <b style="font-size: 15.5px">Ingen avtaler {{dayName}}</b>
+              <span class="meta">En rolig dag. Kanskje en nabo trenger en hånd?</span>
+              <div class="rowf" style="gap: 8px; margin-top: 4px">
+                <button class="btn btn-sm btn-ghost" onClick="{{clearDay}}">Vis alle</button>
+                <a href="Oppdrag.dc.html" class="btn btn-sm btn-lime">Finn en småjobb</a>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- FULLFØRT -->
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <div class="px" style="position: relative; margin-top: 20px">
+        <div class="rowf au" style="gap: 10px">
+          <div class="stat"><b>2</b><span>fullført i september</span></div>
+          <div class="stat"><b class="rowf" style="gap: 5px"><i class="i i-star s18" style="color: #F0A500"></i>4,9</b><span>snitt, 11 vurderinger</span></div>
+        </div>
+        <div class="dh au d1"><b>September</b><span class="meta">2 avtaler</span></div>
+        <div class="stack" style="gap: 10px">
+          <div class="fcard au d2">
+            <a href="Avtale.dc.html" class="main">
+              <span class="art art-flytting" style="width: 52px; height: 52px; border-radius: 16px"><i class="i i-flytting s22"></i></span>
+              <span class="stack" style="gap: 4px; min-width: 0">
+                <b style="font-size: 15.5px">Bære kjøleskap</b>
+                <span class="meta">Erik Moen · Lør 19. sep</span>
+                <span class="pill pill-ok" style="align-self: flex-start; height: 24px"><i class="i i-star s14"></i>Vurdert ★5</span>
+              </span>
+            </a>
+            <i class="i i-right s18" style="color: #8A93A8"></i>
+          </div>
+          <div class="fcard au d3">
+            <a href="Avtale.dc.html" class="main">
+              <span class="art art-data" style="width: 52px; height: 52px; border-radius: 16px"><i class="i i-data s22"></i></span>
+              <span class="stack" style="gap: 4px; min-width: 0">
+                <b style="font-size: 15.5px">Sette opp ny iPad</b>
+                <span class="meta">Grete Nilsen · Søn 27. sep</span>
+                <span class="pill pill-warn" style="align-self: flex-start; height: 24px"><i class="i i-staro s14"></i>Mangler vurdering</span>
+              </span>
+            </a>
+            <a href="Vurdering.dc.html" class="btn btn-sm btn-lime" style="padding: 0 14px">Gi vurdering</a>
+          </div>
+        </div>
+        <div class="card flat au d4" style="margin-top: 16px; padding: 14px 16px; background: #ffffff; display: flex; gap: 12px; align-items: center">
+          <span class="icirc" style="width: 36px; height: 36px; background: #EDF8D6; color: #3B7300"><i class="i i-thumb s16"></i></span>
+          <span class="meta" style="flex: 1">Vurderinger hjelper naboene dine å velge trygt. Det tar under ett minutt.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="px" style="margin-top: 22px">
+      <div class="note"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    </div>
+    <div style="height: 48px"></div>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 32px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { seg: 'up', day: null, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const WD = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+    const DAYS = [];
+    for (let i = 0; i < 14; i++) {
+      const date = 28 + i;
+      const n = date > 30 ? date - 30 : date;
+      const mon = date > 30 ? 'okt' : 'sep';
+      DAYS.push({ key: mon + n, n: String(n), wd: WD[i % 7], mon, idx: i, week: i < 7 ? 40 : 41 });
+    }
+    const ITEMS = [
+      { id: 'k1', day: 'okt3', dayLabel: 'Lør 3. okt', rel: 'Om 4 dager', time: '11:00', dur: 'ca. 2 t', title: 'Klippe plen og rake løv', who: 'hos Kari Holm', ini: 'KH', c: 'c', helper: true, place: 'Nordre Ål', price: '400 kr' },
+      { id: 'k2', day: 'okt10', dayLabel: 'Lør 10. okt', rel: 'Om 11 dager', time: '10:00', dur: 'ca. 5 t', title: 'Male gjerdet i hagen', who: 'Jonas Lie hjelper deg', ini: 'JL', c: 'b', helper: false, place: 'Nordre Ål', price: '1 400 kr' }
+    ];
+    const byDay = {};
+    ITEMS.forEach((it) => { byDay[it.day] = it.helper ? 'l' : 'c'; });
+    const todayIdx = 1;
+    const days = DAYS.map((d) => {
+      const on = S.day === d.key;
+      return {
+        wd: d.wd, n: d.n,
+        cls: 'wd' + (d.idx === 0 || d.idx === 7 ? ' snap' : '') + (d.idx === 7 ? ' wk2' : '') + (d.idx === todayIdx ? ' today' : '') + (d.idx < todayIdx ? ' past' : '') + (on ? ' on' : ''),
+        dotCls: 'dt' + (byDay[d.key] ? ' ' + byDay[d.key] : ''),
+        sel: on ? 'true' : 'false',
+        aria: d.wd + ' ' + d.n + '. ' + d.mon + (d.idx === todayIdx ? ', i dag' : '') + (byDay[d.key] ? ', har avtale' : ''),
+        pick: () => this.setState({ day: on ? null : d.key })
+      };
+    });
+    const selDay = DAYS.filter((d) => d.key === S.day)[0];
+    const list = ITEMS.filter((it) => !S.day || it.day === S.day);
+    const groups = list.map((it, i) => ({
+      label: it.dayLabel, rel: it.rel,
+      items: [{
+        cls: 'acard au d' + (i + 2),
+        tcolCls: 'tcol ' + (it.helper ? 'l' : 'c'),
+        time: it.time, dur: it.dur, title: it.title, who: it.who, ini: it.ini, place: it.place, price: it.price,
+        avCls: 'av s28 av-' + it.c,
+        roleCls: it.helper ? 'pill pill-need' : 'pill pill-offer',
+        roleIcon: it.helper ? 'i i-hand s14' : 'i i-user s14',
+        role: it.helper ? 'Du hjelper' : 'Du får hjelp'
+      }]
+    }));
+    const SEGS = [['up', 'Kommende', '2'], ['done', 'Fullført', '2']];
+    return {
+      segs: SEGS.map(([id, label, n]) => ({ label, n, cls: S.seg === id ? 'on' : '', sel: S.seg === id ? 'true' : 'false', pick: () => this.setState({ seg: id }) })),
+      isUp: S.seg === 'up', isDone: S.seg === 'done',
+      monthLabel: selDay ? (selDay.mon === 'sep' ? 'September' : 'Oktober') + ' 2026' : 'Sep – okt 2026',
+      weekLabel: selDay ? 'Uke ' + selDay.week + ' · ' + selDay.wd + ' ' + selDay.n + '. ' + selDay.mon : 'Uke 40–41 · trykk på en dag',
+      days,
+      hasDay: !!S.day,
+      clearDay: () => this.setState({ day: null }),
+      groups,
+      dayEmpty: !!S.day && list.length === 0,
+      dayName: selDay ? selDay.wd.toLowerCase() + ' ' + selDay.n + '. ' + selDay.mon : '',
+      syncCal: () => this.flash('2 avtaler lagt i kalenderen', 'i i-cal s14'),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

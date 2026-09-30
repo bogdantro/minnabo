@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Ungdomskonto</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.ubadge{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:#0A1740;color:#B8EE3C;font:700 11.5px/1 var(--fb)}
+.nav4 a,.nav4 button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:700 11px/1 var(--fb);color:var(--mute);height:66px;position:relative;background:none;border:0;cursor:pointer;padding:0;text-decoration:none}
+.nav4 .on{color:var(--lime-d)}
+.nav4 .ni{width:48px;height:32px;border-radius:16px;display:grid;place-items:center;position:relative;transition:background .3s}
+.nav4 .on .ni{background:var(--lime-t)}
+.nav4 .ni .i{width:22px;height:22px}
+.card-btn{display:flex;gap:14px;width:100%;text-align:left;background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;min-width:0}
+.orow{display:flex;align-items:center;gap:12px;padding:14px;background:#fff;border-radius:20px;box-shadow:var(--sh)}
+.lockrow{display:flex;align-items:center;gap:12px;padding:13px 16px;width:100%;background:none;border:0;border-top:1px solid var(--line2);cursor:pointer;text-align:left;font:600 14.5px var(--fb);color:var(--mute);min-height:52px}
+.lockrow:first-child{border-top:0}
+.dchip{flex:none;height:44px;padding:0 14px;border-radius:14px;border:1.5px solid var(--line);background:#fff;font:700 13px var(--fb);cursor:pointer;color:var(--ink2)}
+.dchip.on{background:#0A1740;border-color:#0A1740;color:#fff}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="topbar">
+      <div class="brand"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</div>
+      <div class="tb-r">
+        <span class="ubadge"><i class="i i-shield s14"></i>Ungdomskonto</span>
+        <button class="avbtn" onClick="{{goProfil}}" aria-label="Åpne profil"><span class="av av-b">EN</span></button>
+      </div>
+    </div>
+
+    <!-- OPPDRAG -->
+    <sc-if value="{{vOppdrag}}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div class="px au" style="padding-top: 10px; display: flex; flex-direction: column; gap: 8px">
+          <span class="eyebrow">Hei, Emil</span>
+          <h1 class="h1">Finn en småjobb nær deg</h1>
+        </div>
+        <div class="px au d2" style="margin-top: 16px">
+          <div class="card flat" style="height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: #fff">
+            <i class="i i-pin s18" style="color: #3B7300"></i><b style="font-size: 14.5px">Lillehammer kommune</b><span class="meta">· Søre Ål</span>
+          </div>
+        </div>
+        <div class="au d3" style="margin-top: 14px">
+          <div class="chips">
+            <sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+              <button class="{{c.cls}}" onClick="{{c.pick}}"><span class="{{c.ciCls}}"><i class="{{c.icon}}"></i></span>{{c.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sh" style="margin-top: 22px"><div class="t"><span class="ti" style="background: #EDF8D6; color: #3B7300"><i class="i i-clip s18"></i></span><div><h2>Folk som trenger hjelp</h2><div class="sub">Trykk på et oppdrag for å gi tilbud</div></div></div></div>
+        <div class="px stack" style="gap: 12px">
+          <sc-for list="{{tasks}}" as="t" hint-placeholder-count="4">
+            <div class="lcard au">
+              <button class="card-btn" onClick="{{t.open}}" aria-label="{{t.aria}}">
+                <div class="{{t.art}}"><i class="{{t.icon}}"></i></div>
+                <div class="lbody">
+                  <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span><sc-if value="{{t.sent}}" hint-placeholder-val="{{ false }}"><span class="pill pill-dark">Tilbud sendt</span></sc-if></div>
+                  <p class="ltitle" style="padding-right: 0">{{t.title}}</p>
+                  <div class="lmeta"><b>{{t.who}}</b><span class="stars"><i class="i i-star"></i>{{t.rating}}</span></div>
+                  <div class="lmeta"><i class="i i-pin"></i>{{t.place}}</div>
+                  <div class="lmeta"><i class="i i-clock"></i>{{t.when}}</div>
+                  <div class="lprice"><span class="l">{{t.plabel}}</span><span class="v">{{t.price}}</span></div>
+                </div>
+              </button>
+            </div>
+          </sc-for>
+        </div>
+        <div class="px" style="margin-top: 18px"><div class="note" style="justify-content: center; text-align: center"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div></div>
+      </div>
+    </sc-if>
+
+    <!-- MINE TILBUD -->
+    <sc-if value="{{vTilbud}}" hint-placeholder-val="{{ false }}">
+      <div class="px stack" style="gap: 12px; padding-top: 10px">
+        <h1 class="h1 au">Mine tilbud</h1>
+        <p class="meta p au d1" style="font-size: 14px">Tilbudene du har gitt, og hva som har skjedd med dem.</p>
+        <sc-for list="{{offers}}" as="o" hint-placeholder-count="3">
+          <div class="orow au">
+            <div class="{{o.art}}" style="width: 52px; height: 52px; border-radius: 15px; flex: none"><i class="{{o.icon}}" style="width: 22px; height: 22px"></i></div>
+            <div class="stack" style="gap: 4px; flex: 1; min-width: 0">
+              <b style="font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.title}}</b>
+              <span class="meta">{{o.who}} · <b class="num" style="color: #0A1740">{{o.price}}</b></span>
+              <span class="{{o.pill}}" style="align-self: flex-start">{{o.status}}</span>
+            </div>
+            <sc-if value="{{o.canChat}}" hint-placeholder-val="{{ false }}"><a href="Chat.dc.html" class="iconbtn" aria-label="Åpne samtalen"><i class="i i-msg s18"></i></a></sc-if>
+            <sc-if value="{{o.canWithdraw}}" hint-placeholder-val="{{ false }}"><button class="btn btn-sm btn-ghost" onClick="{{o.withdraw}}">Trekk</button></sc-if>
+          </div>
+        </sc-for>
+        <button class="btn btn-lime btn-block" onClick="{{goOppdrag}}" style="margin-top: 6px"><i class="i i-search s18"></i>Finn flere oppdrag</button>
+      </div>
+    </sc-if>
+
+    <!-- INNBOKS -->
+    <sc-if value="{{vInnboks}}" hint-placeholder-val="{{ false }}">
+      <div class="px stack" style="gap: 12px; padding-top: 10px">
+        <h1 class="h1 au">Innboks</h1>
+        <div class="card flat au d1" style="padding: 12px 14px; display: flex; gap: 10px; align-items: center; background: #F7F8FA">
+          <i class="i i-lock s16" style="color: #5F6983"></i><span class="meta" style="color: #34405F">En samtale åpnes når du gir et tilbud. Du kan ikke starte samtaler på egen hånd.</span>
+        </div>
+        <a href="Chat.dc.html" class="orow au d2" style="text-decoration: none; color: #0A1740">
+          <span class="av av-c s48">KH<span class="on-dot"></span></span>
+          <div class="stack" style="gap: 3px; flex: 1; min-width: 0">
+            <div class="rowf" style="justify-content: space-between"><b>Kari Holm</b><span class="meta">14:20</span></div>
+            <span class="meta" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Rake løv i hagen</span>
+            <b style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Supert, vi sees lørdag kl. 12!</b>
+          </div>
+          <span class="pill pill-ok">Godtatt</span>
+        </a>
+        <a href="Chat.dc.html" class="orow au d3" style="text-decoration: none; color: #0A1740">
+          <span class="av av-f s48">NS</span>
+          <div class="stack" style="gap: 3px; flex: 1; min-width: 0">
+            <div class="rowf" style="justify-content: space-between"><b>Nora Solberg</b><span class="meta">I går</span></div>
+            <span class="meta">Bære ved inn i boden</span>
+            <span class="meta" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Du: Jeg kan komme etter skolen på torsdag.</span>
+          </div>
+        </a>
+      </div>
+    </sc-if>
+
+    <!-- PROFIL -->
+    <sc-if value="{{vProfil}}" hint-placeholder-val="{{ false }}">
+      <div class="px stack" style="gap: 16px; padding-top: 10px">
+        <div class="stack au" style="align-items: center; gap: 8px; text-align: center">
+          <span class="av s88 av-b">EN</span>
+          <b class="h2">Emil Nygård</b>
+          <span class="meta">16 år · Søre Ål, Lillehammer</span>
+          <span class="ubadge"><i class="i i-shield s14"></i>Ungdomskonto</span>
+        </div>
+        <div class="rowf au d2" style="gap: 10px">
+          <div class="stat"><b>3</b><span>fullførte jobber</span></div>
+          <div class="stat"><b>5,0</b><span>★ fra 3 vurderinger</span></div>
+        </div>
+        <div class="au d3">
+          <div class="eyebrow" style="margin-bottom: 8px">Låst til du fyller 18</div>
+          <div class="list">
+            <sc-for list="{{locked}}" as="l" hint-placeholder-count="4">
+              <button class="lockrow" onClick="{{l.tap}}"><span class="icirc" style="width: 36px; height: 36px; background: #ECEFF3"><i class="{{l.icon}}"></i></span><span style="flex: 1">{{l.label}}</span><i class="i i-lock s16"></i></button>
+            </sc-for>
+          </div>
+        </div>
+        <div class="list au d4">
+          <a href="Sikkerhet.dc.html" class="lrow"><span class="ri"><i class="i i-shield s18"></i></span><span class="rt"><b>Sikkerhet og rapportering</b><small>Alltid tilgjengelig</small></span><i class="i i-right chev"></i></a>
+          <a href="Personvern.dc.html" class="lrow"><span class="ri"><i class="i i-lock s18"></i></span><span class="rt"><b>Personvern</b></span><i class="i i-right chev"></i></a>
+          <a href="Main.dc.html" class="lrow"><span class="ri"><i class="i i-logout s18"></i></span><span class="rt"><b>Logg ut</b></span><i class="i i-right chev"></i></a>
+        </div>
+      </div>
+    </sc-if>
+    <div class="spacer-nav"></div>
+  </div>
+
+  <nav class="nav nav4" aria-label="Hovedmeny">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+      <button class="{{t.cls}}" onClick="{{t.pick}}"><span class="ni"><i class="{{t.icon}}"></i><sc-if value="{{t.badge}}" hint-placeholder-val="{{ false }}"><b class="count" style="top: -3px; right: 2px">{{t.badge}}</b></sc-if></span>{{t.label}}</button>
+    </sc-for>
+  </nav>
+
+  <!-- task / offer sheet -->
+  <sc-if value="{{sheet}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{close}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="{{cur.title}}">
+      <div class="grab"></div>
+      <sc-if value="{{stDetail}}" hint-placeholder-val="{{ true }}">
+        <div class="stack" style="gap: 14px">
+          <div class="{{cur.art}}" style="height: 130px; border-radius: 22px"><i class="{{cur.icon}}" style="width: 44px; height: 44px"></i></div>
+          <div class="rowf" style="gap: 6px"><span class="pill pill-need"><span class="pd"></span>Åpent oppdrag</span></div>
+          <h2 class="h2">{{cur.title}}</h2>
+          <div class="card flat" style="padding: 4px 14px">
+            <div class="kv"><span>Sted</span><b>{{cur.place}}</b></div>
+            <div class="kv"><span>Når</span><b>{{cur.when}}</b></div>
+            <div class="kv"><span>{{cur.plabelOr}}</span><b>{{cur.price}}</b></div>
+            <div class="kv"><span>Oppdragsgiver</span><b>{{cur.who}} · ★ {{cur.rating}}</b></div>
+          </div>
+          <p class="body p" style="color: #34405F">{{cur.desc}}</p>
+          <div class="card flat" style="padding: 12px 14px; display: flex; gap: 10px; align-items: center; background: #F7F8FA">
+            <i class="i i-lock s16" style="color: #5F6983"></i><span class="meta" style="color: #34405F">Med ungdomskonto kan du sende melding etter at du har gitt et tilbud.</span>
+          </div>
+          <sc-if value="{{curSent}}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-ink btn-block btn-lg" onClick="{{goTilbud}}"><i class="i i-check s18"></i>Tilbud sendt – se Mine tilbud</button>
+          </sc-if>
+          <sc-if value="{{curOpen}}" hint-placeholder-val="{{ true }}">
+            <button class="btn btn-lime btn-block btn-lg" onClick="{{toForm}}">Gi tilbud</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{stForm}}" hint-placeholder-val="{{ false }}">
+        <div class="stack slideL" style="gap: 18px">
+          <div class="sheet-h" style="margin-bottom: 0"><button class="iconbtn" onClick="{{toDetail}}" aria-label="Tilbake"><i class="i i-back s18"></i></button><h2 class="h3" style="flex: 1">Gi tilbud</h2></div>
+          <div class="field">
+            <label class="label" for="u-belop">Pris <small>{{cur.plabelOr}}: {{cur.price}}</small></label>
+            <div class="inwrap"><input id="u-belop" class="{{amountCls}}" value="{{amount}}" onChange="{{onAmount}}" inputmode="numeric"><span class="suf">kr</span></div>
+            <sc-if value="{{amountErr}}" hint-placeholder-val="{{ false }}"><span class="errtxt"><i class="i i-alert s14"></i>Skriv inn en pris</span></sc-if>
+          </div>
+          <div class="field">
+            <span class="label">Når kan du?</span>
+            <div class="hscroll" style="padding: 0; gap: 8px">
+              <sc-for list="{{days}}" as="d" hint-placeholder-count="4"><button class="{{d.cls}}" onClick="{{d.pick}}">{{d.label}}</button></sc-for>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="u-msg">Melding <small>{{msgCount}}/300</small></label>
+            <textarea id="u-msg" class="{{msgCls}}" value="{{msg}}" onChange="{{onMsg}}" placeholder="Fortell kort hvorfor du passer til jobben"></textarea>
+            <sc-if value="{{msgErr}}" hint-placeholder-val="{{ false }}"><span class="errtxt"><i class="i i-alert s14"></i>Skriv minst 10 tegn</span></sc-if>
+          </div>
+          <div class="card flat" style="padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; background: #DFF2FB; border-color: #B6DFF2">
+            <i class="i i-eye s16" style="color: #065C8F; margin-top: 2px"></i><span style="font-size: 13.5px; line-height: 1.4; color: #065C8F">{{cur.first}} ser at tilbudet kommer fra en ungdomskonto (16 år).</span>
+          </div>
+          <div class="note"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+          <button class="btn btn-lime btn-block btn-lg" onClick="{{send}}">Send tilbud</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{stBusy}}" hint-placeholder-val="{{ false }}">
+        <div class="stack" style="align-items: center; gap: 14px; padding: 60px 0"><span class="spin" style="width: 36px; height: 36px; border-radius: 50%; border: 3.5px solid #E6E9EE; border-top-color: #0A1740"></span><b>Sender tilbudet …</b></div>
+      </sc-if>
+
+      <sc-if value="{{stDone}}" hint-placeholder-val="{{ false }}">
+        <div class="stack" style="align-items: center; gap: 14px; text-align: center; padding: 20px 0 6px">
+          <div class="as" style="width: 104px; height: 104px; border-radius: 50%; background: #B8EE3C; display: grid; place-items: center; box-shadow: 0 0 0 10px #EDF8D6">
+            <svg class="checkdraw" viewBox="0 0 24 24" fill="none" stroke="#0A1740" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="width: 48px; height: 48px"><path d="M5 12.5 10 17.5 19.5 7"></path></svg>
+          </div>
+          <b class="h2 au d3">Tilbudet er sendt til {{cur.first}}</b>
+          <p class="meta p au d4" style="font-size: 14.5px">Du får varsel når {{cur.first}} svarer. Samtalen finner du i Innboks.</p>
+          <button class="btn btn-ink btn-block au d5" onClick="{{goTilbud}}">Se Mine tilbud</button>
+          <button class="btn btn-text" onClick="{{close}}">Lukk</button>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- locked sheet -->
+  <sc-if value="{{lock}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeLock}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Ikke tilgjengelig">
+      <div class="grab"></div>
+      <div class="stack" style="align-items: center; text-align: center; gap: 12px; padding: 10px 0 4px">
+        <span class="icirc as" style="width: 72px; height: 72px; background: #ECEFF3; color: #0A1740"><i class="i i-lock s32"></i></span>
+        <b class="h3">{{lock}} er ikke tilgjengelig</b>
+        <p class="meta p" style="font-size: 14.5px; max-width: 290px">Med ungdomskonto kan du bare gi tilbud på oppdrag. Dette låses opp automatisk når du fyller 18.</p>
+        <button class="btn btn-ink btn-block" onClick="{{closeLock}}">Skjønner</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status"><span class="ti"><i class="i i-check s16"></i></span><span>{{toast}}</span></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      view: 'oppdrag', cat: null, sheet: false, step: 'detail', cur: 'n1', sent: {},
+      amount: '', day: 0, msg: '', tried: false, lock: null, toast: null,
+      offers: [
+        { id: 'x1', cat: 'hage', title: 'Rake løv i hagen', who: 'Kari Holm', price: '300 kr', status: 'godtatt' },
+        { id: 'x2', cat: 'flytting', title: 'Bære ved inn i boden', who: 'Nora Solberg', price: '250 kr', status: 'venter' }
+      ]
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.t); clearTimeout(this.b); }
+  flash(m) { clearTimeout(this.t); this.setState({ toast: m }); this.t = setTimeout(() => this.setState({ toast: null }), 2400); }
+  renderVals() {
+    const S = this.state;
+    const TASKS = [
+      { id: 'n1', cat: 'hage', title: 'Klippe plen og rake løv', who: 'Kari Holm', first: 'Kari', rating: '4,9', place: 'Nordre Ål · ca. 1,2 km', when: 'Lør 3. okt · ca. 2 t', plabel: 'Budsjett', price: '400 kr', desc: 'Plenen er ca. 300 m². Løvet rakes i sekker som står i garasjen. Gressklipper finnes.' },
+      { id: 'n7', cat: 'dyrepass', title: 'Passe katten i høstferien', who: 'Thea Lund', first: 'Thea', rating: '5,0', place: 'Fåberg · ca. 4,2 km', when: 'Man 5.–fre 9. okt', plabel: '', price: 'Ønsker tilbud', desc: 'Mate katten Pus morgen og kveld og skifte sand. Nøkkel avtales.' },
+      { id: 'n8', cat: 'data', title: 'Koble opp skriver og wifi', who: 'Magnus Aas', first: 'Magnus', rating: '4,7', place: 'Stampesletta · ca. 2,8 km', when: 'Fre 2. okt · kveld', plabel: 'Budsjett', price: '300 kr', desc: 'Ny ruter og skriver som skal kobles opp. Trenger litt hjelp med innstillingene.' },
+      { id: 'n9', cat: 'snomaking', title: 'Måke trappa ved snøfall', who: 'Nora Solberg', first: 'Nora', rating: '4,8', place: 'Vingrom · ca. 6 km', when: 'Ved snøfall · gjentakende', plabel: 'Budsjett', price: '150 kr / gang', desc: 'Trapp og gangvei, ca. 20 minutter hver gang.' }
+    ];
+    const CATS = [[null, 'Alle'], ['hage', 'Hage'], ['dyrepass', 'Dyrepass'], ['data', 'Datahjelp'], ['snomaking', 'Snømåking']];
+    const cur = TASKS.find((t) => t.id === S.cur);
+    const digits = S.amount.replace(/\D/g, '');
+    const amountOk = digits.length > 0 && parseInt(digits, 10) > 0;
+    const msgOk = S.msg.trim().length >= 10;
+    const ST = { godtatt: ['pill pill-ok', 'Godtatt'], venter: ['pill pill-warn', 'Venter på svar'], sendt: ['pill pill-dark', 'Sendt nå'], trukket: ['pill pill-neutral', 'Trukket'] };
+    const pendingCount = S.offers.filter((o) => o.status === 'venter' || o.status === 'sendt').length;
+    const TABS = [['oppdrag', 'Oppdrag', 'i i-clip', 0], ['tilbud', 'Mine tilbud', 'i i-tag', pendingCount], ['innboks', 'Innboks', 'i i-msg', 1], ['profil', 'Profil', 'i i-user', 0]];
+    const DAYS = ['Fre 2. okt', 'Lør 3. okt', 'Søn 4. okt', 'Etter skolen'];
+    const go = (v) => this.setState({ view: v, sheet: false });
+    return {
+      vOppdrag: S.view === 'oppdrag', vTilbud: S.view === 'tilbud', vInnboks: S.view === 'innboks', vProfil: S.view === 'profil',
+      goProfil: () => go('profil'), goOppdrag: () => go('oppdrag'), goTilbud: () => go('tilbud'),
+      tabs: TABS.map(([id, label, icon, badge]) => ({ label, icon, badge: badge || '', cls: S.view === id ? 'on' : '', pick: () => go(id) })),
+      cats: CATS.map(([id, label]) => ({ label, cls: 'chip' + (S.cat === id ? ' on' : ''), ciCls: id ? 'ci art art-' + id : 'ci', icon: id ? 'i i-' + id : 'i i-annet', pick: () => this.setState({ cat: id }) })),
+      tasks: TASKS.filter((t) => !S.cat || t.cat === S.cat).map((t) => Object.assign({}, t, {
+        art: 'lthumb art art-' + t.cat, icon: 'i i-' + t.cat, sent: !!S.sent[t.id], aria: 'Åpne oppdraget ' + t.title,
+        open: () => this.setState({ sheet: true, step: 'detail', cur: t.id })
+      })),
+      offers: S.offers.map((o) => ({
+        title: o.title, who: o.who, price: o.price, art: 'art art-' + o.cat, icon: 'i i-' + o.cat,
+        pill: ST[o.status][0], status: ST[o.status][1],
+        canChat: o.status !== 'trukket', canWithdraw: o.status === 'venter' || o.status === 'sendt',
+        withdraw: () => { this.setState({ offers: S.offers.map((x) => (x.id === o.id ? Object.assign({}, x, { status: 'trukket' }) : x)) }); this.flash('Tilbudet er trukket'); }
+      })),
+      locked: [['i i-plus s16', 'Legg ut oppdrag'], ['i i-users s16', 'Fellesskap og nabolag'], ['i i-gift s16', 'Oppslagstavle'], ['i i-star s16', 'Vurdere andre'], ['i i-bookmark s16', 'Lagrede søk'], ['i i-building s16', 'Bedriftskonto']].map(([icon, label]) => ({ icon, label, tap: () => this.setState({ lock: label }) })),
+      lock: S.lock, closeLock: () => this.setState({ lock: null }),
+      sheet: S.sheet, close: () => this.setState({ sheet: false }),
+      cur: Object.assign({}, cur, { art: 'art art-' + cur.cat, icon: 'i i-' + cur.cat, plabelOr: cur.plabel || 'Pris' }),
+      curSent: !!S.sent[cur.id], curOpen: !S.sent[cur.id],
+      stDetail: S.step === 'detail', stForm: S.step === 'form', stBusy: S.step === 'busy', stDone: S.step === 'done',
+      toDetail: () => this.setState({ step: 'detail' }),
+      toForm: () => this.setState({ step: 'form', amount: cur.price.indexOf('kr') > 0 ? cur.price.replace(/\D/g, '').slice(0, 4) : '', msg: '', tried: false, day: 0 }),
+      amount: S.amount, onAmount: (e) => this.setState({ amount: e.target.value.replace(/\D/g, '').slice(0, 5) }),
+      amountCls: 'input amount' + (S.tried && !amountOk ? ' err' : ''), amountErr: S.tried && !amountOk,
+      msg: S.msg, onMsg: (e) => this.setState({ msg: e.target.value.slice(0, 300) }), msgCount: S.msg.length,
+      msgCls: 'input' + (S.tried && !msgOk ? ' err' : ''), msgErr: S.tried && !msgOk,
+      days: DAYS.map((label, i) => ({ label, cls: 'dchip' + (S.day === i ? ' on' : ''), pick: () => this.setState({ day: i }) })),
+      send: () => {
+        if (!amountOk || !msgOk) { this.setState({ tried: true }); return; }
+        this.setState({ step: 'busy' });
+        this.b = setTimeout(() => {
+          const sent = Object.assign({}, this.state.sent); sent[cur.id] = true;
+          const offers = [{ id: 'y' + Date.now(), cat: cur.cat, title: cur.title, who: cur.who, price: digits + ' kr', status: 'sendt' }].concat(this.state.offers);
+          this.setState({ step: 'done', sent, offers });
+        }, 1300);
+      },
+      toast: S.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

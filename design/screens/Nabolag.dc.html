@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Nabolag</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.cover{position:relative;height:176px;border-radius:30px;overflow:hidden;background:#E3F2D0}
+.hill{position:absolute;border-radius:50%}
+.house{position:absolute;display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:#fff;box-shadow:0 12px 24px -12px rgba(10,23,64,.45);color:var(--ink)}
+.avstack{display:flex}
+.avstack .av{margin-left:-10px}
+.avstack .av:first-child{margin-left:0}
+.avstack .more{height:32px;padding:0 10px;border-radius:16px;background:#fff;color:var(--ink2);font:800 12px/32px var(--fb);margin-left:-10px;box-shadow:0 0 0 2px #F3F5F1;border:1px solid var(--line)}
+.cnt{display:inline-block;overflow:hidden;height:30px;vertical-align:bottom}
+.rollUp{display:inline-block;animation:rollUp .5s var(--spring) both}
+.rollDown{display:inline-block;animation:rollDown .5s var(--spring) both}
+@keyframes rollUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:none}}
+@keyframes rollDown{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:none}}
+.post{display:flex;gap:12px;padding:14px;border-radius:22px;background:#fff;box-shadow:var(--sh);text-decoration:none;color:inherit}
+.rule{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;line-height:1.45;color:var(--ink2)}
+.rule .icirc{width:26px;height:26px;background:#EDF8D6;color:#3B7300;margin-top:-1px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+
+    <div class="subbar">
+      <a href="Fellesskap.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Nabolag</div>
+      <button class="iconbtn" onClick="{{share}}" aria-label="Del gruppen"><i class="i i-share s18"></i></button>
+    </div>
+
+    <!-- cover art -->
+    <div class="px au" style="position: relative; margin-top: 6px">
+      <div class="cover" aria-hidden="true">
+        <div class="hill" style="left: -60px; bottom: -120px; width: 300px; height: 200px; background: rgba(155,221,44,.35)"></div>
+        <div class="hill" style="right: -80px; bottom: -130px; width: 320px; height: 210px; background: rgba(25,184,238,.22)"></div>
+        <div class="hill" style="left: 110px; top: 20px; width: 130px; height: 130px; border: 1.5px dashed rgba(10,23,64,.18)"></div>
+        <div class="as d2" style="position: absolute; left: 50px; top: 70px"><div class="house float2"><i class="i i-home s22"></i></div></div>
+        <div class="as d3" style="position: absolute; left: 150px; top: 42px"><div class="house float" style="width: 58px; height: 58px; border-radius: 18px; background: #0A1740; color: #B8EE3C"><i class="i i-users s24"></i></div></div>
+        <div class="as d4" style="position: absolute; right: 60px; top: 82px"><div class="house float2"><i class="i i-hage s22"></i></div></div>
+        <div class="as d5" style="position: absolute; left: 116px; top: 118px"><span class="av av-b s32">JL</span></div>
+        <div class="as d6" style="position: absolute; right: 118px; top: 124px"><span class="av av-f s32">NS</span></div>
+        <div class="ai d7" style="position: absolute; right: 36px; top: 30px; width: 12px; height: 12px; border-radius: 50%; background: #B8EE3C"></div>
+        <div class="ai d8" style="position: absolute; left: 30px; top: 28px; width: 8px; height: 8px; border-radius: 50%; background: #1E86F4; opacity: .6"></div>
+      </div>
+    </div>
+
+    <!-- head -->
+    <div class="px au d2" style="position: relative; margin-top: 18px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; gap: 6px">
+        <span class="pill pill-line"><i class="i i-globe s14"></i>Åpen gruppe</span>
+        <span class="pill pill-line"><i class="i i-shield s14"></i>Moderert</span>
+      </div>
+      <h1 class="h1">Nordre Ål nabolag</h1>
+      <span class="meta" style="display: flex; align-items: center; gap: 6px"><i class="i i-pin s14"></i>Nordre Ål, Lillehammer kommune</span>
+    </div>
+
+    <div class="px au d3" style="margin-top: 16px">
+      <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 14px">
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+          <div class="avstack">
+            <sc-if value="{{joined}}" hint-placeholder-val="{{ false }}"><span class="av av-me s32 as">MH</span></sc-if>
+            <span class="av av-b s32">JL</span><span class="av av-c s32">KH</span><span class="av av-f s32">NS</span><span class="av av-d s32">MA</span><span class="more">+{{rest}}</span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 6px">
+            <span class="cnt">
+              <sc-if value="{{joined}}" hint-placeholder-val="{{ false }}"><span class="num rollUp" style="font-size: 26px; line-height: 30px">{{count}}</span></sc-if>
+              <sc-if value="{{notJoined}}" hint-placeholder-val="{{ true }}"><span class="num rollDown" style="font-size: 26px; line-height: 30px">{{count}}</span></sc-if>
+            </span>
+            <span class="meta">medlemmer</span>
+          </div>
+        </div>
+        <sc-if value="{{notJoined}}" hint-placeholder-val="{{ true }}">
+          <button class="btn btn-lime as" onClick="{{toggle}}"><i class="i i-plus s18"></i>Bli med</button>
+        </sc-if>
+        <sc-if value="{{joined}}" hint-placeholder-val="{{ false }}">
+          <div class="stack as" style="gap: 6px; align-items: flex-end">
+            <span class="pill pill-ok"><i class="i i-check s14"></i>Medlem</span>
+            <button class="btn btn-ghost btn-sm" onClick="{{toggle}}">Forlat</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="au d4" style="margin-top: 22px">
+      <div class="tabs" role="tablist">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+          <button class="{{t.cls}}" onClick="{{t.pick}}" role="tab" aria-selected="{{t.sel}}">{{t.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div class="px" style="display: flex; align-items: center; justify-content: space-between; margin: 14px 0 12px">
+      <span class="pill pill-neutral"><i class="i i-pin s14"></i>I Lillehammer kommune</span>
+      <span class="meta">{{listCount}}</span>
+    </div>
+
+    <sc-if value="{{tabOppdrag}}" hint-placeholder-val="{{ true }}">
+      <div class="px stack" style="gap: 12px">
+        <sc-for list="{{tasks}}" as="it" hint-placeholder-count="4">
+          <div class="lcard au">
+            <a href="Oppdragsdetaljer.dc.html">
+              <div class="{{it.artCls}}"><i class="{{it.icon}}"></i></div>
+              <div class="lbody">
+                <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div>
+                <p class="ltitle">{{it.title}}</p>
+                <div class="lmeta"><b>{{it.who}}</b><span class="stars"><i class="i i-star"></i>{{it.rating}}</span></div>
+                <div class="lmeta"><i class="i i-pin"></i>{{it.place}}</div>
+                <div class="lmeta"><i class="i i-clock"></i>{{it.when}}</div>
+                <div class="lprice"><span class="l">{{it.plabel}}</span><span class="v">{{it.price}}</span></div>
+              </div>
+            </a>
+            <button class="{{it.saveCls}}" onClick="{{it.save}}" aria-label="{{it.saveLabel}}"><i class="{{it.heartIcon}}"></i></button>
+          </div>
+        </sc-for>
+        <a href="SeAlle.dc.html" class="btn btn-ghost btn-block">Se alle oppdrag i Lillehammer<i class="i i-arrow s18"></i></a>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{tabOppslag}}" hint-placeholder-val="{{ false }}">
+      <div class="px stack" style="gap: 10px">
+        <sc-for list="{{posts}}" as="p" hint-placeholder-count="4">
+          <a href="Oppslagstavle.dc.html" class="post au">
+            <span class="{{p.avCls}}">{{p.ini}}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+              <span style="display: flex; align-items: center; gap: 8px">
+                <span class="{{p.pillCls}}" style="height: 22px; font-size: 11px">{{p.kind}}</span>
+                <span class="meta" style="font-size: 12px">{{p.time}}</span>
+              </span>
+              <b style="font: 700 15.5px/1.3 var(--fb)">{{p.title}}</b>
+              <span class="meta">{{p.who}} · {{p.area}}</span>
+            </span>
+            <i class="i i-right" style="color: #8A93A8; align-self: center"></i>
+          </a>
+        </sc-for>
+        <a href="Oppslagstavle.dc.html" class="btn btn-ghost btn-block">Åpne oppslagstavla<i class="i i-arrow s18"></i></a>
+      </div>
+    </sc-if>
+
+    <!-- about -->
+    <div class="sh" style="margin-top: 34px">
+      <div class="t">
+        <span class="ti" style="background: #DFF2FB; color: #065C8F"><i class="i i-info s18"></i></span>
+        <div><h2>Om gruppen</h2><div class="sub">Opprettet mars 2023</div></div>
+      </div>
+    </div>
+    <div class="px">
+      <div class="card pad stack" style="gap: 14px">
+        <p class="body p" style="color: #34405F">For alle som bor i og rundt Nordre Ål. Her hjelper vi hverandre med småjobber, låner bort ting og holder hverandre oppdatert.</p>
+        <div class="divider"></div>
+        <span class="eyebrow">Enkle regler</span>
+        <div class="rule"><span class="icirc"><i class="i i-check s14"></i></span><span>Vær vennlig og hjelpsom – vi er naboer.</span></div>
+        <div class="rule"><span class="icirc"><i class="i i-check s14"></i></span><span>Oppgi bare omtrentlig sted, aldri full adresse.</span></div>
+        <div class="rule"><span class="icirc"><i class="i i-check s14"></i></span><span>Ingen reklame. Bedrifter bruker egne bedriftsprofiler.</span></div>
+        <div class="rule"><span class="icirc"><i class="i i-check s14"></i></span><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+        <div class="rule"><span class="icirc"><i class="i i-check s14"></i></span><span>Si fra om innhold som bryter reglene.</span></div>
+        <a href="Rapporter.dc.html" class="btn btn-ghost btn-sm" style="align-self: flex-start"><i class="i i-flag s16"></i>Rapporter innhold</a>
+      </div>
+    </div>
+    <div class="spacer-foot" style="height: 60px"></div>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{toggle}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { joined: false, count: 247, tab: 'oppdrag', saved: {}, toast: null, toastIcon: 'i i-check s16', toastUndo: false };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  toggleJoin() {
+    const on = !this.state.joined;
+    this.setState({ joined: on, count: this.state.count + (on ? 1 : -1) });
+    this.flash(on ? 'Du er nå medlem av Nordre Ål nabolag' : 'Du har forlatt Nordre Ål nabolag', on ? 'i i-users s14' : 'i i-logout s14', !on);
+  }
+  renderVals() {
+    const S = this.state;
+    const TASKS = [
+      { id: 't1', cat: 'hage', title: 'Klippe plen og rake løv', who: 'Kari Holm', rating: '4,9', place: 'Nordre Ål · ca. 1,2 km', when: 'Lør 3. okt · ca. 2 t', plabel: 'Budsjett', price: '400 kr' },
+      { id: 't2', cat: 'maling', title: 'Male gjerdet i hagen', who: 'Mari Haugen', rating: '4,9', place: 'Nordre Ål · din oppføring', when: 'Uke 41 · fleksibel', plabel: '', price: 'Ønsker tilbud' },
+      { id: 't3', cat: 'flytting', title: 'Bære sofa til 3. etasje', who: 'Magnus Aas', rating: '4,7', place: 'Stampesletta · ca. 2,8 km', when: 'Tor 1. okt · ettermiddag', plabel: 'Budsjett', price: '350 kr' },
+      { id: 't4', cat: 'snomaking', title: 'Måke oppkjørselen i vinter', who: 'Nora Solberg', rating: '4,8', place: 'Vingrom · ca. 6,0 km', when: 'Ved snøfall', plabel: 'Budsjett', price: '250 kr / gang' }
+    ];
+    const POSTS = [
+      { ini: 'TL', av: 'g', kind: 'Gis bort', pill: 'pill pill-ok', time: 'for 2 t siden', title: 'Barnesykkel 16 tommer', who: 'Thea Lund', area: 'Søre Ål' },
+      { ini: 'MA', av: 'd', kind: 'Mistet og funnet', pill: 'pill pill-warn', time: 'i dag', title: 'Funnet: nøkkelknippe ved Stampesletta', who: 'Magnus Aas', area: 'Stampesletta' },
+      { ini: 'KH', av: 'c', kind: 'Generelt', pill: 'pill pill-offer', time: 'i går', title: 'Dugnad på lekeplassen lørdag', who: 'Kari Holm', area: 'Nordre Ål' },
+      { ini: 'OD', av: 'f', kind: 'Utlån av verktøy', pill: 'pill pill-neutral', time: 'i går', title: 'Låner ut tilhenger og løvblåser', who: 'Ola Dahl', area: 'Vingrom' }
+    ];
+    const tasks = TASKS.map((x) => Object.assign({}, x, {
+      artCls: 'lthumb art art-' + x.cat, icon: 'i i-' + x.cat,
+      saveCls: 'save' + (S.saved[x.id] ? ' on' : ''),
+      heartIcon: S.saved[x.id] ? 'i i-heartf s18' : 'i i-heart s18',
+      saveLabel: S.saved[x.id] ? 'Fjern fra lagrede' : 'Lagre',
+      save: () => { const saved = Object.assign({}, S.saved); saved[x.id] = !saved[x.id]; this.setState({ saved }); this.flash(saved[x.id] ? 'Lagret i Lagrede' : 'Fjernet fra Lagrede', saved[x.id] ? 'i i-heartf s14' : 'i i-x s14'); }
+    }));
+    const posts = POSTS.map((p) => Object.assign({}, p, { avCls: 'av s48 plain av-' + p.av, pillCls: p.pill }));
+    const TABS = [['oppdrag', 'Oppdrag'], ['oppslag', 'Oppslag']];
+    return {
+      joined: S.joined, notJoined: !S.joined, count: S.count,
+      rest: S.count - (S.joined ? 5 : 4),
+      toggle: () => this.toggleJoin(),
+      share: () => this.flash('Lenke til gruppen er kopiert', 'i i-copy s14'),
+      tabs: TABS.map(([id, label]) => ({ label, cls: S.tab === id ? 'on' : '', sel: S.tab === id ? 'true' : 'false', pick: () => this.setState({ tab: id }) })),
+      tabOppdrag: S.tab === 'oppdrag', tabOppslag: S.tab === 'oppslag',
+      listCount: S.tab === 'oppdrag' ? '4 åpne oppdrag' : '4 nye oppslag',
+      tasks, posts,
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo
+    };
+  }
+}
+</script>
+</body>
+</html>

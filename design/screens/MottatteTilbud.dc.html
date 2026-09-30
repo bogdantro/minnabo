@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Mottatte tilbud</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.gcard{background:#fff;border-radius:26px;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035);overflow:hidden}
+.ghead{display:flex;gap:14px;align-items:center;padding:14px 14px 12px}
+.gthumb{width:58px;height:58px;border-radius:17px;flex:none}
+.gthumb .i{width:26px;height:26px}
+.orow{display:flex;align-items:center;gap:12px;padding:13px 14px;text-decoration:none;color:inherit;position:relative;min-height:72px;transition:background .2s}
+.orow:active{background:#F7F8FA}
+.orow::before{content:"";position:absolute;top:0;left:74px;right:14px;height:1px;background:var(--line2)}
+.orow .newdot{position:absolute;left:6px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:#F2542D}
+.ogrow{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.oname{display:flex;align-items:center;gap:8px;font:700 15.5px/1.2 var(--fb);white-space:nowrap;overflow:hidden}
+.oright{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.gfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 14px 4px;border-top:1px solid var(--line2);background:#FBFCFA}
+.sumcard{position:relative;overflow:hidden;border-radius:28px;background:#0A1740;color:#fff;padding:20px 20px 18px}
+.avstack{display:flex}
+.avstack .av{box-shadow:0 0 0 2.5px #0A1740}
+.avstack .av + .av{margin-left:-10px}
+.minis{display:flex;gap:8px;margin-top:16px}
+.mini{flex:1;border-radius:16px;background:rgba(255,255,255,.08);padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.mini b{font:700 20px/1 var(--fd);letter-spacing:-.02em}
+.mini span{font-size:12px;color:rgba(255,255,255,.72)}
+.stepn{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 13px var(--fb);flex:none}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+
+    <div class="subbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Mottatte tilbud</div>
+      <button class="iconbtn" onClick="{{openInfo}}" aria-label="Slik fungerer tilbud"><i class="i i-info s18"></i></button>
+    </div>
+
+    <!-- summary -->
+    <div class="px au d1" style="position: relative; margin-top: 8px">
+      <div class="sumcard">
+        <div style="position: absolute; right: -50px; top: -70px; width: 200px; height: 200px; border-radius: 50%; background: var(--grad); opacity: .32"></div>
+        <div style="position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+          <div class="stack" style="gap: 8px">
+            <span class="pill pill-grad" style="align-self: flex-start; height: 24px"><i class="i i-sparkle s14"></i>Nytt siden i går</span>
+            <h1 class="h2" style="color: #ffffff; font-size: 26px">3 nye tilbud på 2 oppføringer</h1>
+          </div>
+          <div class="avstack as d3" style="margin-top: 4px">
+            <span class="av s32 av-b">JL</span>
+            <span class="av s32 av-c">EM</span>
+            <span class="av s32 av-f">GN</span>
+          </div>
+        </div>
+        <div class="minis" style="position: relative">
+          <div class="mini"><b>6</b><span>totalt</span></div>
+          <div class="mini"><b>1</b><span>venter på endring</span></div>
+          <div class="mini"><b>1</b><span>avtale inngått</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- segment -->
+    <div class="px au d2" style="position: relative; margin-top: 18px">
+      <div class="seg" role="tablist" aria-label="Filtrer tilbud">
+        <sc-for list="{{segs}}" as="s" hint-placeholder-count="3">
+          <button class="{{s.cls}}" onClick="{{s.pick}}" role="tab" aria-selected="{{s.sel}}">{{s.label}} <span style="opacity: .6">{{s.n}}</span></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- groups -->
+    <div class="px stack" style="gap: 16px; margin-top: 18px; position: relative">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <section class="{{g.cls}}" aria-label="{{g.title}}">
+          <div class="ghead">
+            <div class="{{g.artCls}}"><i class="{{g.icon}}"></i></div>
+            <div class="stack" style="gap: 6px; flex: 1; min-width: 0">
+              <div class="rowf" style="gap: 6px">
+                <span class="{{g.pillCls}}"><span class="pd"></span>{{g.pillLabel}}</span>
+                <sc-if value="{{g.archived}}" hint-placeholder-val="{{ false }}"><span class="pill pill-neutral"><i class="i i-archive s14"></i>Fullført</span></sc-if>
+              </div>
+              <h2 class="h4" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{g.title}}</h2>
+              <span class="meta">{{g.meta}}</span>
+            </div>
+          </div>
+          <sc-for list="{{g.rows}}" as="o" hint-placeholder-count="3">
+            <a href="{{o.href}}" class="orow">
+              <sc-if value="{{o.isNew}}" hint-placeholder-val="{{ true }}"><span class="newdot" aria-hidden="true"></span></sc-if>
+              <span class="{{o.avCls}}">{{o.ini}}<sc-if value="{{o.online}}" hint-placeholder-val="{{ false }}"><span class="on-dot"></span></sc-if></span>
+              <span class="ogrow">
+                <span class="oname"><span style="overflow: hidden; text-overflow: ellipsis">{{o.name}}</span><sc-if value="{{o.rating}}" hint-placeholder-val="{{ true }}"><span class="stars"><i class="i i-star"></i>{{o.rating}}</span></sc-if></span>
+                <span class="meta" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.line}}</span>
+                <span class="meta" style="font-size: 12px; color: #8A93A8">{{o.date}}</span>
+              </span>
+              <span class="oright">
+                <span class="num" style="font-size: 18px">{{o.price}}</span>
+                <span class="{{o.stCls}}">{{o.stLabel}}</span>
+              </span>
+            </a>
+          </sc-for>
+          <sc-if value="{{g.canCompare}}" hint-placeholder-val="{{ true }}">
+            <div class="gfoot">
+              <a href="Sammenlign.dc.html" class="link"><i class="i i-chart"></i>Sammenlign</a>
+              <span class="meta">Ditt budsjett ca. <b class="num" style="color: #0A1740">1 500 kr</b></span>
+            </div>
+          </sc-if>
+          <sc-if value="{{g.isRequest}}" hint-placeholder-val="{{ false }}">
+            <div class="gfoot">
+              <a href="Chat.dc.html" class="link"><i class="i i-reply"></i>Svar Grete</a>
+              <span class="meta">Lillehammer + 10 km</span>
+            </div>
+          </sc-if>
+        </section>
+      </sc-for>
+
+      <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+        <div class="dash-card as" style="padding: 26px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+          <span class="icirc" style="width: 56px; height: 56px; background: #EDF8D6; color: #3B7300"><i class="i i-checks s24"></i></span>
+          <b style="font-size: 15.5px">{{emptyTitle}}</b>
+          <span class="meta">{{emptySub}}</span>
+          <button class="btn btn-sm btn-ghost" onClick="{{showAll}}">Vis alle tilbud</button>
+        </div>
+      </sc-if>
+
+      <div class="note au d6" style="padding: 4px 4px 0"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    </div>
+    <div style="height: 48px"></div>
+  </div>
+
+  <!-- info sheet -->
+  <sc-if value="{{infoOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeInfo}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Slik fungerer tilbud">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Slik fungerer tilbud</h2>
+        <button class="iconbtn" onClick="{{closeInfo}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <div class="stack" style="gap: 14px">
+        <div class="rowf au d1" style="gap: 14px; align-items: flex-start">
+          <span class="stepn" style="background: #EDF8D6; color: #3B7300">1</span>
+          <div class="stack" style="gap: 3px"><b>Sammenlign i ro og mak</b><span class="meta">Se pris, tidspunkt, vurderinger og forbehold side om side.</span></div>
+        </div>
+        <div class="rowf au d2" style="gap: 14px; align-items: flex-start">
+          <span class="stepn" style="background: #DFF2FB; color: #065C8F">2</span>
+          <div class="stack" style="gap: 3px"><b>Godta, avslå eller be om endring</b><span class="meta">Når du godtar ett tilbud, får de andre beskjed automatisk.</span></div>
+        </div>
+        <div class="rowf au d3" style="gap: 14px; align-items: flex-start">
+          <span class="stepn" style="background: #0A1740; color: #B8EE3C">3</span>
+          <div class="stack" style="gap: 3px"><b>Avtal detaljene i chatten</b><span class="meta">Adressen deler du først når dere har en avtale.</span></div>
+        </div>
+      </div>
+      <div class="card flat" style="padding: 14px; margin-top: 18px; background: #F7F8FA">
+        <div class="note"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+      </div>
+      <button class="btn btn-ink btn-block" style="margin-top: 18px" onClick="{{closeInfo}}">Skjønner</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { seg: 'alle', infoOpen: false };
+  }
+  renderVals() {
+    const S = this.state;
+    const ST = {
+      ny: ['pill pill-dark', 'Ny'],
+      endring: ['pill pill-warn', 'Endring forespurt'],
+      godtatt: ['pill pill-ok', 'Godtatt'],
+      avslatt: ['pill pill-danger', 'Avslått'],
+      trukket: ['pill pill-neutral', 'Trukket']
+    };
+    const GROUPS = [
+      {
+        id: 'g1', cat: 'maling', type: 'need', title: 'Male gjerdet i hagen', meta: '3 tilbud · Uke 41 · Nordre Ål', canCompare: true,
+        rows: [
+          { ini: 'JL', c: 'b', name: 'Jonas Lie', rating: '4,9', online: true, line: 'Lør 10. okt kl. 10:00 · ca. 5 t', date: 'Sendt 30. sep kl. 18:05', price: '1 400 kr', st: 'ny', href: 'TilbudDetaljer.dc.html' },
+          { ini: 'EM', c: 'c', name: 'Erik Moen', rating: '4,8', online: false, line: 'Søn 11. okt kl. 09:00 · ca. 4 t', date: 'Sendt 30. sep kl. 16:40', price: '1 800 kr', st: 'ny', href: 'TilbudDetaljer.dc.html' },
+          { ini: 'LB', c: 'e', name: 'Lise Brekke', rating: '4,6', online: false, line: 'Fre 9. okt kl. 15:00 · ca. 6 t', date: 'Sendt 29. sep kl. 21:12', price: '1 250 kr', st: 'endring', href: 'TilbudDetaljer.dc.html' }
+        ]
+      },
+      {
+        id: 'g2', cat: 'data', type: 'need', title: 'Koble opp ny ruter og skriver', meta: '1 tilbud · Fre 2. okt · Nordre Ål',
+        rows: [
+          { ini: 'HB', c: 'd', name: 'Henrik Berg', rating: '5,0', online: true, line: 'Fre 2. okt kl. 18:00 · ca. 1 t', date: 'Sendt 30. sep kl. 12:30', price: '300 kr', st: 'ny', href: 'TilbudDetaljer.dc.html' }
+        ]
+      },
+      {
+        id: 'g3', cat: 'flytting', type: 'need', title: 'Bære kjøleskap', meta: '2 tilbud · Lør 19. sep · Nordre Ål', archived: true,
+        rows: [
+          { ini: 'EM', c: 'c', name: 'Erik Moen', rating: '4,8', online: false, line: 'Lør 19. sep kl. 12:00 · ca. 1 t', date: 'Godtatt 15. sep', price: '600 kr', st: 'godtatt', href: 'TilbudDetaljer.dc.html' },
+          { ini: 'MA', c: 'd', name: 'Magnus Aas', rating: '4,7', online: false, line: 'Lør 19. sep kl. 16:00 · ca. 1 t', date: 'Avslått 15. sep', price: '750 kr', st: 'avslatt', href: 'TilbudDetaljer.dc.html' }
+        ]
+      }
+    ];
+    const match = (r) => S.seg === 'alle' || (S.seg === 'nye' ? r.st === 'ny' : r.st !== 'ny');
+    const all = GROUPS.reduce((a, g) => a.concat(g.rows), []);
+    const nNew = all.filter((r) => r.st === 'ny').length;
+    let idx = 0;
+    const groups = GROUPS.map((g) => {
+      const rows = g.rows.filter(match).map((r) => Object.assign({}, r, {
+        avCls: 'av s48 av-' + r.c,
+        isNew: r.st === 'ny',
+        stCls: ST[r.st][0],
+        stLabel: ST[r.st][1],
+        price: r.price
+      }));
+      return Object.assign({}, g, { rows });
+    }).filter((g) => g.rows.length > 0).map((g) => {
+      idx += 1;
+      return Object.assign({}, g, {
+        cls: 'gcard au d' + Math.min(idx + 2, 10),
+        artCls: 'gthumb art art-' + g.cat,
+        icon: 'i i-' + g.cat,
+        pillCls: g.type === 'need' ? 'pill pill-need' : 'pill pill-offer',
+        pillLabel: g.type === 'need' ? 'Trenger hjelp' : 'Tilbyr hjelp',
+        archived: !!g.archived,
+        canCompare: !!g.canCompare && S.seg !== 'besvart',
+        isRequest: !!g.isRequest
+      });
+    });
+    const SEGS = [['alle', 'Alle', all.length], ['nye', 'Nye', nNew], ['besvart', 'Besvart', all.length - nNew]];
+    return {
+      segs: SEGS.map(([id, label, n]) => ({
+        label, n: String(n),
+        cls: S.seg === id ? 'on' : '',
+        sel: S.seg === id ? 'true' : 'false',
+        pick: () => this.setState({ seg: id })
+      })),
+      groups,
+      empty: groups.length === 0,
+      emptyTitle: S.seg === 'nye' ? 'Ingen nye tilbud' : 'Ingen besvarte tilbud ennå',
+      emptySub: 'Vi sier fra med en gang noen sender deg et tilbud.',
+      showAll: () => this.setState({ seg: 'alle' }),
+      infoOpen: S.infoOpen,
+      openInfo: () => this.setState({ infoOpen: true }),
+      closeInfo: () => this.setState({ infoOpen: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

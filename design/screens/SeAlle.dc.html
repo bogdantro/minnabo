@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Se alle</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.bigseg{position:relative;display:flex;background:#fff;border:1px solid var(--line);border-radius:24px;padding:5px;box-shadow:var(--sh)}
+.bigseg .ind{position:absolute;top:5px;bottom:5px;width:calc(50% - 5px);border-radius:19px;transition:left .45s var(--spring),background .35s,box-shadow .35s}
+.bigseg button{position:relative;z-index:1;flex:1;height:64px;border:0;background:none;border-radius:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font:700 15.5px var(--fb);color:var(--mute);transition:color .3s}
+.bigseg button .bi{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:#EEF1F4;color:var(--mute);transition:background .3s,color .3s}
+.bigseg button .bt{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.bigseg button .bt small{font:600 12px var(--fb);opacity:.8}
+.bigseg button.need.on{color:#2C5A00}
+.bigseg button.need.on .bi{background:#fff;color:#3B7300}
+.bigseg button.offer.on{color:#fff}
+.bigseg button.offer.on .bi{background:rgba(255,255,255,.2);color:#fff}
+.sortbtn{height:40px;padding:0 12px 0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:6px;font:700 13.5px var(--fb);color:var(--ink);cursor:pointer}
+.sortbtn .i{color:var(--mute)}
+.menu{position:absolute;right:20px;top:46px;width:228px;background:#fff;border-radius:20px;box-shadow:var(--sh-l);border:1px solid var(--line2);padding:6px;z-index:21;animation:menuIn .28s var(--spring) both;transform-origin:top right}
+.menu button{width:100%;min-height:46px;border:0;background:none;border-radius:14px;display:flex;align-items:center;gap:10px;padding:0 12px;font:600 14.5px var(--fb);color:var(--ink);cursor:pointer;text-align:left}
+.menu button.on{background:#F3F5F1}
+.menu button .i{color:var(--faint)}
+.menu button.on .ck{color:var(--ink)}
+.menu .ck{margin-left:auto}
+.menu .hid{visibility:hidden}
+.mscrim{position:absolute;inset:0;background:transparent;border:0;padding:0;z-index:20;cursor:default}
+@keyframes menuIn{from{opacity:0;transform:scale(.85) translateY(-6px)}to{opacity:1;transform:none}}
+.skcard{display:flex;gap:14px;padding:12px;background:#fff;border-radius:24px;box-shadow:var(--sh)}
+.locline{display:flex;align-items:center;gap:8px;font:600 13.5px var(--fb);color:var(--ink2)}
+.locline .i{color:var(--faint)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="{{meshCls}}"></div>
+
+    <div class="subbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">{{title}}</div>
+      <a href="Sok.dc.html" class="iconbtn" aria-label="Søk"><i class="i i-search s18"></i></a>
+    </div>
+
+    <!-- location line -->
+    <div class="px" style="position: relative; margin-top: 14px; display: flex; align-items: center; justify-content: space-between">
+      <span class="locline"><i class="i i-pin s16"></i>Lillehammer kommune · Bare min kommune</span>
+      <a href="Oppdrag.dc.html" class="link" style="font-size: 13px">Endre</a>
+    </div>
+
+    <!-- categories -->
+    <div style="position: relative; margin-top: 6px">
+      <div class="chips" role="tablist" aria-label="Kategorier">
+        <sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+          <button class="{{c.cls}}" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}">
+            <span class="{{c.ciCls}}"><i class="{{c.icon}}"></i></span>{{c.label}}
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- count + sort -->
+    <div class="px" style="position: relative; display: flex; align-items: center; justify-content: space-between; margin: 14px 0 12px">
+      <div class="stack" style="gap: 3px">
+        <b style="font: 700 19px/1.1 var(--fd); letter-spacing: -.02em">{{countLabel}}</b>
+        <span class="meta">{{countSub}}</span>
+      </div>
+      <button class="sortbtn" onClick="{{toggleMenu}}" aria-haspopup="menu" aria-expanded="{{menuExpanded}}"><i class="i i-sliders s16"></i>{{sortLabel}}<i class="i i-down s16"></i></button>
+      <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+        <div class="menu" role="menu" aria-label="Sorter">
+          <div class="eyebrow" style="padding: 10px 12px 6px">Sorter etter</div>
+          <sc-for list="{{sorts}}" as="s" hint-placeholder-count="4">
+            <button class="{{s.cls}}" onClick="{{s.pick}}" role="menuitemradio" aria-checked="{{s.checked}}"><i class="{{s.icon}}"></i>{{s.label}}<i class="{{s.ckCls}}"></i></button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- skeleton -->
+    <sc-if value="{{loading}}" hint-placeholder-val="{{ false }}">
+      <div class="px stack" style="gap: 12px">
+        <sc-for list="{{skels}}" as="k" hint-placeholder-count="4">
+          <div class="skcard">
+            <div class="sk" style="width: 96px; height: 118px; border-radius: 17px; flex: none"></div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 4px">
+              <div class="sk" style="width: 96px; height: 22px; border-radius: 999px"></div>
+              <div class="sk" style="width: 88%; height: 16px"></div>
+              <div class="sk" style="width: 60%; height: 12px"></div>
+              <div class="sk" style="width: 70%; height: 12px"></div>
+              <div class="sk" style="width: 40%; height: 18px; margin-top: 4px"></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- list -->
+    <sc-if value="{{ready}}" hint-placeholder-val="{{ true }}">
+      <div class="px stack" style="gap: 12px">
+        <sc-for list="{{items}}" as="it" hint-placeholder-count="5">
+          <div class="{{it.cardCls}}">
+            <a href="{{it.href}}">
+              <div class="{{it.artCls}}"><i class="{{it.icon}}"></i><sc-if value="{{it.online}}" hint-placeholder-val="{{ false }}"><span class="online"></span></sc-if></div>
+              <div class="lbody">
+                <div class="lbadges"><span class="{{it.pillCls}}"><span class="pd"></span>{{it.pillText}}</span><sc-if value="{{it.fresh}}" hint-placeholder-val="{{ false }}"><span class="pill pill-neutral">Ny</span></sc-if></div>
+                <p class="ltitle">{{it.title}}</p>
+                <div class="lmeta"><b>{{it.who}}</b><span class="stars"><i class="i i-star"></i>{{it.rating}}</span><span>{{it.n}}</span></div>
+                <div class="lmeta"><i class="i i-pin"></i>{{it.place}} · {{it.dist}}</div>
+                <div class="lmeta"><i class="i i-clock"></i>{{it.when}}</div>
+                <div class="lprice"><span class="l">{{it.plabel}}</span><span class="v">{{it.price}}</span></div>
+              </div>
+            </a>
+            <button class="{{it.saveCls}}" onClick="{{it.save}}" aria-label="{{it.saveLabel}}"><i class="{{it.heartIcon}}"></i></button>
+          </div>
+        </sc-for>
+        <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+          <div class="dash-card as" style="padding: 26px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+            <span class="{{emptyIconCls}}" style="width: 56px; height: 56px"><i class="{{emptyIcon}}"></i></span>
+            <b style="font-size: 15.5px">{{emptyTitle}}</b>
+            <span class="meta">Prøv en annen kategori, eller se i nabokommunene.</span>
+            <button class="btn btn-sm btn-ghost" onClick="{{clearCat}}">Vis alle kategorier</button>
+          </div>
+        </sc-if>
+        <div class="note" style="justify-content: center; text-align: center; margin-top: 8px"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+      </div>
+    </sc-if>
+    <div style="height: 60px"></div>
+  </div>
+
+  <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="mscrim" onClick="{{closeMenu}}" aria-label="Lukk meny"></button>
+  </sc-if>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 28px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { type: 'need', cat: null, sort: 'near', loading: false, menuOpen: false, saved: { n1: true }, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.lt); clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  reload(patch, ms) {
+    clearTimeout(this.lt);
+    this.setState(Object.assign({ loading: true, menuOpen: false }, patch));
+    this.lt = setTimeout(() => this.setState({ loading: false }), ms || 600);
+  }
+  renderVals() {
+    const S = this.state;
+    const LBL = { hage: 'Hage', rengjoring: 'Rengjøring', flytting: 'Flytting/bæring', transport: 'Transport/levering', montering: 'Montering', snomaking: 'Snømåking', maling: 'Maling/vedlikehold', dyrepass: 'Dyrepass', data: 'Datahjelp', arrangement: 'Arrangementshjelp', annet: 'Annet' };
+    const NEEDS = [
+      { id: 'n1', cat: 'hage', title: 'Klippe plen og rake løv', who: 'Kari Holm', rating: '4,9', place: 'Nordre Ål', km: 1.2, when: 'Lør 3. okt · ca. 2 t', plabel: 'Budsjett', price: '400 kr', pnum: 400, age: 3 },
+      { id: 'n2', cat: 'flytting', title: 'Bære sofa til 3. etasje', who: 'Magnus Aas', rating: '4,7', place: 'Stampesletta', km: 2.8, when: 'Tor 1. okt · ettermiddag', plabel: 'Budsjett', price: '350 kr', pnum: 350, age: 5 },
+      { id: 'n3', cat: 'montering', title: 'Montere garderobeskap', who: 'Thea Lund', rating: '5,0', place: 'Søre Ål', km: 3.1, when: 'Denne uka · fleksibel', plabel: '', price: 'Ønsker tilbud', pnum: null, age: 20 },
+      { id: 'n4', cat: 'snomaking', title: 'Måke oppkjørselen i vinter', who: 'Nora Solberg', rating: '4,8', place: 'Vingrom', km: 6.0, when: 'Ved snøfall · gjentakende', plabel: 'Budsjett', price: '250 kr', pnum: 250, age: 30 },
+      { id: 'n5', cat: 'annet', title: 'Dugnad i Kirkegata borettslag', who: 'Kirkegata BRL', rating: '4,6', place: 'Sentrum', km: 1.9, when: 'Søn 11. okt · 10–14', plabel: '', price: 'Frivillig', pnum: 0, age: 48 },
+      { id: 'n6', cat: 'rengjoring', title: 'Flyttevask av 3-roms', who: 'Ida Sæther', rating: '4,9', place: 'Kanten', km: 3.4, when: 'Fre 9. okt', plabel: 'Budsjett', price: '1 200 kr', pnum: 1200, age: 8 },
+      { id: 'n7', cat: 'dyrepass', title: 'Passe katten i høstferien', who: 'Thea Lund', rating: '5,0', place: 'Fåberg', km: 4.2, when: 'Man 5.–fre 9. okt', plabel: 'Budsjett', price: '600 kr', pnum: 600, age: 1 },
+      { id: 'n8', cat: 'data', title: 'Koble opp skriver og wifi', who: 'Magnus Aas', rating: '4,7', place: 'Stampesletta', km: 2.8, when: 'Fre 2. okt · kveld', plabel: 'Budsjett', price: '300 kr', pnum: 300, age: 2 }
+    ];
+    const OFFERS = [
+      { id: 'o1', cat: 'hage', title: 'Jeg klipper plenen din', who: 'Jonas Lie', rating: '4,9', n: '(32)', place: 'Nordre Ål', km: 1.5, when: 'Kvelder og helg', plabel: 'Fra', price: '300 kr', pnum: 300, age: 26, online: true },
+      { id: 'o2', cat: 'rengjoring', title: 'Grundig vask av hjem og hytte', who: 'Sofie Nygård', rating: '5,0', n: '(18)', place: 'Sentrum', km: 2.1, when: 'Hverdager 8–16', plabel: 'Fra', price: '450 kr', pnum: 450, age: 50, online: true },
+      { id: 'o3', cat: 'flytting', title: 'Varebil og bærehjelp', who: 'Erik Moen', rating: '4,8', n: '(41)', place: 'Fåberg', km: 4.6, when: 'Helger', plabel: 'Fra', price: '500 kr', pnum: 500, age: 12 },
+      { id: 'o4', cat: 'dyrepass', title: 'Hundelufting og dyrepass', who: 'Amalie Strand', rating: '4,9', n: '(23)', place: 'Søre Ål', km: 3.0, when: 'Hver dag', plabel: '', price: 'Pris avtales', pnum: null, age: 70, online: true },
+      { id: 'o5', cat: 'data', title: 'Datahjelp for seniorer', who: 'Henrik Berg', rating: '5,0', n: '(12)', place: 'Stampesletta', km: 2.4, when: 'Etter kl. 16', plabel: 'Fra', price: '250 kr', pnum: 250, age: 6 },
+      { id: 'o6', cat: 'snomaking', title: 'Snørydding med fres', who: 'Ola Dahl', rating: '4,7', n: '(29)', place: 'Vingrom', km: 7.2, when: 'Ved snøfall', plabel: 'Fra', price: '300 kr', pnum: 300, age: 96 },
+      { id: 'o7', cat: 'maling', title: 'Maling og beising av gjerder', who: 'Lise Brekke', rating: '4,6', n: '(5)', place: 'Søre Ål', km: 2.6, when: 'Fredager og helg', plabel: 'Fra', price: '350 kr', pnum: 350, age: 2 },
+      { id: 'o8', cat: 'montering', title: 'Montering av møbler og hyller', who: 'Magnus Aas', rating: '4,7', n: '(9)', place: 'Stampesletta', km: 2.8, when: 'Hverdager etter kl. 17', plabel: 'Fra', price: '400 kr', pnum: 400, age: 15, online: true }
+    ];
+    const isNeed = S.type === 'need';
+    const SRC = isNeed ? NEEDS : OFFERS;
+    const present = [];
+    SRC.forEach((x) => { if (present.indexOf(x.cat) < 0) present.push(x.cat); });
+    const cats = [{ id: null, label: 'Alle' }].concat(present.map((id) => ({ id, label: LBL[id] }))).map((c) => ({
+      label: c.label,
+      cls: 'chip' + (S.cat === c.id ? ' on' : ''),
+      ciCls: c.id ? 'ci art art-' + c.id : 'ci',
+      icon: c.id ? 'i i-' + c.id : 'i i-annet',
+      pressed: S.cat === c.id ? 'true' : 'false',
+      pick: () => this.reload({ cat: c.id }, 320)
+    }));
+    let arr = S.cat ? SRC.filter((x) => x.cat === S.cat) : SRC.slice();
+    const pv = (x, hi) => (x.pnum === null ? (hi ? -1 : 99999) : x.pnum);
+    if (S.sort === 'near') arr.sort((a, b) => a.km - b.km);
+    if (S.sort === 'new') arr.sort((a, b) => a.age - b.age);
+    if (S.sort === 'low') arr.sort((a, b) => pv(a, false) - pv(b, false));
+    if (S.sort === 'high') arr.sort((a, b) => pv(b, true) - pv(a, true));
+    const items = arr.map((x, i) => ({
+      title: x.title, who: x.who, rating: x.rating, n: x.n || '', place: x.place,
+      dist: String(x.km).replace('.', ',') + ' km', when: x.when, plabel: x.plabel, price: x.price,
+      online: !!x.online, fresh: x.age <= 5,
+      cardCls: 'lcard au d' + Math.min(i + 1, 10),
+      href: isNeed ? 'Oppdragsdetaljer.dc.html' : 'Oppdragsdetaljer.dc.html',
+      pillCls: isNeed ? 'pill pill-need' : 'pill pill-offer',
+      pillText: isNeed ? 'Trenger hjelp' : 'Tilbyr hjelp',
+      artCls: 'lthumb art art-' + x.cat, icon: 'i i-' + x.cat,
+      saveCls: 'save' + (S.saved[x.id] ? ' on' : ''),
+      heartIcon: S.saved[x.id] ? 'i i-heartf s18' : 'i i-heart s18',
+      saveLabel: S.saved[x.id] ? 'Fjern fra lagrede' : 'Lagre',
+      save: () => {
+        const saved = Object.assign({}, this.state.saved); const on = !saved[x.id]; saved[x.id] = on;
+        this.setState({ saved }); this.flash(on ? 'Lagret i Lagrede' : 'Fjernet fra Lagrede', on ? 'i i-heartf s14' : 'i i-x s14');
+      }
+    }));
+    const SORTS = [
+      { id: 'near', label: 'Nærmest', icon: 'i i-locate s18' },
+      { id: 'new', label: 'Nyeste', icon: 'i i-clock s18' },
+      { id: 'low', label: 'Lavest pris', icon: 'i i-down s18' },
+      { id: 'high', label: 'Høyest pris', icon: 'i i-up s18' }
+    ];
+    const cur = SORTS.filter((s) => s.id === S.sort)[0];
+    const n = items.length;
+    return {
+      title: isNeed ? 'Alle oppdrag' : 'Alle som tilbyr hjelp',
+      meshCls: isNeed ? 'mesh lime' : 'mesh cyan',
+      indStyle: isNeed
+        ? 'left: 5px; background: #B8EE3C'
+        : 'left: 50%; background: #0A74B4',
+      needBtnCls: 'need' + (isNeed ? ' on' : ''), offerBtnCls: 'offer' + (isNeed ? '' : ' on'),
+      needSel: isNeed ? 'true' : 'false', offerSel: isNeed ? 'false' : 'true',
+      pickNeed: () => { if (!isNeed) this.reload({ type: 'need', cat: null }, 600); },
+      pickOffer: () => { if (isNeed) this.reload({ type: 'offer', cat: null }, 600); },
+      cats,
+      countLabel: n + (isNeed ? ' oppdrag' : (n === 1 ? ' tilbyder' : ' tilbydere')),
+      countSub: S.cat ? LBL[S.cat] + ' · sortert: ' + cur.label.toLowerCase() : 'Alle kategorier · sortert: ' + cur.label.toLowerCase(),
+      sortLabel: cur.label,
+      menuOpen: S.menuOpen, menuExpanded: S.menuOpen ? 'true' : 'false',
+      toggleMenu: () => this.setState({ menuOpen: !S.menuOpen }),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      sorts: SORTS.map((s) => ({
+        label: s.label, icon: s.icon,
+        cls: S.sort === s.id ? 'on' : '',
+        checked: S.sort === s.id ? 'true' : 'false',
+        ckCls: 'i i-check s18 ck' + (S.sort === s.id ? '' : ' hid'),
+        pick: () => this.reload({ sort: s.id }, 350)
+      })),
+      loading: S.loading, ready: !S.loading,
+      skels: [1, 2, 3, 4],
+      items, empty: n === 0,
+      emptyTitle: isNeed ? 'Ingen oppdrag i denne kategorien' : 'Ingen tilbydere i denne kategorien',
+      emptyIcon: isNeed ? 'i i-clip s24' : 'i i-hand s24',
+      emptyIconCls: isNeed ? 'icirc art-hage' : 'icirc art-rengjoring',
+      clearCat: () => this.reload({ cat: null }, 320),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

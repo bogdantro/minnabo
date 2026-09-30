@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Varsler</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.iconbtn.dim{opacity:.45}
+.chip.fchip{padding:0 8px 0 15px;gap:8px}
+.fchip .n{min-width:24px;height:24px;border-radius:12px;padding:0 7px;display:grid;place-items:center;font:800 12px/1 var(--fb);background:#EEF1F4;color:var(--ink2);transition:background .25s,color .25s}
+.fchip.on .n{background:rgba(255,255,255,.18);color:#fff}
+.fchip .ud{width:7px;height:7px;border-radius:50%;background:#F2542D;margin-left:-4px}
+.onlybtn{display:inline-flex;align-items:center;gap:10px;border:0;background:none;padding:0;cursor:pointer;min-height:44px;font:600 13.5px var(--fb);color:var(--ink2)}
+.onlybtn .tgl{width:44px;height:26px;border-radius:13px;pointer-events:none}
+.onlybtn .tgl::after{width:20px;height:20px}
+.onlybtn .tgl.on::after{transform:translateX(18px)}
+.grp{font:700 12px/1 var(--fb);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:22px 24px 10px;display:flex;align-items:center;gap:10px}
+.grp::after{content:"";flex:1;height:1px;background:#E1E5EA}
+.nlist{background:#fff;border-radius:24px;box-shadow:var(--sh);overflow:hidden;margin:0 16px}
+.nrow{display:flex;gap:13px;align-items:flex-start;padding:14px 16px 14px 14px;text-decoration:none;color:var(--ink);position:relative;background:#fff;transition:background .6s var(--ease)}
+.nrow+.nrow::before{content:"";position:absolute;top:0;left:68px;right:0;height:1px;background:var(--line2)}
+.nrow.unread{background:#F1F9FE}
+.nrow.unread::after{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--cyan)}
+.nrow:active{background:#F7F8FA}
+.nic{width:42px;height:42px;border-radius:50%;place-items:center;flex:none;position:relative}
+.nic .i{width:19px;height:19px}
+.nb{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.nt{font:700 15px/1.32 var(--fb)}
+.nd{font-size:13.5px;line-height:1.4;color:var(--ink2)}
+.nm{font-size:12px;color:var(--faint);font-weight:600;margin-top:2px;display:flex;align-items:center;gap:6px}
+.nm .ct{padding:3px 7px;border-radius:6px;background:#F1F3F6;color:var(--mute);font-weight:700;font-size:11px}
+.udot{width:10px;height:10px;border-radius:50%;background:var(--cyan);flex:none;margin-top:6px;transition:transform .45s var(--spring),opacity .45s;box-shadow:0 0 0 4px rgba(25,184,238,.16)}
+.udot.gone{transform:scale(0);opacity:0}
+.sumbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 20px;margin-top:4px}
+.ucount{display:inline-flex;align-items:center;gap:8px;font:700 14px var(--fb)}
+.ucount .bub{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:800 13px/1 var(--fd);background:var(--ink);color:#fff;transition:background .3s}
+.ucount .bub.zero{background:#E3F5E8;color:#2B8F4E}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+    <div class="subbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Varsler</div>
+      <button class="{{markCls}}" onClick="{{markAll}}" aria-label="Merk alle som lest"><i class="i i-checks"></i></button>
+    </div>
+
+    <!-- summary -->
+    <div class="sumbar au" style="position: relative">
+      <span class="ucount"><span class="{{bubCls}}">{{unreadN}}</span>{{unreadLabel}}</span>
+      <button class="onlybtn" onClick="{{toggleOnly}}" aria-pressed="{{onlyPressed}}"><span>Bare uleste</span><span class="{{onlyTgl}}"></span></button>
+    </div>
+
+    <!-- filters -->
+    <div class="au d2" style="position: relative; margin-top: 8px">
+      <div class="chips" role="tablist" aria-label="Filtrer varsler">
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+          <button class="{{f.cls}}" onClick="{{f.pick}}" role="tab" aria-selected="{{f.sel}}">{{f.label}}<sc-if value="{{f.hasUnread}}" hint-placeholder-val="{{ false }}"><span class="ud"></span></sc-if><span class="n">{{f.n}}</span></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- groups -->
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+      <div class="au">
+        <div class="grp">{{g.label}}</div>
+        <div class="nlist">
+          <sc-for list="{{g.items}}" as="n" hint-placeholder-count="3">
+            <a href="{{n.href}}" class="{{n.cls}}" style="transition-delay: 0s; {{n.delay}}" aria-label="{{n.aria}}">
+              <span class="nic" style="display: grid; {{n.icStyle}}"><i class="{{n.icon}}"></i></span>
+              <span class="nb">
+                <b class="nt">{{n.title}}</b>
+                <span class="nd">{{n.detail}}</span>
+                <span class="nm">{{n.time}}<span class="ct">{{n.catLabel}}</span></span>
+              </span>
+              <span class="{{n.dotCls}}" style="transition-delay: 0s; {{n.delay}}"></span>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+
+    <!-- empty -->
+    <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+      <div class="px as" style="margin-top: 26px">
+        <div class="card" style="padding: 34px 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px">
+          <div style="position: relative; width: 84px; height: 84px; display: grid; place-items: center">
+            <span style="position: absolute; inset: 0; border-radius: 50%; background: var(--grad-soft)"></span>
+            <span class="float" style="position: relative; display: grid; place-items: center; color: #065C8F"><i class="i i-bell s32"></i></span>
+          </div>
+          <b class="h3" style="margin-top: 6px">Ingen varsler her ennå</b>
+          <span class="meta" style="max-width: 260px">{{emptySub}}</span>
+          <button class="btn btn-sm btn-ghost" style="margin-top: 6px" onClick="{{showAll}}">Vis alle varsler</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="px" style="margin-top: 22px">
+      <a href="Varslinger.dc.html" class="lrow card" style="border-radius: 20px">
+        <span class="ri" style="background: #FFF2D9; color: #9A5B00"><i class="i i-sliders s18"></i></span>
+        <span class="rt"><b>Velg hva du vil bli varslet om</b><small>Push, e-post og stille timer</small></span>
+        <i class="i i-right chev"></i>
+      </a>
+    </div>
+    <div style="height: 60px"></div>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 34px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all', only: false, read: {}, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const COL = {
+      msg: 'background: #E8E3FB; color: #46379E',
+      need: 'background: #EDF8D6; color: #3B7300',
+      cyan: 'background: #DFF2FB; color: #065C8F',
+      ok: 'background: #E3F5E8; color: #2B8F4E',
+      ink: 'background: #0A1740; color: #B8EE3C',
+      warn: 'background: #FFF2D9; color: #9A5B00',
+      star: 'background: #FFF4D6; color: #F0A500',
+      mute: 'background: #ECEFF3; color: #46506A',
+      danger: 'background: #FDEBE9; color: #C23029'
+    };
+    const N = [
+      { id: 'n1', g: 'today', cat: 'msg', icon: 'i-msg', col: 'msg', title: 'Jonas Lie: «Passer lørdag kl. 10?»', detail: 'Ny melding om «Male gjerdet i hagen»', time: '14:12', href: 'Chat.dc.html', unread: true },
+      { id: 'n2', g: 'today', cat: 'offer', icon: 'i-tag', col: 'need', title: 'Erik Moen sendte et tilbud på «Male gjerdet i hagen»', detail: '1 800 kr · Søn 11. okt kl. 09:00 · ca. 4 t', time: '13:05', href: 'TilbudDetaljer.dc.html', unread: true },
+      { id: 'n3', g: 'today', cat: 'offer', icon: 'i-edit', col: 'cyan', title: 'Lise Brekke endret tilbudet til 1 250 kr', detail: '«Male gjerdet i hagen» · Fre 9. okt kl. 15:00', time: '11:40', href: 'TilbudDetaljer.dc.html' },
+      { id: 'n4', g: 'today', cat: 'offer', icon: 'i-check', col: 'ok', title: 'Kari Holm godtok tilbudet ditt på «Klippe plen og rake løv»', detail: '400 kr · Lør 3. okt · Se avtalen', time: '10:24', href: 'Avtale.dc.html' },
+      { id: 'n5', g: 'today', cat: 'deal', icon: 'i-cal', col: 'ink', title: 'Avtalt: Lør 10. okt kl. 10:00', detail: 'Med Jonas Lie · «Male gjerdet i hagen» · Nordre Ål', time: '09:02', href: 'MineAvtaler.dc.html' },
+      { id: 'n6', g: 'yday', cat: 'deal', icon: 'i-hourglass', col: 'warn', title: 'Jonas ba deg bekrefte at jobben er fullført', detail: '«Rake løv og tømme takrenner» · Bekreft innen 3 dager', time: '18:30', href: 'Fullforing.dc.html' },
+      { id: 'n7', g: 'yday', cat: 'other', icon: 'i-star', col: 'star', title: 'Kari ga deg 5 stjerner', detail: '«Punktlig, ryddig og hyggelig. Anbefales!»', time: '16:05', href: 'Profil.dc.html' },
+      { id: 'n8', g: 'yday', cat: 'offer', icon: 'i-undo', col: 'mute', title: 'Magnus Aas trakk tilbudet sitt', detail: '«Male gjerdet i hagen» · Du har fortsatt 3 tilbud å velge mellom', time: '12:47', href: 'MottatteTilbud.dc.html' },
+      { id: 'n9', g: 'yday', cat: 'msg', icon: 'i-msg', col: 'msg', title: 'Kari Holm: «Gressklipperen står i garasjen.»', detail: 'Ny melding om «Klippe plen og rake løv»', time: '10:15', href: 'Chat.dc.html' },
+      { id: 'n10', g: 'older', cat: 'offer', icon: 'i-x', col: 'danger', title: 'Thea Lund takket nei til tilbudet ditt', detail: '«Montere garderobeskap» · Se lignende oppdrag i nærheten', time: 'Fre 25. sep', href: 'Oppdrag.dc.html' },
+      { id: 'n11', g: 'older', cat: 'other', icon: 'i-shield', col: 'ok', title: 'Oppføringen din er godkjent', detail: '«Datahjelp og oppsett av mobil» er nå synlig for naboer', time: 'Tor 24. sep', href: 'MineOppforinger.dc.html' },
+      { id: 'n12', g: 'older', cat: 'other', icon: 'i-flag', col: 'cyan', title: 'Rapporten din er behandlet', detail: 'Takk for at du sa fra. Vi har gått gjennom saken og tatt grep.', time: 'Man 21. sep', href: 'Sikkerhet.dc.html' }
+    ];
+    const CATS = [['all', 'Alle'], ['offer', 'Tilbud'], ['msg', 'Meldinger'], ['deal', 'Avtaler'], ['other', 'Annet']];
+    const catLabel = { offer: 'Tilbud', msg: 'Melding', deal: 'Avtale', other: 'Annet' };
+    const isUnread = (n) => n.unread && !S.read[n.id];
+    const inCat = (n, c) => c === 'all' || n.cat === c;
+    const unreadN = N.filter(isUnread).length;
+    const visible = N.filter((n) => inCat(n, S.filter) && (!S.only || isUnread(n)));
+    const GROUPS = [['today', 'I dag'], ['yday', 'I går'], ['older', 'Tidligere']];
+    let idx = 0;
+    const groups = GROUPS.map(([gid, label]) => {
+      const items = visible.filter((n) => n.g === gid).map((n) => {
+        const u = isUnread(n);
+        const i = idx++;
+        return {
+          href: n.href, title: n.title, detail: n.detail, time: n.time, catLabel: catLabel[n.cat],
+          icon: 'i ' + n.icon, icStyle: COL[n.col],
+          cls: 'nrow' + (u ? ' unread' : ''),
+          dotCls: 'udot' + (u ? '' : ' gone'),
+          delay: 'transition-delay: ' + (i * 0.07).toFixed(2) + 's',
+          aria: (u ? 'Ulest: ' : '') + n.title + '. ' + n.detail + '. ' + n.time
+        };
+      });
+      return { label, items };
+    }).filter((g) => g.items.length > 0);
+    const filters = CATS.map(([id, label]) => ({
+      label,
+      n: N.filter((n) => inCat(n, id)).length,
+      hasUnread: id !== 'all' && N.some((n) => inCat(n, id) && isUnread(n)),
+      cls: 'chip plain fchip' + (S.filter === id ? ' on' : ''),
+      sel: S.filter === id ? 'true' : 'false',
+      pick: () => this.setState({ filter: id })
+    }));
+    const fName = (CATS.find((c) => c[0] === S.filter) || CATS[0])[1].toLowerCase();
+    return {
+      groups, filters,
+      empty: visible.length === 0,
+      emptySub: S.only ? 'Du har lest alt' + (S.filter === 'all' ? '' : ' under ' + fName) + '. Nye tilbud, meldinger og avtaler dukker opp her.' : 'Når noen sender deg tilbud eller meldinger, dukker det opp her.',
+      showAll: () => this.setState({ filter: 'all', only: false }),
+      unreadN,
+      unreadLabel: unreadN === 0 ? 'Alt er lest' : (unreadN === 1 ? 'ulest varsel' : 'uleste varsler'),
+      bubCls: 'bub' + (unreadN === 0 ? ' zero' : ''),
+      markCls: 'iconbtn' + (unreadN === 0 ? ' dim' : ''),
+      markAll: () => {
+        if (unreadN === 0) { this.flash('Ingen uleste varsler', 'i i-info s14'); return; }
+        const read = Object.assign({}, S.read);
+        N.forEach((n) => { if (n.unread) read[n.id] = true; });
+        this.setState({ read });
+        this.flash('Alle varsler er merket som lest', 'i i-checks s14');
+      },
+      onlyTgl: 'tgl' + (S.only ? ' on' : ''),
+      onlyPressed: S.only ? 'true' : 'false',
+      toggleOnly: () => this.setState({ only: !S.only }),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

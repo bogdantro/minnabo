@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Oppdragsdetaljer</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.dbar{position:relative;z-index:5;display:flex;align-items:center;gap:8px;padding:56px 16px 10px}
+.dbar .mid{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font:700 17px var(--fb)}
+.dbar .mid img{width:26px;height:26px}
+.gal{position:relative;height:268px;border-radius:30px;overflow:hidden;box-shadow:var(--sh-m);background:#D9F0BE}
+.gslide{position:absolute;inset:0}
+.gslide .art{position:absolute;inset:0}
+.gcap{position:absolute;left:14px;bottom:14px;height:30px;padding:0 12px;border-radius:999px;background:rgba(10,23,64,.62);backdrop-filter:blur(16px);color:#fff;font:700 12.5px/30px var(--fb);display:inline-flex;align-items:center;gap:6px}
+.gnav{position:absolute;top:50%;margin-top:-22px;z-index:3}
+.gtop{position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:3}
+.gdots{position:absolute;left:0;right:0;bottom:22px;z-index:3;pointer-events:none}
+.gdots i{background:rgba(255,255,255,.6)}
+.gdots i.on{background:#fff}
+.gnum{position:absolute;right:14px;bottom:14px;z-index:3;height:30px;padding:0 11px;border-radius:999px;background:rgba(255,255,255,.85);backdrop-filter:blur(16px);font:800 12.5px/30px var(--fb);color:var(--ink)}
+.save.big{width:44px;height:44px;background:rgba(255,255,255,.85);backdrop-filter:blur(16px)}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.icell{background:#fff;border-radius:20px;padding:14px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:8px}
+.icell .ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:#EDF8D6;color:#3B7300}
+.icell small{font:700 11.5px var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.icell b{font:700 15px/1.3 var(--fb)}
+.map{position:relative;height:178px;border-radius:22px;overflow:hidden;background:#E7EEE2}
+.map .road{position:absolute;background:#fff;border-radius:6px;box-shadow:0 0 0 1px rgba(10,23,64,.04)}
+.map .water{position:absolute;background:#CFE6F3}
+.map .park{position:absolute;border-radius:40%;background:#D4E8C4}
+.map .area{position:absolute;left:50%;top:50%;width:132px;height:132px;margin:-66px 0 0 -66px;border-radius:50%;background:rgba(184,238,60,.28);border:2px dashed #8FD12A}
+.map .alabel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:30px;padding:0 12px;border-radius:999px;background:#fff;box-shadow:var(--sh);font:700 12.5px/30px var(--fb);white-space:nowrap}
+.sec{font:700 19px/1.15 var(--fd);letter-spacing:-.02em;margin:0 0 12px}
+.prow{display:flex;gap:12px;align-items:flex-start;padding:11px 0}
+.prow + .prow{border-top:1px solid var(--line2)}
+.prow .pi{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#F3F5F1;color:var(--ink2);flex:none}
+.eq{height:36px;padding:0 13px;border-radius:999px;background:#fff;border:1px solid var(--line);display:inline-flex;align-items:center;gap:7px;font:600 13.5px var(--fb)}
+.eq .i{width:16px;height:16px;color:var(--lime-d)}
+.eq.no .i{color:var(--faint)}
+.avst{display:flex}
+.avst .av{margin-left:-10px;box-shadow:0 0 0 2.5px #fff}
+.avst .av:first-child{margin-left:0}
+.qchip{height:40px;padding:0 15px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font:700 14.5px var(--fd);color:var(--ink);cursor:pointer;transition:all .2s}
+.qchip.on{background:var(--lime-t);border-color:#BFE07F;color:var(--lime-d)}
+.tchip{min-height:40px;padding:8px 13px;border-radius:14px;border:1px dashed #C9CFD9;background:#F7F8FA;font:600 13px/1.3 var(--fb);color:var(--ink2);cursor:pointer;text-align:left;display:inline-flex;align-items:center;gap:6px}
+.tchip .i{width:14px;height:14px;color:var(--lime-d);flex:none}
+.shk1{animation:shake .35s}
+.shk2{animation:shake2 .35s}
+@keyframes shake2{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ctr{font:600 12.5px var(--fb);color:var(--mute)}
+.ctr.warn{color:var(--danger)}
+.pvcard{border-radius:24px;border:1.5px solid #D5E9A8;background:#F7FCEB;padding:18px}
+.quote{background:#F3F5F1;border-radius:16px;padding:12px 14px;font-size:14.5px;line-height:1.5;color:var(--ink)}
+.okring{width:108px;height:108px;border-radius:50%;background:var(--grad);display:grid;place-items:center;box-shadow:0 20px 40px -16px rgba(40,170,120,.7)}
+.okring svg{display:block}
+.sentbtn{flex:1;height:52px;border-radius:999px;background:#EEF1F4;color:#5F6983;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 16px var(--fb);border:0}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+
+    <!-- detail bar -->
+    <div class="dbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="mid"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">Oppdrag</div>
+      <a href="Varsler.dc.html" class="iconbtn" aria-label="Varsler, 2 uleste"><i class="i i-bell s18"></i><span class="dot"></span></a>
+      <a href="Profil.dc.html" class="avbtn" aria-label="Åpne profil"><span class="av av-me s32">MH</span></a>
+    </div>
+
+    <!-- gallery -->
+    <div class="px au" style="position: relative; margin-top: 4px">
+      <div class="gal" role="region" aria-label="Bilder fra oppdraget">
+        <sc-if value="{{g0}}" hint-placeholder-val="{{ true }}">
+          <div class="{{gCls}}">
+            <div class="art art-hage">
+              <span style="position: absolute; inset: 0; background: repeating-linear-gradient(100deg, rgba(255,255,255,.2) 0 26px, rgba(255,255,255,0) 26px 52px)"></span>
+              <span style="position: absolute; left: -40px; right: -40px; bottom: -70px; height: 150px; border-radius: 50%; background: #B9E08F"></span>
+              <span style="position: absolute; left: 30px; bottom: 56px; width: 60px; height: 70px; border-radius: 50% 50% 8px 8px; background: #8CC455"></span>
+              <span style="position: absolute; right: 44px; bottom: 60px; width: 84px; height: 96px; border-radius: 50% 50% 10px 10px; background: #7DB548"></span>
+              <i class="i i-hage" style="width: 64px; height: 64px; position: relative"></i>
+            </div>
+            <span class="gcap"><i class="i i-image s14"></i>Plenen, ca. 300 m²</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{g1}}" hint-placeholder-val="{{ false }}">
+          <div class="{{gCls}}">
+            <div class="art art-flytting" style="background: #F6E3C8; color: #B5541C">
+              <span style="position: absolute; left: 0; right: 0; bottom: 0; height: 80px; background: #EBCB9D"></span>
+              <span style="position: absolute; left: 0; right: 0; bottom: 78px; height: 10px; background: repeating-linear-gradient(90deg, #C99B63 0 8px, rgba(0,0,0,0) 8px 22px)"></span>
+              <i class="i i-hage" style="position: absolute; left: 50px; top: 50px; width: 34px; height: 34px; color: #C9772A"></i>
+              <i class="i i-hage" style="position: absolute; right: 70px; top: 36px; width: 26px; height: 26px; color: #D9A13B"></i>
+              <i class="i i-hage" style="position: absolute; left: 150px; bottom: 30px; width: 40px; height: 40px; color: #B5541C"></i>
+              <i class="i i-hage" style="position: absolute; right: 40px; bottom: 22px; width: 30px; height: 30px; color: #C9772A"></i>
+              <i class="i i-hage" style="position: absolute; left: 36px; bottom: 16px; width: 24px; height: 24px; color: #D9A13B"></i>
+            </div>
+            <span class="gcap"><i class="i i-image s14"></i>Løv langs gjerdet</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{g2}}" hint-placeholder-val="{{ false }}">
+          <div class="{{gCls}}">
+            <div class="art art-annet">
+              <span style="position: absolute; left: 40px; right: 40px; top: 30px; bottom: 0; border-radius: 18px 18px 0 0; background: #D7DCE4"></span>
+              <span style="position: absolute; left: 40px; right: 40px; top: 30px; height: 60px; border-radius: 18px 18px 0 0; background: repeating-linear-gradient(180deg, #C4CAD5 0 6px, #D7DCE4 6px 14px)"></span>
+              <span style="position: absolute; left: 96px; bottom: 20px; width: 56px; height: 74px; border-radius: 14px 14px 10px 10px; background: #3F7A2A"></span>
+              <span style="position: absolute; left: 160px; bottom: 20px; width: 56px; height: 80px; border-radius: 14px 14px 10px 10px; background: #4E8C34"></span>
+              <span style="position: absolute; left: 222px; bottom: 20px; width: 56px; height: 70px; border-radius: 14px 14px 10px 10px; background: #3F7A2A"></span>
+            </div>
+            <span class="gcap"><i class="i i-image s14"></i>Sekkene står i garasjen</span>
+          </div>
+        </sc-if>
+
+        <div class="gtop">
+          <button class="{{saveCls}}" onClick="{{toggleSave}}" aria-label="{{saveLabel}}"><i class="{{heartIcon}}"></i></button>
+          <button class="iconbtn glass" onClick="{{share}}" aria-label="Del oppføringen"><i class="i i-share s18"></i></button>
+        </div>
+        <button class="iconbtn glass gnav" style="left: 12px" onClick="{{prev}}" aria-label="Forrige bilde"><i class="i i-left"></i></button>
+        <button class="iconbtn glass gnav" style="right: 12px" onClick="{{next}}" aria-label="Neste bilde"><i class="i i-right"></i></button>
+        <div class="dots gdots"><sc-for list="{{gdots}}" as="d" hint-placeholder-count="3"><i class="{{d.cls}}"></i></sc-for></div>
+        <span class="gnum">{{gnum}}</span>
+      </div>
+    </div>
+
+    <!-- title block -->
+    <div class="px au d2" style="position: relative; margin-top: 18px; display: flex; flex-direction: column; gap: 10px">
+      <div class="rowf" style="gap: 8px">
+        <span class="pill pill-need lg"><span class="pd"></span>Åpent oppdrag</span>
+        <span class="pill pill-neutral lg"><i class="i i-hage s14"></i>Hage</span>
+      </div>
+      <h1 class="h1">Klippe plen og rake løv</h1>
+    </div>
+
+    <!-- budget -->
+    <div class="px au d3" style="position: relative; margin-top: 14px">
+      <div class="card" style="padding: 16px 18px; display: flex; align-items: center; gap: 14px; background: #F2FBDF">
+        <div class="stack" style="gap: 4px; flex: 1">
+          <span class="eyebrow" style="color: #3B7300">Budsjett</span>
+          <span class="num" style="font-size: 34px; line-height: 1">400 kr</span>
+          <span class="meta">Kari tar gjerne imot tilbud rundt dette</span>
+        </div>
+        <div class="stack" style="align-items: flex-end; gap: 6px">
+          <div class="avst"><span class="av s32 plain av-b">JL</span><span class="av s32 plain av-e">LB</span></div>
+          <span class="meta" style="font-weight: 700; color: #34405F">2 tilbud</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- info grid -->
+    <div class="px au d4" style="position: relative; margin-top: 12px">
+      <div class="igrid">
+        <div class="icell"><span class="ic"><i class="i i-pin s18"></i></span><small>Sted</small><b>Nordre Ål, Lillehammer · ca. 1,2 km</b></div>
+        <div class="icell"><span class="ic"><i class="i i-cal s18"></i></span><small>Dato</small><b>Lør 3. okt</b></div>
+        <div class="icell"><span class="ic"><i class="i i-hourglass s18"></i></span><small>Varighet</small><b>ca. 2 timer</b></div>
+        <div class="icell"><span class="ic"><i class="i i-clock s18"></i></span><small>Publisert</small><b>for 3 timer siden</b></div>
+      </div>
+    </div>
+
+    <!-- map -->
+    <div class="px" style="margin-top: 26px">
+      <h2 class="sec">Område</h2>
+      <div class="card" style="padding: 8px">
+        <div class="map" role="img" aria-label="Omtrentlig område rundt Nordre Ål">
+          <span class="water" style="left: -40px; top: -20px; width: 110px; height: 240px; border-radius: 0 60% 60% 0; transform: rotate(8deg)"></span>
+          <span class="park" style="right: 30px; top: 18px; width: 70px; height: 46px"></span>
+          <span class="park" style="left: 110px; bottom: 10px; width: 60px; height: 38px"></span>
+          <span class="road" style="left: 60px; right: -20px; top: 62px; height: 9px; transform: rotate(-8deg)"></span>
+          <span class="road" style="left: 40px; right: 0; top: 128px; height: 7px; transform: rotate(5deg)"></span>
+          <span class="road" style="left: 190px; top: -20px; width: 8px; height: 230px; transform: rotate(14deg)"></span>
+          <span class="road" style="left: 120px; top: 20px; width: 6px; height: 170px; transform: rotate(-22deg)"></span>
+          <span class="area"></span>
+          <span class="alabel">Nordre Ål</span>
+          <span style="position: absolute; left: 12px; bottom: 10px; font: 700 11px var(--fb); color: #3E6E8C; letter-spacing: .04em">LÅGEN</span>
+        </div>
+        <div class="note" style="padding: 10px 8px 6px"><i class="i i-lock"></i><span>Omtrentlig område. Adressen deles i chatten når dere har avtalt.</span></div>
+      </div>
+    </div>
+
+    <!-- description -->
+    <div class="px" style="margin-top: 26px">
+      <h2 class="sec">Beskrivelse</h2>
+      <p class="body p" style="color: #34405F">Plenen er ca. 300 m². Løvet rakes i sekker som står i garasjen. Gressklipper finnes.</p>
+      <p class="body p" style="color: #34405F; margin-top: 10px">Plenen har ikke vært klippet på et par uker, så gresset er litt høyt langs gjerdet. Det meste av løvet ligger under bjørka i hjørnet av hagen.</p>
+    </div>
+
+    <!-- practical -->
+    <div class="px" style="margin-top: 24px">
+      <h2 class="sec">Praktisk info</h2>
+      <div class="card" style="padding: 4px 16px">
+        <div class="prow"><span class="pi"><i class="i i-home s16"></i></span><div class="stack" style="gap: 2px"><b style="font-size: 14.5px">Kari er hjemme</b><span class="meta">Du kan ringe på når du kommer</span></div></div>
+        <div class="prow"><span class="pi"><i class="i i-archive s16"></i></span><div class="stack" style="gap: 2px"><b style="font-size: 14.5px">Sekker i garasjen</b><span class="meta">Fylte sekker settes ved garasjeporten</span></div></div>
+        <div class="prow"><span class="pi"><i class="i i-transport s16"></i></span><div class="stack" style="gap: 2px"><b style="font-size: 14.5px">Parkering i oppkjørselen</b><span class="meta">Plass til én bil</span></div></div>
+        <div class="prow"><span class="pi"><i class="i i-sun s16"></i></span><div class="stack" style="gap: 2px"><b style="font-size: 14.5px">Flyttes ved regn</b><span class="meta">Avtal ny dag i chatten</span></div></div>
+      </div>
+    </div>
+
+    <!-- equipment -->
+    <div class="px" style="margin-top: 24px">
+      <h2 class="sec">Utstyr</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <span class="eq"><i class="i i-check"></i>Gressklipper finnes</span>
+        <span class="eq"><i class="i i-check"></i>Sekker finnes</span>
+        <span class="eq no"><i class="i i-hand"></i>Ta med rive</span>
+        <span class="eq no"><i class="i i-hand"></i>Ta med arbeidshansker</span>
+      </div>
+    </div>
+
+    <!-- owner -->
+    <div class="px" style="margin-top: 26px">
+      <h2 class="sec">Lagt ut av</h2>
+      <div class="card pad" style="display: flex; flex-direction: column; gap: 14px">
+        <div class="rowf" style="gap: 14px">
+          <span class="av s56 av-c">KH</span>
+          <div class="stack" style="gap: 4px; flex: 1; min-width: 0">
+            <b style="font: 700 17px var(--fb)">Kari Holm</b>
+            <span class="stars"><i class="i i-star"></i>4,9<span>(27 vurderinger)</span></span>
+            <span class="meta">Medlem siden 2022</span>
+          </div>
+          <a href="Profil.dc.html" class="link">Profil<i class="i i-right"></i></a>
+        </div>
+        <div class="stack" style="gap: 8px">
+          <span class="vbadge"><i class="i i-verified s16"></i>Bekreftet med Vipps</span>
+          <span class="vbadge"><i class="i i-phone s16"></i>Telefon bekreftet<i class="i i-check s14"></i></span>
+        </div>
+        <div class="rowf" style="gap: 10px; padding: 12px 14px; border-radius: 16px; background: #F3F5F1">
+          <i class="i i-zap s18" style="color: #3B7300"></i>
+          <span style="font: 600 14px var(--fb)">Svarer vanligvis innen 1 t</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- offers count -->
+    <div class="px" style="margin-top: 14px">
+      <div class="card" style="padding: 14px 16px; display: flex; align-items: center; gap: 12px">
+        <div class="avst"><span class="av s32 plain" style="background: #E6E9EE; color: #5F6983"><i class="i i-user s16"></i></span><span class="av s32 plain" style="background: #E6E9EE; color: #5F6983"><i class="i i-user s16"></i></span></div>
+        <div class="stack" style="gap: 2px; flex: 1">
+          <b style="font-size: 14.5px">{{offerCountLabel}}</b>
+          <span class="meta">Du ser ikke hva andre har tilbudt.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px" style="margin-top: 18px; display: flex; justify-content: center">
+      <a href="Rapporter.dc.html" class="link" style="color: #5F6983"><i class="i i-flag"></i>Rapporter oppføringen</a>
+    </div>
+    <div class="spacer-foot" style="height: 170px"></div>
+  </div>
+
+  <!-- sticky foot -->
+  <div class="foot">
+    <div class="note"><i class="i i-info"></i><span>Pris og betaling avtales mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    <sc-if value="{{notSent}}" hint-placeholder-val="{{ true }}">
+      <div class="fr">
+        <a href="StartSamtale.dc.html" class="btn btn-ghost" style="flex: 1"><i class="i i-msg s18"></i>Send melding</a>
+        <button class="btn btn-lime" style="flex: 1.15" onClick="{{openOffer}}">Gi tilbud<i class="i i-arrow s18"></i></button>
+      </div>
+    </sc-if>
+    <sc-if value="{{sent}}" hint-placeholder-val="{{ false }}">
+      <div class="fr au">
+        <a href="Chat.dc.html" class="btn btn-ghost" style="flex: 1"><i class="i i-msg s18"></i>Se samtale</a>
+        <span class="sentbtn" aria-disabled="true"><i class="i i-checks s18"></i>Tilbud sendt</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 170px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- ======= GI TILBUD SHEET ======= -->
+  <sc-if value="{{sheet}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Gi tilbud" style="max-height: 94%">
+      <div class="grab"></div>
+
+      <!-- step 1 -->
+      <sc-if value="{{st1}}" hint-placeholder-val="{{ true }}">
+        <div class="au">
+          <div class="sheet-h" style="margin-bottom: 10px">
+            <div class="stack" style="gap: 8px">
+              <div class="steps" style="width: 70px"><i class="on"></i><i></i></div>
+              <h2 class="h2">Gi tilbud</h2>
+            </div>
+            <button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+          </div>
+          <div class="rowf" style="gap: 12px; padding: 10px; border-radius: 18px; background: #F3F5F1; margin-bottom: 20px">
+            <div class="art art-hage" style="width: 46px; height: 46px; border-radius: 13px"><i class="i i-hage s22"></i></div>
+            <div class="stack" style="gap: 3px; flex: 1; min-width: 0">
+              <b style="font-size: 14.5px">Klippe plen og rake løv</b>
+              <span class="meta">Kari Holm · Lør 3. okt · Nordre Ål</span>
+            </div>
+            <span class="pill pill-need"><span class="pd"></span>Oppdrag</span>
+          </div>
+
+          <!-- amount -->
+          <div class="field">
+            <label class="label" for="amt">Ditt pristilbud <small>Budsjett: 400 kr</small></label>
+            <div class="{{amtWrapCls}}">
+              <input id="amt" class="{{amtInputCls}}" inputmode="numeric" value="{{amount}}" onChange="{{onAmount}}" aria-label="Beløp i kroner">
+              <span class="suf">kr</span>
+            </div>
+            <div class="rowf" style="gap: 8px">
+              <sc-for list="{{quick}}" as="qc" hint-placeholder-count="3">
+                <button class="{{qc.cls}}" onClick="{{qc.pick}}">{{qc.label}}</button>
+              </sc-for>
+              <span class="help" style="margin-left: auto">{{amtHint}}</span>
+            </div>
+            <sc-if value="{{errAmt}}" hint-placeholder-val="{{ false }}">
+              <span class="errtxt"><i class="i i-alert s16"></i>{{errAmt}}</span>
+            </sc-if>
+          </div>
+
+          <!-- message -->
+          <div class="field" style="margin-top: 22px">
+            <label class="label" for="msg">Melding til Kari <span class="{{ctrCls}}">{{msgCount}}/500</span></label>
+            <div class="{{msgWrapCls}}">
+              <textarea id="msg" class="{{msgInputCls}}" value="{{msg}}" onChange="{{onMsg}}" placeholder="Fortell kort hvorfor du passer til jobben og når du kan komme."></textarea>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <sc-for list="{{templates}}" as="tp" hint-placeholder-count="3">
+                <button class="tchip" onClick="{{tp.use}}"><i class="i i-plus"></i>{{tp.text}}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{errMsg}}" hint-placeholder-val="{{ false }}">
+              <span class="errtxt"><i class="i i-alert s16"></i>{{errMsg}}</span>
+            </sc-if>
+          </div>
+
+          <!-- when -->
+          <div class="field" style="margin-top: 22px">
+            <span class="label">Foreslått dag <small>Kari ønsker lør 3. okt</small></span>
+            <div class="chips" style="padding: 2px 0 4px">
+              <sc-for list="{{days}}" as="d" hint-placeholder-count="4">
+                <button class="{{d.cls}}" onClick="{{d.pick}}" aria-pressed="{{d.pressed}}">{{d.label}}</button>
+              </sc-for>
+            </div>
+            <span class="label" style="margin-top: 8px">Klokkeslett</span>
+            <div class="chips" style="padding: 2px 0 4px">
+              <sc-for list="{{times}}" as="t" hint-placeholder-count="4">
+                <button class="{{t.cls}}" onClick="{{t.pick}}" aria-pressed="{{t.pressed}}">{{t.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- reservations -->
+          <div class="field" style="margin-top: 22px">
+            <label class="label" for="res">Forbehold (valgfritt)</label>
+            <textarea id="res" class="input" style="min-height: 80px" value="{{res}}" onChange="{{onRes}}" placeholder="F.eks. «Utsettes ved regn.»"></textarea>
+          </div>
+
+          <div class="note" style="margin-top: 16px"><i class="i i-info"></i><span>Tilbudet er ikke bindende før dere har avtalt i chatten. Pris og betaling avtales direkte mellom dere – MinNabo håndterer ikke betaling.</span></div>
+          <button class="btn btn-lime btn-block btn-lg" style="margin-top: 16px" onClick="{{toPreview}}">Se over tilbudet<i class="i i-arrow s18"></i></button>
+        </div>
+      </sc-if>
+
+      <!-- step 2 -->
+      <sc-if value="{{st2}}" hint-placeholder-val="{{ false }}">
+        <div class="slideL">
+          <div class="sheet-h" style="margin-bottom: 14px">
+            <div class="rowf" style="gap: 10px">
+              <button class="iconbtn" onClick="{{backToForm}}" aria-label="Tilbake til skjemaet"><i class="i i-back s18"></i></button>
+              <div class="stack" style="gap: 6px">
+                <div class="steps" style="width: 70px"><i class="on"></i><i class="on"></i></div>
+                <h2 class="h3">Se over tilbudet</h2>
+              </div>
+            </div>
+            <button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+          </div>
+          <div class="eyebrow" style="margin-bottom: 10px; display: flex; align-items: center; gap: 6px"><i class="i i-eye s14"></i>Slik ser Kari tilbudet</div>
+          <div class="pvcard">
+            <div class="rowf" style="gap: 12px">
+              <span class="av s48 av-me">MH</span>
+              <div class="stack" style="gap: 4px; flex: 1; min-width: 0">
+                <b style="font-size: 16px">Mari Haugen</b>
+                <span class="stars"><i class="i i-star"></i>4,9<span>(11) · 14 jobber</span></span>
+              </div>
+              <span class="pill pill-ok">Ny</span>
+            </div>
+            <div class="rowf" style="gap: 8px; margin-top: 10px">
+              <span class="vbadge"><i class="i i-verified s16"></i>Vipps-bekreftet</span>
+              <span class="meta">· Nordre Ål</span>
+            </div>
+            <div class="divider" style="margin: 14px 0"></div>
+            <div class="rowf" style="justify-content: space-between; align-items: flex-end">
+              <div class="stack" style="gap: 4px">
+                <span class="eyebrow">Pristilbud</span>
+                <span class="num" style="font-size: 36px; line-height: 1">{{amountFmt}}</span>
+              </div>
+              <span class="{{diffPillCls}}">{{diffText}}</span>
+            </div>
+            <div class="rowf" style="gap: 8px; margin-top: 14px; font: 600 14.5px var(--fb)"><i class="i i-cal s18" style="color: #3B7300"></i>{{whenFmt}}</div>
+            <div class="quote" style="margin-top: 12px">{{msg}}</div>
+            <sc-if value="{{hasRes}}" hint-placeholder-val="{{ false }}">
+              <div class="rowf" style="gap: 8px; margin-top: 10px; align-items: flex-start; font-size: 13.5px; color: #34405F"><i class="i i-info s16" style="margin-top: 1px; color: #9A5B00"></i><span><b>Forbehold:</b> {{res}}</span></div>
+            </sc-if>
+            <div class="rowf" style="gap: 8px; margin-top: 14px">
+              <span class="btn btn-sm btn-lime" style="flex: 1; pointer-events: none">Godta</span>
+              <span class="btn btn-sm btn-ghost" style="flex: 1; pointer-events: none">Svar</span>
+            </div>
+          </div>
+          <div class="note" style="margin-top: 14px"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+          <button class="btn btn-lime btn-block btn-lg" style="margin-top: 16px" onClick="{{send}}" disabled="{{sending}}">
+            <sc-if value="{{sending}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid rgba(10,23,64,.2); border-top-color: #0A1740"></span>Sender tilbudet …</sc-if>
+            <sc-if value="{{notSending}}" hint-placeholder-val="{{ true }}"><i class="i i-send s18"></i>Send tilbud</sc-if>
+          </button>
+          <button class="btn btn-text btn-block" style="margin-top: 4px" onClick="{{backToForm}}">Endre tilbudet</button>
+        </div>
+      </sc-if>
+
+      <!-- step 3 -->
+      <sc-if value="{{st3}}" hint-placeholder-val="{{ false }}">
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 14px 0 4px; overflow: hidden">
+          <div class="confetti" style="position: absolute; inset: 0; pointer-events: none">
+            <i style="left: 8%; background: #B8EE3C; animation-delay: .1s"></i>
+            <i style="left: 18%; background: #19B8EE; animation-delay: .3s"></i>
+            <i style="left: 28%; background: #63E08A; animation-delay: 0s"></i>
+            <i style="left: 40%; background: #1E86F4; animation-delay: .45s"></i>
+            <i style="left: 52%; background: #B8EE3C; animation-delay: .2s"></i>
+            <i style="left: 63%; background: #F0A500; animation-delay: .05s"></i>
+            <i style="left: 74%; background: #19B8EE; animation-delay: .35s"></i>
+            <i style="left: 84%; background: #63E08A; animation-delay: .15s"></i>
+            <i style="left: 93%; background: #1E86F4; animation-delay: .5s"></i>
+          </div>
+          <div class="as" style="margin-top: 10px">
+            <div class="okring">
+              <svg class="checkdraw" width="56" height="56" viewBox="0 0 52 52" aria-hidden="true"><path d="M13 27 L22 36 L39 17" fill="none" stroke="#0A1740" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </div>
+          </div>
+          <h2 class="h2 au d3" style="margin-top: 20px">Tilbudet er sendt til Kari</h2>
+          <p class="meta au d4 p" style="font-size: 15px; margin-top: 8px">Du får varsel når hun svarer.</p>
+          <div class="au d5" style="align-self: stretch; margin-top: 18px; padding: 14px 16px; border-radius: 18px; background: #F3F5F1; display: flex; align-items: center; gap: 12px; text-align: left">
+            <div class="art art-hage" style="width: 44px; height: 44px; border-radius: 13px"><i class="i i-hage s22"></i></div>
+            <div class="stack" style="gap: 3px; flex: 1; min-width: 0">
+              <b style="font-size: 14.5px">Klippe plen og rake løv</b>
+              <span class="meta">{{amountFmt}} · {{whenFmt}}</span>
+            </div>
+            <span class="pill pill-warn">Venter</span>
+          </div>
+          <div class="stack au d6" style="gap: 10px; align-self: stretch; margin-top: 18px">
+            <a href="Chat.dc.html" class="btn btn-lime btn-block btn-lg"><i class="i i-msg s18"></i>Gå til samtalen</a>
+            <button class="btn btn-ghost btn-block" onClick="{{closeSheet}}">Lukk</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      gi: 0, gdir: 'slideL', saved: false,
+      sheet: false, step: 1, amount: '400', msg: '', day: 'Lør 3. okt', time: 'kl. 10:00', res: '',
+      eAmt: null, eMsg: null, tries: 0, sending: false, sent: false,
+      toast: null, toastIcon: 'i i-check s16'
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.st); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' kr'; }
+  amountNum() { return parseInt(String(this.state.amount).replace(/\D/g, ''), 10) || 0; }
+  validate() {
+    const a = this.amountNum();
+    const m = this.state.msg.trim().length;
+    const eAmt = a > 0 ? null : 'Skriv inn et beløp over 0 kr.';
+    const eMsg = m >= 10 ? null : (m === 0 ? 'Skriv en kort melding til Kari.' : 'Meldingen må ha minst 10 tegn.');
+    this.setState({ eAmt, eMsg, tries: this.state.tries + 1 });
+    return !eAmt && !eMsg;
+  }
+  renderVals() {
+    const S = this.state;
+    const a = this.amountNum();
+    const shk = S.tries % 2 ? ' shk1' : ' shk2';
+    const DAYS = ['Lør 3. okt', 'Søn 4. okt', 'Man 5. okt', 'Tir 6. okt', 'Ons 7. okt'];
+    const TIMES = ['kl. 10:00', 'kl. 12:00', 'kl. 14:00', 'kl. 17:00'];
+    const TPL = ['Hei Kari! Jeg kan ta plenen lørdag formiddag.', 'Jeg tar med egen rive og hansker.', 'Jeg har klippet plener i Nordre Ål før.'];
+    const diff = a - 400;
+    const go = (i, dir) => this.setState({ gi: (i + 3) % 3, gdir: dir });
+    return {
+      g0: S.gi === 0, g1: S.gi === 1, g2: S.gi === 2,
+      gCls: 'gslide ' + S.gdir,
+      gnum: (S.gi + 1) + '/3',
+      gdots: [0, 1, 2].map((i) => ({ cls: i === S.gi ? 'on' : '' })),
+      prev: () => go(S.gi - 1, 'slideR'),
+      next: () => go(S.gi + 1, 'slideL'),
+      saveCls: 'save big' + (S.saved ? ' on' : ''),
+      heartIcon: S.saved ? 'i i-heartf s18' : 'i i-heart s18',
+      saveLabel: S.saved ? 'Fjern fra lagrede' : 'Lagre oppdraget',
+      toggleSave: () => { this.setState({ saved: !S.saved }); this.flash(S.saved ? 'Fjernet fra Lagrede' : 'Lagret i Lagrede', S.saved ? 'i i-x s14' : 'i i-heartf s14'); },
+      share: () => this.flash('Lenke kopiert – del den med en nabo', 'i i-copy s14'),
+      offerCountLabel: S.sent ? '3 naboer har gitt tilbud – inkludert deg' : '2 naboer har gitt tilbud',
+      notSent: !S.sent, sent: S.sent,
+      openOffer: () => this.setState({ sheet: true, step: 1, eAmt: null, eMsg: null }),
+      closeSheet: () => { if (!S.sending) this.setState({ sheet: false }); },
+      sheet: S.sheet,
+      st1: S.step === 1, st2: S.step === 2, st3: S.step === 3,
+      amount: S.amount,
+      onAmount: (e) => this.setState({ amount: e.target.value.replace(/[^\d ]/g, '').slice(0, 7), eAmt: null }),
+      amtWrapCls: 'inwrap' + (S.eAmt ? shk : ''),
+      amtInputCls: 'input amount' + (S.eAmt ? ' err' : ''),
+      quick: [350, 400, 450].map((v) => ({ label: this.fmt(v), cls: 'qchip' + (a === v ? ' on' : ''), pick: () => this.setState({ amount: String(v), eAmt: null }) })),
+      amtHint: a <= 0 ? '' : (diff === 0 ? 'Som budsjettet' : (diff < 0 ? this.fmt(-diff) + ' under' : this.fmt(diff) + ' over')),
+      errAmt: S.eAmt,
+      msg: S.msg, msgCount: S.msg.length,
+      ctrCls: 'ctr' + (S.msg.length > 480 ? ' warn' : ''),
+      onMsg: (e) => this.setState({ msg: e.target.value.slice(0, 500), eMsg: null }),
+      msgWrapCls: S.eMsg ? 'stack' + shk : 'stack',
+      msgInputCls: 'input' + (S.eMsg ? ' err' : ''),
+      templates: TPL.map((t) => ({ text: t, use: () => { const cur = this.state.msg.trim(); this.setState({ msg: (cur ? cur + ' ' : '') + t, eMsg: null }); } })),
+      errMsg: S.eMsg,
+      days: DAYS.map((d) => ({ label: d, cls: 'chip sm plain lime' + (S.day === d ? ' on' : ''), pressed: S.day === d ? 'true' : 'false', pick: () => this.setState({ day: d }) })),
+      times: TIMES.map((t) => ({ label: t, cls: 'chip sm plain lime' + (S.time === t ? ' on' : ''), pressed: S.time === t ? 'true' : 'false', pick: () => this.setState({ time: t }) })),
+      res: S.res.trim(), hasRes: S.res.trim().length > 0,
+      onRes: (e) => this.setState({ res: e.target.value.slice(0, 300) }),
+      toPreview: () => { if (this.validate()) this.setState({ step: 2 }); },
+      backToForm: () => { if (!S.sending) this.setState({ step: 1 }); },
+      amountFmt: this.fmt(a),
+      diffText: diff === 0 ? 'Som budsjettet' : (diff < 0 ? this.fmt(-diff) + ' under budsjett' : this.fmt(diff) + ' over budsjett'),
+      diffPillCls: diff > 0 ? 'pill pill-warn' : 'pill pill-need',
+      whenFmt: S.day + ' · ' + S.time,
+      sending: S.sending, notSending: !S.sending,
+      send: () => {
+        if (S.sending) return;
+        this.setState({ sending: true });
+        this.st = setTimeout(() => this.setState({ sending: false, step: 3, sent: true }), 1500);
+      },
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

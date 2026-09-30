@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Fellesskap</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.hero{position:relative;border-radius:30px;background:var(--grad-soft);overflow:hidden;padding:22px 20px 0;box-shadow:var(--sh)}
+.hero-art{position:relative;height:178px;margin:6px -20px 0}
+.blob{position:absolute;border-radius:50%}
+.avstack{display:flex}
+.avstack .av{margin-left:-9px}
+.avstack .av:first-child{margin-left:0}
+.avstack .more{width:28px;height:28px;border-radius:50%;background:#ECEFF3;color:var(--ink2);font:800 10.5px/28px var(--fb);text-align:center;margin-left:-9px;box-shadow:0 0 0 1.5px #fff,0 0 0 3px #fff}
+.linkcard{display:flex;align-items:center;gap:14px;padding:16px;border-radius:24px;background:#fff;box-shadow:var(--sh);text-decoration:none;color:inherit;border:1px solid rgba(10,23,64,.035);transition:transform .2s var(--ease)}
+.linkcard:active{transform:scale(.985)}
+.pcard{position:relative;display:flex;gap:14px;align-items:center;width:100%;padding:18px;border-radius:26px;background:#fff;border:1px solid rgba(10,23,64,.05);box-shadow:var(--sh-m);cursor:pointer;text-align:left;font:inherit;color:inherit;overflow:hidden;transition:transform .2s var(--ease)}
+.pcard:active{transform:scale(.985)}
+.pcard .glow{position:absolute;right:-50px;top:-70px;width:180px;height:180px;border-radius:50%;background:var(--grad);opacity:.14;pointer-events:none}
+.logoph{width:68px;height:68px;border-radius:20px;border:1.5px dashed #BFC6D2;background:var(--surf2);display:grid;place-items:center;color:var(--faint);flex:none;position:relative}
+.logoph small{position:absolute;bottom:6px;font:700 9px/1 var(--fb);letter-spacing:.08em;text-transform:uppercase}
+.car-view{overflow:hidden;padding:4px 20px 10px}
+.car-track{display:flex;gap:12px;transition:transform .55s var(--ease)}
+.scard{width:150px;flex:none;padding:14px;border-radius:22px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.scard .lg{width:44px;height:44px;border-radius:14px;border:1.5px dashed #C9CFD9;display:grid;place-items:center;color:var(--faint);background:var(--surf2)}
+.don{display:flex;align-items:center;gap:14px;padding:14px 16px;position:relative}
+.don+.don::before{content:"";position:absolute;top:0;left:70px;right:0;height:1px;background:var(--line2)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+
+    <!-- top bar -->
+    <div class="topbar">
+      <a href="Oppdrag.dc.html" class="brand" aria-label="MinNabo, til forsiden"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</a>
+      <div class="tb-r">
+        <a href="Varsler.dc.html" class="iconbtn" aria-label="Varsler, 2 uleste"><i class="i i-bell"></i><span class="dot"></span></a>
+        <a href="Profil.dc.html" class="avbtn" aria-label="Åpne profil"><span class="av av-me">MH</span></a>
+      </div>
+    </div>
+
+    <!-- hero -->
+    <div class="px au" style="position: relative; margin-top: 10px">
+      <div class="hero">
+        <span class="eyebrow" style="color: #3B7300">Fellesskap i Lillehammer</span>
+        <h1 class="h1" style="margin-top: 10px; font-size: 32px">Sammen gjør vi en forskjell</h1>
+        <p class="body p" style="color: #34405F; margin-top: 8px">Naboer som hjelper naboer, og lokale bedrifter som støtter nærmiljøet.</p>
+        <div class="hero-art" aria-hidden="true">
+          <div class="blob ai d2" style="left: 8px; top: 46px; width: 150px; height: 150px; background: rgba(184,238,60,.35)"></div>
+          <div class="blob ai d3" style="right: -10px; top: 18px; width: 180px; height: 180px; background: rgba(25,184,238,.18)"></div>
+          <div class="blob ai d4" style="left: 50%; top: 40px; margin-left: -88px; width: 176px; height: 176px; border: 1.5px dashed rgba(10,23,64,.16)"></div>
+          <div class="as d3" style="position: absolute; left: 50%; top: 76px; margin-left: -52px; width: 104px; height: 104px; border-radius: 50%; background: #ffffff; box-shadow: 0 24px 44px -18px rgba(10,23,64,.4); display: grid; place-items: center">
+            <div class="float" style="display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--grad); color: #0A1740"><i class="i i-hand s28"></i></div>
+          </div>
+          <div class="au d4 float2" style="position: absolute; left: 40px; top: 56px"><span class="av av-b s48">JL</span></div>
+          <div class="au d5 float" style="position: absolute; left: 88px; top: 132px"><span class="av av-a">SN</span></div>
+          <div class="au d6 float2" style="position: absolute; right: 44px; top: 42px"><span class="av av-c s48">KH</span></div>
+          <div class="au d7 float" style="position: absolute; right: 86px; top: 138px"><span class="av av-g">AS</span></div>
+          <div class="au d8" style="position: absolute; right: 22px; top: 122px"><span class="av av-me s32">MH</span></div>
+          <div class="ai d8" style="position: absolute; left: 22px; top: 150px; width: 10px; height: 10px; border-radius: 50%; background: #B8EE3C"></div>
+          <div class="ai d9" style="position: absolute; right: 140px; top: 30px; width: 8px; height: 8px; border-radius: 50%; background: #1E86F4; opacity: .6"></div>
+          <div class="ai d9" style="position: absolute; left: 150px; top: 60px; width: 6px; height: 6px; border-radius: 50%; background: #63E08A"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- link cards -->
+    <div class="px stack" style="gap: 12px; margin-top: 16px; position: relative">
+      <a href="Nabolag.dc.html" class="linkcard au d2">
+        <span class="icirc" style="width: 52px; height: 52px; background: #EDF8D6; color: #3B7300"><i class="i i-home s22"></i></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow" style="font-size: 11px">Nabolag</span>
+          <b style="font: 700 17px/1.2 var(--fd); letter-spacing: -.02em">Nordre Ål nabolag</b>
+          <span style="display: flex; align-items: center; gap: 10px">
+            <span class="avstack">
+              <span class="av av-b s28">JL</span><span class="av av-c s28">KH</span><span class="av av-f s28">NS</span><span class="av av-d s28">MA</span><span class="more">+243</span>
+            </span>
+            <span class="meta">247 medlemmer</span>
+          </span>
+        </span>
+        <i class="i i-right chev" style="color: #8A93A8"></i>
+      </a>
+      <a href="Oppslagstavle.dc.html" class="linkcard au d3">
+        <span class="icirc" style="width: 52px; height: 52px; background: #DFF2FB; color: #065C8F"><i class="i i-pinned s22"></i></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow" style="font-size: 11px">Oppslagstavle</span>
+          <b style="font: 700 17px/1.2 var(--fd); letter-spacing: -.02em">Nye oppslag i Lillehammer</b>
+          <span style="display: flex; gap: 6px">
+            <span class="pill pill-ok" style="height: 22px; font-size: 11px"><i class="i i-gift s14"></i>Gis bort</span>
+            <span class="pill pill-warn" style="height: 22px; font-size: 11px"><i class="i i-key s14"></i>Funnet</span>
+          </span>
+        </span>
+        <span class="pill pill-dark" style="height: 24px">4 nye</span>
+      </a>
+    </div>
+
+    <!-- partner note -->
+    <div class="px au d4" style="margin-top: 30px">
+      <div style="display: flex; gap: 12px; padding: 14px 16px; border-radius: 20px; background: #ffffff; border: 1px solid #E4E8EE">
+        <span class="icirc" style="width: 34px; height: 34px; background: #F3F5F1; color: #34405F"><i class="i i-info s18"></i></span>
+        <p class="p" style="font-size: 13.5px; line-height: 1.45; color: #34405F">Lokale bedrifter støtter MinNabo. De betaler for synlighet her – aldri for plass i søket.</p>
+      </div>
+    </div>
+
+    <!-- main partners -->
+    <div class="sh">
+      <div class="t">
+        <span class="ti" style="background: #0A1740; color: #B8EE3C"><i class="i i-award s18"></i></span>
+        <div><h2>Hovedpartnere</h2><div class="sub">To partnere støtter MinNabo i Innlandet</div></div>
+      </div>
+    </div>
+    <div class="px stack" style="gap: 12px">
+      <sc-for list="{{partners}}" as="p" hint-placeholder-count="2">
+        <button class="pcard au" onClick="{{p.open}}" aria-label="{{p.aria}}">
+          <span class="glow"></span>
+          <span class="logoph"><i class="i i-building s24"></i><small>Logo</small></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; position: relative">
+            <span class="pill pill-grad" style="align-self: flex-start; height: 22px; font-size: 11px"><i class="i i-award s14"></i>Hovedpartner</span>
+            <b style="font: 700 18px/1.2 var(--fd); letter-spacing: -.02em">{{p.name}}</b>
+            <span class="meta">{{p.line}}</span>
+          </span>
+          <i class="i i-right" style="color: #8A93A8; position: relative"></i>
+        </button>
+      </sc-for>
+    </div>
+
+    <!-- supporters carousel -->
+    <div class="sh" style="margin-top: 34px">
+      <div class="t">
+        <span class="ti" style="background: #DFF2FB; color: #065C8F"><i class="i i-building s18"></i></span>
+        <div><h2>Lokale støttespillere</h2><div class="sub">{{carLabel}}</div></div>
+      </div>
+      <div style="display: flex; gap: 8px">
+        <button class="iconbtn" onClick="{{prev}}" aria-label="Forrige støttespiller" disabled="{{atStart}}" style="transition: opacity .2s; {{prevStyle}}"><i class="i i-left s18"></i></button>
+        <button class="iconbtn" onClick="{{next}}" aria-label="Neste støttespiller" disabled="{{atEnd}}" style="transition: opacity .2s; {{nextStyle}}"><i class="i i-right s18"></i></button>
+      </div>
+    </div>
+    <div class="car-view">
+      <div class="car-track" style="will-change: transform; {{trackStyle}}">
+        <sc-for list="{{supporters}}" as="s" hint-placeholder-count="6">
+          <div class="scard">
+            <span class="lg"><i class="{{s.icon}}"></i></span>
+            <span class="stack" style="gap: 3px">
+              <b style="font-size: 14.5px">[Lokal bedrift]</b>
+              <span class="meta" style="font-size: 12.5px">{{s.kind}}</span>
+            </span>
+            <span class="meta" style="font-size: 12px; display: flex; align-items: center; gap: 4px"><i class="i i-pin s14" style="color: #8A93A8"></i>{{s.area}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div class="dots" style="margin-top: 4px">
+      <sc-for list="{{carDots}}" as="d" hint-placeholder-count="5">
+        <i class="{{d.cls}}"></i>
+      </sc-for>
+    </div>
+
+    <!-- donations -->
+    <div class="sh" style="margin-top: 34px">
+      <div class="t">
+        <span class="ti" style="background: #EDF8D6; color: #3B7300"><i class="i i-gift s18"></i></span>
+        <div><h2>Donasjoner</h2><div class="sub">Gitt videre til lag og foreninger</div></div>
+      </div>
+    </div>
+    <div class="px">
+      <div class="list">
+        <sc-for list="{{donations}}" as="d" hint-placeholder-count="3">
+          <div class="don au">
+            <span class="icirc" style="width: 40px; height: 40px; background: #F3F5F1; color: #34405F"><i class="{{d.icon}}"></i></span>
+            <span style="flex: 1; min-width: 0">
+              <b style="display: block; font: 600 15px/1.3 var(--fb)">{{d.to}}</b>
+              <small class="meta" style="display: block; margin-top: 2px">{{d.period}}</small>
+            </span>
+            <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px">
+              <span class="num" style="font-size: 17px">{{d.amount}}</span>
+              <span class="pill pill-ok" style="height: 22px; font-size: 11px"><i class="i i-check s14"></i>Overført</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+      <button class="btn btn-ghost btn-block btn-sm" style="margin-top: 12px; height: 46px" onClick="{{toggleDon}}">{{donBtn}}<i class="{{donIcon}}"></i></button>
+    </div>
+
+    <!-- coming -->
+    <div class="px" style="margin-top: 26px">
+      <div class="dash-card" style="padding: 18px; display: flex; gap: 14px; align-items: center; background: rgba(255,255,255,.5)">
+        <span class="icirc" style="width: 44px; height: 44px; background: #ECEFF3; color: #5F6983"><i class="i i-hourglass s18"></i></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+          <span class="pill pill-neutral" style="align-self: flex-start; height: 22px; font-size: 11px">Kommer</span>
+          <span style="font-size: 14px; line-height: 1.4; color: #5F6983">Samarbeid med Røde Kors er under avklaring.</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="spacer-nav"></div>
+  </div>
+
+  <!-- bottom nav -->
+  <nav class="nav" aria-label="Hovedmeny">
+    <a href="Oppdrag.dc.html"><span class="ni"><i class="i i-clip"></i></span>Oppdrag</a>
+    <a href="Fellesskap.dc.html" class="on" aria-current="page"><span class="ni"><i class="i i-users"></i></span>Fellesskap</a>
+    <a href="LeggUt.dc.html" class="fabw" aria-label="Legg ut"><span class="fab"><i class="i i-plus"></i></span>Legg ut</a>
+    <a href="Innboks.dc.html" aria-label="Innboks, 3 uleste"><span class="ni"><i class="i i-msg"></i><b class="count">3</b></span>Innboks</a>
+    <a href="Meny.dc.html"><span class="ni"><i class="i i-menu"></i></span>Meny</a>
+  </nav>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- partner sheet -->
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Om partneren">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <span class="pill pill-grad"><i class="i i-award s14"></i>Hovedpartner</span>
+        <button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <div style="display: flex; gap: 16px; align-items: center">
+        <span class="logoph as" style="width: 84px; height: 84px; border-radius: 24px"><i class="i i-building s32"></i><small>Logo</small></span>
+        <div class="stack" style="gap: 6px">
+          <h2 class="h2">{{sel.name}}</h2>
+          <span class="meta">[Bransje] · Lillehammer</span>
+        </div>
+      </div>
+      <p class="body p au d2" style="margin-top: 16px; color: #34405F">[Kort tekst om partneren og hvorfor de støtter nabohjelp i Lillehammer. Leveres av partneren.]</p>
+      <div class="card flat au d3" style="margin-top: 16px; padding: 4px 16px">
+        <div class="kv"><span>Partner siden</span><b>[Måned år]</b></div>
+        <div class="kv"><span>Nettside</span><b>[nettside.no]</b></div>
+        <div class="kv"><span>Område</span><b>Innlandet</b></div>
+      </div>
+      <div class="note au d4" style="margin-top: 16px"><i class="i i-info"></i><span>Partnere betaler for synlighet på Fellesskap. De får aldri bedre plass i søk eller blant oppdrag.</span></div>
+      <button class="btn btn-ink btn-block" style="margin-top: 18px" onClick="{{thanks}}"><i class="i i-heart s18"></i>Takk for støtten</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { car: 0, donAll: false, sheet: null, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const PARTNERS = [
+      { id: 1, name: '[Hovedpartner 1]', line: '[Én linje om hva partneren gjør lokalt]' },
+      { id: 2, name: '[Hovedpartner 2]', line: '[Én linje om hva partneren gjør lokalt]' }
+    ];
+    const SUP = [
+      { kind: 'Bakeri', area: 'Sentrum', icon: 'i i-sun s22' },
+      { kind: 'Sykkelverksted', area: 'Stampesletta', icon: 'i i-montering s22' },
+      { kind: 'Byggevare', area: 'Fåberg', icon: 'i i-building s22' },
+      { kind: 'Blomster og hage', area: 'Nordre Ål', icon: 'i i-hage s22' },
+      { kind: 'Kafé', area: 'Sentrum', icon: 'i i-smile s22' },
+      { kind: 'Regnskap', area: 'Søre Ål', icon: 'i i-file s22' }
+    ];
+    const DON = [
+      { to: '[Lokalt idrettslag]', period: 'Juli–sept. 2026', amount: '15 000 kr', icon: 'i i-award s18' },
+      { to: '[Lokal forening]', period: 'Juli–sept. 2026', amount: '8 500 kr', icon: 'i i-users s18' },
+      { to: '[Frivilligsentral]', period: 'April–juni 2026', amount: '12 000 kr', icon: 'i i-hand s18' },
+      { to: '[Skolekorps]', period: 'April–juni 2026', amount: '5 000 kr', icon: 'i i-mic s18' },
+      { to: '[Lokal forening]', period: 'Jan.–mars 2026', amount: '7 500 kr', icon: 'i i-users s18' }
+    ];
+    const max = SUP.length - 2;
+    const c = S.car;
+    const sel = PARTNERS.find((p) => p.id === S.sheet) || PARTNERS[0];
+    return {
+      partners: PARTNERS.map((p) => ({ name: p.name, line: p.line, aria: 'Les om ' + p.name, open: () => this.setState({ sheet: p.id }) })),
+      supporters: SUP,
+      trackStyle: 'transform: translateX(-' + c * 162 + 'px)',
+      atStart: c === 0, atEnd: c >= max,
+      prevStyle: 'opacity: ' + (c === 0 ? '.4' : '1'),
+      nextStyle: 'opacity: ' + (c >= max ? '.4' : '1'),
+      prev: () => this.setState({ car: Math.max(0, c - 1) }),
+      next: () => this.setState({ car: Math.min(max, c + 1) }),
+      carLabel: (c + 1) + '–' + (c + 2) + ' av ' + SUP.length + ' bedrifter',
+      carDots: Array.from({ length: max + 1 }, (_, i) => ({ cls: i === c ? 'on' : '' })),
+      donations: S.donAll ? DON : DON.slice(0, 3),
+      donBtn: S.donAll ? 'Vis færre' : 'Vis alle donasjoner',
+      donIcon: S.donAll ? 'i i-up s18' : 'i i-down s18',
+      toggleDon: () => this.setState({ donAll: !S.donAll }),
+      sheetOpen: !!S.sheet, sel,
+      closeSheet: () => this.setState({ sheet: null }),
+      thanks: () => { this.setState({ sheet: null }); this.flash('Takken er sendt til ' + sel.name, 'i i-heartf s14'); },
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Personvern og samtykker</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.log{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line2)}
+.log:last-child{border-bottom:0}
+.log .dt{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}
+.acc{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:none;border:0;cursor:pointer;font:600 15px var(--fb);text-align:left;color:var(--ink);min-height:52px}
+.acc + .ab{padding:0 16px 16px 16px;font-size:14px;line-height:1.5;color:var(--ink2);animation:fadeUp .35s var(--ease) both}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="subbar">
+    <a href="Innstillinger.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+    <div class="title">Personvern</div>
+    <span></span>
+  </div>
+  <div class="scroll" style="top: 110px">
+    <div class="px stack" style="gap: 22px; padding-top: 6px">
+      <div class="au">
+        <h1 class="h2">Personvern og samtykker</h1>
+        <p class="meta p" style="margin-top: 6px; font-size: 14px">Du bestemmer over dataene dine. Her ser du hva du har samtykket til, og når.</p>
+      </div>
+
+      <div class="card pad au d2">
+        <div class="rowf" style="justify-content: space-between; gap: 12px">
+          <div class="stack" style="gap: 3px; flex: 1">
+            <b style="font-size: 15px">Tips om oppdrag i nærheten</b>
+            <span class="meta">Valgfritt · push og e-post</span>
+          </div>
+          <button class="{{tipsCls}}" onClick="{{toggleTips}}" aria-pressed="{{tipsPressed}}" aria-label="Tips om oppdrag i nærheten"></button>
+        </div>
+      </div>
+
+      <div class="au d3">
+        <div class="eyebrow" style="margin-bottom: 10px">Samtykkelogg</div>
+        <div class="card" style="padding: 4px 16px">
+          <sc-for list="{{log}}" as="l" hint-placeholder-count="4">
+            <div class="log">
+              <span class="dt" style="background: {{l.color}}"></span>
+              <div class="stack" style="gap: 2px; flex: 1">
+                <b style="font-size: 14.5px">{{l.title}}</b>
+                <span class="meta">{{l.when}}</span>
+              </div>
+              <span class="{{l.pill}}">{{l.state}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="card pad au d4" style="display: flex; flex-direction: column; gap: 12px">
+        <div class="rowf" style="gap: 12px">
+          <span class="icirc" style="width: 42px; height: 42px; background: #DFF2FB; color: #065C8F"><i class="i i-download s18"></i></span>
+          <div class="stack" style="gap: 2px"><b style="font-size: 15px">Last ned dataene mine</b><span class="meta">Profil, oppføringer, meldinger og avtaler</span></div>
+        </div>
+        <sc-if value="{{exIdle}}" hint-placeholder-val="{{ true }}">
+          <button class="btn btn-ink btn-block" onClick="{{startExport}}">Be om eksport</button>
+        </sc-if>
+        <sc-if value="{{exBusy}}" hint-placeholder-val="{{ false }}">
+          <div class="stack" style="gap: 8px">
+            <div class="bar"><i style="display: block; {{exBar}}"></i></div>
+            <span class="meta">Forbereder eksport … {{exPct}} %</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{exDone}}" hint-placeholder-val="{{ false }}">
+          <div class="as" style="display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #E3F5E8; color: #1D6E3A; font: 600 14px var(--fb)">
+            <i class="i i-check s18"></i>Eksporten er sendt til m••••@••••.no
+          </div>
+        </sc-if>
+      </div>
+
+      <div class="au d5">
+        <div class="eyebrow" style="margin-bottom: 10px">Hvor lenge lagrer vi data?</div>
+        <div class="list">
+          <sc-for list="{{faq}}" as="f" hint-placeholder-count="3">
+            <div>
+              <button class="acc" onClick="{{f.toggle}}" aria-expanded="{{f.expanded}}"><span style="flex: 1">{{f.q}}</span><i class="{{f.icon}}"></i></button>
+              <sc-if value="{{f.open}}" hint-placeholder-val="{{ false }}"><div class="ab">{{f.a}}</div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="list au d6">
+        <a href="Vilkar.dc.html" class="lrow"><span class="ri"><i class="i i-file s18"></i></span><span class="rt"><b>Vilkår for bruk</b><small>Versjon [x.x]</small></span><i class="i i-right chev"></i></a>
+        <a href="SlettKonto.dc.html" class="lrow"><span class="ri" style="background: #FDEBE9; color: #C23029"><i class="i i-trash s18"></i></span><span class="rt"><b style="color: #C23029">Slett konto</b><small>Sletter profilen og dataene dine</small></span><i class="i i-right chev"></i></a>
+      </div>
+      <div style="height: 40px"></div>
+    </div>
+  </div>
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px"><span class="ti"><i class="i i-check s16"></i></span><span>{{toast}}</span></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tips: true, open: 0, ex: 'idle', pct: 0, toast: null,
+      extra: []
+    };
+  }
+  componentWillUnmount() { clearInterval(this.iv); clearTimeout(this.t); }
+  flash(msg) { clearTimeout(this.t); this.setState({ toast: msg }); this.t = setTimeout(() => this.setState({ toast: null }), 2400); }
+  renderVals() {
+    const S = this.state;
+    const base = [
+      { title: 'Vilkår v2.1 godtatt', when: '29. sep 2026 kl. 14:02', state: 'Godtatt', pill: 'pill pill-ok', color: '#2B8F4E' },
+      { title: 'Personvernerklæring lest', when: '29. sep 2026 kl. 14:02', state: 'Lest', pill: 'pill pill-ok', color: '#2B8F4E' },
+      { title: 'Alder bekreftet (18+)', when: 'Via Vipps · 29. sep 2026 kl. 14:01', state: 'Bekreftet', pill: 'pill pill-ok', color: '#2B8F4E' },
+      { title: 'Tips om oppdrag', when: '29. sep 2026 kl. 14:02', state: 'På', pill: 'pill pill-neutral', color: '#19B8EE' }
+    ];
+    const FAQ = [
+      ['Profil og vurderinger', 'Så lenge du har konto. Når du sletter kontoen, fjernes profilen innen [x] dager. Vurderinger du har gitt anonymiseres.'],
+      ['Meldinger og avtaler', 'Lagres i [x] måneder etter siste aktivitet, slik at dere kan se hva som ble avtalt.'],
+      ['Rapporter og moderering', 'Lagres i [x] måneder for å kunne håndtere gjentatte brudd på reglene.']
+    ];
+    return {
+      tipsCls: 'tgl' + (S.tips ? ' on' : ''), tipsPressed: S.tips ? 'true' : 'false',
+      toggleTips: () => {
+        const on = !S.tips;
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        this.setState({ tips: on, extra: [{ title: 'Tips om oppdrag ' + (on ? 'slått på' : 'slått av'), when: 'I dag kl. ' + hh, state: on ? 'På' : 'Av', pill: 'pill pill-dark', color: '#0A1740' }].concat(S.extra) });
+        this.flash('Endringen er lagret i samtykkeloggen');
+      },
+      log: S.extra.concat(base),
+      exIdle: S.ex === 'idle', exBusy: S.ex === 'busy', exDone: S.ex === 'done',
+      exPct: S.pct, exBar: 'width: ' + S.pct + '%',
+      startExport: () => {
+        this.setState({ ex: 'busy', pct: 0 });
+        this.iv = setInterval(() => {
+          const p = Math.min(100, this.state.pct + 9);
+          this.setState({ pct: p });
+          if (p >= 100) { clearInterval(this.iv); this.setState({ ex: 'done' }); }
+        }, 180);
+      },
+      faq: FAQ.map(([q, a], i) => ({
+        q, a, open: S.open === i, expanded: S.open === i ? 'true' : 'false',
+        icon: S.open === i ? 'i i-up s18' : 'i i-down s18',
+        toggle: () => this.setState({ open: S.open === i ? -1 : i })
+      })),
+      toast: S.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Legg ut oppdrag</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.wzh{position:absolute;top:0;left:0;right:0;z-index:20;background:rgba(243,245,241,.84);backdrop-filter:blur(18px) saturate(1.3);border-bottom:1px solid rgba(10,23,64,.05)}
+.wzh .subbar{padding-bottom:2px}
+.wzmeta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 20px 8px}
+.wzmeta .st{display:flex;flex-direction:column;gap:4px;min-width:0}
+.wzmeta .st b{font:700 15.5px/1.1 var(--fb)}
+.draftbtn{height:44px;padding:0 14px;border-radius:999px;border:1px solid #E4E8EE;background:#ffffff;font:700 13px var(--fb);display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:#0A1740;flex:none;transition:transform .15s}
+.draftbtn:active{transform:scale(.95)}
+.wzprog{margin:0 20px 14px;height:7px}
+.wzprog > i{position:relative;overflow:hidden}
+.wzprog > i::after{content:"";position:absolute;inset:0;display:none}
+.sp-top{height:190px}
+.q{font:700 27px/1.08 var(--fd);letter-spacing:-.03em;margin:0;text-wrap:balance}
+.qs{font-size:15px;line-height:1.45;color:#34405F;margin:8px 0 0}
+.shA{animation:shA .38s}
+.shB{animation:shB .38s}
+@keyframes shA{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes shB{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.ctgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-radius:24px}
+.ctgrid.err{box-shadow:0 0 0 2px rgba(194,48,41,.35);padding:6px;margin:-6px}
+.ct{position:relative;border-radius:22px;background:#ffffff;border:1.5px solid #E4E8EE;cursor:pointer;padding:0;font:inherit;color:#0A1740;transition:border-color .2s,box-shadow .25s,background .2s}
+.ct-in{display:flex;flex-direction:column;align-items:center;gap:9px;padding:14px 6px 12px;transition:transform .15s cubic-bezier(.2,.8,.2,1)}
+.ct:active .ct-in{transform:scale(.93)}
+.ct .art{width:58px;height:58px;border-radius:19px}
+.ct .art .i{width:26px;height:26px}
+.ct-l{font:700 12.5px/1.2 var(--fb);text-align:center;min-height:30px;display:flex;align-items:center}
+.ct.on{border-color:#0A1740;box-shadow:0 0 0 3px rgba(10,23,64,.09),0 12px 22px -14px rgba(10,23,64,.5);background:#FBFDF6}
+.ct-ck{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:#0A1740;color:#B8EE3C;display:grid;place-items:center}
+.sug{display:flex;flex-wrap:wrap;gap:8px}
+.sugc{height:40px;padding:0 14px;border-radius:999px;background:#ffffff;border:1px dashed #BFD6A0;display:inline-flex;align-items:center;gap:7px;font:600 14px var(--fb);color:#0A1740;cursor:pointer;transition:all .2s}
+.sugc .i{color:#3B7300}
+.sugc.on{background:#EDF8D6;border-style:solid;border-color:#BFE07F;color:#3B7300}
+.cnt{font:600 12.5px var(--fb);color:#8A93A8}
+.cnt.ok{color:#2B8F4E}
+.qcard{background:#ffffff;border-radius:22px;box-shadow:var(--sh);padding:16px;display:flex;flex-direction:column;gap:16px}
+.qlab{font:700 14px/1.2 var(--fb);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.optrow{display:flex;gap:8px;flex-wrap:wrap}
+.ochip{height:42px;padding:0 16px;border-radius:999px;background:#F7F8FA;border:1.5px solid #E4E8EE;font:700 14px var(--fb);color:#34405F;cursor:pointer;transition:all .2s}
+.ochip.on{background:#EDF8D6;border-color:#9BDD2C;color:#2F5C08}
+.stepper{display:flex;align-items:center;gap:10px;background:#F7F8FA;border-radius:18px;padding:6px}
+.stepper button{width:44px;height:44px;border-radius:14px;border:0;background:#ffffff;box-shadow:0 1px 3px rgba(10,23,64,.12);display:grid;place-items:center;cursor:pointer;color:#0A1740;transition:transform .15s}
+.stepper button:active{transform:scale(.9)}
+.stepper .sv{flex:1;text-align:center;font:700 20px/1 var(--fd);letter-spacing:-.02em}
+.stepper .sv small{font:600 13px var(--fb);color:#5F6983;margin-left:3px}
+.phgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ph{position:relative;aspect-ratio:1;border-radius:18px}
+.ph .i{width:30px;height:30px}
+.phx{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;background:rgba(10,23,64,.72);color:#ffffff;border:0;display:grid;place-items:center;cursor:pointer;padding:0}
+.phcover{position:absolute;left:8px;bottom:8px;height:22px;padding:0 8px;border-radius:999px;background:#ffffff;font:700 10.5px/22px var(--fb);color:#0A1740}
+.photo-add{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.mapc{position:relative;height:156px;border-radius:24px;overflow:hidden;background:#E8F2E1;border:1px solid rgba(10,23,64,.05)}
+.mapc .g{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,rgba(10,23,64,.045) 0 1px,transparent 1px 26px),repeating-linear-gradient(90deg,rgba(10,23,64,.045) 0 1px,transparent 1px 26px)}
+.mapc .road{position:absolute;background:#ffffff;border-radius:6px}
+.mapc .lake{position:absolute;right:-40px;top:-30px;width:150px;height:110px;border-radius:50%;background:#CFE8F6}
+.mapc .zone{position:absolute;left:50%;top:50%;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;background:rgba(184,238,60,.28);border:2px solid rgba(110,180,10,.55);animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.mapc .lbl{position:absolute;left:12px;bottom:12px;height:32px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.92);display:inline-flex;align-items:center;gap:6px;font:700 13px var(--fb);box-shadow:0 4px 12px -6px rgba(10,23,64,.4)}
+.dstrip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:14px 20px 8px;margin:0 -20px}
+.dstrip::-webkit-scrollbar{display:none}
+.dstrip.err .dchip{border-color:#E7A7A2}
+.dchip{position:relative;flex:none;width:60px;height:80px;border-radius:20px;border:1.5px solid #E4E8EE;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:#0A1740;padding:0;transition:all .22s}
+.dchip .wd{font:700 11.5px/1 var(--fb);color:#5F6983;text-transform:uppercase;letter-spacing:.04em}
+.dchip .dn{font:700 23px/1 var(--fd);letter-spacing:-.02em}
+.dchip .mo{font:600 11px/1 var(--fb);color:#8A93A8}
+.dchip.w41{background:#FBFDF6}
+.dchip.on{background:#0A1740;border-color:#0A1740;color:#ffffff;box-shadow:0 10px 18px -10px rgba(10,23,64,.7)}
+.dchip.on .wd,.dchip.on .mo{color:rgba(255,255,255,.7)}
+.wtag{position:absolute;top:-10px;left:50%;margin-left:-24px;width:48px;height:18px;border-radius:9px;background:#B8EE3C;color:#0A1740;font:800 9.5px/18px var(--fb);text-align:center;letter-spacing:.04em}
+.tod{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.todb{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-radius:18px;border:1.5px solid #E4E8EE;background:#ffffff;cursor:pointer;text-align:left;font:inherit;color:#0A1740;transition:all .2s}
+.todb .ti2{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:#F3F5F1;flex:none;transition:all .2s}
+.todb b{display:block;font:700 14px/1.2 var(--fb)}
+.todb small{display:block;font-size:12px;color:#5F6983}
+.todb.on{border-color:#9BDD2C;background:#F6FCEA}
+.todb.on .ti2{background:#B8EE3C;color:#0A1740}
+.sumpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:16px;background:#ffffff;box-shadow:var(--sh);font:700 14px var(--fb)}
+.qchips{display:flex;gap:8px;flex-wrap:wrap}
+.trow{display:flex;align-items:center;gap:14px;padding:12px 14px 12px 16px;min-height:68px;width:100%;background:none;border:0;cursor:pointer;text-align:left;font:inherit;color:#0A1740;position:relative}
+.trow + .trow::before{content:"";position:absolute;top:0;left:70px;right:0;height:1px;background:#EEF1F4}
+.trow .tgl{display:inline-block}
+.trow .ri{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:#F3F5F1;flex:none}
+.trow .rt{flex:1;min-width:0}
+.trow .rt b{display:block;font:600 15.5px/1.3 var(--fb)}
+.trow .rt small{display:block;font-size:13px;color:#5F6983;margin-top:2px}
+.rings{position:relative;width:124px;height:124px;flex:none;border-radius:50%;background:#F3F5F1}
+.rings .rg{position:absolute;left:50%;top:50%;border-radius:50%;background:rgba(184,238,60,.3);border:1.5px solid #8FD12A;transition:all .45s cubic-bezier(.3,1.4,.5,1)}
+.rings .me{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#0A1740;box-shadow:0 0 0 4px #ffffff}
+.sgroup{background:#ffffff;border-radius:22px;box-shadow:var(--sh);padding:4px 16px}
+.sgroup .gh{display:flex;align-items:center;gap:8px;padding:12px 0 6px;font:700 12px/1 var(--fb);letter-spacing:.08em;text-transform:uppercase;color:#5F6983}
+.srow{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #EEF1F4}
+.srow .sv2{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.srow .sv2 span{font-size:12.5px;color:#5F6983}
+.srow .sv2 b{font:600 14.5px/1.35 var(--fb)}
+.srow .link{min-height:44px;padding:0 4px;font-size:13.5px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="mesh lime"></div>
+
+  <!-- STEP 1 · Kategori -->
+  <sc-if value="{{s1}}" hint-placeholder-val="{{ true }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Hva trenger du hjelp med?</h1>
+        <p class="qs">Velg kategorien som passer best, så finner riktige naboer oppdraget ditt.</p>
+        <div class="{{catGridCls}}" style="margin-top: 20px" role="group" aria-label="Kategorier">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="11">
+            <button class="{{c.cls}}" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}">
+              <span class="ct-in">
+                <span class="{{c.artCls}}"><i class="{{c.icon}}"></i></span>
+                <span class="ct-l">{{c.label}}</span>
+              </span>
+              <sc-if value="{{c.on}}" hint-placeholder-val="{{ false }}"><span class="ct-ck as"><i class="i i-check s14"></i></span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{errA}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: 14px"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+        <sc-if value="{{errB}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: 14px"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+        <div class="note" style="margin-top: 18px"><i class="i i-info"></i><span>Finner du ikke riktig kategori? Velg «Annet» og beskriv jobben med egne ord.</span></div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 2 · Tittel -->
+  <sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Gi oppdraget en tittel</h1>
+        <p class="qs">Kort og konkret – hva skal gjøres?</p>
+        <div class="field" style="margin-top: 22px">
+          <label class="label" for="tj-title">Tittel <span class="{{titleCntCls}}">{{titleLen}}/60</span></label>
+          <input id="tj-title" class="{{titleCls}}" value="{{title}}" onChange="{{onTitle}}" maxlength="60" placeholder="F.eks. Male gjerdet i hagen" autocomplete="off">
+          <sc-if value="{{errA}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+          <sc-if value="{{errB}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+          <span class="help">Minst 5 tegn. Unngå adresse og telefonnummer i tittelen.</span>
+        </div>
+        <div style="margin-top: 26px">
+          <div class="qlab"><i class="i i-sparkle s16" style="color: #3B7300"></i>Forslag for {{catLabel}}</div>
+          <div class="sug">
+            <sc-for list="{{sugs}}" as="g" hint-placeholder-count="3">
+              <button class="{{g.cls}}" onClick="{{g.pick}}"><i class="{{g.icon}}"></i>{{g.text}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div class="card pad" style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px">
+          <b style="font: 700 14px var(--fb)">Gode titler er konkrete</b>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <span class="icirc" style="width: 26px; height: 26px; background: #E3F5E8; color: #2B8F4E"><i class="i i-check s14"></i></span>
+            <span class="body" style="font-size: 14px">«Male gjerdet i hagen»</span>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <span class="icirc" style="width: 26px; height: 26px; background: #FDEBE9; color: #C23029"><i class="i i-x s14"></i></span>
+            <span class="body muted" style="font-size: 14px">«Trenger hjelp snarest»</span>
+          </div>
+        </div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 3 · Beskrivelse -->
+  <sc-if value="{{s3}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Beskriv oppdraget</h1>
+        <p class="qs">Jo mer hjelperen vet, jo bedre og mer presise tilbud får du.</p>
+        <div class="field" style="margin-top: 22px">
+          <label class="label" for="tj-desc">Beskrivelse <span class="{{descCntCls}}">{{descLen}}/600</span></label>
+          <textarea id="tj-desc" class="{{descCls}}" value="{{desc}}" onChange="{{onDesc}}" rows="5" maxlength="600" placeholder="Hva skal gjøres, hvor stort er det, og er det noe hjelperen bør vite?"></textarea>
+          <sc-if value="{{errA}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+          <sc-if value="{{errB}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+        </div>
+
+        <div class="eyebrow" style="margin: 26px 0 12px">Noen raske spørsmål</div>
+        <div class="qcard">
+          <div>
+            <div class="qlab"><span class="icirc" style="width: 26px; height: 26px; background: #EDF8D6; color: #3B7300"><i class="i i-maling s14"></i></span>{{iq1}}</div>
+            <div class="optrow">
+              <sc-for list="{{q1opts}}" as="o" hint-placeholder-count="4">
+                <button class="{{o.cls}}" onClick="{{o.pick}}" aria-pressed="{{o.pressed}}">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div>
+            <div class="qlab"><span class="icirc" style="width: 26px; height: 26px; background: #EDF8D6; color: #3B7300"><i class="i i-sliders s14"></i></span>{{isz}}</div>
+            <div class="stepper">
+              <button onClick="{{sizeDown}}" aria-label="Mindre"><i class="i i-minus s18"></i></button>
+              <span class="sv">ca. {{size}}<small>{{unit}}</small></span>
+              <button onClick="{{sizeUp}}" aria-label="Større"><i class="i i-plus s18"></i></button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div>
+            <div class="qlab"><span class="icirc" style="width: 26px; height: 26px; background: #EDF8D6; color: #3B7300"><i class="i i-info s14"></i></span>{{iq3}}</div>
+            <div class="seg">
+              <sc-for list="{{q3opts}}" as="o" hint-placeholder-count="2">
+                <button class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div class="label" style="margin: 26px 0 12px">Bilder <small>{{photoCount}}/6 · valgfritt</small></div>
+        <div class="phgrid">
+          <sc-for list="{{photos}}" as="p" hint-placeholder-count="3">
+            <div class="{{p.cls}}">
+              <i class="{{p.icon}}"></i>
+              <sc-if value="{{p.cover}}" hint-placeholder-val="{{ false }}"><span class="phcover">Forsidebilde</span></sc-if>
+              <button class="phx" onClick="{{p.remove}}" aria-label="{{p.label}}"><i class="i i-x s14"></i></button>
+            </div>
+          </sc-for>
+          <sc-if value="{{canAddPhoto}}" hint-placeholder-val="{{ true }}">
+            <button class="photo-add" onClick="{{addPhoto}}"><i class="i i-camera s24"></i>Legg til</button>
+          </sc-if>
+        </div>
+        <div class="note" style="margin-top: 12px"><i class="i i-info"></i><span>Bilder gjør det lettere å gi et godt tilbud. Unngå husnummer, bilskilt og ansikter.</span></div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 4 · Sted -->
+  <sc-if value="{{s4}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Hvor skal jobben gjøres?</h1>
+        <p class="qs">Vi viser bare et omtrentlig område til andre.</p>
+
+        <button onClick="{{locate}}" class="btn btn-ink btn-block" style="margin-top: 22px; height: 54px">
+          <sc-if value="{{locating}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #B8EE3C"></span>Finner posisjonen din …</sc-if>
+          <sc-if value="{{notLocating}}" hint-placeholder-val="{{ true }}"><i class="i i-locate s18"></i>Bruk posisjonen min</sc-if>
+        </button>
+        <sc-if value="{{located}}" hint-placeholder-val="{{ false }}">
+          <div class="au" style="margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #E3F5E8; color: #1D6E3A; font: 600 14px var(--fb)">
+            <span class="icirc as" style="width: 24px; height: 24px; background: #2B8F4E; color: #ffffff"><i class="i i-check s14"></i></span>Fant deg: Nordre Ål, Lillehammer
+          </div>
+        </sc-if>
+
+        <div class="field" style="margin-top: 20px">
+          <span class="label">Kommune</span>
+          <button class="selectbox" onClick="{{openK}}" aria-label="Velg kommune, valgt {{kommune}}">
+            <i class="i i-building s18" style="color: #5F6983"></i><span class="v">{{kommune}}</span><i class="i i-down s18" style="color: #8A93A8"></i>
+          </button>
+        </div>
+        <div class="field" style="margin-top: 16px">
+          <label class="label" for="tj-area">Område eller bydel</label>
+          <input id="tj-area" class="{{areaCls}}" value="{{area}}" onChange="{{onArea}}" placeholder="F.eks. Nordre Ål" autocomplete="off">
+          <sc-if value="{{errA}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+          <sc-if value="{{errB}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+          <div class="qchips" style="margin-top: 2px">
+            <sc-for list="{{areaChips}}" as="a" hint-placeholder-count="6">
+              <button class="{{a.cls}}" onClick="{{a.pick}}">{{a.name}}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="mapc" style="margin-top: 22px" aria-hidden="true">
+          <div class="g"></div>
+          <div class="lake"></div>
+          <div class="road" style="left: -20px; right: -20px; top: 58px; height: 9px"></div>
+          <div class="road" style="left: 140px; top: -20px; bottom: -20px; width: 8px"></div>
+          <div class="road" style="left: 40px; top: 100px; width: 180px; height: 6px"></div>
+          <div class="zone"></div>
+          <span class="lbl"><i class="i i-pin s14" style="color: #3B7300"></i>{{areaShow}}, {{kommune}} · omtrentlig</span>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 18px; background: #ffffff; box-shadow: var(--sh)">
+          <span class="icirc" style="width: 32px; height: 32px; background: #0A1740; color: #B8EE3C"><i class="i i-lock s16"></i></span>
+          <span style="font-size: 13.5px; line-height: 1.45; color: #34405F"><b style="color: #0A1740">Bare omtrentlig område vises.</b> Nøyaktig adresse deler du selv i chatten når dere har avtalt.</span>
+        </div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 5 · Når -->
+  <sc-if value="{{s5}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Når passer det?</h1>
+        <p class="qs">{{modeHelp}}</p>
+        <div class="seg" style="margin-top: 20px">
+          <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+            <button class="{{m.cls}}" onClick="{{m.pick}}">{{m.label}}</button>
+          </sc-for>
+        </div>
+
+        <div class="{{stripCls}}" role="group" aria-label="Velg dager">
+          <sc-for list="{{dayItems}}" as="d" hint-placeholder-count="8">
+            <button class="{{d.cls}}" onClick="{{d.pick}}" aria-pressed="{{d.pressed}}" aria-label="{{d.aria}}">
+              <sc-if value="{{d.wk}}" hint-placeholder-val="{{ false }}"><span class="wtag">UKE 41</span></sc-if>
+              <span class="wd">{{d.wd}}</span><span class="dn">{{d.d}}</span><span class="mo">okt</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{errA}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: 4px"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+        <sc-if value="{{errB}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: 4px"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+        <sc-if value="{{hasWhen}}" hint-placeholder-val="{{ true }}">
+          <div class="sumpill as" style="margin-top: 8px"><i class="i i-cal s16" style="color: #3B7300"></i>{{whenLabel}}</div>
+        </sc-if>
+
+        <div class="label" style="margin: 26px 0 12px">Tid på dagen <small>Velg én eller flere</small></div>
+        <div class="tod">
+          <sc-for list="{{tods}}" as="t" hint-placeholder-count="4">
+            <button class="{{t.cls}}" onClick="{{t.pick}}" aria-pressed="{{t.pressed}}">
+              <span class="ti2"><i class="{{t.icon}}"></i></span>
+              <span><b>{{t.label}}</b><small>{{t.sub}}</small></span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div class="label" style="margin: 26px 0 12px">Omtrent hvor lang tid? <small>Et anslag holder</small></div>
+        <div class="stepper" style="background: #ffffff; box-shadow: var(--sh)">
+          <button onClick="{{hoursDown}}" aria-label="Kortere tid"><i class="i i-minus s18"></i></button>
+          <span class="sv">{{hoursLabel}}</span>
+          <button onClick="{{hoursUp}}" aria-label="Lengre tid"><i class="i i-plus s18"></i></button>
+        </div>
+        <div class="note" style="margin-top: 12px"><i class="i i-info"></i><span>Usikker? Hjelperen kan foreslå tidspunkt og tidsbruk i tilbudet sitt.</span></div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 6 · Pris -->
+  <sc-if value="{{s6}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Hva med pris?</h1>
+        <p class="qs">Oppgi et budsjett, eller la naboene foreslå en pris.</p>
+        <div class="seg" style="margin-top: 20px">
+          <sc-for list="{{pmodes}}" as="m" hint-placeholder-count="2">
+            <button class="{{m.cls}}" onClick="{{m.pick}}">{{m.label}}</button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{isBudget}}" hint-placeholder-val="{{ false }}">
+          <div class="field au" style="margin-top: 20px">
+            <label class="label" for="tj-amt">Budsjett <small>Vises på oppdraget</small></label>
+            <div class="inwrap">
+              <input id="tj-amt" class="{{amountCls}}" value="{{amountFmt}}" onChange="{{onAmount}}" inputmode="numeric" placeholder="0" autocomplete="off">
+              <span class="suf">kr</span>
+            </div>
+            <sc-if value="{{errA}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+            <sc-if value="{{errB}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s16"></i>{{err}}</div></sc-if>
+            <div class="qchips">
+              <sc-for list="{{quick}}" as="k" hint-placeholder-count="5">
+                <button class="{{k.cls}}" onClick="{{k.pick}}">{{k.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{isOffer}}" hint-placeholder-val="{{ true }}">
+          <div class="au" style="margin-top: 20px; display: flex; flex-direction: column; gap: 16px">
+            <div style="display: flex; gap: 14px; padding: 16px; border-radius: 22px; background: #EDF8D6; border: 1px solid #D3EE9C">
+              <span class="icirc" style="width: 42px; height: 42px; background: #0A1740; color: #B8EE3C"><i class="i i-tag s18"></i></span>
+              <span class="stack" style="gap: 4px"><b style="font: 700 15.5px var(--fb)">Oppdraget vises med «Ønsker tilbud»</b><span class="meta" style="color: #34405F">Naboer sender deg et prisforslag. Du sammenligner og velger selv.</span></span>
+            </div>
+            <div class="field">
+              <label class="label" for="tj-guess">Ditt eget anslag <small>Valgfritt · vises ikke</small></label>
+              <div class="inwrap">
+                <input id="tj-guess" class="input amount" value="{{amountFmt}}" onChange="{{onAmount}}" inputmode="numeric" placeholder="0" autocomplete="off">
+                <span class="suf">kr</span>
+              </div>
+              <span class="help">Hjelper deg å vurdere tilbudene du får.</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="margin-top: 22px; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 18px; background: #ffffff; border: 1px solid #E4E8EE">
+          <div class="note" style="color: #34405F"><i class="i i-tag"></i><span><b>Prisen er veiledende – dere avtaler selv.</b></span></div>
+          <div class="note"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+        </div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 7 · Utstyr og praktisk -->
+  <sc-if value="{{s7}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Utstyr og praktisk</h1>
+        <p class="qs">Små detaljer som gjør det enklere å gi et riktig tilbud.</p>
+        <div class="list" style="margin-top: 20px">
+          <sc-for list="{{eqRows}}" as="r" hint-placeholder-count="4">
+            <button class="trow" onClick="{{r.toggle}}" role="switch" aria-checked="{{r.checked}}">
+              <span class="ri" style="color: #3B7300"><i class="{{r.icon}}"></i></span>
+              <span class="rt"><b>{{r.label}}</b><small>{{r.sub}}</small></span>
+              <span class="{{r.tglCls}}" aria-hidden="true"></span>
+            </button>
+          </sc-for>
+        </div>
+        <div class="field" style="margin-top: 22px">
+          <label class="label" for="tj-prac">Annet hjelperen bør vite <small>{{pracLen}}/300</small></label>
+          <textarea id="tj-prac" class="input" value="{{practical}}" onChange="{{onPractical}}" rows="4" maxlength="300" placeholder="F.eks. hvor utstyret står, eller om det er trapp opp til huset"></textarea>
+          <span class="help">Valgfritt. Ikke skriv nøyaktig adresse her.</span>
+        </div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 8 · Hvem kan gi tilbud -->
+  <sc-if value="{{s8}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Hvem kan gi tilbud?</h1>
+        <p class="qs">Du bestemmer hvem som kan svare på oppdraget.</p>
+        <div class="stack" style="gap: 10px; margin-top: 20px">
+          <sc-for list="{{whoOpts}}" as="w" hint-placeholder-count="2">
+            <button class="{{w.cls}}" onClick="{{w.pick}}" aria-pressed="{{w.pressed}}">
+              <span class="icirc" style="width: 44px; height: 44px; background: #EDF8D6; color: #3B7300"><i class="{{w.icon}}"></i></span>
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><b style="font: 700 15.5px var(--fb)">{{w.label}}</b><span class="meta">{{w.sub}}</span></span>
+              <span class="{{w.radCls}}"></span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div class="card pad" style="margin-top: 22px">
+          <div class="label">Maks avstand til hjelperen <span class="num" style="font-size: 18px">{{kmLabel}}</span></div>
+          <div style="display: flex; align-items: center; gap: 18px; margin-top: 16px">
+            <div class="rings" aria-hidden="true">
+              <span class="rg" style="display: block; {{ringStyle}}"></span>
+              <span class="me"></span>
+            </div>
+            <div class="stack" style="gap: 6px; flex: 1">
+              <b style="font: 700 16px var(--fd)">{{kmName}}</b>
+              <span class="meta">Hjelpere lenger unna ser ikke oppdraget ditt.</span>
+            </div>
+          </div>
+          <input type="range" class="range" min="1" max="30" step="1" value="{{km}}" onChange="{{onKm}}" aria-label="Maks avstand i kilometer" style="margin-top: 20px; {{rangeBg}}">
+          <div style="display: flex; justify-content: space-between; margin-top: 8px" class="meta"><span>1 km</span><span>15 km</span><span>30 km</span></div>
+        </div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- STEP 9 · Bekreft -->
+  <sc-if value="{{s9}}" hint-placeholder-val="{{ false }}">
+    <div class="scroll">
+      <div class="sp-top"></div>
+      <div class="{{wrapCls}}">
+        <h1 class="q">Ser alt riktig ut?</h1>
+        <p class="qs">Sjekk oppsummeringen. Trykk «Endre» for å rette noe.</p>
+
+        <div class="lcard" style="margin-top: 20px">
+          <div class="{{heroArt}}" style="width: 84px; min-height: 96px; align-self: stretch; border-radius: 16px"><i class="{{catIcon}}"></i></div>
+          <div class="lbody">
+            <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div>
+            <p class="ltitle" style="padding-right: 0">{{titleShow}}</p>
+            <div class="lmeta"><i class="i i-pin"></i>{{areaShow}}, {{kommune}}</div>
+            <div class="lprice"><span class="l">{{priceL}}</span><span class="v">{{priceV}}</span></div>
+          </div>
+        </div>
+
+        <div class="stack" style="gap: 12px; margin-top: 16px">
+          <div class="sgroup">
+            <div class="gh"><i class="i i-clip s14"></i>Oppdraget</div>
+            <sc-for list="{{sumA}}" as="r" hint-placeholder-count="4">
+              <div class="srow"><div class="sv2"><span>{{r.k}}</span><b>{{r.v}}</b></div><button class="link" onClick="{{r.edit}}" aria-label="Endre {{r.k}}">Endre</button></div>
+            </sc-for>
+          </div>
+          <div class="sgroup">
+            <div class="gh"><i class="i i-pin s14"></i>Sted og tid</div>
+            <sc-for list="{{sumB}}" as="r" hint-placeholder-count="3">
+              <div class="srow"><div class="sv2"><span>{{r.k}}</span><b>{{r.v}}</b></div><button class="link" onClick="{{r.edit}}" aria-label="Endre {{r.k}}">Endre</button></div>
+            </sc-for>
+          </div>
+          <div class="sgroup">
+            <div class="gh"><i class="i i-tag s14"></i>Pris og praktisk</div>
+            <sc-for list="{{sumC}}" as="r" hint-placeholder-count="2">
+              <div class="srow"><div class="sv2"><span>{{r.k}}</span><b>{{r.v}}</b></div><button class="link" onClick="{{r.edit}}" aria-label="Endre {{r.k}}">Endre</button></div>
+            </sc-for>
+          </div>
+          <div class="sgroup">
+            <div class="gh"><i class="i i-users s14"></i>Synlighet</div>
+            <sc-for list="{{sumD}}" as="r" hint-placeholder-count="2">
+              <div class="srow"><div class="sv2"><span>{{r.k}}</span><b>{{r.v}}</b></div><button class="link" onClick="{{r.edit}}" aria-label="Endre {{r.k}}">Endre</button></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="note" style="margin-top: 16px"><i class="i i-info"></i><span>Du kan endre, pause eller slette oppdraget når som helst etter publisering. Pris og betaling avtales direkte mellom dere – MinNabo håndterer ikke betaling.</span></div>
+      </div>
+      <div class="spacer-foot"></div>
+    </div>
+  </sc-if>
+
+  <!-- wizard header -->
+  <div class="wzh">
+    <div class="subbar">
+      <sc-if value="{{isFirst}}" hint-placeholder-val="{{ true }}"><a href="Oppdrag.dc.html" class="iconbtn" aria-label="Lukk"><i class="i i-back"></i></a></sc-if>
+      <sc-if value="{{notFirst}}" hint-placeholder-val="{{ false }}"><button class="iconbtn" onClick="{{back}}" aria-label="Forrige steg"><i class="i i-back"></i></button></sc-if>
+      <div class="title">Legg ut oppdrag</div>
+      <button class="iconbtn" onClick="{{openClose}}" aria-label="Lukk"><i class="i i-x"></i></button>
+    </div>
+    <div class="wzmeta">
+      <div class="st">
+        <span class="eyebrow">Steg {{step}} av 9</span>
+        <b>{{stepName}}</b>
+      </div>
+      <button class="draftbtn" onClick="{{saveDraft}}"><i class="i i-bookmark s16"></i>Lagre utkast</button>
+    </div>
+    <div class="prog wzprog" role="progressbar" aria-valuemin="1" aria-valuemax="9" aria-valuenow="{{step}}" aria-label="Fremdrift"><i style="display: block; {{progStyle}}"></i></div>
+  </div>
+
+  <!-- sticky foot -->
+  <div class="foot">
+    <div class="fr">
+      <sc-if value="{{notFirst}}" hint-placeholder-val="{{ false }}">
+        <button class="btn btn-ghost btn-lg" onClick="{{back}}" aria-label="Forrige steg" style="width: 58px; padding: 0; flex: none"><i class="i i-back"></i></button>
+      </sc-if>
+      <sc-if value="{{notLast}}" hint-placeholder-val="{{ true }}">
+        <button class="btn btn-lime btn-lg" onClick="{{next}}" style="flex: 1">{{nextLabel}}<i class="i i-arrow s18"></i></button>
+      </sc-if>
+      <sc-if value="{{isLast}}" hint-placeholder-val="{{ false }}">
+        <a href="Forhandsvisning.dc.html" class="btn btn-lime btn-lg" style="flex: 1"><i class="i i-eye s18"></i>Forhåndsvis<span class="shine"></span></a>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- kommune sheet -->
+  <sc-if value="{{kSheet}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeK}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Velg kommune">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Velg kommune</h2>
+        <button class="iconbtn" onClick="{{closeK}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <div class="stack" style="gap: 8px">
+        <sc-for list="{{kommuner}}" as="k" hint-placeholder-count="6">
+          <button class="{{k.cls}}" onClick="{{k.pick}}" style="padding: 13px 14px">
+            <span class="{{k.radCls}}"></span>
+            <span style="flex: 1; font: 600 15px var(--fb)">{{k.name}}</span>
+            <span class="meta">{{k.sub}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div class="note" style="margin-top: 16px"><i class="i i-info"></i><span>MinNabo er foreløpig åpent i Innlandet.</span></div>
+    </div>
+  </sc-if>
+
+  <!-- close dialog -->
+  <sc-if value="{{closeOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{cancelClose}}" aria-label="Lukk"></button>
+    <div class="dialog" role="dialog" aria-label="Lukke uten å publisere?">
+      <span class="icirc as" style="width: 60px; height: 60px; margin: 0 auto 14px; background: #EDF8D6; color: #3B7300"><i class="i i-bookmark s24"></i></span>
+      <h2 class="h3">Lukke uten å publisere?</h2>
+      <p class="body p muted" style="margin-top: 8px">Lagre utkastet, så kan du fortsette der du slapp fra «Legg ut».</p>
+      <div class="stack" style="gap: 10px; margin-top: 20px">
+        <a href="Oppdrag.dc.html" class="btn btn-ink btn-block">Lagre utkast og lukk</a>
+        <button class="btn btn-ghost btn-block" onClick="{{cancelClose}}">Fortsett å redigere</button>
+        <a href="Oppdrag.dc.html" class="btn btn-text" style="color: #C23029; align-self: center">Forkast utkastet</a>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const days = {};
+    [5, 6, 7, 8, 9, 10, 11].forEach((d) => { days[d] = true; });
+    this.state = {
+      step: 1, dir: 'slideL', err: null, errField: null, errN: 0, ret: false,
+      cat: 'maling',
+      title: 'Male gjerdet i hagen',
+      desc: 'Tregjerdet rundt hagen trenger ny beis før vinteren. Det er ca. 25 meter langt og rundt 1,2 meter høyt. Den gamle beisen flasser enkelte steder, så gjerdet bør skrapes lett og børstes før beising.',
+      q1: 'Gjerde', size: 30, q3: 'Ja',
+      photos: [{ id: 1, icon: 'i i-maling' }, { id: 2, icon: 'i i-hage' }, { id: 3, icon: 'i i-home' }], pid: 4,
+      kommune: 'Lillehammer', area: 'Nordre Ål', kSheet: false, locating: false, located: false,
+      whenMode: 'flex', days: days, tod: { Formiddag: true, Ettermiddag: true }, hours: 5,
+      priceMode: 'offer', amount: '1500',
+      eq: { utstyr: true, materialer: true, parkering: true, dyr: false },
+      practical: 'Beis og pensler står i boden. Stige finnes, men ta gjerne med egen hvis du har.',
+      who: 'alle', km: 10,
+      closeOpen: false, toast: null, toastIcon: 'i i-check s16'
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.lt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  edit(obj) { this.setState(Object.assign({}, obj, { err: null, errField: null })); }
+  go(n, dir, ret) { this.setState({ step: n, dir: dir, err: null, errField: null, ret: !!ret }); }
+  validate(n) {
+    const S = this.state;
+    if (n === 1 && !S.cat) return { f: 'cat', m: 'Velg en kategori for å gå videre.' };
+    if (n === 2) {
+      const l = S.title.trim().length;
+      if (l === 0) return { f: 'title', m: 'Skriv en tittel for oppdraget.' };
+      if (l < 5) return { f: 'title', m: 'Tittelen må ha minst 5 tegn.' };
+    }
+    if (n === 3 && S.desc.trim().length < 20) return { f: 'desc', m: 'Beskriv oppdraget med minst 20 tegn.' };
+    if (n === 4 && !S.area.trim()) return { f: 'area', m: 'Skriv inn område eller bydel.' };
+    if (n === 5 && Object.keys(S.days).filter((k) => S.days[k]).length === 0) return { f: 'days', m: S.whenMode === 'flex' ? 'Velg minst én dag som passer.' : 'Velg en dato.' };
+    if (n === 6 && S.priceMode === 'budget' && !(parseInt(S.amount, 10) > 0)) return { f: 'amount', m: 'Skriv inn et budsjett, eller velg «Ønsker tilbud».' };
+    return null;
+  }
+  next() {
+    const S = this.state;
+    const v = this.validate(S.step);
+    if (v) { this.setState({ err: v.m, errField: v.f, errN: S.errN + 1 }); return; }
+    if (S.ret) { this.go(9, 'slideL'); return; }
+    if (S.step < 9) this.go(S.step + 1, 'slideL');
+  }
+  renderVals() {
+    const S = this.state;
+    const TITLES = ['Kategori', 'Tittel', 'Beskrivelse', 'Sted', 'Når', 'Pris', 'Utstyr og praktisk', 'Hvem kan gi tilbud', 'Bekreft'];
+    const CATS = [
+      ['hage', 'Hage'], ['rengjoring', 'Rengjøring'], ['flytting', 'Flytting/bæring'], ['transport', 'Transport/levering'],
+      ['montering', 'Montering'], ['snomaking', 'Snømåking'], ['maling', 'Maling/vedlikehold'], ['dyrepass', 'Dyrepass'],
+      ['data', 'Datahjelp'], ['arrangement', 'Arrangementshjelp'], ['annet', 'Annet']
+    ];
+    const INTAKE = {
+      maling: { q1: 'Hva skal males?', o1: ['Gjerde', 'Terrasse', 'Vegg', 'Annet'], sz: 'Omtrentlig størrelse', unit: 'm²', inc: 5, def: 30, q3: 'Har du maling/beis?' },
+      hage: { q1: 'Hva gjelder det?', o1: ['Plen', 'Hekk', 'Løv', 'Annet'], sz: 'Omtrentlig størrelse', unit: 'm²', inc: 25, def: 300, q3: 'Finnes det utstyr?' },
+      rengjoring: { q1: 'Hva skal vaskes?', o1: ['Leilighet', 'Hus', 'Hytte', 'Vinduer'], sz: 'Omtrentlig størrelse', unit: 'm²', inc: 10, def: 70, q3: 'Har du vaskemidler?' },
+      flytting: { q1: 'Hva skal bæres?', o1: ['Møbler', 'Esker', 'Hvitevarer', 'Annet'], sz: 'Antall etasjer', unit: 'etg.', inc: 1, def: 2, q3: 'Er det heis?' },
+      transport: { q1: 'Hva skal fraktes?', o1: ['Møbler', 'Avfall', 'Varer', 'Annet'], sz: 'Omtrentlig avstand', unit: 'km', inc: 5, def: 10, q3: 'Trengs det bærehjelp?' },
+      montering: { q1: 'Hva skal monteres?', o1: ['Møbler', 'Hyller', 'Lamper', 'Annet'], sz: 'Antall ting', unit: 'stk', inc: 1, def: 1, q3: 'Har du verktøy?' },
+      snomaking: { q1: 'Hva skal måkes?', o1: ['Oppkjørsel', 'Tak', 'Trapp', 'Annet'], sz: 'Omtrentlig størrelse', unit: 'm²', inc: 10, def: 60, q3: 'Finnes det snøfres?' },
+      dyrepass: { q1: 'Hvilket dyr?', o1: ['Hund', 'Katt', 'Kanin', 'Annet'], sz: 'Antall dager', unit: 'dager', inc: 1, def: 2, q3: 'Trengs det lufting?' },
+      data: { q1: 'Hva gjelder det?', o1: ['Mobil', 'PC', 'Nettbrett', 'Annet'], sz: 'Antall enheter', unit: 'stk', inc: 1, def: 1, q3: 'Kan det gjøres hjemme hos deg?' },
+      arrangement: { q1: 'Hva slags arrangement?', o1: ['Bursdag', 'Bryllup', 'Dugnad', 'Annet'], sz: 'Antall gjester', unit: 'pers.', inc: 10, def: 30, q3: 'Trengs det rigging?' },
+      annet: { q1: 'Hva slags oppdrag?', o1: ['Innendørs', 'Utendørs', 'Begge', 'Annet'], sz: 'Personer som trengs', unit: 'pers.', inc: 1, def: 1, q3: 'Trengs det eget utstyr?' }
+    };
+    const SUGS = {
+      maling: ['Male gjerdet i hagen', 'Beise terrassen', 'Male en vegg'],
+      hage: ['Klippe plen og rake løv', 'Klippe hekken', 'Luke bedene'],
+      rengjoring: ['Flyttevask av leilighet', 'Vaske vinduer', 'Vårrengjøring av hytta'],
+      flytting: ['Bære sofa til 3. etasje', 'Hjelp med flyttelasset', 'Bære kjøleskap'],
+      transport: ['Kjøre til gjenvinningsstasjonen', 'Hente en kommode', 'Frakte sykler til hytta'],
+      montering: ['Montere garderobeskap', 'Henge opp hyller', 'Montere seng'],
+      snomaking: ['Måke oppkjørselen', 'Måke taket', 'Strø trappa'],
+      dyrepass: ['Lufte hunden på dagtid', 'Passe katten i helga', 'Mate kaninen i ferien'],
+      data: ['Sette opp ny mobil', 'Hjelp med skriver og wifi', 'Flytte bilder til ny PC'],
+      arrangement: ['Hjelp til bursdagsselskap', 'Rigge til fest', 'Servering på konfirmasjon'],
+      annet: ['Barnevakt fredagskveld', 'Hjelp med handling', 'Vanne planter i ferien']
+    };
+    const DAYS = [['Tor', 1], ['Fre', 2], ['Lør', 3], ['Søn', 4], ['Man', 5], ['Tir', 6], ['Ons', 7], ['Tor', 8], ['Fre', 9], ['Lør', 10], ['Søn', 11], ['Man', 12]];
+    const WD = {}; DAYS.forEach(([w, d]) => { WD[d] = w; });
+    const TODS = [['Morgen', 'Før kl. 10', 'i i-sun s18'], ['Formiddag', 'kl. 10–13', 'i i-sun s18'], ['Ettermiddag', 'kl. 13–17', 'i i-clock s18'], ['Kveld', 'Etter kl. 17', 'i i-moon s18']];
+    const EQ = [
+      ['utstyr', 'Utstyr finnes', 'Stige, pensler og det som trengs', 'i i-montering s18'],
+      ['materialer', 'Materialer kjøpes av meg', 'Hjelperen trenger ikke kjøpe inn', 'i i-tag s18'],
+      ['parkering', 'Parkering tilgjengelig', 'Plass til bil ved huset', 'i i-transport s18'],
+      ['dyr', 'Dyr i huset', 'Nyttig å vite ved allergi', 'i i-dyrepass s18']
+    ];
+    const KOM = [['Lillehammer', 'Innlandet'], ['Øyer', 'Innlandet'], ['Gausdal', 'Innlandet'], ['Ringsaker', 'Innlandet'], ['Hamar', 'Innlandet'], ['Gjøvik', 'Innlandet']];
+    const AREAS = ['Nordre Ål', 'Søre Ål', 'Sentrum', 'Stampesletta', 'Fåberg', 'Vingrom', 'Kanten', 'Jørstadmoen'];
+    const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const catLabel = (id) => { const c = CATS.find((x) => x[0] === id); return c ? c[1] : ''; };
+    const I = INTAKE[S.cat || 'annet'];
+    const shk = S.errN % 2 ? 'shA' : 'shB';
+    const errOn = (f) => S.errField === f;
+    const step = S.step;
+
+    const selDays = Object.keys(S.days).filter((k) => S.days[k]).map((k) => parseInt(k, 10)).sort((a, b) => a - b);
+    let whenLabel = '';
+    if (selDays.length) {
+      const a = selDays[0], b = selDays[selDays.length - 1];
+      if (S.whenMode === 'fast') whenLabel = WD[a] + ' ' + a + '. okt';
+      else if (S.whenMode === 'innen') whenLabel = 'Innen ' + WD[a].toLowerCase() + ' ' + a + '. okt';
+      else if (selDays.length === 7 && a === 5 && b === 11) whenLabel = 'Uke 41 · fleksibel';
+      else if (selDays.length === 1) whenLabel = 'Fleksibel · ' + WD[a] + ' ' + a + '. okt';
+      else whenLabel = 'Fleksibel · ' + selDays.length + ' dager, ' + a + '.–' + b + '. okt';
+    }
+    const todSel = TODS.filter((t) => S.tod[t[0]]).map((t) => t[0].toLowerCase());
+    const hoursLabel = 'ca. ' + S.hours + (S.hours === 1 ? ' time' : ' timer');
+    const amt = parseInt(S.amount, 10) || 0;
+    const priceL = S.priceMode === 'budget' ? 'Budsjett' : '';
+    const priceV = S.priceMode === 'budget' ? fmt(amt) + ' kr' : 'Ønsker tilbud';
+    const eqOn = EQ.filter((e) => S.eq[e[0]]).map((e) => e[1]);
+    const descShort = S.desc.length > 84 ? S.desc.slice(0, 82).trim() + ' …' : S.desc;
+    const nPh = S.photos.length;
+    const pct = (S.km - 1) / 29 * 100;
+    const ringSize = 26 + S.km * 3.2;
+    const row = (k, v, n) => ({ k: k, v: v, edit: () => this.go(n, 'slideR', true) });
+
+    return {
+      s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4, s5: step === 5, s6: step === 6, s7: step === 7, s8: step === 8, s9: step === 9,
+      wrapCls: 'px ' + S.dir,
+      step: step,
+      stepName: TITLES[step - 1],
+      progStyle: 'width: ' + (step / 9 * 100).toFixed(1) + '%',
+      isFirst: step === 1, notFirst: step > 1, isLast: step === 9, notLast: step < 9,
+      nextLabel: S.ret ? 'Lagre og se oversikt' : 'Neste',
+      back: () => { if (S.step > 1) this.go(S.step - 1, 'slideR'); },
+      next: () => this.next(),
+      saveDraft: () => this.flash('Utkastet er lagret', 'i i-bookmark s14'),
+      openClose: () => this.setState({ closeOpen: true }),
+      cancelClose: () => this.setState({ closeOpen: false }),
+      closeOpen: S.closeOpen,
+      err: S.err,
+      errA: !!S.err && S.errN % 2 === 1,
+      errB: !!S.err && S.errN % 2 === 0,
+
+      cats: CATS.map(([id, label], i) => ({
+        label: label.replace('/', '/\u200b').replace('Arrangementshjelp', 'Arrangements\u00adhjelp'),
+        on: S.cat === id,
+        pressed: S.cat === id ? 'true' : 'false',
+        cls: 'ct au d' + Math.min(i + 1, 10) + (S.cat === id ? ' on' : ''),
+        artCls: 'art art-' + id,
+        icon: 'i i-' + id,
+        pick: () => {
+          if (S.cat === id) { this.edit({}); return; }
+          this.edit({ cat: id, q1: null, size: INTAKE[id].def, q3: 'Ja' });
+        }
+      })),
+      catGridCls: 'ctgrid' + (errOn('cat') ? ' err ' + shk : ''),
+      catLabel: catLabel(S.cat) || 'oppdraget',
+
+      title: S.title,
+      titleLen: S.title.length,
+      titleCntCls: 'cnt' + (S.title.trim().length >= 5 ? ' ok' : ''),
+      titleCls: 'input' + (errOn('title') ? ' err ' + shk : ''),
+      onTitle: (e) => this.edit({ title: e.target.value.slice(0, 60) }),
+      sugs: (SUGS[S.cat || 'annet']).map((t) => ({
+        text: t,
+        cls: 'sugc' + (S.title === t ? ' on' : ''),
+        icon: S.title === t ? 'i i-check s14' : 'i i-plus s14',
+        pick: () => this.edit({ title: t })
+      })),
+
+      desc: S.desc,
+      descLen: S.desc.length,
+      descCntCls: 'cnt' + (S.desc.trim().length >= 20 ? ' ok' : ''),
+      descCls: 'input' + (errOn('desc') ? ' err ' + shk : ''),
+      onDesc: (e) => this.edit({ desc: e.target.value.slice(0, 600) }),
+      iq1: I.q1, isz: I.sz, iq3: I.q3, unit: I.unit, size: S.size,
+      q1opts: I.o1.map((o) => ({ label: o, cls: 'ochip' + (S.q1 === o ? ' on' : ''), pressed: S.q1 === o ? 'true' : 'false', pick: () => this.setState({ q1: o }) })),
+      q3opts: ['Ja', 'Nei'].map((o) => ({ label: o, cls: S.q3 === o ? 'on' : '', pick: () => this.setState({ q3: o }) })),
+      sizeDown: () => this.setState({ size: Math.max(I.inc, S.size - I.inc) }),
+      sizeUp: () => this.setState({ size: Math.min(I.inc * 200, S.size + I.inc) }),
+      photos: S.photos.map((p, i) => ({
+        cls: 'ph art art-' + (S.cat || 'annet') + ' as',
+        icon: p.icon + ' s28',
+        cover: i === 0,
+        label: 'Fjern bilde ' + (i + 1),
+        remove: () => { this.setState({ photos: S.photos.filter((x) => x.id !== p.id) }); this.flash('Bildet er fjernet', 'i i-trash s14'); }
+      })),
+      photoCount: nPh,
+      canAddPhoto: nPh < 6,
+      addPhoto: () => {
+        const ICONS = ['i i-' + (S.cat || 'annet'), 'i i-image', 'i i-sun', 'i i-home', 'i i-camera', 'i i-hage'];
+        this.setState({ photos: S.photos.concat([{ id: S.pid, icon: ICONS[S.pid % ICONS.length] }]), pid: S.pid + 1 });
+        this.flash(nPh + 1 === 6 ? 'Bilde lagt til · maks 6 bilder' : 'Bilde lagt til', 'i i-image s14');
+      },
+
+      kommune: S.kommune,
+      area: S.area,
+      areaShow: S.area.trim() || 'Område',
+      areaCls: 'input' + (errOn('area') ? ' err ' + shk : ''),
+      onArea: (e) => this.edit({ area: e.target.value.slice(0, 40) }),
+      areaChips: (S.kommune === 'Lillehammer' ? AREAS : []).map((a) => ({ name: a, cls: 'chip plain sm' + (S.area === a ? ' lime on' : ''), pick: () => this.edit({ area: a }) })),
+      locating: S.locating, notLocating: !S.locating, located: S.located,
+      locate: () => {
+        if (S.locating) return;
+        this.setState({ locating: true, located: false });
+        this.lt = setTimeout(() => this.setState({ locating: false, located: true, kommune: 'Lillehammer', area: 'Nordre Ål', err: null, errField: null }), 1600);
+      },
+      kSheet: S.kSheet,
+      openK: () => this.setState({ kSheet: true }),
+      closeK: () => this.setState({ kSheet: false }),
+      kommuner: KOM.map(([name, sub]) => ({
+        name: name, sub: sub,
+        cls: 'optcard' + (S.kommune === name ? ' on' : ''),
+        radCls: 'rad' + (S.kommune === name ? ' on' : ''),
+        pick: () => this.setState({ kommune: name, kSheet: false, area: name === S.kommune ? S.area : '', located: false })
+      })),
+
+      modes: [['fast', 'Fast dato'], ['flex', 'Fleksibel'], ['innen', 'Innen en dato']].map(([id, label]) => ({
+        label: label, cls: S.whenMode === id ? 'on' : '',
+        pick: () => {
+          if (id === S.whenMode) return;
+          let d = S.days;
+          if (id !== 'flex') { const keep = selDays.length ? (id === 'innen' ? selDays[selDays.length - 1] : selDays[0]) : 10; d = {}; d[keep] = true; }
+          this.edit({ whenMode: id, days: d });
+        }
+      })),
+      modeHelp: S.whenMode === 'fast' ? 'Velg dagen jobben må gjøres.' : (S.whenMode === 'innen' ? 'Velg siste dag jobben kan gjøres.' : 'Velg alle dagene som passer for deg.'),
+      stripCls: 'dstrip' + (errOn('days') ? ' err ' + shk : ''),
+      dayItems: DAYS.map(([wd, d]) => ({
+        wd: wd, d: d, wk: d === 5,
+        cls: 'dchip' + (d >= 5 && d <= 11 ? ' w41' : '') + (S.days[d] ? ' on' : ''),
+        pressed: S.days[d] ? 'true' : 'false',
+        aria: wd + ' ' + d + '. oktober',
+        pick: () => {
+          let nd;
+          if (S.whenMode === 'flex') { nd = Object.assign({}, S.days); nd[d] = !nd[d]; }
+          else { nd = {}; nd[d] = true; }
+          this.edit({ days: nd });
+        }
+      })),
+      hasWhen: !!whenLabel,
+      whenLabel: whenLabel,
+      tods: TODS.map(([label, sub, icon]) => ({
+        label: label, sub: sub, icon: icon,
+        cls: 'todb' + (S.tod[label] ? ' on' : ''),
+        pressed: S.tod[label] ? 'true' : 'false',
+        pick: () => { const t = Object.assign({}, S.tod); t[label] = !t[label]; this.setState({ tod: t }); }
+      })),
+      hoursLabel: hoursLabel,
+      hoursDown: () => this.setState({ hours: Math.max(1, S.hours - 1) }),
+      hoursUp: () => this.setState({ hours: Math.min(12, S.hours + 1) }),
+
+      pmodes: [['budget', 'Jeg har et budsjett'], ['offer', 'Ønsker tilbud']].map(([id, label]) => ({ label: label, cls: S.priceMode === id ? 'on' : '', pick: () => this.edit({ priceMode: id }) })),
+      isBudget: S.priceMode === 'budget',
+      isOffer: S.priceMode === 'offer',
+      amountFmt: S.amount ? fmt(S.amount) : '',
+      amountCls: 'input amount' + (errOn('amount') ? ' err ' + shk : ''),
+      onAmount: (e) => this.edit({ amount: e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 6) }),
+      quick: [500, 1000, 1500, 2000, 3000].map((v) => ({ label: fmt(v) + ' kr', cls: 'chip plain sm' + (amt === v ? ' lime on' : ''), pick: () => this.edit({ amount: String(v) }) })),
+
+      eqRows: EQ.map(([id, label, sub, icon]) => ({
+        label: label, sub: sub, icon: icon,
+        checked: S.eq[id] ? 'true' : 'false',
+        tglCls: 'tgl' + (S.eq[id] ? ' on' : ''),
+        toggle: () => { const q = Object.assign({}, S.eq); q[id] = !q[id]; this.setState({ eq: q }); }
+      })),
+      practical: S.practical,
+      pracLen: S.practical.length,
+      onPractical: (e) => this.setState({ practical: e.target.value.slice(0, 300) }),
+
+      whoOpts: [
+        ['alle', 'Alle naboer', 'Alle med bekreftet telefonnummer kan gi tilbud', 'i i-users s18'],
+        ['verif', 'Kun verifiserte', 'Bare de som har bekreftet identiteten med Vipps', 'i i-verified s18']
+      ].map(([id, label, sub, icon]) => ({
+        label: label, sub: sub, icon: icon,
+        cls: 'optcard' + (S.who === id ? ' on' : ''),
+        radCls: 'rad' + (S.who === id ? ' on' : ''),
+        pressed: S.who === id ? 'true' : 'false',
+        pick: () => this.setState({ who: id })
+      })),
+      km: S.km,
+      kmLabel: S.km + ' km',
+      kmName: S.km <= 3 ? 'Bare nærmeste nabolag' : (S.km <= 12 ? 'Lillehammer og omegn' : 'Også nabokommuner'),
+      onKm: (e) => this.setState({ km: parseInt(e.target.value, 10) || 1 }),
+      rangeBg: 'background: linear-gradient(90deg, #0A1740 ' + pct.toFixed(1) + '%, #DDE1E7 ' + pct.toFixed(1) + '%)',
+      ringStyle: 'width: ' + ringSize + 'px; height: ' + ringSize + 'px; margin: -' + (ringSize / 2) + 'px 0 0 -' + (ringSize / 2) + 'px',
+
+      heroArt: 'art art-' + (S.cat || 'annet'),
+      catIcon: 'i i-' + (S.cat || 'annet'),
+      titleShow: S.title.trim() || 'Uten tittel',
+      priceL: priceL, priceV: priceV,
+      sumA: [
+        row('Kategori', catLabel(S.cat), 1),
+        row('Tittel', S.title.trim(), 2),
+        row('Beskrivelse', descShort, 3),
+        row('Detaljer', (S.q1 || 'Ikke valgt') + ' · ca. ' + S.size + ' ' + I.unit + ' · ' + I.q3.replace('?', '') + ': ' + S.q3, 3),
+        row('Bilder', nPh === 0 ? 'Ingen bilder' : nPh + (nPh === 1 ? ' bilde' : ' bilder'), 3)
+      ],
+      sumB: [
+        row('Sted', S.area.trim() + ', ' + S.kommune + ' (omtrentlig)', 4),
+        row('Når', whenLabel + (todSel.length ? ' · ' + todSel.join(', ') : ''), 5),
+        row('Varighet', hoursLabel, 5)
+      ],
+      sumC: [
+        row('Pris', S.priceMode === 'budget' ? 'Budsjett ' + fmt(amt) + ' kr' : 'Ønsker tilbud' + (amt ? ' · ditt anslag ' + fmt(amt) + ' kr (vises ikke)' : ''), 6),
+        row('Praktisk', eqOn.length ? eqOn.join(', ') : 'Ingenting valgt', 7)
+      ],
+      sumD: [
+        row('Hvem kan gi tilbud', S.who === 'alle' ? 'Alle naboer' : 'Kun verifiserte', 8),
+        row('Maks avstand', 'Innen ' + S.km + ' km', 8)
+      ],
+
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Oppsett</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.wtop{position:relative;z-index:5;padding:56px 16px 0;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px}
+.wtop .t{text-align:center;font:700 14px/1 var(--fb);color:var(--mute)}
+.wtop .t b{color:var(--ink)}
+.phwrap{position:relative;width:116px;height:116px;margin:0 auto}
+.phc{width:116px;height:116px;border-radius:50%;display:grid;place-items:center;font:700 38px/1 var(--fd);letter-spacing:-.02em;position:relative;overflow:hidden}
+.phc.none{background:#fff;color:var(--ink);border:2px dashed #C3C9D4}
+.phc.has{background:var(--grad);color:#fff;box-shadow:0 0 0 4px #fff,0 0 0 6px var(--cyan),0 18px 36px -14px rgba(10,23,64,.4)}
+.phc.has::after{content:"";position:absolute;left:50%;bottom:-38px;width:92px;height:70px;margin-left:-46px;border-radius:50%;background:rgba(255,255,255,.45)}
+.phc.has .hd{position:absolute;left:50%;top:22px;width:42px;height:42px;margin-left:-21px;border-radius:50%;background:rgba(255,255,255,.6)}
+.cambtn{position:absolute;right:-2px;bottom:-2px;width:44px;height:44px;border-radius:50%;background:var(--ink);color:#fff;border:3px solid #F3F5F1;display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .15s}
+.cambtn:active{transform:scale(.9)}
+.lockf{height:56px;border-radius:17px;background:var(--surf2);border:1.5px solid var(--line2);display:flex;align-items:center;gap:10px;padding:0 14px 0 16px;font:600 16px var(--fb);color:var(--ink2)}
+.cnt{font:600 12.5px var(--fb);color:var(--faint)}
+.rcard{display:flex;align-items:center;gap:16px;padding:18px 16px;border-radius:24px;background:#fff;border:2px solid var(--line);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit;transition:border-color .25s,box-shadow .25s,transform .15s;box-shadow:var(--sh)}
+.rcard:active{transform:scale(.985)}
+.rcard .rt{width:58px;height:58px;border-radius:19px;display:grid;place-items:center;flex:none}
+.rcard .rb{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.rcard .rb b{font:700 17.5px/1.2 var(--fd);letter-spacing:-.015em}
+.rcard .rb span.d{font-size:13.5px;line-height:1.4;color:var(--mute)}
+.rcard.need.on{border-color:#8BD21E;box-shadow:0 0 0 4px rgba(184,238,60,.3),var(--sh)}
+.rcard.offer.on{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(25,184,238,.18),var(--sh)}
+.rcard.both.on{border-color:transparent;border-color:#0A1740;background:#fff;box-shadow:0 0 0 4px rgba(99,224,138,.2),var(--sh)}
+.rchk{width:28px;height:28px;border-radius:50%;border:2px solid #C3C9D4;display:grid;place-items:center;color:transparent;flex:none;transition:all .25s}
+.rcard.on .rchk{background:var(--ink);border-color:var(--ink);color:var(--lime)}
+.rcard.on .rchk .i{animation:popIn .3s var(--spring)}
+.loccard{width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px 14px 14px;border-radius:24px;background:var(--ink);color:#fff;border:0;cursor:pointer;text-align:left;font:inherit;position:relative;overflow:hidden;box-shadow:0 16px 30px -16px rgba(10,23,64,.7)}
+.loccard .glowb{position:absolute;right:-50px;top:-60px;width:160px;height:160px;border-radius:50%;background:var(--grad);opacity:.28}
+.radarw{position:relative;width:64px;height:64px;flex:none}
+.radar{position:absolute;inset:0;border-radius:50%;background:rgba(184,238,60,.14);overflow:hidden;display:grid;place-items:center}
+.radar .rg{position:absolute;border-radius:50%;border:1.5px solid rgba(184,238,60,.35)}
+.radar .sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(184,238,60,0) 0deg 300deg,rgba(184,238,60,.55) 300deg 360deg)}
+.rpulse{position:absolute;inset:0;border-radius:50%;border:2px solid #B8EE3C;animation:rpulse 1.6s ease-out infinite}
+.rpulse.p2{animation-delay:.8s}
+@keyframes rpulse{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.9);opacity:0}}
+.rdot{position:relative;width:14px;height:14px;border-radius:50%;background:#B8EE3C;box-shadow:0 0 0 4px rgba(184,238,60,.3)}
+.okchip{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:#E3F5E8;color:#1D6E3A;font:600 14.5px var(--fb)}
+.kopt{padding:13px 14px}
+.kopt .kn{flex:1;font:600 15.5px var(--fb)}
+.orline{display:flex;align-items:center;gap:14px;color:var(--faint);font:600 13px var(--fb)}
+.orline::before,.orline::after{content:"";flex:1;height:1px;background:#DDE1E7}
+.shA{animation:shA .4s}.shB{animation:shB .4s}
+@keyframes shA{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+@keyframes shB{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+.confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:20}
+.celeb{width:128px;height:128px;border-radius:40px;background:#fff;display:grid;place-items:center;box-shadow:0 30px 60px -20px rgba(10,23,64,.35);position:relative}
+.celeb .ring{position:absolute;inset:-12px;border-radius:50px;background:var(--grad);opacity:.35;z-index:-1}
+.sumrow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.sumrow .pill{background:#fff;color:var(--ink);border:1px solid var(--line);height:36px;padding:0 14px;font-size:13.5px;box-shadow:var(--sh)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh"></div>
+
+    <!-- wizard top -->
+    <sc-if value="{{inWizard}}" hint-placeholder-val="{{ true }}">
+      <div class="wtop">
+        <sc-if value="{{isS1}}" hint-placeholder-val="{{ true }}">
+          <a href="Samtykke.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+        </sc-if>
+        <sc-if value="{{notS1}}" hint-placeholder-val="{{ false }}">
+          <button class="iconbtn" onClick="{{back}}" aria-label="Tilbake"><i class="i i-back"></i></button>
+        </sc-if>
+        <div class="t">Oppsett · <b>{{stepLabel}}</b></div>
+        <span></span>
+      </div>
+      <div class="px" style="position: relative; margin-top: 14px">
+        <div class="prog"><i style="width: 0; {{progStyle}}"></i></div>
+      </div>
+    </sc-if>
+
+    <!-- ============ STEP 1: NAVN ============ -->
+    <sc-if value="{{isS1}}" hint-placeholder-val="{{ true }}">
+      <div class="{{slideCls}}" style="position: relative; padding: 26px 20px 0">
+        <span class="eyebrow">Steg 1 · Navn</span>
+        <h1 class="h1" style="margin-top: 10px; font-size: 29px">Hva skal naboene kalle deg?</h1>
+        <p class="body muted p" style="margin-top: 8px">Navnet ditt er hentet fra Vipps. Du velger selv hva som vises på profilen.</p>
+
+        <div style="margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+          <div class="phwrap as">
+            <sc-if value="{{hasPhoto}}" hint-placeholder-val="{{ false }}">
+              <div class="phc has" role="img" aria-label="Profilbilde valgt"><span class="hd"></span></div>
+            </sc-if>
+            <sc-if value="{{noPhoto}}" hint-placeholder-val="{{ true }}">
+              <div class="phc none" aria-hidden="true">{{initials}}</div>
+            </sc-if>
+            <button class="cambtn" onClick="{{openPhoto}}" aria-label="{{camLabel}}"><i class="i i-camera s18"></i></button>
+          </div>
+          <span class="meta">{{photoHint}}</span>
+        </div>
+
+        <div class="field" style="margin-top: 22px">
+          <span class="label">Fullt navn <small>Fra Vipps</small></span>
+          <div class="lockf"><i class="i i-lock s16" style="color: #8A93A8"></i><span style="flex: 1">Mari Haugen</span><span class="vbadge"><i class="i i-verified s16"></i>Bekreftet</span></div>
+        </div>
+
+        <label class="field" style="margin-top: 18px">
+          <span class="label">Visningsnavn <span class="cnt">{{nameCount}}</span></span>
+          <input class="{{nameInCls}}" type="text" autocomplete="nickname" value="{{display}}" onChange="{{onName}}" placeholder="F.eks. Mari H.">
+        </label>
+        <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap">
+          <sc-for list="{{nameSugs}}" as="n" hint-placeholder-count="3">
+            <button class="{{n.cls}}" onClick="{{n.pick}}">{{n.label}}</button>
+          </sc-for>
+        </div>
+        <div class="note" style="margin-top: 16px"><i class="i i-eye"></i><span>Visningsnavnet står på oppføringene dine. Fullt navn vises bare til naboer du gjør en avtale med.</span></div>
+      </div>
+    </sc-if>
+
+    <!-- ============ STEP 2: ROLLE ============ -->
+    <sc-if value="{{isS2}}" hint-placeholder-val="{{ false }}">
+      <div class="{{slideCls}}" style="position: relative; padding: 26px 20px 0">
+        <span class="eyebrow">Steg 2 · Bruk</span>
+        <h1 class="h1" style="margin-top: 10px; font-size: 29px">Hva vil du bruke MinNabo til?</h1>
+        <p class="body muted p" style="margin-top: 8px">Vi tilpasser forsiden etter det du velger. Du kan endre det når som helst.</p>
+        <div class="stack" style="gap: 12px; margin-top: 22px" role="radiogroup" aria-label="Hva vil du bruke MinNabo til?">
+          <sc-for list="{{roles}}" as="r" hint-placeholder-count="3">
+            <button class="{{r.cls}}" onClick="{{r.pick}}" role="radio" aria-checked="{{r.checked}}">
+              <span class="rt" style="display: grid; {{r.tileStyle}}"><i class="{{r.icon}}"></i></span>
+              <span class="rb">
+                <b>{{r.title}}</b>
+                <span class="d">{{r.desc}}</span>
+                <span style="display: flex; gap: 6px; margin-top: 3px">
+                  <sc-for list="{{r.pills}}" as="p" hint-placeholder-count="1">
+                    <span class="{{p.cls}}" style="height: 22px; font-size: 11px"><span class="pd"></span>{{p.t}}</span>
+                  </sc-for>
+                </span>
+              </span>
+              <span class="rchk"><i class="i i-check s16"></i></span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ STEP 3: STED ============ -->
+    <sc-if value="{{isS3}}" hint-placeholder-val="{{ false }}">
+      <div class="{{slideCls}}" style="position: relative; padding: 26px 20px 0">
+        <span class="eyebrow">Steg 3 · Sted</span>
+        <h1 class="h1" style="margin-top: 10px; font-size: 29px">Hvor bor du?</h1>
+        <p class="body muted p" style="margin-top: 8px">Vi viser oppdrag og hjelpere i nærheten av deg.</p>
+
+        <button class="loccard" style="margin-top: 22px" onClick="{{locate}}">
+          <span class="glowb"></span>
+          <span class="radarw">
+            <sc-if value="{{locating}}" hint-placeholder-val="{{ false }}"><span class="rpulse"></span><span class="rpulse p2"></span></sc-if>
+            <span class="radar">
+              <span class="rg" style="inset: 10px"></span>
+              <span class="rg" style="inset: 21px"></span>
+              <sc-if value="{{locating}}" hint-placeholder-val="{{ false }}"><span class="sweep spin"></span></sc-if>
+              <sc-if value="{{located}}" hint-placeholder-val="{{ false }}"><span class="icirc as" style="position: relative; width: 30px; height: 30px; background: #B8EE3C; color: #0A1740"><i class="i i-check s16"></i></span></sc-if>
+              <sc-if value="{{locIdle}}" hint-placeholder-val="{{ true }}"><span class="rdot"></span></sc-if>
+            </span>
+          </span>
+          <span style="position: relative; flex: 1; display: flex; flex-direction: column; gap: 4px">
+            <b style="font: 700 16.5px/1.2 var(--fb)">{{locTitle}}</b>
+            <span style="font-size: 13px; color: rgba(255,255,255,.72)">{{locSub}}</span>
+          </span>
+          <sc-if value="{{locIdle}}" hint-placeholder-val="{{ true }}"><span class="icirc" style="position: relative; width: 36px; height: 36px; background: rgba(255,255,255,.12)"><i class="i i-locate s18"></i></span></sc-if>
+        </button>
+        <sc-if value="{{located}}" hint-placeholder-val="{{ false }}">
+          <div class="okchip au" style="margin-top: 10px"><span class="icirc as" style="width: 24px; height: 24px; background: #2B8F4E; color: #ffffff"><i class="i i-check s14"></i></span>Fant deg: Lillehammer kommune</div>
+        </sc-if>
+
+        <div class="orline" style="margin: 20px 0 16px">eller velg kommune</div>
+
+        <div class="search" style="height: 52px; box-shadow: none">
+          <i class="i i-search"></i>
+          <input type="text" placeholder="Søk etter kommune" value="{{q}}" onChange="{{onQ}}" aria-label="Søk etter kommune">
+          <sc-if value="{{hasQ}}" hint-placeholder-val="{{ false }}"><button class="iconbtn ghost" onClick="{{clearQ}}" aria-label="Tøm søket"><i class="i i-x s16"></i></button></sc-if>
+        </div>
+        <div class="stack" style="gap: 8px; margin-top: 10px">
+          <sc-for list="{{kommuner}}" as="k" hint-placeholder-count="5">
+            <button class="{{k.cls}}" onClick="{{k.pick}}" role="radio" aria-checked="{{k.checked}}">
+              <span class="{{k.radCls}}"></span>
+              <span class="kn">{{k.name}}</span>
+              <sc-if value="{{k.found}}" hint-placeholder-val="{{ false }}"><span class="pill pill-ok"><i class="i i-locate s14"></i>Din posisjon</span></sc-if>
+              <span class="meta">Innlandet</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{noK}}" hint-placeholder-val="{{ false }}">
+            <div class="dash-card as" style="padding: 18px; text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center">
+              <span class="icirc" style="width: 44px; height: 44px; background: #ECEFF3; color: #34405F"><i class="i i-map s18"></i></span>
+              <b style="font-size: 14.5px">Fant ingen kommune som heter «{{q}}»</b>
+              <span class="meta">MinNabo er foreløpig bare i Innlandet.</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <label class="field" style="margin-top: 22px">
+          <span class="label">Område <small>Valgfritt</small></span>
+          <span class="inwrap">
+            <span class="pre"><i class="i i-pin s18"></i></span>
+            <input class="input" type="text" placeholder="F.eks. Nordre Ål" value="{{area}}" onChange="{{onArea}}">
+          </span>
+        </label>
+        <sc-if value="{{showAreas}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px">
+            <sc-for list="{{areas}}" as="a" hint-placeholder-count="5">
+              <button class="{{a.cls}}" onClick="{{a.pick}}">{{a.label}}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div style="margin-top: 18px; display: flex; gap: 12px; padding: 14px 16px; border-radius: 18px; background: #EDF8D6; color: #3B7300">
+          <i class="i i-shield s18" style="margin-top: 1px"></i>
+          <span style="font: 600 13.5px/1.45 var(--fb)">Andre ser bare omtrentlig område – aldri adressen din.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ DONE ============ -->
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <div style="position: relative; min-height: 844px; padding: 110px 24px 40px; display: flex; flex-direction: column; align-items: center; text-align: center">
+        <div class="celeb as d1"><span class="ring"></span><div class="float" style="display: grid; place-items: center"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="" style="width: 92px; height: 92px"></div></div>
+        <span class="pill pill-grad lg au d3" style="margin-top: 26px"><i class="i i-sparkle s14"></i>Kontoen din er klar</span>
+        <h1 class="display au d4" style="font-size: 38px; margin-top: 14px">Velkommen til nabolaget, {{first}}!</h1>
+        <p class="body muted p au d5" style="margin-top: 12px; max-width: 320px">{{doneSub}}</p>
+        <div class="sumrow au d6" style="margin-top: 22px">
+          <sc-for list="{{summary}}" as="s" hint-placeholder-count="3">
+            <span class="pill"><i class="{{s.icon}}"></i>{{s.t}}</span>
+          </sc-for>
+        </div>
+        <div class="stack au d8" style="gap: 10px; width: 100%; margin-top: auto; padding-top: 34px">
+          <a href="Oppdrag.dc.html" class="btn btn-lime btn-lg btn-block">Utforsk oppdrag<i class="i i-arrow s18"></i><span class="shine"></span></a>
+          <a href="LeggUt.dc.html" class="btn btn-ghost btn-block"><i class="i i-plus s18"></i>{{secondaryLabel}}</a>
+          <p class="note p" style="justify-content: center; margin-top: 6px"><i class="i i-info"></i><span>MinNabo håndterer ikke betaling. Pris og betaling avtales direkte mellom dere.</span></p>
+        </div>
+      </div>
+      <div class="confetti" aria-hidden="true">
+        <sc-for list="{{confetti}}" as="c" hint-placeholder-count="12">
+          <i style="display: block; {{c.style}}"></i>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{inWizard}}" hint-placeholder-val="{{ true }}"><div class="spacer-foot"></div></sc-if>
+  </div>
+
+  <!-- footer -->
+  <sc-if value="{{inWizard}}" hint-placeholder-val="{{ true }}">
+    <div class="foot">
+      <sc-if value="{{err}}" hint-placeholder-val="{{ false }}">
+        <div class="errtxt" role="alert" style="justify-content: center"><i class="i i-alert s16"></i>{{err}}</div>
+      </sc-if>
+      <div class="{{footCls}}">
+        <button class="btn btn-ink btn-lg btn-block" onClick="{{next}}">{{nextLabel}}<i class="i i-arrow s18"></i></button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 130px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- photo sheet -->
+  <sc-if value="{{photoOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closePhoto}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Profilbilde">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h3">Profilbilde</h2>
+        <button class="iconbtn" onClick="{{closePhoto}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <p class="meta p" style="margin: -6px 0 14px">Et tydelig bilde av ansiktet ditt gjør det lettere for naboer å stole på deg.</p>
+      <div class="list" style="box-shadow: none; border: 1px solid #E4E8EE">
+        <button class="lrow" onClick="{{pickPhoto}}"><span class="ri" style="background: #DFF2FB; color: #065C8F"><i class="i i-camera s18"></i></span><span class="rt"><b>Ta bilde</b><small>Bruk kameraet</small></span><i class="i i-right chev"></i></button>
+        <button class="lrow" onClick="{{pickPhoto}}"><span class="ri" style="background: #EDF8D6; color: #3B7300"><i class="i i-image s18"></i></span><span class="rt"><b>Velg fra bildene dine</b><small>JPG eller PNG</small></span><i class="i i-right chev"></i></button>
+        <sc-if value="{{hasPhoto}}" hint-placeholder-val="{{ false }}">
+          <button class="lrow" onClick="{{removePhoto}}"><span class="ri" style="background: #FDEBE9; color: #C23029"><i class="i i-trash s18"></i></span><span class="rt"><b style="color: #C23029">Fjern bildet</b></span></button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 1, dir: 'f', display: 'Mari Haugen', photo: false, photoOpen: false, role: null, kommune: null, locating: false, located: false, q: '', area: '', err: null, shakeN: 0, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.lt); clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  fail(msg) { this.setState({ err: msg, shakeN: this.state.shakeN + 1 }); }
+  next() {
+    const S = this.state;
+    if (S.step === 1) {
+      const n = S.display.trim();
+      if (n.length < 2) return this.fail('Visningsnavnet må ha minst 2 tegn');
+      if (n.length > 30) return this.fail('Visningsnavnet kan ha maks 30 tegn');
+    }
+    if (S.step === 2 && !S.role) return this.fail('Velg ett alternativ for å gå videre');
+    if (S.step === 3 && !S.kommune) return this.fail('Velg kommunen din eller bruk posisjonen din');
+    this.setState({ step: S.step + 1, dir: 'f', err: null });
+  }
+  renderVals() {
+    const S = this.state;
+    const st = S.step;
+    const name = S.display.trim();
+    const parts = name.split(/\s+/).filter(Boolean);
+    const initials = ((parts[0] || '')[0] || '').toUpperCase() + ((parts.length > 1 ? parts[parts.length - 1][0] : '') || '').toUpperCase();
+    const first = parts[0] || 'Mari';
+    const SUG = ['Mari Haugen', 'Mari H.', 'Mari'];
+    const ROLES = [
+      { id: 'need', title: 'Jeg trenger hjelp', desc: 'Legg ut oppdrag og få tilbud fra naboer.', icon: 'i i-clip s28', tile: 'background: #EDF8D6; color: #3B7300', pills: [{ t: 'Trenger hjelp', cls: 'pill pill-need' }] },
+      { id: 'offer', title: 'Jeg ønsker småjobber', desc: 'Finn oppdrag i nærheten og tjen litt ekstra.', icon: 'i i-hand s28', tile: 'background: #DFF2FB; color: #065C8F', pills: [{ t: 'Gi tilbud', cls: 'pill pill-offer' }] },
+      { id: 'both', title: 'Begge deler', desc: 'Få hjelp når du trenger det – og hjelp andre når du kan.', icon: 'i i-repeat s28', tile: 'background: var(--grad); color: #0A1740', pills: [{ t: 'Trenger', cls: 'pill pill-need' }, { t: 'Gi tilbud', cls: 'pill pill-offer' }] }
+    ];
+    const KOM = ['Lillehammer', 'Øyer', 'Gausdal', 'Ringsaker', 'Hamar', 'Gjøvik', 'Elverum', 'Stange', 'Østre Toten', 'Nord-Fron', 'Vestre Toten', 'Sør-Fron', 'Løten', 'Kongsvinger'];
+    const q = S.q.trim().toLowerCase();
+    const kFiltered = KOM.filter((k) => !q || k.toLowerCase().indexOf(q) !== -1);
+    const AREAS = ['Nordre Ål', 'Søre Ål', 'Sentrum', 'Stampesletta', 'Fåberg', 'Vingrom', 'Kanten'];
+    const COLORS = ['#B8EE3C', '#19B8EE', '#63E08A', '#1E86F4', '#0A1740', '#F0A500', '#C6F43C', '#F2542D'];
+    const confetti = [];
+    for (let i = 0; i < 34; i++) {
+      const left = (i * 37) % 100;
+      const delay = ((i * 13) % 17) / 10;
+      const w = 6 + (i % 3) * 2;
+      const h = 10 + (i % 4) * 3;
+      confetti.push({ style: 'left: ' + left + '%; width: ' + w + 'px; height: ' + h + 'px; background: ' + COLORS[i % COLORS.length] + '; animation-delay: ' + delay + 's; animation-duration: ' + (2.2 + (i % 5) * 0.3) + 's; border-radius: ' + (i % 3 === 0 ? '50%' : '2px') });
+    }
+    const roleObj = ROLES.find((r) => r.id === S.role);
+    const roleLabel = { need: 'Trenger hjelp', offer: 'Ønsker småjobber', both: 'Begge deler' };
+    const summary = [
+      { icon: 'i i-user s16', t: name || 'Mari' },
+      { icon: S.role === 'offer' ? 'i i-hand s16' : (S.role === 'need' ? 'i i-clip s16' : 'i i-repeat s16'), t: roleLabel[S.role] || '' },
+      { icon: 'i i-pin s16', t: (S.area.trim() ? S.area.trim() + ', ' : '') + (S.kommune || '') }
+    ];
+    if (S.photo) summary.push({ icon: 'i i-camera s16', t: 'Profilbilde lagt til' });
+    const inWizard = st <= 3;
+    return {
+      inWizard, isS1: st === 1, notS1: st !== 1, isS2: st === 2, isS3: st === 3, isDone: st === 4,
+      stepLabel: 'Steg ' + Math.min(st, 3) + ' av 3',
+      progStyle: 'width: ' + Math.round((Math.min(st, 3) / 3) * 100) + '%',
+      slideCls: S.dir === 'b' ? 'slideR' : 'slideL',
+      back: () => this.setState({ step: Math.max(1, st - 1), dir: 'b', err: null }),
+      next: () => this.next(),
+      nextLabel: st === 3 ? 'Fullfør' : 'Neste',
+      err: S.err,
+      footCls: S.err ? (S.shakeN % 2 ? 'shA' : 'shB') : '',
+      hasPhoto: S.photo, noPhoto: !S.photo, initials: initials || '?',
+      camLabel: S.photo ? 'Endre profilbilde' : 'Legg til profilbilde',
+      photoHint: S.photo ? 'Flott! Profilbildet er lagt til.' : 'Legg til profilbilde (valgfritt)',
+      openPhoto: () => this.setState({ photoOpen: true }),
+      closePhoto: () => this.setState({ photoOpen: false }),
+      pickPhoto: () => { this.setState({ photo: true, photoOpen: false }); this.flash('Profilbilde lagt til', 'i i-camera s14'); },
+      removePhoto: () => { this.setState({ photo: false, photoOpen: false }); this.flash('Profilbildet er fjernet', 'i i-trash s14'); },
+      photoOpen: S.photoOpen,
+      display: S.display,
+      nameCount: name.length + '/30',
+      nameInCls: 'input' + (S.err && st === 1 ? ' err' : ''),
+      onName: (e) => this.setState({ display: e.target.value.slice(0, 40), err: null }),
+      nameSugs: SUG.map((s) => ({ label: s, cls: 'chip plain sm' + (name === s ? ' on' : ''), pick: () => this.setState({ display: s, err: null }) })),
+      roles: ROLES.map((r) => ({
+        title: r.title, desc: r.desc, icon: r.icon, tileStyle: r.tile, pills: r.pills,
+        cls: 'rcard ' + r.id + (S.role === r.id ? ' on' : ''),
+        checked: S.role === r.id ? 'true' : 'false',
+        pick: () => this.setState({ role: r.id, err: null })
+      })),
+      locating: S.locating, located: S.located && !S.locating, locIdle: !S.locating && !S.located,
+      locTitle: S.locating ? 'Finner posisjonen din …' : (S.located ? 'Lillehammer kommune' : 'Bruk posisjonen min'),
+      locSub: S.locating ? 'Dette tar bare et øyeblikk' : (S.located ? 'Posisjonen er brukt én gang og ikke lagret' : 'Raskest – vi finner kommunen for deg'),
+      locate: () => {
+        if (S.locating) return;
+        this.setState({ locating: true, located: false, err: null });
+        this.lt = setTimeout(() => { this.setState({ locating: false, located: true, kommune: 'Lillehammer', q: '' }); this.flash('Fant deg: Lillehammer kommune', 'i i-pin s14'); }, 2200);
+      },
+      q: S.q, hasQ: !!S.q,
+      onQ: (e) => this.setState({ q: e.target.value }),
+      clearQ: () => this.setState({ q: '' }),
+      kommuner: kFiltered.map((k) => ({
+        name: k, found: S.located && k === 'Lillehammer',
+        cls: 'optcard kopt' + (S.kommune === k ? ' on' : ''),
+        radCls: 'rad' + (S.kommune === k ? ' on' : ''),
+        checked: S.kommune === k ? 'true' : 'false',
+        pick: () => this.setState({ kommune: k, err: null, area: S.kommune && S.kommune !== k ? '' : S.area })
+      })),
+      noK: kFiltered.length === 0,
+      area: S.area,
+      onArea: (e) => this.setState({ area: e.target.value }),
+      showAreas: S.kommune === 'Lillehammer' || !S.kommune,
+      areas: AREAS.map((a) => ({ label: a, cls: 'chip plain sm' + (S.area === a ? ' on' : ''), pick: () => this.setState({ area: S.area === a ? '' : a, kommune: S.kommune || 'Lillehammer' }) })),
+      first,
+      doneSub: roleObj && S.role === 'offer' ? 'Nå kan du finne småjobber i ' + S.kommune + ' og gi tilbud til naboene.' : (S.role === 'need' ? 'Nå kan du legge ut oppdrag og få tilbud fra naboer i ' + S.kommune + '.' : 'Nå kan du både få hjelp og hjelpe naboene dine i ' + S.kommune + '.'),
+      summary,
+      secondaryLabel: 'Legg ut ditt første oppdrag',
+      confetti,
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

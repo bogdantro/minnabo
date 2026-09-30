@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Innboks</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.conv{display:flex;gap:13px;padding:14px;border-radius:24px;background:#fff;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035);text-decoration:none;color:inherit;position:relative;transition:transform .2s var(--ease),box-shadow .2s}
+.conv:active{transform:scale(.985)}
+.conv.unread{box-shadow:0 0 0 1.5px #D5EFA0,var(--sh)}
+.conv .cb{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.conv .top{display:flex;align-items:baseline;gap:8px}
+.conv .nm{font:700 15.5px/1.2 var(--fb);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv .tm{font-size:12.5px;color:var(--faint);flex:none}
+.conv.unread .tm{color:var(--lime-d);font-weight:700}
+.lst{display:flex;align-items:center;gap:6px;font:600 12.5px/1.2 var(--fb);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.lst .td{width:8px;height:8px;border-radius:50%;flex:none}
+.lst .td.need{background:#8BD21E}
+.lst .td.offer{background:#19B8EE}
+.lst span{overflow:hidden;text-overflow:ellipsis}
+.msg{font-size:14px;line-height:1.35;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.conv.unread .msg{color:var(--ink);font-weight:700}
+.bub-n{min-width:22px;height:22px;border-radius:11px;background:var(--ink);color:var(--lime);font:800 12px/22px var(--fb);text-align:center;padding:0 6px;flex:none}
+.grp{font:700 12px/1 var(--fb);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:18px 4px 10px}
+.tagp{height:22px;font-size:11px;padding:0 8px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+
+    <div class="topbar">
+      <a href="Oppdrag.dc.html" class="brand" aria-label="MinNabo, til forsiden"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</a>
+      <div class="tb-r">
+        <a href="Varsler.dc.html" class="iconbtn" aria-label="Varsler, 2 uleste"><i class="i i-bell"></i><span class="dot"></span></a>
+        <a href="Profil.dc.html" class="avbtn" aria-label="Åpne profil"><span class="av av-me">MH</span></a>
+      </div>
+    </div>
+
+    <div class="px au" style="position: relative; padding-top: 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+      <div class="stack" style="gap: 6px">
+        <h1 class="h1">Innboks</h1>
+        <span class="meta">{{subline}}</span>
+      </div>
+      <button class="{{markCls}}" onClick="{{markAll}}" aria-disabled="{{markAria}}"><i class="i i-checks"></i>Merk alle som lest</button>
+    </div>
+
+    <div class="px au d2" style="position: relative; margin-top: 16px">
+      <label class="search" style="cursor: text">
+        <i class="i i-search"></i>
+        <input value="{{q}}" onChange="{{onQ}}" placeholder="Søk i meldinger" aria-label="Søk i meldinger">
+        <sc-if value="{{hasQ}}" hint-placeholder-val="{{ false }}">
+          <button class="iconbtn ghost as" onClick="{{clearQ}}" aria-label="Tøm søk" style="width: 42px; height: 42px"><i class="i i-x s16"></i></button>
+        </sc-if>
+      </label>
+    </div>
+
+    <div class="au d3" style="position: relative; margin-top: 12px">
+      <div class="chips" role="tablist" aria-label="Filtrer samtaler">
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="2">
+          <button class="{{f.cls}}" onClick="{{f.pick}}" role="tab" aria-selected="{{f.sel}}">{{f.label}}<sc-if value="{{f.n}}" hint-placeholder-val="{{ true }}"><span class="{{f.nCls}}">{{f.n}}</span></sc-if></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="px" style="position: relative">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <div>
+          <div class="grp">{{g.label}}</div>
+          <div class="stack" style="gap: 10px">
+            <sc-for list="{{g.rows}}" as="c" hint-placeholder-count="2">
+              <a href="Chat.dc.html" class="{{c.cls}}" aria-label="{{c.aria}}">
+                <span class="{{c.avCls}}">{{c.ini}}<sc-if value="{{c.online}}" hint-placeholder-val="{{ false }}"><span class="on-dot"></span></sc-if></span>
+                <span class="cb">
+                  <span class="top"><span class="nm">{{c.name}}</span><span class="tm">{{c.time}}</span></span>
+                  <span class="lst"><span class="{{c.tdCls}}"></span><span>{{c.listing}}</span></span>
+                  <span class="rowf" style="gap: 10px">
+                    <span class="msg">{{c.msg}}</span>
+                    <sc-if value="{{c.unread}}" hint-placeholder-val="{{ false }}"><span class="bub-n as">{{c.unreadN}}</span></sc-if>
+                  </span>
+                  <sc-if value="{{c.tag}}" hint-placeholder-val="{{ false }}">
+                    <span class="{{c.tagCls}}" style="align-self: flex-start; margin-top: 3px"><i class="{{c.tagIcon}}"></i>{{c.tag}}</span>
+                  </sc-if>
+                </span>
+              </a>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{emptyUnread}}" hint-placeholder-val="{{ false }}">
+        <div class="as" style="margin-top: 26px; padding: 30px 22px; border-radius: 28px; background: #ffffff; box-shadow: var(--sh); display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+          <span class="icirc" style="width: 64px; height: 64px; background: var(--grad-soft); color: #2B8F4E"><i class="i i-checks s28"></i></span>
+          <b style="font: 700 19px/1.2 var(--fd); letter-spacing: -.02em">Du er à jour!</b>
+          <span class="meta">Ingen uleste meldinger. Vi sier fra når en nabo skriver til deg.</span>
+          <button class="btn btn-sm btn-ghost" style="margin-top: 4px" onClick="{{showAll}}">Vis alle samtaler</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{emptySearch}}" hint-placeholder-val="{{ false }}">
+        <div class="dash-card as" style="margin-top: 26px; padding: 26px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+          <span class="icirc" style="width: 56px; height: 56px; background: #DFF2FB; color: #065C8F"><i class="i i-search s22"></i></span>
+          <b style="font-size: 15.5px">Ingen treff på «{{q}}»</b>
+          <span class="meta">Prøv et navn, en oppføring eller et ord fra meldingen.</span>
+          <button class="btn btn-sm btn-ghost" onClick="{{clearQ}}">Tøm søket</button>
+        </div>
+      </sc-if>
+
+      <div class="card flat au d8" style="margin-top: 20px; padding: 14px 16px; background: rgba(255,255,255,.7); display: flex; gap: 12px; align-items: flex-start">
+        <span class="icirc" style="width: 34px; height: 34px; background: #E3F5E8; color: #2B8F4E"><i class="i i-shield s16"></i></span>
+        <span class="meta" style="flex: 1">Hold samtalen i MinNabo. Del adressen først når dere har en avtale. Pris og betaling avtales direkte mellom dere – MinNabo håndterer ikke betaling.</span>
+      </div>
+    </div>
+    <div class="spacer-nav"></div>
+  </div>
+
+  <!-- bottom nav -->
+  <nav class="nav" aria-label="Hovedmeny">
+    <a href="Oppdrag.dc.html"><span class="ni"><i class="i i-clip"></i></span>Oppdrag</a>
+    <a href="Fellesskap.dc.html"><span class="ni"><i class="i i-users"></i></span>Fellesskap</a>
+    <a href="LeggUt.dc.html" class="fabw" aria-label="Legg ut"><span class="fab"><i class="i i-plus"></i></span>Legg ut</a>
+    <a href="Innboks.dc.html" class="on" aria-current="page" aria-label="{{navAria}}"><span class="ni"><i class="i i-msg"></i><sc-if value="{{navCount}}" hint-placeholder-val="{{ true }}"><b class="count as">{{navCount}}</b></sc-if></span>Innboks</a>
+    <a href="Meny.dc.html"><span class="ni"><i class="i i-menu"></i></span>Meny</a>
+  </nav>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { q: '', filter: 'alle', unread: { jonas: 2, erik: 1 }, prevUnread: null, toast: null, toastIcon: 'i i-check s16', toastUndo: false };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const CONVS = [
+      { id: 'jonas', ini: 'JL', c: 'b', name: 'Jonas Lie', online: true, time: '18:07', grp: 'I dag', listing: 'Male gjerdet i hagen', type: 'need', msg: 'Jeg kan komme lørdag kl. 10', tag: 'Nytt tilbud', tagCls: 'pill pill-need tagp', tagIcon: 'i i-sparkle s14' },
+      { id: 'erik', ini: 'EM', c: 'c', name: 'Erik Moen', online: false, time: '16:42', grp: 'I dag', listing: 'Male gjerdet i hagen', type: 'need', msg: 'Har sendt deg et tilbud. Kan ta med sprøyteutstyr.', tag: 'Nytt tilbud', tagCls: 'pill pill-need tagp', tagIcon: 'i i-sparkle s14' },
+      { id: 'kari', ini: 'KH', c: 'c', name: 'Kari Holm', online: true, time: '14:20', grp: 'I dag', listing: 'Klippe plen og rake løv', type: 'need', msg: 'Supert, sees lørdag!', tag: 'Tilbud godtatt', tagCls: 'pill pill-ok tagp', tagIcon: 'i i-check s14' },
+      { id: 'lise', ini: 'LB', c: 'e', name: 'Lise Brekke', online: false, time: 'I går', grp: 'I går', listing: 'Male gjerdet i hagen', type: 'need', msg: 'Du: Kunne du startet litt tidligere på dagen?', tag: 'Endring forespurt', tagCls: 'pill pill-warn tagp', tagIcon: 'i i-edit s14' },
+      { id: 'grete', ini: 'GN', c: 'f', name: 'Grete Nilsen', online: false, time: 'I går', grp: 'I går', listing: 'Sette opp ny iPad', type: 'offer', msg: 'Hei! Passer det en kveld denne uka?', tag: '', tagCls: '', tagIcon: '' },
+      { id: 'sofie', ini: 'SN', c: 'a', name: 'Sofie Nygård', online: false, time: '14. sep', grp: 'Tidligere', listing: 'Flyttevask', type: 'offer', msg: 'Takk for sist, og lykke til i den nye leiligheten!', tag: '', tagCls: '', tagIcon: '' }
+    ];
+    const q = S.q.trim().toLowerCase();
+    const totalUnread = Object.keys(S.unread).reduce((a, k) => a + (S.unread[k] || 0), 0);
+    const unreadConvs = CONVS.filter((c) => S.unread[c.id] > 0).length;
+    const list = CONVS.filter((c) => {
+      if (S.filter === 'uleste' && !(S.unread[c.id] > 0)) return false;
+      if (!q) return true;
+      return (c.name + ' ' + c.listing + ' ' + c.msg).toLowerCase().indexOf(q) >= 0;
+    });
+    let n = 0;
+    const groups = ['I dag', 'I går', 'Tidligere'].map((label) => {
+      const rows = list.filter((c) => c.grp === label).map((c) => {
+        n += 1;
+        const u = S.unread[c.id] || 0;
+        return {
+          ini: c.ini, name: c.name, online: c.online, time: c.time, listing: c.listing, msg: c.msg,
+          tag: c.tag, tagCls: c.tagCls, tagIcon: c.tagIcon,
+          cls: 'conv au d' + Math.min(n + 3, 10) + (u ? ' unread' : ''),
+          avCls: 'av s48 av-' + c.c,
+          tdCls: 'td ' + c.type,
+          unread: u > 0, unreadN: String(u),
+          aria: c.name + ', ' + c.listing + (u ? ', ' + u + ' uleste' : '')
+        };
+      });
+      return { label, rows };
+    }).filter((g) => g.rows.length);
+    return {
+      subline: totalUnread ? totalUnread + ' uleste meldinger i ' + unreadConvs + ' samtaler' : 'Alt er lest',
+      q: S.q, hasQ: S.q.length > 0,
+      onQ: (e) => this.setState({ q: e.target.value }),
+      clearQ: () => this.setState({ q: '' }),
+      filters: [
+        { id: 'alle', label: 'Alle', n: '' },
+        { id: 'uleste', label: 'Uleste', n: unreadConvs ? String(unreadConvs) : '' }
+      ].map((f) => ({
+        label: f.label, n: f.n,
+        cls: 'chip plain' + (S.filter === f.id ? ' on' : ''),
+        nCls: 'pill ' + (S.filter === f.id ? 'pill-grad' : 'pill-neutral'),
+        sel: S.filter === f.id ? 'true' : 'false',
+        pick: () => this.setState({ filter: f.id })
+      })),
+      groups,
+      emptyUnread: S.filter === 'uleste' && !q && list.length === 0,
+      emptySearch: !!q && list.length === 0,
+      showAll: () => this.setState({ filter: 'alle' }),
+      markCls: 'btn btn-sm btn-ghost' + (totalUnread ? '' : ' disabled'),
+      markAria: totalUnread ? 'false' : 'true',
+      markAll: () => {
+        if (!totalUnread) return;
+        this.setState({ prevUnread: S.unread, unread: {} });
+        this.flash('Alle samtaler er merket som lest', 'i i-checks s14', true);
+      },
+      undo: () => { clearTimeout(this.tt); if (S.prevUnread) this.setState({ unread: S.prevUnread, prevUnread: null, toast: null }); },
+      navCount: totalUnread ? String(totalUnread) : '',
+      navAria: totalUnread ? 'Innboks, ' + totalUnread + ' uleste' : 'Innboks',
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo
+    };
+  }
+}
+</script>
+</body>
+</html>

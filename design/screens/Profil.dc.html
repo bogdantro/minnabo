@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Profil</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.pf-stat{flex:1;padding:14px 10px;border-radius:20px;background:#fff;box-shadow:var(--sh);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.pf-stat b{font:700 22px/1 var(--fd);letter-spacing:-.02em;display:inline-flex;align-items:center;gap:4px}
+.pf-stat span{font-size:12px;color:var(--mute);line-height:1.25}
+.vchip{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:13px 12px;border-radius:18px;background:#fff;border:1.5px solid var(--line);cursor:pointer;text-align:left;font:inherit;color:inherit;transition:transform .15s,border-color .2s;min-height:44px}
+.vchip:active{transform:scale(.96)}
+.vchip b{font:700 13.5px/1.2 var(--fb)}
+.vchip small{font:600 11.5px/1 var(--fb);color:#1D6E3A;display:inline-flex;align-items:center;gap:3px}
+.avstack{display:flex}
+.avstack .av{margin-left:-9px}
+.avstack .av:first-child{margin-left:0}
+.tagc{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font:600 13px/1 var(--fb)}
+.tagc b{min-width:22px;height:22px;border-radius:11px;background:var(--lime-t);color:var(--lime-d);display:grid;place-items:center;font:800 11.5px/1 var(--fb);padding:0 6px}
+.ptile{display:flex;flex-direction:column;gap:8px;background:none;border:0;padding:0;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.ptile .pair{display:flex;height:132px;border-radius:20px;overflow:hidden;box-shadow:var(--sh);position:relative;transition:transform .2s var(--ease)}
+.ptile:active .pair{transform:scale(.97)}
+.ptile .pair .art{flex:1}
+.ptile .pair .art .i{width:26px;height:26px}
+.before{filter:grayscale(.85) contrast(.92) brightness(1.02)}
+.before::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(10,23,64,.05) 0 6px,transparent 6px 14px)}
+.plab{position:absolute;top:8px;height:20px;padding:0 8px;border-radius:999px;font:800 10.5px/20px var(--fb);letter-spacing:.04em;text-transform:uppercase;z-index:2}
+.plab.b{left:8px;background:rgba(255,255,255,.9);color:var(--ink2)}
+.plab.a{right:8px;background:var(--ink);color:#fff}
+.pdiv{position:absolute;top:0;bottom:0;left:50%;width:3px;margin-left:-1.5px;background:#fff;z-index:2}
+.rev{padding:16px;border-radius:22px;background:#fff;box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px}
+.rstars{display:inline-flex;gap:1px;color:var(--star)}
+.rstars .i{width:14px;height:14px}
+.rstars .off{color:#D8DCE3}
+.reply{padding:12px 14px;border-radius:16px;background:var(--surf2);border-left:3px solid var(--cyan);font-size:13.5px;line-height:1.45}
+.vwrap{display:flex;gap:6px;justify-content:center}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh"></div>
+
+    <div class="subbar" style="grid-template-columns: 98px 1fr 98px">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Profil</div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end">
+        <button class="iconbtn" onClick="{{share}}" aria-label="Del profilen"><i class="i i-share s18"></i></button>
+        <a href="Innstillinger.dc.html" class="iconbtn" aria-label="Innstillinger"><i class="i i-gear s18"></i></a>
+      </div>
+    </div>
+
+    <!-- vacation banner -->
+    <sc-if value="{{vacBanner}}" hint-placeholder-val="{{ false }}">
+      <div class="px au" style="position: relative; margin-top: 4px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 18px; background: #FFF2D9; color: #7A4700; border: 1px solid #F5DDAE">
+          <span class="icirc" style="width: 34px; height: 34px; background: #ffffff; color: #9A5B00"><i class="i i-moon s18"></i></span>
+          <span style="flex: 1; font: 600 13.5px/1.35 var(--fb)">Feriemodus er på – oppføringene dine er skjult</span>
+          <button class="btn btn-sm btn-ghost" style="height: 36px; padding: 0 12px; font-size: 13px" onClick="{{toggleVac}}">Slå av</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- head -->
+    <div class="px" style="position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 14px">
+      <div class="as" style="position: relative">
+        <span class="av av-me s88">MH</span>
+        <span class="icirc" style="position: absolute; right: -6px; bottom: -4px; width: 30px; height: 30px; background: #19B8EE; color: #ffffff; box-shadow: 0 0 0 3px #ffffff"><i class="i i-check s16"></i></span>
+      </div>
+      <h1 class="h2 au d2" style="margin-top: 20px; font-size: 27px">Mari Haugen</h1>
+      <div class="au d3" style="display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; justify-content: center">
+        <span class="vbadge"><i class="i i-shield s14"></i>Verifisert med Vipps</span>
+        <sc-if value="{{pubVac}}" hint-placeholder-val="{{ false }}"><span class="pill pill-warn"><i class="i i-moon s14"></i>På ferie</span></sc-if>
+      </div>
+      <div class="meta au d3" style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px; align-items: center">
+        <span style="display: inline-flex; align-items: center; gap: 5px"><i class="i i-pin s14"></i>Nordre Ål, Lillehammer</span>
+        <span style="display: inline-flex; align-items: center; gap: 5px"><i class="i i-cal s14"></i>Medlem siden mars 2024</span>
+      </div>
+      <sc-if value="{{isMe}}" hint-placeholder-val="{{ true }}">
+        <a href="RedigerProfil.dc.html" class="btn btn-ghost btn-sm au d4" style="margin-top: 16px; background: rgba(255,255,255,.85)"><i class="i i-edit s16"></i>Rediger profil</a>
+      </sc-if>
+      <sc-if value="{{isPub}}" hint-placeholder-val="{{ false }}">
+        <div class="au" style="margin-top: 16px; display: flex; gap: 10px; width: 100%">
+          <button class="btn btn-cyan" style="flex: 1" onClick="{{previewTap}}"><i class="i i-msg s18"></i>Ta kontakt</button>
+          <button class="btn btn-ghost" style="flex: 1" onClick="{{previewTap}}">Be om tilbud</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- stats -->
+    <div class="px au d5" style="display: flex; gap: 10px; margin-top: 22px">
+      <div class="pf-stat"><b>14</b><span>fullførte jobber</span></div>
+      <div class="pf-stat"><b><i class="i i-star s18" style="color: #F0A500"></i>4,9</b><span>11 vurderinger</span></div>
+      <div class="pf-stat"><b style="font-size: 19px">1 t</b><span>svarer vanligvis innen</span></div>
+    </div>
+
+    <!-- view seg -->
+    <div class="px au d6" style="margin-top: 18px">
+      <div class="seg" role="tablist" aria-label="Visning">
+        <button class="{{segMe}}" onClick="{{viewMe}}" role="tab" aria-selected="{{ariaMe}}">Min visning</button>
+        <button class="{{segPub}}" onClick="{{viewPub}}" role="tab" aria-selected="{{ariaPub}}"><span style="display: inline-flex; align-items: center; gap: 6px"><i class="i i-eye s16"></i>Slik ser andre deg</span></button>
+      </div>
+      <sc-if value="{{isPub}}" hint-placeholder-val="{{ false }}">
+        <div class="note au" style="margin-top: 10px; justify-content: center"><i class="i i-eye"></i><span>Forhåndsvisning. Private detaljer og innstillinger er skjult.</span></div>
+      </sc-if>
+    </div>
+
+    <!-- vacation card -->
+    <sc-if value="{{isMe}}" hint-placeholder-val="{{ true }}">
+      <div class="px au d7" style="margin-top: 14px">
+        <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 14px">
+          <span class="icirc" style="width: 44px; height: 44px; background: {{vacIconBg}}; color: {{vacIconFg}}; transition: background .3s"><i class="i i-moon s22"></i></span>
+          <div style="flex: 1; min-width: 0">
+            <b style="display: block; font: 700 15.5px/1.25 var(--fb)">Feriemodus</b>
+            <span class="meta" style="display: block; margin-top: 3px">{{vacDesc}}</span>
+          </div>
+          <button class="{{vacTgl}}" onClick="{{toggleVac}}" role="switch" aria-checked="{{vacAria}}" aria-label="Feriemodus"></button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- tabs -->
+    <div class="tabs au d8" role="tablist" aria-label="Profilinnhold" style="margin-top: 22px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+        <button class="{{t.cls}}" onClick="{{t.pick}}" role="tab" aria-selected="{{t.sel}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <!-- OM -->
+    <sc-if value="{{tabOm}}" hint-placeholder-val="{{ true }}">
+      <div class="px stack" style="gap: 14px; padding-top: 18px">
+        <div class="card pad au">
+          <div class="eyebrow">Presentasjon</div>
+          <p class="body p" style="margin-top: 10px; color: #34405F">Hei! Jeg er Mari og bor i Nordre Ål med samboer og hunden Luna. Til daglig jobber jeg med IT, og hjelper gjerne naboer med mobil, PC og smarthus. På fritiden er jeg mye i hagen, og liker å male og fikse.</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px">
+            <span class="pill pill-neutral"><i class="i i-globe s14"></i>Norsk, engelsk</span>
+            <span class="pill pill-neutral"><i class="i i-transport s14"></i>Har bil</span>
+            <span class="pill pill-neutral"><i class="i i-clock s14"></i>Kvelder etter kl. 17</span>
+          </div>
+        </div>
+
+        <div class="card pad au d1">
+          <div class="eyebrow">Tjenester og kategorier</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px">
+            <sc-for list="{{cats}}" as="c" hint-placeholder-count="4">
+              <span class="chip sm" style="padding-left: 5px; cursor: default"><span class="{{c.art}}" style="width: 26px; height: 26px; border-radius: 50%"><i class="{{c.icon}}" style="width: 14px; height: 14px"></i></span>{{c.label}}</span>
+            </sc-for>
+          </div>
+          <a href="MineOppforinger.dc.html" class="link" style="margin-top: 6px">Se oppføringene mine<i class="i i-arrow"></i></a>
+        </div>
+
+        <div class="card pad au d2">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <div class="eyebrow">Verifisering</div>
+            <span class="meta" style="font-size: 12px">Trykk for detaljer</span>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 12px">
+            <sc-for list="{{verifs}}" as="v" hint-placeholder-count="3">
+              <button class="vchip" onClick="{{v.open}}" aria-label="{{v.aria}}">
+                <span class="icirc" style="width: 34px; height: 34px; background: {{v.bg}}; color: {{v.fg}}"><i class="{{v.icon}}"></i></span>
+                <b>{{v.short}}</b>
+                <small><i class="i i-check s14"></i>Bekreftet</small>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="card pad au d3">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <div class="eyebrow">Pålitelighet</div>
+            <span class="pill pill-ok" style="height: 22px; font-size: 11px"><i class="i i-award s14"></i>Svært pålitelig</span>
+          </div>
+          <div class="stack" style="gap: 14px; margin-top: 14px">
+            <sc-for list="{{rel}}" as="r" hint-placeholder-count="3">
+              <div class="stack" style="gap: 7px">
+                <div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: inline-flex; align-items: center; gap: 7px; font-weight: 600"><i class="{{r.icon}}" style="color: #5F6983"></i>{{r.label}}</span><b class="num" style="font-size: 15px">{{r.val}}</b></div>
+                <div class="bar"><i style="display: block; {{r.w}}"></i></div>
+              </div>
+            </sc-for>
+          </div>
+          <p class="meta p" style="margin-top: 12px; font-size: 12px">Basert på 14 fullførte avtaler siste 12 måneder.</p>
+        </div>
+
+        <div class="card pad au d4">
+          <div class="eyebrow">Anbefalt av naboer</div>
+          <div class="stack" style="margin-top: 6px">
+            <sc-for list="{{recs}}" as="r" hint-placeholder-count="2">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF1F4">
+                <span class="{{r.art}}" style="width: 40px; height: 40px; border-radius: 13px"><i class="{{r.icon}}" style="width: 20px; height: 20px"></i></span>
+                <div style="flex: 1; min-width: 0">
+                  <b style="display: block; font: 700 15px/1.2 var(--fb)">{{r.label}}</b>
+                  <span class="meta">{{r.n}}</span>
+                </div>
+                <div class="avstack">
+                  <sc-for list="{{r.avs}}" as="a" hint-placeholder-count="3">
+                    <span class="{{a.cls}}">{{a.ini}}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <p class="meta p" style="margin-top: 10px; font-size: 12px">Bare naboer som har hatt en fullført avtale med Mari kan anbefale.</p>
+        </div>
+
+        <sc-if value="{{isMe}}" hint-placeholder-val="{{ true }}">
+          <div class="card pad au d5" style="border: 1.5px dashed #C9CFD9; box-shadow: none; background: rgba(255,255,255,.6)">
+            <div style="display: flex; align-items: center; gap: 8px"><i class="i i-lock s16" style="color: #5F6983"></i><div class="eyebrow">Privat – bare for deg</div></div>
+            <div class="kv" style="margin-top: 6px"><span>Telefon</span><b>+47 9•• •• 412</b></div>
+            <div class="kv"><span>E-post</span><b>m••••@••••.no</b></div>
+            <div class="kv"><span>Hjemmenotater</span><b>Deles ved avtale</b></div>
+            <a href="RedigerProfil.dc.html" class="link">Endre private detaljer<i class="i i-arrow"></i></a>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- VURDERINGER -->
+    <sc-if value="{{tabRev}}" hint-placeholder-val="{{ false }}">
+      <div class="stack" style="gap: 14px; padding-top: 18px">
+        <div class="px au">
+          <div class="card pad" style="display: flex; gap: 18px; align-items: center">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; width: 96px">
+              <span class="num" style="font-size: 48px; line-height: 1">4,9</span>
+              <span class="rstars"><i class="i i-star"></i><i class="i i-star"></i><i class="i i-star"></i><i class="i i-star"></i><i class="i i-star"></i></span>
+              <span class="meta" style="font-size: 12px">11 vurderinger</span>
+            </div>
+            <div class="stack" style="gap: 7px; flex: 1">
+              <sc-for list="{{dist}}" as="d" hint-placeholder-count="5">
+                <div style="display: flex; align-items: center; gap: 8px; font: 600 12.5px/1 var(--fb)">
+                  <span style="width: 10px; color: #5F6983">{{d.s}}</span>
+                  <div class="bar" style="flex: 1; height: 7px"><i style="display: block; {{d.w}}"></i></div>
+                  <span style="width: 16px; text-align: right; color: #5F6983">{{d.n}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div class="px au d1">
+          <div class="eyebrow" style="margin-bottom: 10px">Det naboer trekker fram</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{tags}}" as="t" hint-placeholder-count="6">
+              <span class="tagc">{{t.label}}<b>{{t.n}}</b></span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="au d2" style="margin-top: 4px">
+          <div class="chips" role="tablist" aria-label="Filtrer vurderinger">
+            <sc-for list="{{revFilters}}" as="f" hint-placeholder-count="4">
+              <button class="{{f.cls}}" onClick="{{f.pick}}" aria-pressed="{{f.pressed}}">{{f.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="px stack" style="gap: 12px">
+          <sc-for list="{{reviews}}" as="r" hint-placeholder-count="4">
+            <article class="rev au">
+              <div style="display: flex; align-items: center; gap: 12px">
+                <span class="{{r.avCls}}">{{r.ini}}</span>
+                <div style="flex: 1; min-width: 0">
+                  <b style="display: block; font: 700 15px/1.2 var(--fb)">{{r.name}}</b>
+                  <span class="meta" style="font-size: 12px">{{r.role}} · {{r.date}}</span>
+                </div>
+                <span class="rstars" aria-label="{{r.aria}}">
+                  <sc-for list="{{r.stars}}" as="s" hint-placeholder-count="5"><i class="{{s.cls}}"></i></sc-for>
+                </span>
+              </div>
+              <div style="display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; font: 600 12.5px/1 var(--fb); color: #34405F; background: #F7F8FA; padding: 7px 10px; border-radius: 10px"><i class="{{r.jobIcon}}" style="width: 14px; height: 14px"></i>{{r.job}}</div>
+              <p class="p" style="font-size: 14.5px; line-height: 1.5">{{r.text}}</p>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                <sc-for list="{{r.tags}}" as="t" hint-placeholder-count="2">
+                  <span class="pill pill-need" style="height: 24px; font-size: 11.5px"><i class="i i-check s14"></i>{{t.label}}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{r.reply}}" hint-placeholder-val="{{ false }}">
+                <div class="reply"><b style="display: block; font-size: 12.5px; margin-bottom: 3px">Svar fra Mari</b>{{r.reply}}</div>
+              </sc-if>
+            </article>
+          </sc-for>
+          <sc-if value="{{noReviews}}" hint-placeholder-val="{{ false }}">
+            <div class="dash-card as" style="padding: 22px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px">
+              <span class="icirc" style="width: 48px; height: 48px; background: #EDF8D6; color: #3B7300"><i class="i i-staro s22"></i></span>
+              <b>Ingen vurderinger med dette filteret</b>
+            </div>
+          </sc-if>
+          <p class="meta p" style="text-align: center; font-size: 12px; margin-top: 4px">{{revCountLabel}} · Bare parter i en fullført avtale kan vurdere hverandre.</p>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- PORTEFØLJE -->
+    <sc-if value="{{tabPort}}" hint-placeholder-val="{{ false }}">
+      <div class="px" style="padding-top: 18px">
+        <p class="meta p au" style="margin-bottom: 14px">Før og etter fra jobber Mari har gjort for naboer. Trykk for å se større.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px">
+          <sc-for list="{{port}}" as="p" hint-placeholder-count="4">
+            <button class="{{p.cls}}" onClick="{{p.open}}" aria-label="{{p.aria}}">
+              <div class="pair">
+                <span class="plab b">Før</span><span class="plab a">Etter</span><span class="pdiv"></span>
+                <div class="{{p.artB}}"><i class="{{p.icon}}"></i></div>
+                <div class="{{p.artA}}"><i class="{{p.icon}}"></i></div>
+              </div>
+              <b style="font: 700 14px/1.25 var(--fb)">{{p.title}}</b>
+              <span class="meta" style="font-size: 12px; margin-top: -4px">{{p.where}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{isMe}}" hint-placeholder-val="{{ true }}">
+          <a href="RedigerProfil.dc.html" class="btn btn-ghost btn-block au d5" style="margin-top: 18px"><i class="i i-plus s18"></i>Legg til før og etter</a>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div style="height: 48px"></div>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- verification sheet -->
+  <sc-if value="{{verifOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeVerif}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="{{vs.title}}">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span class="icirc as" style="width: 48px; height: 48px; background: {{vs.bg}}; color: {{vs.fg}}"><i class="{{vs.iconL}}"></i></span>
+          <div>
+            <h2 class="h3">{{vs.title}}</h2>
+            <span class="vbadge" style="margin-top: 4px"><i class="i i-check s14"></i>{{vs.date}}</span>
+          </div>
+        </div>
+        <button class="iconbtn" onClick="{{closeVerif}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <div class="label" style="margin: 6px 0 10px">Dette ble sjekket</div>
+      <div class="stack" style="gap: 8px">
+        <sc-for list="{{vs.checked}}" as="c" hint-placeholder-count="3">
+          <div class="au" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: #F7F8FA">
+            <span class="icirc" style="width: 24px; height: 24px; background: #2B8F4E; color: #ffffff; margin-top: 1px"><i class="i i-check s14"></i></span>
+            <span style="font-size: 14.5px; line-height: 1.4">{{c.t}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div class="label" style="margin: 18px 0 10px">Dette deles ikke</div>
+      <div style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1px solid #E4E8EE">
+        <i class="i i-lock s18" style="color: #5F6983; margin-top: 1px"></i>
+        <span style="font-size: 14px; line-height: 1.45; color: #34405F">{{vs.private}}</span>
+      </div>
+      <a href="Verifisering.dc.html" class="btn btn-ghost btn-block" style="margin-top: 18px">Les mer om verifisering<i class="i i-arrow s18"></i></a>
+    </div>
+  </sc-if>
+
+  <!-- portfolio viewer -->
+  <sc-if value="{{viewerOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeViewer}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="{{pv.title}}">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <div>
+          <h2 class="h3">{{pv.title}}</h2>
+          <span class="meta">{{pv.where}}</span>
+        </div>
+        <button class="iconbtn" onClick="{{closeViewer}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <div style="position: relative; height: 262px; border-radius: 24px; overflow: hidden; box-shadow: var(--sh-m)">
+        <sc-if value="{{pvBefore}}" hint-placeholder-val="{{ false }}">
+          <div class="{{pv.bigB}}" style="position: absolute; inset: 0"><i class="{{pv.icon}}" style="width: 64px; height: 64px"></i></div>
+          <span class="plab b" style="top: 14px; left: 14px; height: 26px; line-height: 26px; font-size: 12px; padding: 0 12px">Før</span>
+        </sc-if>
+        <sc-if value="{{pvAfter}}" hint-placeholder-val="{{ true }}">
+          <div class="{{pv.bigA}}" style="position: absolute; inset: 0"><i class="{{pv.icon}}" style="width: 64px; height: 64px"></i></div>
+          <span class="plab a" style="top: 14px; right: 14px; height: 26px; line-height: 26px; font-size: 12px; padding: 0 12px">Etter</span>
+        </sc-if>
+        <button class="iconbtn glass" onClick="{{prevP}}" aria-label="Forrige" style="position: absolute; left: 12px; top: 50%; margin-top: -22px"><i class="i i-left"></i></button>
+        <button class="iconbtn glass" onClick="{{nextP}}" aria-label="Neste" style="position: absolute; right: 12px; top: 50%; margin-top: -22px"><i class="i i-right"></i></button>
+      </div>
+      <div class="seg" style="margin-top: 14px">
+        <button class="{{segB}}" onClick="{{showB}}">Før</button>
+        <button class="{{segA}}" onClick="{{showA}}">Etter</button>
+      </div>
+      <p class="body p" style="margin-top: 14px; color: #34405F">{{pv.caption}}</p>
+      <div class="vwrap" style="margin-top: 14px">
+        <sc-for list="{{pvDots}}" as="d" hint-placeholder-count="4"><span class="{{d.cls}}" style="display: block; height: 7px; border-radius: 4px; transition: width .35s, background .35s; {{d.st}}"></span></sc-for>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'om', view: 'me', vac: false, verif: null, revF: 'alle', port: null, side: 'etter', toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const isPub = S.view === 'public';
+    const TABS = [['om', 'Om'], ['rev', 'Vurderinger (11)'], ['port', 'Portefølje']];
+    const VER = {
+      vipps: { short: 'Vipps-ID', title: 'Identitet med Vipps', icon: 'i i-shield s18', iconL: 'i i-shield s24', bg: '#FFE6DC', fg: '#C2410C', date: 'Bekreftet 12. mars 2024',
+        checked: ['Fullt navn er hentet fra Vipps: Mari Haugen', 'Alder er bekreftet – over 18 år', 'Kontoen er knyttet til én Vipps-bruker'],
+        private: 'Fødselsnummer, adresse og bankopplysninger hentes ikke og vises aldri. Andre ser bare at identiteten er bekreftet.' },
+      phone: { short: 'Telefon', title: 'Telefonnummer', icon: 'i i-phone s18', iconL: 'i i-phone s24', bg: '#DFF2FB', fg: '#065C8F', date: 'Bekreftet 12. mars 2024',
+        checked: ['Engangskode sendt på SMS til +47 9•• •• 412', 'Koden ble tastet inn riktig i appen'],
+        private: 'Telefonnummeret ditt vises aldri offentlig. Det deles bare hvis du selv sender det i chatten.' },
+      email: { short: 'E-post', title: 'E-postadresse', icon: 'i i-mail s18', iconL: 'i i-mail s24', bg: '#EDF8D6', fg: '#3B7300', date: 'Bekreftet 12. mars 2024',
+        checked: ['Bekreftelseslenke sendt til m••••@••••.no', 'Lenken ble åpnet og adressen bekreftet'],
+        private: 'E-postadressen brukes bare til kvitteringer og varsler du har valgt. Den vises ikke for andre.' }
+    };
+    const CATS = [['data', 'Datahjelp'], ['hage', 'Hage'], ['maling', 'Maling/vedlikehold'], ['montering', 'Montering']];
+    const REL = [['i i-hand s16', 'Møter opp', 100], ['i i-clock s16', 'Presis', 96], ['i i-checks s16', 'Fullfører', 100]];
+    const REVS = [
+      { name: 'Kari Holm', ini: 'KH', av: 'c', stars: 5, role: 'hjelper', date: '12. sep 2026', job: 'Oppsett av ny mobil', cat: 'data', text: 'Mari satte opp den nye telefonen til mamma og forklarte alt med stor tålmodighet. Kom presis og ryddet etter seg.', tags: ['Punktlig', 'Vennlig'] },
+      { name: 'Erik Moen', ini: 'EM', av: 'c', stars: 5, role: 'oppdragsgiver', date: '2. sep 2026', job: 'Bære kjøleskap', cat: 'flytting', text: 'Klar beskjed på forhånd, og alt var ryddet klart da jeg kom. Hyggelig å hjelpe.', tags: ['God kommunikasjon'] },
+      { name: 'Grete Nilsen', ini: 'GN', av: 'e', stars: 5, role: 'hjelper', date: '28. aug 2026', job: 'Beising av terrasse', cat: 'maling', text: 'Grundig jobb! Terrassen ser ny ut, og hun dekket til alt rundt før hun startet.', tags: ['Grundig', 'Ryddig'] },
+      { name: 'Magnus Aas', ini: 'MA', av: 'd', stars: 5, role: 'hjelper', date: '19. aug 2026', job: 'Koble opp skriver og wifi', cat: 'data', text: 'Løste noe jeg hadde slitt med i ukevis. Anbefales!', tags: ['Anbefales', 'Punktlig'] },
+      { name: 'Nora Solberg', ini: 'NS', av: 'f', stars: 4, role: 'oppdragsgiver', date: '3. jul 2026', job: 'Luke bed i forhagen', cat: 'hage', text: 'Hyggelig oppdragsgiver. Litt uklart hvor hageavfallet skulle, men vi fant ut av det i chatten.', tags: ['Vennlig'], reply: 'Takk, Nora! Jeg skal skrive det tydeligere i oppdraget neste gang.' },
+      { name: 'Thea Lund', ini: 'TL', av: 'g', stars: 5, role: 'hjelper', date: '21. jun 2026', job: 'Smarthus-oppsett', cat: 'data', text: 'Supert! Nå styrer vi lys og varme fra mobilen, og Mari skrev en liten bruksanvisning til oss.', tags: ['Grundig', 'God kommunikasjon'] }
+    ];
+    const RF = [['alle', 'Alle'], ['5', '5 stjerner'], ['hjelper', 'Som hjelper'], ['oppdragsgiver', 'Som oppdragsgiver']];
+    const revList = REVS.filter((r) => S.revF === 'alle' || (S.revF === '5' ? r.stars === 5 : r.role === S.revF));
+    const PORT = [
+      { cat: 'maling', title: 'Beiset terrasse', where: 'Søre Ål · aug 2026', caption: 'Terrassen ble vasket, pusset lett og beiset to strøk. Utført for Grete Nilsen. Beis kjøpt av oppdragsgiver.' },
+      { cat: 'hage', title: 'Ryddet hagebed', where: 'Nordre Ål · jul 2026', caption: 'Ugress fjernet, kanter klippet og ny bark lagt i to bed. Hageavfallet ble levert på gjenvinningsstasjonen.' },
+      { cat: 'data', title: 'Smarthus-oppsett', where: 'Stampesletta · jun 2026', caption: 'Satte opp smarthus-hub, seks lyspærer og varmestyring, og laget en enkel bruksanvisning på papir.' },
+      { cat: 'montering', title: 'Hyller i boden', where: 'Nordre Ål · mai 2026', caption: 'Monterte fire vegghyller og krokverk i boden, slik at sykler og hageutstyr fikk faste plasser.' }
+    ];
+    const pv = S.port !== null ? PORT[S.port] : PORT[0];
+    const vs = VER[S.verif || 'vipps'];
+    const showVac = S.vac;
+    return {
+      share: () => this.flash('Lenke til profilen er kopiert', 'i i-copy s14'),
+      previewTap: () => this.flash('Dette er en forhåndsvisning av profilen din', 'i i-eye s14'),
+      isMe: !isPub, isPub,
+      pubVac: isPub && S.vac,
+      vacBanner: showVac && !isPub,
+      segMe: isPub ? '' : 'on', segPub: isPub ? 'on' : '',
+      ariaMe: isPub ? 'false' : 'true', ariaPub: isPub ? 'true' : 'false',
+      viewMe: () => this.setState({ view: 'me' }),
+      viewPub: () => this.setState({ view: 'public' }),
+      vacTgl: 'tgl' + (S.vac ? ' on' : ''),
+      vacAria: S.vac ? 'true' : 'false',
+      vacIconBg: S.vac ? '#FFF2D9' : '#EEF1F4', vacIconFg: S.vac ? '#9A5B00' : '#5F6983',
+      vacDesc: S.vac ? 'På – oppføringene dine vises ikke i søk. Avtaler og chatter går som vanlig.' : 'Skjul oppføringene dine midlertidig når du er borte.',
+      toggleVac: () => { const on = !S.vac; this.setState({ vac: on }); this.flash(on ? 'Feriemodus er slått på' : 'Feriemodus er slått av – du er synlig igjen', on ? 'i i-moon s14' : 'i i-sun s14'); },
+      tabs: TABS.map(([id, label]) => ({ label, cls: S.tab === id ? 'on' : '', sel: S.tab === id ? 'true' : 'false', pick: () => this.setState({ tab: id }) })),
+      tabOm: S.tab === 'om', tabRev: S.tab === 'rev', tabPort: S.tab === 'port',
+      cats: CATS.map(([id, label]) => ({ label, art: 'art art-' + id, icon: 'i i-' + id })),
+      verifs: ['vipps', 'phone', 'email'].map((k) => ({ short: VER[k].short, icon: VER[k].icon, bg: VER[k].bg, fg: VER[k].fg, aria: VER[k].title + ' – bekreftet. Se hva som ble sjekket', open: () => this.setState({ verif: k }) })),
+      rel: REL.map(([icon, label, v]) => ({ icon, label, val: v + ' %', w: 'width: ' + v + '%; background: #3F9A1A' })),
+      recs: [
+        { art: 'art art-data', icon: 'i i-data', label: 'Datahjelp', n: '6 naboer anbefaler', avs: [['KH', 'c'], ['MA', 'd'], ['TL', 'g']].map(([ini, c]) => ({ ini, cls: 'av s32 av-' + c })).concat([{ ini: '+3', cls: 'av s32 av-me' }]) },
+        { art: 'art art-hage', icon: 'i i-hage', label: 'Hage', n: '3 naboer anbefaler', avs: [['NS', 'f'], ['GN', 'e'], ['IS', 'a']].map(([ini, c]) => ({ ini, cls: 'av s32 av-' + c })) }
+      ],
+      dist: [[5, 10], [4, 1], [3, 0], [2, 0], [1, 0]].map(([s, n]) => ({ s, n, w: 'width: ' + Math.round(n / 11 * 100) + '%; background: #F0A500' })),
+      tags: [['Punktlig', 9], ['Vennlig', 8], ['Grundig', 7], ['God kommunikasjon', 6], ['Anbefales', 6], ['Ryddig', 5]].map(([label, n]) => ({ label, n })),
+      revFilters: RF.map(([id, label]) => ({ label, cls: 'chip plain sm' + (S.revF === id ? ' on' : ''), pressed: S.revF === id ? 'true' : 'false', pick: () => this.setState({ revF: id }) })),
+      reviews: revList.map((r) => ({
+        name: r.name, ini: r.ini, avCls: 'av s40 plain av-' + r.av, date: r.date, job: r.job, jobIcon: 'i i-' + r.cat, text: r.text,
+        role: r.role === 'hjelper' ? 'Mari hjalp' : 'Mari var oppdragsgiver',
+        aria: r.stars + ' av 5 stjerner',
+        stars: [1, 2, 3, 4, 5].map((i) => ({ cls: 'i i-star' + (i <= r.stars ? '' : ' off') })),
+        tags: r.tags.map((t) => ({ label: t })), reply: r.reply || ''
+      })),
+      noReviews: revList.length === 0,
+      revCountLabel: 'Viser ' + revList.length + ' av 11',
+      port: PORT.map((p, i) => ({
+        title: p.title, where: p.where, cls: 'ptile au d' + (i + 1), icon: 'i i-' + p.cat,
+        artB: 'art art-' + p.cat + ' before', artA: 'art art-' + p.cat,
+        aria: 'Åpne før og etter: ' + p.title,
+        open: () => this.setState({ port: i, side: 'etter' })
+      })),
+      verifOpen: !!S.verif,
+      closeVerif: () => this.setState({ verif: null }),
+      vs: { title: vs.title, iconL: vs.iconL, bg: vs.bg, fg: vs.fg, date: vs.date, private: vs.private, checked: vs.checked.map((t) => ({ t })) },
+      toast: S.toast, toastIcon: S.toastIcon,
+      viewerOpen: S.port !== null,
+      closeViewer: () => this.setState({ port: null }),
+      pv: { title: pv.title, where: pv.where, caption: pv.caption, icon: 'i i-' + pv.cat, bigB: 'art art-' + pv.cat + ' before ai', bigA: 'art art-' + pv.cat + ' ai' },
+      pvBefore: S.side === 'for', pvAfter: S.side !== 'for',
+      segB: S.side === 'for' ? 'on' : '', segA: S.side === 'for' ? '' : 'on',
+      showB: () => this.setState({ side: 'for' }),
+      showA: () => this.setState({ side: 'etter' }),
+      prevP: () => this.setState({ port: ((S.port || 0) + PORT.length - 1) % PORT.length, side: 'for' }),
+      nextP: () => this.setState({ port: ((S.port || 0) + 1) % PORT.length, side: 'for' }),
+      pvDots: PORT.map((p, i) => ({ cls: '', st: i === S.port ? 'width: 22px; background: #0A1740' : 'width: 7px; background: #C9CFD8' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

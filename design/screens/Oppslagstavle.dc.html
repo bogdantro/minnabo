@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Oppslagstavle</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.kp{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;font:700 12px/1 var(--fb);white-space:nowrap}
+.k-gis{background:#E3F5E8;color:#1D6E3A}
+.k-mistet{background:#FFF2D9;color:#9A5B00}
+.k-utlan{background:#E8E3FB;color:#46379E}
+.k-gen{background:#DFF2FB;color:#065C8F}
+.post{background:#fff;border-radius:26px;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035);padding:16px;display:flex;flex-direction:column;gap:12px}
+.post.fresh{animation:freshIn .7s var(--spring) both;box-shadow:0 0 0 2px #B8EE3C,var(--sh-m)}
+@keyframes freshIn{0%{opacity:0;transform:translateY(-24px) scale(.94)}100%{opacity:1;transform:none}}
+.post .tile{height:150px;border-radius:18px}
+.post .tile .i{width:40px;height:40px}
+.pact{display:flex;gap:8px;align-items:center}
+.savebtn{height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:7px;font:700 14px var(--fb);color:var(--ink2);cursor:pointer;transition:all .2s}
+.savebtn.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.savebtn.on .i{animation:pop .45s var(--spring)}
+.fabx{position:absolute;right:20px;bottom:30px;z-index:20;box-shadow:0 16px 30px -12px rgba(10,23,64,.7)}
+.kchip{flex:none;height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:7px;font:700 13.5px var(--fb);color:var(--ink2);cursor:pointer;transition:all .2s}
+.kchip.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.photo-add{height:96px;width:100%}
+.shake{animation:shake .35s}
+.chip .ci-alle{background:#ECEFF3;color:#34405F}
+.chip .ci-gis{background:#E3F5E8;color:#1D6E3A}
+.chip .ci-mistet{background:#FFF2D9;color:#9A5B00}
+.chip .ci-utlan{background:#E8E3FB;color:#46379E}
+.chip .ci-gen{background:#DFF2FB;color:#065C8F}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+    <div class="subbar">
+      <a href="Fellesskap.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Oppslagstavle</div>
+      <button class="iconbtn" onClick="{{openCompose}}" aria-label="Nytt oppslag"><i class="i i-edit s18"></i></button>
+    </div>
+
+    <div class="px au" style="position: relative; margin-top: 8px; display: flex; flex-direction: column; gap: 8px">
+      <span class="eyebrow">Lillehammer kommune</span>
+      <h1 class="h1">Oppslag fra naboene</h1>
+      <p class="body p" style="color: #34405F">Gi bort, lån ut, finn igjen – eller bare si fra om noe som skjer i nabolaget.</p>
+    </div>
+
+    <div class="au d2" style="position: relative; margin-top: 16px">
+      <div class="chips" role="tablist" aria-label="Type oppslag">
+        <sc-for list="{{kinds}}" as="k" hint-placeholder-count="5">
+          <button class="{{k.cls}}" onClick="{{k.pick}}" aria-pressed="{{k.pressed}}"><span class="{{k.ciCls}}"><i class="{{k.icon}}"></i></span>{{k.label}}<span style="opacity: .6; font-weight: 600">{{k.n}}</span></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="px stack" style="gap: 14px; margin-top: 12px; position: relative">
+      <sc-for list="{{posts}}" as="p" hint-placeholder-count="4">
+        <article class="{{p.cls}}">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span class="{{p.avCls}}">{{p.ini}}</span>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+              <b style="font-size: 14.5px">{{p.who}}</b>
+              <span class="meta" style="font-size: 12.5px">{{p.area}} · {{p.time}}</span>
+            </div>
+            <span class="{{p.kCls}}"><i class="{{p.kIcon}}"></i>{{p.kind}}</span>
+          </div>
+          <div class="stack" style="gap: 6px">
+            <h3 class="h4" style="font-size: 17px">{{p.title}}</h3>
+            <p class="p" style="font-size: 14.5px; line-height: 1.5; color: #34405F">{{p.text}}</p>
+          </div>
+          <sc-if value="{{p.hasArt}}" hint-placeholder-val="{{ true }}">
+            <div class="{{p.artCls}}"><i class="{{p.artIcon}}"></i></div>
+          </sc-if>
+          <div class="pact">
+            <a href="Chat.dc.html" class="btn btn-ink btn-sm"><i class="i i-reply s16"></i>Svar</a>
+            <button class="{{p.saveCls}}" onClick="{{p.save}}" aria-pressed="{{p.savedStr}}"><i class="{{p.saveIcon}}"></i>{{p.saveLabel}}</button>
+            <span style="margin-left: auto" class="meta">{{p.replies}}</span>
+          </div>
+        </article>
+      </sc-for>
+      <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+        <div class="dash-card as" style="padding: 26px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+          <span class="icirc" style="width: 52px; height: 52px; background: #DFF2FB; color: #065C8F"><i class="i i-pinned s22"></i></span>
+          <b style="font-size: 15px">Ingen oppslag av denne typen ennå</b>
+          <span class="meta">Bli den første i Lillehammer.</span>
+          <button class="btn btn-sm btn-ghost" onClick="{{openCompose}}">Skriv et oppslag</button>
+        </div>
+      </sc-if>
+      <div class="note" style="justify-content: center; margin-top: 4px"><i class="i i-pin"></i><span>Viser oppslag i Lillehammer kommune</span></div>
+    </div>
+    <div class="spacer-foot" style="height: 120px"></div>
+  </div>
+
+  <button class="btn btn-ink btn-lg fabx" onClick="{{openCompose}}"><i class="i i-plus s18"></i>Nytt oppslag</button>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 100px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- compose sheet -->
+  <sc-if value="{{composeOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeCompose}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Nytt oppslag">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Nytt oppslag</h2>
+        <button class="iconbtn" onClick="{{closeCompose}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+
+      <div class="label" style="margin-bottom: 10px">Type <small>Velg én</small></div>
+      <div class="{{kindWrapCls}}" style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{draftKinds}}" as="k" hint-placeholder-count="4">
+          <button class="{{k.cls}}" onClick="{{k.pick}}" aria-pressed="{{k.pressed}}"><i class="{{k.icon}}"></i>{{k.label}}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{errKind}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: 8px"><i class="i i-alert s14"></i>Velg hva slags oppslag det er</div></sc-if>
+
+      <div class="field" style="margin-top: 18px">
+        <label class="label" for="ptitle">Tittel <small>{{titleCount}}/60</small></label>
+        <input id="ptitle" class="{{titleCls}}" value="{{dTitle}}" onChange="{{onTitle}}" placeholder="F.eks. Gir bort bokhylle" maxlength="60">
+        <sc-if value="{{errTitle}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s14"></i>Skriv en tittel på minst 4 tegn</div></sc-if>
+      </div>
+
+      <div class="field" style="margin-top: 14px">
+        <label class="label" for="ptext">Tekst <small>{{textCount}}/400</small></label>
+        <textarea id="ptext" class="{{textCls}}" value="{{dText}}" onChange="{{onText}}" placeholder="Beskriv kort. Skriv omtrentlig område – ikke full adresse." maxlength="400"></textarea>
+        <sc-if value="{{errText}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s14"></i>Skriv litt mer, minst 10 tegn</div></sc-if>
+      </div>
+
+      <div class="label" style="margin: 16px 0 10px">Bilde <small>Valgfritt</small></div>
+      <sc-if value="{{noPhoto}}" hint-placeholder-val="{{ true }}">
+        <button class="photo-add" onClick="{{addPhoto}}"><span style="display: flex; flex-direction: column; align-items: center; gap: 6px"><i class="i i-camera s24"></i>Legg til bilde</span></button>
+      </sc-if>
+      <sc-if value="{{hasPhoto}}" hint-placeholder-val="{{ false }}">
+        <div class="as" style="position: relative">
+          <div class="{{photoArtCls}}" style="height: 110px; border-radius: 18px"><i class="i i-image"></i></div>
+          <button class="iconbtn glass" onClick="{{removePhoto}}" aria-label="Fjern bilde" style="position: absolute; top: 8px; right: 8px"><i class="i i-trash s18"></i></button>
+        </div>
+      </sc-if>
+
+      <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #F3F5F1">
+        <span class="icirc" style="width: 32px; height: 32px; background: #ffffff; color: #0A1740"><i class="i i-globe s16"></i></span>
+        <span style="flex: 1; font-size: 13.5px; line-height: 1.4; color: #34405F"><b style="color: #0A1740">Vises i Lillehammer kommune</b><br>Bare omtrentlig område vises for andre.</span>
+      </div>
+
+      <button class="btn btn-lime btn-block btn-lg" style="margin-top: 18px" onClick="{{publish}}"><i class="i i-send s18"></i>Publiser oppslag</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      kind: 'alle', saved: { p4: true }, compose: false,
+      dKind: null, dTitle: '', dText: '', dPhoto: false, tried: false, shakeKind: false,
+      mine: [], toast: null, toastIcon: 'i i-check s16'
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.st); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  publish() {
+    const S = this.state;
+    const ok = S.dKind && S.dTitle.trim().length >= 4 && S.dText.trim().length >= 10;
+    if (!ok) {
+      this.setState({ tried: true, shakeKind: !S.dKind });
+      clearTimeout(this.st);
+      this.st = setTimeout(() => this.setState({ shakeKind: false }), 400);
+      return;
+    }
+    const post = { id: 'm' + Date.now(), kind: S.dKind, ini: 'MH', av: 'me', who: 'Mari Haugen', area: 'Nordre Ål', time: 'Akkurat nå', title: S.dTitle.trim(), text: S.dText.trim(), art: S.dPhoto ? ({ gis: 'hage', utlan: 'montering', mistet: 'dyrepass' }[S.dKind] || 'rengjoring') : null, artIcon: 'i i-image', replies: 'Ingen svar ennå', fresh: true };
+    const mine = [post].concat(S.mine.map((m) => Object.assign({}, m, { fresh: false })));
+    const keep = S.kind === 'alle' || S.kind === S.dKind;
+    this.setState({ mine, compose: false, kind: keep ? S.kind : 'alle', dKind: null, dTitle: '', dText: '', dPhoto: false, tried: false });
+    this.flash('Oppslaget er publisert i Lillehammer', 'i i-check s16');
+  }
+  renderVals() {
+    const S = this.state;
+    const KINDS = [
+      { id: 'gis', label: 'Gis bort', icon: 'i i-gift' },
+      { id: 'mistet', label: 'Mistet og funnet', icon: 'i i-key' },
+      { id: 'utlan', label: 'Utlån av verktøy', icon: 'i i-montering' },
+      { id: 'gen', label: 'Generelt', icon: 'i i-msg' }
+    ];
+    const kindOf = (id) => KINDS.find((k) => k.id === id);
+    const BASE = [
+      { id: 'p1', kind: 'gis', ini: 'TL', av: 'g', who: 'Thea Lund', area: 'Søre Ål', time: 'for 2 t siden', title: 'Barnesykkel 16 tommer', text: 'Blå barnesykkel som dattera har vokst fra. Kjedet trenger litt olje, ellers fin. Hentes i Søre Ål.', art: 'transport', artIcon: 'i i-gift', replies: '3 svar' },
+      { id: 'p2', kind: 'mistet', ini: 'MA', av: 'd', who: 'Magnus Aas', area: 'Stampesletta', time: 'i dag kl. 08:12', title: 'Funnet: nøkkelknippe ved Stampesletta', text: 'Tre nøkler og en rød brikke, funnet ved inngangen til hallen. Beskriv knippet, så får du det tilbake.', art: 'dyrepass', artIcon: 'i i-key', replies: '1 svar' },
+      { id: 'p3', kind: 'utlan', ini: 'OD', av: 'f', who: 'Ola Dahl', area: 'Vingrom', time: 'i går', title: 'Låner ut tilhenger og løvblåser', text: 'Ledig i helgene i oktober. Hentes og leveres i Vingrom. Send en melding, så avtaler vi.', art: 'montering', artIcon: 'i i-montering', replies: '5 svar' },
+      { id: 'p4', kind: 'gen', ini: 'KH', av: 'c', who: 'Kari Holm', area: 'Nordre Ål', time: 'i går', title: 'Dugnad på lekeplassen lørdag', text: 'Vi rydder lekeplassen i Nordre Ål Lør 3. okt kl. 11:00. Ta med hansker og rive. Kaffe og vafler til alle som kommer.', art: null, replies: '8 svar' },
+      { id: 'p5', kind: 'gis', ini: 'NS', av: 'f', who: 'Nora Solberg', area: 'Vingrom', time: '2 dager siden', title: 'Epler fra hagen', text: 'Mer enn vi klarer å spise! Står i kasser ved porten, forsyn deg.', art: 'hage', artIcon: 'i i-hage', replies: '6 svar' },
+      { id: 'p6', kind: 'mistet', ini: 'IS', av: 'a', who: 'Ida Sæther', area: 'Kanten', time: '3 dager siden', title: 'Savnet: grå katt i Kanten', text: 'Pus heter Luna, grå med én hvit pote. Har vært borte siden søndag. Si fra om du ser henne.', art: 'dyrepass', artIcon: 'i i-dyrepass', replies: '4 svar' }
+    ];
+    const ALL = S.mine.concat(BASE);
+    const KCLS = { gis: 'kp k-gis', mistet: 'kp k-mistet', utlan: 'kp k-utlan', gen: 'kp k-gen' };
+    const kinds = [{ id: 'alle', label: 'Alle', icon: 'i i-pinned' }].concat(KINDS).map((k) => ({
+      label: k.label,
+      n: k.id === 'alle' ? ALL.length : ALL.filter((p) => p.kind === k.id).length,
+      cls: 'chip' + (S.kind === k.id ? ' on' : ''),
+      ciCls: 'ci ci-' + k.id,
+      icon: k.icon + ' s16',
+      pressed: S.kind === k.id ? 'true' : 'false',
+      pick: () => this.setState({ kind: k.id })
+    }));
+    const list = S.kind === 'alle' ? ALL : ALL.filter((p) => p.kind === S.kind);
+    const posts = list.map((p) => {
+      const k = kindOf(p.kind);
+      const sv = !!S.saved[p.id];
+      return {
+        cls: 'post' + (p.fresh ? ' fresh' : ' au'),
+        ini: p.ini, who: p.who, area: p.area, time: p.time, title: p.title, text: p.text, replies: p.replies,
+        avCls: 'av s40 plain av-' + p.av,
+        kCls: KCLS[p.kind], kIcon: k.icon + ' s14', kind: k.label,
+        hasArt: !!p.art, artCls: 'tile art art-' + (p.art || 'annet'), artIcon: p.artIcon || 'i i-image',
+        saveCls: 'savebtn' + (sv ? ' on' : ''), saveIcon: sv ? 'i i-bookmark s16' : 'i i-bookmark s16', saveLabel: sv ? 'Lagret' : 'Lagre', savedStr: sv ? 'true' : 'false',
+        save: () => { const saved = Object.assign({}, S.saved); saved[p.id] = !sv; this.setState({ saved }); this.flash(!sv ? 'Oppslaget er lagret' : 'Fjernet fra lagrede', !sv ? 'i i-bookmark s14' : 'i i-x s14'); }
+      };
+    });
+    const t = S.tried;
+    return {
+      kinds, posts, empty: posts.length === 0,
+      composeOpen: S.compose,
+      openCompose: () => this.setState({ compose: true, tried: false }),
+      closeCompose: () => this.setState({ compose: false }),
+      draftKinds: KINDS.map((k) => ({
+        label: k.label, icon: k.icon + ' s16',
+        cls: 'kchip' + (S.dKind === k.id ? ' on' : ''),
+        pressed: S.dKind === k.id ? 'true' : 'false',
+        pick: () => this.setState({ dKind: k.id })
+      })),
+      kindWrapCls: S.shakeKind ? 'shake' : '',
+      errKind: t && !S.dKind,
+      dTitle: S.dTitle, dText: S.dText,
+      titleCount: S.dTitle.length, textCount: S.dText.length,
+      onTitle: (e) => this.setState({ dTitle: e.target.value }),
+      onText: (e) => this.setState({ dText: e.target.value }),
+      errTitle: t && S.dTitle.trim().length < 4,
+      errText: t && S.dText.trim().length < 10,
+      titleCls: 'input' + (t && S.dTitle.trim().length < 4 ? ' err' : ''),
+      textCls: 'input' + (t && S.dText.trim().length < 10 ? ' err' : ''),
+      noPhoto: !S.dPhoto, hasPhoto: S.dPhoto,
+      photoArtCls: 'art art-' + (S.dKind === 'gis' ? 'hage' : S.dKind === 'utlan' ? 'montering' : S.dKind === 'mistet' ? 'dyrepass' : 'rengjoring'),
+      addPhoto: () => this.setState({ dPhoto: true }),
+      removePhoto: () => this.setState({ dPhoto: false }),
+      publish: () => this.publish(),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

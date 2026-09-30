@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Oppdrag</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh"></div>
+
+    <!-- top bar -->
+    <div class="topbar">
+      <a href="Oppdrag.dc.html" class="brand" aria-label="MinNabo, til forsiden"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</a>
+      <div class="tb-r">
+        <a href="Varsler.dc.html" class="iconbtn" aria-label="Varsler, 2 uleste"><i class="i i-bell"></i><span class="dot"></span></a>
+        <a href="Profil.dc.html" class="avbtn" aria-label="Åpne profil"><span class="av av-me">MH</span></a>
+      </div>
+    </div>
+
+    <!-- heading -->
+    <div class="px au" style="position: relative; padding-top: 14px; display: flex; flex-direction: column; gap: 8px">
+      <span class="eyebrow">Hei, Mari</span>
+      <h1 class="h1" style="font-size: 33px">Finn hjelp eller en småjobb nær deg</h1>
+    </div>
+
+    <!-- kommune + reach -->
+    <div class="px au d2" style="position: relative; margin-top: 18px">
+      <button onClick="{{openLoc}}" style="width: 100%; height: 56px; border-radius: 18px; border: 1px solid #E4E8EE; background: rgba(255,255,255,.85); backdrop-filter: blur(10px); display: flex; align-items: center; gap: 12px; padding: 0 14px 0 8px; cursor: pointer; text-align: left">
+        <span class="icirc" style="width: 40px; height: 40px; background: #EDF8D6; color: #3B7300"><i class="i i-pin s18"></i></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+          <b style="font: 700 15px/1.2 var(--fb)">{{kommuneLabel}}</b>
+          <span class="meta">{{reachLabel}}</span>
+        </span>
+        <span class="pill pill-line" style="gap: 4px">Endre<i class="i i-down s14"></i></span>
+      </button>
+    </div>
+
+    <!-- search -->
+    <div class="px au d3" style="position: relative; margin-top: 12px">
+      <a href="Sok.dc.html" class="search" aria-label="Søk etter oppdrag og tilbud">
+        <i class="i i-search"></i>
+        <span class="ph">Søk etter plen, flytting, datahjelp …</span>
+        <span class="filt"><i class="i i-sliders s18"></i></span>
+      </a>
+    </div>
+
+    <!-- categories -->
+    <div class="au d4" style="position: relative; margin-top: 18px">
+      <div class="chips" role="tablist" aria-label="Kategorier">
+        <sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+          <button class="{{c.cls}}" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}">
+            <span class="{{c.ciCls}}"><i class="{{c.icon}}"></i></span>{{c.label}}
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- NEEDS -->
+    <div class="sh">
+      <div class="t">
+        <span class="ti" style="background: #EDF8D6; color: #3B7300"><i class="i i-clip s18"></i></span>
+        <div><h2>Folk som trenger hjelp</h2><div class="sub">Småjobber du kan ta i nærheten</div></div>
+      </div>
+    </div>
+    <div class="px stack" style="gap: 12px">
+      <sc-for list="{{needs}}" as="it" hint-placeholder-count="4">
+        <div class="lcard au">
+          <a href="Oppdragsdetaljer.dc.html">
+            <div class="{{it.artCls}}"><i class="{{it.icon}}"></i></div>
+            <div class="lbody">
+              <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span><sc-if value="{{it.extra}}" hint-placeholder-val="{{ false }}"><span class="pill pill-neutral"><i class="{{it.extraIcon}}"></i>{{it.extra}}</span></sc-if></div>
+              <p class="ltitle">{{it.title}}</p>
+              <div class="lmeta"><b>{{it.who}}</b><span class="stars"><i class="i i-star"></i>{{it.rating}}</span></div>
+              <div class="lmeta"><i class="i i-pin"></i>{{it.place}} · {{it.dist}}</div>
+              <div class="lmeta"><i class="i i-clock"></i>{{it.when}}</div>
+              <div class="lprice"><span class="l">{{it.plabel}}</span><span class="v">{{it.price}}</span></div>
+            </div>
+          </a>
+          <button class="{{it.saveCls}}" onClick="{{it.save}}" aria-label="{{it.saveLabel}}"><i class="{{it.heartIcon}}"></i></button>
+        </div>
+      </sc-for>
+      <sc-if value="{{noNeeds}}" hint-placeholder-val="{{ false }}">
+        <div class="dash-card as" style="padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+          <span class="icirc" style="width: 52px; height: 52px; background: #EDF8D6; color: #3B7300"><i class="i i-clip s22"></i></span>
+          <b style="font-size: 15px">Ingen oppdrag i {{kommune}} akkurat nå.</b>
+          <span class="meta">Prøv å utvide rekkevidden.</span>
+          <button class="btn btn-sm btn-ghost" onClick="{{openLoc}}">Utvid rekkevidde</button>
+        </div>
+      </sc-if>
+      <a href="SeAlle.dc.html" class="btn btn-ghost btn-block" style="margin-top: 2px">Se alle oppdrag<i class="i i-arrow s18"></i></a>
+    </div>
+
+    <!-- lead board -->
+    <div class="px" style="margin-top: 30px">
+      <a href="ForMeg.dc.html" style="display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 26px; background: #0A1740; color: #ffffff; text-decoration: none; position: relative; overflow: hidden">
+        <div style="position: absolute; right: -40px; top: -60px; width: 190px; height: 190px; border-radius: 50%; background: var(--grad); opacity: .35"></div>
+        <div style="position: relative; width: 62px; height: 70px; flex: none">
+          <div style="position: absolute; left: 8px; top: 0; width: 50px; height: 62px; border-radius: 12px; background: rgba(255,255,255,.14); transform: rotate(8deg)"></div>
+          <div class="art art-montering" style="position: absolute; left: 0; top: 6px; width: 50px; height: 62px; border-radius: 12px"><i class="i i-montering s22"></i></div>
+        </div>
+        <div style="flex: 1; position: relative; display: flex; flex-direction: column; gap: 5px">
+          <span class="pill pill-grad" style="align-self: flex-start; height: 22px; font-size: 11px"><i class="i i-sparkle s14"></i>6 nye</span>
+          <b style="font: 700 18px/1.2 var(--fd); letter-spacing: -.02em">Oppdrag for meg</b>
+          <span style="font-size: 13.5px; color: rgba(255,255,255,.78)">Småjobber som passer det du kan</span>
+        </div>
+        <span class="icirc" style="width: 44px; height: 44px; background: #B8EE3C; color: #0A1740; position: relative"><i class="i i-arrow"></i></span>
+      </a>
+    </div>
+
+    <!-- footer note -->
+    <div class="px" style="margin-top: 22px">
+      <div class="note" style="justify-content: center; text-align: center"><i class="i i-info"></i><span>MinNabo håndterer ikke betaling. Pris og betaling avtales direkte mellom dere.</span></div>
+    </div>
+    <div class="spacer-nav"></div>
+  </div>
+
+  <!-- bottom nav -->
+  <nav class="nav" aria-label="Hovedmeny">
+    <a href="Oppdrag.dc.html" class="on" aria-current="page"><span class="ni"><i class="i i-clip"></i></span>Oppdrag</a>
+    <a href="Fellesskap.dc.html"><span class="ni"><i class="i i-users"></i></span>Fellesskap</a>
+    <a href="LeggUt.dc.html" class="fabw" aria-label="Legg ut"><span class="fab"><i class="i i-plus"></i></span>Legg ut</a>
+    <a href="Innboks.dc.html" aria-label="Innboks, 3 uleste"><span class="ni"><i class="i i-msg"></i><b class="count">3</b></span>Innboks</a>
+    <a href="Meny.dc.html"><span class="ni"><i class="i i-menu"></i></span>Meny</a>
+  </nav>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+
+  <!-- location sheet -->
+  <sc-if value="{{locOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeLoc}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Velg sted og rekkevidde">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Hvor vil du se oppdrag?</h2>
+        <button class="iconbtn" onClick="{{closeLoc}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+
+      <button onClick="{{locate}}" class="btn btn-ink btn-block" style="height: 54px">
+        <sc-if value="{{locating}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #B8EE3C"></span>Finner posisjonen din …</sc-if>
+        <sc-if value="{{notLocating}}" hint-placeholder-val="{{ true }}"><i class="i i-locate s18"></i>Bruk posisjonen min</sc-if>
+      </button>
+      <sc-if value="{{located}}" hint-placeholder-val="{{ false }}">
+        <div class="au" style="margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #E3F5E8; color: #1D6E3A; font: 600 14px var(--fb)">
+          <span class="icirc as" style="width: 24px; height: 24px; background: #2B8F4E; color: #ffffff"><i class="i i-check s14"></i></span>Fant deg: Lillehammer kommune
+        </div>
+      </sc-if>
+
+      <div class="label" style="margin: 22px 0 10px">Kommune <small>Du ser bare omtrentlig område</small></div>
+      <div class="stack" style="gap: 8px">
+        <sc-for list="{{kommuner}}" as="k" hint-placeholder-count="5">
+          <button class="{{k.cls}}" onClick="{{k.pick}}" style="padding: 12px 14px">
+            <span class="{{k.radCls}}"></span>
+            <span style="flex: 1; font: 600 15px var(--fb)">{{k.name}}</span>
+            <span class="meta">{{k.count}}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div class="label" style="margin: 24px 0 12px">Rekkevidde</div>
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 14px">
+        <div style="position: relative; width: 92px; height: 92px; flex: none">
+          <span style="display: block; {{ring3}}"></span>
+          <span style="display: block; {{ring2}}"></span>
+          <span style="display: block; {{ring1}}"></span>
+          <span style="position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #0A1740; box-shadow: 0 0 0 4px #ffffff"></span>
+        </div>
+        <div class="stack" style="gap: 4px">
+          <b style="font: 700 17px var(--fd)">{{reachName}}</b>
+          <span class="meta">{{reachDesc}}</span>
+        </div>
+      </div>
+      <div class="seg">
+        <sc-for list="{{reaches}}" as="r" hint-placeholder-count="3">
+          <button class="{{r.cls}}" onClick="{{r.pick}}">{{r.short}}</button>
+        </sc-for>
+      </div>
+
+      <button class="btn btn-lime btn-block btn-lg" style="margin-top: 22px" onClick="{{applyLoc}}">Vis oppdrag</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { cat: null, saved: { o2: true }, locOpen: false, locating: false, located: false, kommune: 'Lillehammer', reach: 0, draftK: 'Lillehammer', draftR: 0, toast: null, toastIcon: 'i i-check s16', toastUndo: false, lastSaved: null };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.lt); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  toggleSave(id) {
+    const saved = Object.assign({}, this.state.saved);
+    const on = !saved[id];
+    saved[id] = on;
+    this.setState({ saved, lastSaved: id });
+    this.flash(on ? 'Lagret i Lagrede' : 'Fjernet fra Lagrede', on ? 'i i-heartf s14' : 'i i-x s14', on);
+  }
+  renderVals() {
+    const S = this.state;
+    const CATS = [
+      ['hage', 'Hage'], ['rengjoring', 'Rengjøring'], ['flytting', 'Flytting/bæring'], ['transport', 'Transport/levering'],
+      ['montering', 'Montering'], ['snomaking', 'Snømåking'], ['maling', 'Maling/vedlikehold'], ['dyrepass', 'Dyrepass'],
+      ['data', 'Datahjelp'], ['arrangement', 'Arrangementshjelp'], ['annet', 'Annet']
+    ];
+    const cats = [{ id: null, label: 'Alle' }].concat(CATS.map(([id, label]) => ({ id, label }))).map((c) => ({
+      label: c.label,
+      cls: 'chip' + (S.cat === c.id ? ' on' : ''),
+      ciCls: c.id ? 'ci art art-' + c.id : 'ci',
+      icon: c.id ? 'i i-' + c.id : 'i i-annet',
+      pressed: S.cat === c.id ? 'true' : 'false',
+      pick: () => this.setState({ cat: c.id })
+    }));
+    const OFFERS = [
+      { id: 'o1', cat: 'hage', title: 'Jeg klipper plenen din', who: 'Jonas Lie', rating: '4,9', n: '32', place: 'Nordre Ål', dist: '1,5 km', when: 'Kvelder og helg', plabel: 'Fra', price: '300 kr', online: true },
+      { id: 'o2', cat: 'rengjoring', title: 'Grundig vask av hjem og hytte', who: 'Sofie Nygård', rating: '5,0', n: '18', place: 'Sentrum', dist: '2,1 km', when: 'Hverdager 8–16', plabel: 'Fra', price: '450 kr', online: true },
+      { id: 'o3', cat: 'flytting', title: 'Varebil og bærehjelp', who: 'Erik Moen', rating: '4,8', n: '41', place: 'Fåberg', dist: '4,6 km', when: 'Helger', plabel: 'Fra', price: '500 kr', online: false },
+      { id: 'o4', cat: 'dyrepass', title: 'Hundelufting og dyrepass', who: 'Amalie Strand', rating: '4,9', n: '23', place: 'Søre Ål', dist: '3,0 km', when: 'Hver dag', plabel: '', price: 'Pris avtales', online: true },
+      { id: 'o5', cat: 'data', title: 'Datahjelp for seniorer', who: 'Henrik Berg', rating: '5,0', n: '12', place: 'Stampesletta', dist: '2,4 km', when: 'Etter kl. 16', plabel: 'Fra', price: '250 kr', online: false },
+      { id: 'o6', cat: 'snomaking', title: 'Snørydding med fres', who: 'Ola Dahl', rating: '4,7', n: '29', place: 'Vingrom', dist: '7,2 km', when: 'Ved snøfall', plabel: 'Fra', price: '300 kr', online: false }
+    ];
+    const NEEDS = [
+      { id: 'n1', cat: 'hage', title: 'Klippe plen og rake løv', who: 'Kari Holm', rating: '4,9', place: 'Nordre Ål', dist: '1,2 km', when: 'Lør 3. okt · ca. 2 t', plabel: 'Budsjett', price: '400 kr' },
+      { id: 'n2', cat: 'flytting', title: 'Bære sofa til 3. etasje', who: 'Magnus Aas', rating: '4,7', place: 'Stampesletta', dist: '2,8 km', when: 'Tor 1. okt · ettermiddag', plabel: 'Budsjett', price: '350 kr' },
+      { id: 'n3', cat: 'montering', title: 'Montere garderobeskap', who: 'Thea Lund', rating: '5,0', place: 'Søre Ål', dist: '3,1 km', when: 'Denne uka · fleksibel', plabel: '', price: 'Ønsker tilbud' },
+      { id: 'n4', cat: 'snomaking', title: 'Måke oppkjørselen i vinter', who: 'Nora Solberg', rating: '4,8', place: 'Vingrom', dist: '6,0 km', when: 'Ved snøfall', plabel: 'Budsjett', price: '250 kr / gang', extra: 'Gjentakende', extraIcon: 'i i-repeat s14' },
+      { id: 'n5', cat: 'annet', title: 'Dugnad i Kirkegata borettslag', who: 'Kirkegata BRL', rating: '4,6', place: 'Sentrum', dist: '1,9 km', when: 'Søn 11. okt · 10–14', plabel: '', price: 'Frivillig', extra: 'Dugnad', extraIcon: 'i i-users s14' },
+      { id: 'n6', cat: 'rengjoring', title: 'Flyttevask av 3-roms', who: 'Ida Sæther', rating: '4,9', place: 'Kanten', dist: '3,4 km', when: 'Fre 9. okt', plabel: 'Budsjett', price: '1 200 kr' }
+    ];
+    const deco = (x) => Object.assign({}, x, {
+      artCls: 'lthumb art art-' + x.cat,
+      icon: 'i i-' + x.cat,
+      saveCls: 'save' + (S.saved[x.id] ? ' on' : ''),
+      heartIcon: S.saved[x.id] ? 'i i-heartf s18' : 'i i-heart s18',
+      saveLabel: S.saved[x.id] ? 'Fjern fra lagrede' : 'Lagre',
+      save: () => this.toggleSave(x.id)
+    });
+    const byCat = (arr) => (S.cat ? arr.filter((x) => x.cat === S.cat) : arr);
+    const offers = byCat(OFFERS).slice(0, 4).map(deco);
+    const needs = byCat(NEEDS).slice(0, 6).map(deco);
+    const PROV = [['JL', 'Jonas', 'b'], ['SN', 'Sofie', 'a'], ['AS', 'Amalie', 'g'], ['HB', 'Henrik', 'd'], ['EM', 'Erik', 'c'], ['OD', 'Ola', 'f'], ['LB', 'Lise', 'e']];
+    const providers = PROV.map(([ini, first, c]) => ({ ini, first, avCls: 'av s48 av-' + c }));
+    const REACH = [
+      { short: 'Min kommune', name: 'Bare min kommune', desc: 'Kun ' + S.draftK + ' kommune' },
+      { short: 'Nabokommuner', name: 'Nabokommuner', desc: S.draftK + ' og kommunene rundt' },
+      { short: 'Innlandet', name: 'Hele Innlandet', desc: 'Alle 46 kommuner i fylket' }
+    ];
+    const r = S.draftR;
+    const ring = (size, on) => 'position: absolute; left: 50%; top: 50%; width: ' + size + 'px; height: ' + size + 'px; margin: -' + size / 2 + 'px 0 0 -' + size / 2 + 'px; border-radius: 50%; transition: all .45s cubic-bezier(.3,1.4,.5,1); background: ' + (on ? 'rgba(184,238,60,.28)' : 'rgba(10,23,64,.04)') + '; border: 1.5px ' + (on ? 'solid #8FD12A' : 'dashed #C9CFD9') + '; transform: scale(' + (on ? 1 : .92) + ')';
+    const KOM = [['Lillehammer', '184 aktive'], ['Øyer', '37 aktive'], ['Gausdal', '29 aktive'], ['Ringsaker', '142 aktive'], ['Hamar', '211 aktive'], ['Gjøvik', '167 aktive']];
+    return {
+      cats, offers, needs, providers,
+      showProviders: !S.cat,
+      noOffers: offers.length === 0, noNeeds: needs.length === 0,
+      kommune: S.kommune,
+      kommuneLabel: S.kommune + ' kommune',
+      reachLabel: REACH[S.reach].name,
+      openLoc: () => this.setState({ locOpen: true, draftK: S.kommune, draftR: S.reach, located: false }),
+      closeLoc: () => this.setState({ locOpen: false, locating: false }),
+      locOpen: S.locOpen, locating: S.locating, notLocating: !S.locating, located: S.located,
+      locate: () => {
+        if (S.locating) return;
+        this.setState({ locating: true, located: false });
+        this.lt = setTimeout(() => this.setState({ locating: false, located: true, draftK: 'Lillehammer' }), 1600);
+      },
+      kommuner: KOM.map(([name, count]) => ({
+        name, count,
+        cls: 'optcard' + (S.draftK === name ? ' on' : ''),
+        radCls: 'rad' + (S.draftK === name ? ' on' : ''),
+        pick: () => this.setState({ draftK: name })
+      })),
+      reaches: REACH.map((x, i) => ({ short: x.short, cls: i === r ? 'on' : '', pick: () => this.setState({ draftR: i }) })),
+      reachName: REACH[r].name, reachDesc: REACH[r].desc,
+      ring1: ring(40, true), ring2: ring(66, r >= 1), ring3: ring(92, r >= 2),
+      applyLoc: () => { this.setState({ locOpen: false, kommune: S.draftK, reach: S.draftR }); this.flash('Viser ' + REACH[S.draftR].name.toLowerCase() + ' · ' + S.draftK, 'i i-pin s14'); },
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo,
+      undo: () => { if (S.lastSaved) { const saved = Object.assign({}, S.saved); saved[S.lastSaved] = false; this.setState({ saved, toast: null }); } }
+    };
+  }
+}
+</script>
+</body>
+</html>

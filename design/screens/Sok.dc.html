@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Søk</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.sbar{position:relative;z-index:5;display:flex;align-items:center;gap:10px;padding:56px 16px 8px}
+.sbar .search{flex:1;height:52px;padding:0 4px 0 16px}
+.sbar .search:focus-within{border-color:#0A74B4;box-shadow:0 0 0 4px rgba(25,184,238,.16)}
+.clr{width:40px;height:40px;border-radius:50%;border:0;background:#EEF1F4;color:#34405F;display:grid;place-items:center;cursor:pointer;flex:none;animation:scaleIn .3s var(--spring) both}
+.fbtn{height:42px;padding:0 14px 0 12px;border-radius:999px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:8px;font:700 14px var(--fb);color:var(--ink);cursor:pointer;flex:none;position:relative}
+.fbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fbtn .fc{min-width:20px;height:20px;border-radius:10px;background:var(--lime);color:var(--ink);font:800 11.5px/20px var(--fb);text-align:center;padding:0 5px}
+.achip{flex:none;height:42px;padding:0 6px 0 14px;border-radius:999px;background:#fff;border:1.5px solid var(--ink);display:inline-flex;align-items:center;gap:6px;font:600 13.5px var(--fb);color:var(--ink);cursor:pointer;animation:scaleIn .35s var(--spring) both}
+.achip .xx{width:26px;height:26px;border-radius:50%;background:#EEF1F4;display:grid;place-items:center}
+.rrow{display:flex;align-items:center;gap:6px;padding:0 6px 0 14px;min-height:52px}
+.rrow + .rrow{border-top:1px solid var(--line2)}
+.rrow .rq{flex:1;display:flex;align-items:center;gap:12px;min-height:48px;border:0;background:none;cursor:pointer;font:600 15px var(--fb);color:var(--ink);text-align:left;padding:0}
+.rrow .rq .i{color:var(--faint)}
+.pop{height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:7px;font:600 14px var(--fb);color:var(--ink);cursor:pointer;transition:transform .15s}
+.pop:active{transform:scale(.95)}
+.pop .i{color:var(--lime-d)}
+.segc button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.segc .sc{font:700 12px/1 var(--fb);color:var(--mute);background:rgba(10,23,64,.06);border-radius:8px;padding:3px 6px}
+.segc button.on .sc{background:var(--ink);color:#fff}
+.pd-need,.pd-offer{width:8px;height:8px;border-radius:50%;flex:none}
+.pd-need{background:#8BD21E}.pd-offer{background:#19B8EE}
+.pd-none{display:none}
+.catwrap{display:flex;flex-wrap:wrap;gap:8px}
+.rtick{display:flex;justify-content:space-between;font:600 12px var(--fb);color:var(--faint);margin-top:8px}
+.vmini{display:inline-flex;align-items:center;gap:3px;color:#1B8F4B;font:700 12px var(--fb)}
+.vmini .i{width:14px;height:14px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan" style="height: 260px"></div>
+
+    <!-- search bar -->
+    <div class="sbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <label class="search" aria-label="Søk">
+        <i class="i i-search s18"></i>
+        <input type="search" value="{{q}}" onChange="{{onQ}}" placeholder="Søk etter plen, flytting, datahjelp …" aria-label="Søk etter oppdrag">
+        <sc-if value="{{hasQ}}" hint-placeholder-val="{{ false }}">
+          <button class="clr" onClick="{{clearQ}}" aria-label="Tøm søkefeltet"><i class="i i-x s16"></i></button>
+        </sc-if>
+      </label>
+    </div>
+
+    <!-- filter row -->
+    <div class="au d2" style="position: relative; margin-top: 12px">
+      <div class="chips" style="align-items: center">
+        <button class="{{fbtnCls}}" onClick="{{openFilters}}" aria-label="Åpne filtre"><i class="i i-sliders s18"></i>Filtre<sc-if value="{{hasActive}}" hint-placeholder-val="{{ false }}"><span class="fc">{{activeCount}}</span></sc-if></button>
+        <sc-for list="{{active}}" as="a" hint-placeholder-count="2">
+          <button class="achip" onClick="{{a.remove}}" aria-label="Fjern filter {{a.label}}">{{a.label}}<span class="xx"><i class="i i-x s14"></i></span></button>
+        </sc-for>
+        <sc-if value="{{manyActive}}" hint-placeholder-val="{{ false }}">
+          <button class="link" onClick="{{resetAll}}" style="padding: 0 6px; flex: none">Nullstill</button>
+        </sc-if>
+        <sc-if value="{{noActive}}" hint-placeholder-val="{{ true }}">
+          <span class="meta" style="white-space: nowrap; padding-left: 4px">Kategori, avstand og sortering</span>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- suggestions (empty query) -->
+    <sc-if value="{{showSuggest}}" hint-placeholder-val="{{ true }}">
+      <div>
+        <sc-if value="{{hasRecents}}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div class="sh" style="margin-top: 20px; margin-bottom: 10px">
+              <div class="t"><h2 style="font-size: 18px">Nylige søk</h2></div>
+              <button class="link" onClick="{{clearRecents}}">Tøm</button>
+            </div>
+            <div class="px">
+              <div class="list au d3">
+                <sc-for list="{{recents}}" as="r" hint-placeholder-count="3">
+                  <div class="rrow">
+                    <button class="rq" onClick="{{r.use}}"><i class="i i-clock s18"></i>{{r.text}}</button>
+                    <button class="iconbtn ghost" onClick="{{r.remove}}" aria-label="Fjern {{r.text}} fra nylige søk"><i class="i i-x s16"></i></button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <div class="sh" style="margin-top: 24px; margin-bottom: 10px">
+          <div class="t">
+            <span class="ti" style="background: #EDF8D6; color: #3B7300; width: 30px; height: 30px; border-radius: 10px"><i class="i i-zap s16"></i></span>
+            <h2 style="font-size: 18px">Populært i Lillehammer</h2>
+          </div>
+        </div>
+        <div class="px au d4" style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{popular}}" as="p" hint-placeholder-count="6">
+            <button class="pop" onClick="{{p.use}}"><i class="i i-arrowur s14"></i>{{p.text}}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- results header -->
+    <sc-if value="{{hasResults}}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div class="px" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px 0 12px">
+          <div class="stack" style="gap: 3px; min-width: 0">
+            <b style="font: 700 19px/1.15 var(--fd); letter-spacing: -.02em">{{countLabel}}</b>
+            <span class="meta">{{sortLine}}</span>
+          </div>
+          <button class="btn btn-sm btn-ghost" onClick="{{saveSearch}}" aria-label="{{saveSearchLabel}}" style="padding: 0 14px; flex: none"><i class="{{saveSearchIcon}}"></i>{{saveSearchText}}</button>
+        </div>
+        <div class="px stack" style="gap: 12px">
+          <sc-for list="{{results}}" as="it" hint-placeholder-count="4">
+            <div class="lcard au">
+              <a href="{{it.href}}">
+                <div class="{{it.artCls}}"><i class="{{it.icon}}"></i><sc-if value="{{it.online}}" hint-placeholder-val="{{ false }}"><span class="online"></span></sc-if></div>
+                <div class="lbody">
+                  <div class="lbadges"><span class="{{it.pillCls}}"><span class="pd"></span>{{it.pillText}}</span></div>
+                  <p class="ltitle">{{it.title}}</p>
+                  <div class="lmeta"><b>{{it.who}}</b><span class="stars"><i class="i i-star"></i>{{it.rating}}</span><sc-if value="{{it.ver}}" hint-placeholder-val="{{ true }}"><span class="vmini"><i class="i i-verified"></i>Verifisert</span></sc-if></div>
+                  <div class="lmeta"><i class="i i-pin"></i>{{it.place}} · {{it.dist}}</div>
+                  <div class="lmeta"><i class="i i-clock"></i>{{it.when}}</div>
+                  <div class="lprice"><span class="l">{{it.plabel}}</span><span class="v">{{it.price}}</span></div>
+                </div>
+              </a>
+              <button class="{{it.saveCls}}" onClick="{{it.save}}" aria-label="{{it.saveLabel}}"><i class="{{it.heartIcon}}"></i></button>
+            </div>
+          </sc-for>
+        </div>
+        <div class="px" style="margin-top: 18px">
+          <div class="note" style="justify-content: center; text-align: center"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- empty state -->
+    <sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}">
+      <div class="px" style="margin-top: 26px">
+        <div class="card as" style="padding: 28px 22px 22px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px">
+          <div style="position: relative; width: 96px; height: 96px; margin-bottom: 6px">
+            <span style="position: absolute; inset: 0; border-radius: 50%; background: #DFF2FB"></span>
+            <span style="position: absolute; inset: 14px; border-radius: 50%; background: #ffffff; box-shadow: 0 10px 24px -12px rgba(10,23,64,.4)"></span>
+            <span class="icirc" style="position: absolute; inset: 14px; color: #065C8F"><i class="i i-search s32"></i></span>
+            <span class="icirc" style="position: absolute; right: 2px; top: 6px; width: 26px; height: 26px; background: #B8EE3C; color: #0A1740"><i class="i i-x s14"></i></span>
+          </div>
+          <h2 class="h3">{{emptyTitle}}</h2>
+          <p class="meta p" style="max-width: 280px">Sjekk stavemåten, prøv et mer generelt ord, eller fjern noen filtre.</p>
+          <sc-if value="{{hasActive}}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-sm btn-ink" onClick="{{resetAll}}" style="margin-top: 4px"><i class="i i-refresh s16"></i>Fjern alle filtre</button>
+          </sc-if>
+          <div class="eyebrow" style="margin-top: 12px">Prøv heller</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center">
+            <sc-for list="{{emptySug}}" as="p" hint-placeholder-count="3">
+              <button class="pop" onClick="{{p.use}}"><i class="i i-search s14"></i>{{p.text}}</button>
+            </sc-for>
+          </div>
+          <div class="divider" style="align-self: stretch; margin: 12px 0 4px"></div>
+          <p class="meta p">Finner du ikke det du trenger?</p>
+          <a href="LeggUt.dc.html" class="btn btn-lime btn-block"><i class="i i-plus s18"></i>Legg ut et oppdrag</a>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="spacer-foot" style="height: 60px"></div>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 28px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+
+  <!-- filter sheet -->
+  <sc-if value="{{fOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeFilters}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Filtre" style="padding-bottom: 0">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Filtre</h2>
+        <div class="rowf" style="gap: 6px">
+          <button class="link" onClick="{{draftReset}}" style="padding: 0 8px">Nullstill</button>
+          <button class="iconbtn" onClick="{{closeFilters}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+        </div>
+      </div>
+
+      <div class="label" style="margin-bottom: 12px">Kategori <small>Velg én eller flere</small></div>
+      <div class="catwrap">
+        <sc-for list="{{dCats}}" as="c" hint-placeholder-count="8">
+          <button class="{{c.cls}}" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}" style="height: 40px"><span class="{{c.ciCls}}" style="width: 28px; height: 28px"><i class="{{c.icon}}"></i></span>{{c.label}}</button>
+        </sc-for>
+      </div>
+
+      <div class="divider" style="margin: 22px 0 18px"></div>
+      <div class="rowf" style="gap: 14px">
+        <span class="icirc" style="width: 42px; height: 42px; background: #E3F5E8; color: #2B8F4E"><i class="i i-verified s22"></i></span>
+        <div style="flex: 1; min-width: 0">
+          <b style="display: block; font: 700 15.5px var(--fb)">Kun verifiserte</b>
+          <span class="meta">Identitet bekreftet med Vipps</span>
+        </div>
+        <button class="{{verTglCls}}" onClick="{{toggleVer}}" aria-pressed="{{verPressed}}" aria-label="Kun verifiserte"></button>
+      </div>
+
+      <div class="divider" style="margin: 18px 0 18px"></div>
+      <div class="label" style="margin-bottom: 14px">Avstand <span class="num" style="font-size: 17px">{{distLabel}}</span></div>
+      <input type="range" class="range" min="1" max="50" step="1" value="{{dDist}}" onChange="{{onDist}}" aria-label="Maks avstand i km" style="display: block; {{rangeStyle}}">
+      <div class="rtick"><span>1 km</span><span>25 km</span><span>50 km</span></div>
+
+      <div class="divider" style="margin: 20px 0 16px"></div>
+      <div class="label" style="margin-bottom: 12px">Sorter etter</div>
+      <div class="stack" style="gap: 8px">
+        <sc-for list="{{dSorts}}" as="s" hint-placeholder-count="4">
+          <button class="{{s.cls}}" onClick="{{s.pick}}" style="padding: 12px 14px" role="radio" aria-checked="{{s.checked}}">
+            <span class="{{s.radCls}}"></span>
+            <span style="flex: 1; font: 600 15px var(--fb)">{{s.label}}</span>
+            <span class="meta">{{s.desc}}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="position: sticky; bottom: 0; background: #ffffff; padding: 16px 0 30px; margin-top: 8px">
+        <button class="btn btn-ink btn-block btn-lg" onClick="{{applyFilters}}">{{applyLabel}}</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      q: '', type: 'all',
+      cats: [], ver: false, dist: 50, sort: 'rel',
+      fOpen: false, dCats: [], dVer: false, dDist: 50, dSort: 'rel',
+      recents: ['plenklipping', 'flyttehjelp', 'datahjelp for seniorer'],
+      saved: { o1: true }, savedSearch: false,
+      toast: null, toastIcon: 'i i-check s16', toastUndo: false, lastSaved: null
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  toggleSave(id) {
+    const saved = Object.assign({}, this.state.saved);
+    const on = !saved[id];
+    saved[id] = on;
+    this.setState({ saved, lastSaved: on ? id : null });
+    this.flash(on ? 'Lagret i Lagrede' : 'Fjernet fra Lagrede', on ? 'i i-heartf s14' : 'i i-x s14', on);
+  }
+  useQuery(text) {
+    const rec = [text].concat(this.state.recents.filter((r) => r !== text)).slice(0, 5);
+    this.setState({ q: text, recents: rec, savedSearch: false });
+  }
+  data() {
+    return [
+      { id: 'n1', type: 'need', cat: 'hage', title: 'Klippe plen og rake løv', who: 'Kari Holm', rating: '4,9', place: 'Nordre Ål', km: 1.2, when: 'Lør 3. okt · ca. 2 t', plabel: 'Budsjett', price: '400 kr', pnum: 400, age: 3, ver: true, kw: 'plenklipping gress løv raking hage' },
+      { id: 'n2', type: 'need', cat: 'flytting', title: 'Bære sofa til 3. etasje', who: 'Magnus Aas', rating: '4,7', place: 'Stampesletta', km: 2.8, when: 'Tor 1. okt · ettermiddag', plabel: 'Budsjett', price: '350 kr', pnum: 350, age: 5, ver: true, kw: 'flyttehjelp bæring bærehjelp møbler' },
+      { id: 'n3', type: 'need', cat: 'montering', title: 'Montere garderobeskap', who: 'Thea Lund', rating: '5,0', place: 'Søre Ål', km: 3.1, when: 'Denne uka · fleksibel', plabel: '', price: 'Ønsker tilbud', pnum: null, age: 20, ver: true, kw: 'ikea møbler skrue montering' },
+      { id: 'n6', type: 'need', cat: 'rengjoring', title: 'Flyttevask av 3-roms', who: 'Ida Sæther', rating: '4,9', place: 'Kanten', km: 3.4, when: 'Fre 9. okt', plabel: 'Budsjett', price: '1 200 kr', pnum: 1200, age: 8, ver: true, kw: 'vask flyttevask rengjøring' },
+      { id: 'n7', type: 'need', cat: 'dyrepass', title: 'Passe katten i høstferien', who: 'Thea Lund', rating: '5,0', place: 'Fåberg', km: 4.2, when: 'Man 5.–fre 9. okt', plabel: 'Budsjett', price: '600 kr', pnum: 600, age: 1, ver: true, kw: 'katt dyrepass høstferie mating' },
+      { id: 'n4', type: 'need', cat: 'snomaking', title: 'Måke oppkjørselen i vinter', who: 'Nora Solberg', rating: '4,8', place: 'Vingrom', km: 6.0, when: 'Ved snøfall', plabel: 'Budsjett', price: '250 kr / gang', pnum: 250, age: 30, ver: false, kw: 'snø brøyting måking snømåking' },
+      { id: 'n5', type: 'need', cat: 'annet', title: 'Dugnad i Kirkegata borettslag', who: 'Kirkegata BRL', rating: '4,6', place: 'Sentrum', km: 1.9, when: 'Søn 11. okt · 10–14', plabel: '', price: 'Frivillig', pnum: null, age: 48, ver: false, kw: 'dugnad rydding frivillig' },
+    ];
+  }
+  filtered(q, cats, ver, dist, sort) {
+    const LBL = this.catLabels();
+    const qq = q.trim().toLowerCase();
+    let arr = this.data().map((x, i) => {
+      let score = 0;
+      if (qq) {
+        const t = x.title.toLowerCase();
+        if (t.indexOf(qq) === 0) score = 5;
+        else if (t.indexOf(qq) >= 0) score = 4;
+        else if (LBL[x.cat].toLowerCase().indexOf(qq) >= 0) score = 3;
+        else if (x.kw.indexOf(qq) >= 0) score = 2;
+        else if ((x.who + ' ' + x.place).toLowerCase().indexOf(qq) >= 0) score = 1;
+      }
+      return Object.assign({}, x, { score, idx: i });
+    });
+    if (qq) arr = arr.filter((x) => x.score > 0);
+    if (cats.length) arr = arr.filter((x) => cats.indexOf(x.cat) >= 0);
+    if (ver) arr = arr.filter((x) => x.ver);
+    if (dist < 50) arr = arr.filter((x) => x.km <= dist);
+    const s = arr.slice();
+    if (sort === 'rel') s.sort((a, b) => (b.score - a.score) || (a.idx - b.idx));
+    if (sort === 'dist') s.sort((a, b) => a.km - b.km);
+    if (sort === 'new') s.sort((a, b) => a.age - b.age);
+    if (sort === 'price') s.sort((a, b) => {
+      const pa = a.pnum === null ? 99999 : a.pnum; const pb = b.pnum === null ? 99999 : b.pnum;
+      return pa - pb;
+    });
+    return s;
+  }
+  catLabels() {
+    return { hage: 'Hage', rengjoring: 'Rengjøring', flytting: 'Flytting/bæring', transport: 'Transport/levering', montering: 'Montering', snomaking: 'Snømåking', maling: 'Maling/vedlikehold', dyrepass: 'Dyrepass', data: 'Datahjelp', arrangement: 'Arrangementshjelp', annet: 'Annet' };
+  }
+  renderVals() {
+    const S = this.state;
+    const LBL = this.catLabels();
+    const SORTS = [
+      { id: 'rel', label: 'Relevans', desc: 'Best treff først' },
+      { id: 'dist', label: 'Avstand', desc: 'Nærmest først' },
+      { id: 'new', label: 'Nyeste', desc: 'Sist publisert' },
+      { id: 'price', label: 'Pris', desc: 'Lavest først' }
+    ];
+    const sortName = (id) => SORTS.filter((x) => x.id === id)[0].label;
+    const base = this.filtered(S.q, S.cats, S.ver, S.dist, S.sort);
+    const nNeed = base.filter((x) => x.type === 'need').length;
+    const nOffer = base.filter((x) => x.type === 'offer').length;
+    const list = S.type === 'all' ? base : base.filter((x) => x.type === S.type);
+    const fmtKm = (k) => String(k).replace('.', ',') + ' km';
+    const results = list.map((x) => ({
+      title: x.title, who: x.who, rating: x.rating, place: x.place, dist: fmtKm(x.km), when: x.when,
+      plabel: x.plabel, price: x.price, ver: x.ver, online: !!x.online,
+      href: x.type === 'need' ? 'Oppdragsdetaljer.dc.html' : 'Oppdragsdetaljer.dc.html',
+      pillCls: x.type === 'need' ? 'pill pill-need' : 'pill pill-offer',
+      pillText: x.type === 'need' ? 'Trenger hjelp' : 'Tilbyr hjelp',
+      artCls: 'lthumb art art-' + x.cat, icon: 'i i-' + x.cat,
+      saveCls: 'save' + (S.saved[x.id] ? ' on' : ''),
+      heartIcon: S.saved[x.id] ? 'i i-heartf s18' : 'i i-heart s18',
+      saveLabel: S.saved[x.id] ? 'Fjern fra lagrede' : 'Lagre',
+      save: () => this.toggleSave(x.id)
+    }));
+    const TYPES = [
+      { id: 'all', label: 'Alle', n: base.length, dot: '' },
+      { id: 'need', label: 'Oppdrag', n: nNeed, dot: 'need' },
+      { id: 'offer', label: 'Tilbud', n: nOffer, dot: 'offer' }
+    ];
+    const types = TYPES.map((t) => ({
+      label: t.label, n: t.n,
+      cls: S.type === t.id ? 'on' : '',
+      sel: S.type === t.id ? 'true' : 'false',
+      dotCls: t.dot === 'need' ? 'pd-need' : (t.dot === 'offer' ? 'pd-offer' : 'pd-none'),
+      pick: () => this.setState({ type: t.id })
+    }));
+    // active filter chips
+    const active = [];
+    S.cats.forEach((c) => active.push({ label: LBL[c], remove: () => this.setState({ cats: this.state.cats.filter((z) => z !== c), savedSearch: false }) }));
+    if (S.ver) active.push({ label: 'Kun verifiserte', remove: () => this.setState({ ver: false, savedSearch: false }) });
+    if (S.dist < 50) active.push({ label: 'Inntil ' + S.dist + ' km', remove: () => this.setState({ dist: 50, savedSearch: false }) });
+    if (S.sort !== 'rel') active.push({ label: 'Sortert: ' + sortName(S.sort), remove: () => this.setState({ sort: 'rel' }) });
+    // draft (sheet)
+    const draftCount = this.filtered(S.q, S.dCats, S.dVer, S.dDist, S.dSort).filter((x) => S.type === 'all' || x.type === S.type).length;
+    const pct = Math.round((S.dDist - 1) / 49 * 100);
+    const dCats = Object.keys(LBL).map((id) => {
+      const on = S.dCats.indexOf(id) >= 0;
+      return {
+        label: LBL[id], cls: 'chip' + (on ? ' on' : ''), ciCls: 'ci art art-' + id, icon: 'i i-' + id,
+        pressed: on ? 'true' : 'false',
+        pick: () => this.setState({ dCats: on ? this.state.dCats.filter((z) => z !== id) : this.state.dCats.concat([id]) })
+      };
+    });
+    const dSorts = SORTS.map((s) => ({
+      label: s.label, desc: s.desc,
+      cls: 'optcard' + (S.dSort === s.id ? ' on' : ''), radCls: 'rad' + (S.dSort === s.id ? ' on' : ''),
+      checked: S.dSort === s.id ? 'true' : 'false',
+      pick: () => this.setState({ dSort: s.id })
+    }));
+    const POP = ['Plen', 'Snømåking', 'Flyttevask', 'Hundelufting', 'Montering', 'Datahjelp', 'Varebil'];
+    const hasQ = S.q.length > 0;
+    return {
+      q: S.q, hasQ,
+      onQ: (e) => this.setState({ q: e.target.value, savedSearch: false }),
+      clearQ: () => this.setState({ q: '', savedSearch: false }),
+      types,
+      fbtnCls: 'fbtn' + (active.length ? ' on' : ''),
+      hasActive: active.length > 0, activeCount: active.length, noActive: active.length === 0, manyActive: active.length > 1,
+      active,
+      resetAll: () => this.setState({ cats: [], ver: false, dist: 50, sort: 'rel', savedSearch: false }),
+      showSuggest: !hasQ,
+      hasRecents: S.recents.length > 0,
+      recents: S.recents.map((r) => ({ text: r, use: () => this.useQuery(r), remove: () => this.setState({ recents: this.state.recents.filter((z) => z !== r) }) })),
+      clearRecents: () => this.setState({ recents: [] }),
+      popular: POP.map((p) => ({ text: p, use: () => this.useQuery(p) })),
+      hasResults: results.length > 0, noResults: results.length === 0,
+      results,
+      countLabel: results.length + ' treff i Lillehammer kommune',
+      sortLine: (hasQ ? 'Søk: «' + S.q.trim() + '» · ' : '') + 'Sortert etter ' + sortName(S.sort).toLowerCase(),
+      saveSearchIcon: S.savedSearch ? 'i i-check s16' : 'i i-bookmark s16',
+      saveSearchText: S.savedSearch ? 'Lagret' : 'Lagre søk',
+      saveSearchLabel: S.savedSearch ? 'Søket er lagret' : 'Lagre søk',
+      saveSearch: () => {
+        if (S.savedSearch) { this.setState({ savedSearch: false }); this.flash('Lagret søk fjernet', 'i i-x s14'); return; }
+        this.setState({ savedSearch: true });
+        this.flash('Søket er lagret – du får varsel om nye treff', 'i i-bookmark s14');
+      },
+      emptyTitle: hasQ ? 'Ingen treff på «' + S.q.trim() + '»' : 'Ingen treff med disse filtrene',
+      emptySug: ['Plen', 'Flytting', 'Datahjelp'].map((p) => ({ text: p, use: () => this.setState({ q: p, cats: [], ver: false, dist: 50 }) })),
+      fOpen: S.fOpen,
+      openFilters: () => this.setState({ fOpen: true, dCats: S.cats.slice(), dVer: S.ver, dDist: S.dist, dSort: S.sort }),
+      closeFilters: () => this.setState({ fOpen: false }),
+      draftReset: () => this.setState({ dCats: [], dVer: false, dDist: 50, dSort: 'rel' }),
+      dCats, dSorts,
+      verTglCls: 'tgl' + (S.dVer ? ' on' : ''), verPressed: S.dVer ? 'true' : 'false',
+      toggleVer: () => this.setState({ dVer: !S.dVer }),
+      dDist: S.dDist,
+      onDist: (e) => this.setState({ dDist: parseInt(e.target.value, 10) || 1 }),
+      distLabel: S.dDist >= 50 ? 'Hele kommunen' : 'Inntil ' + S.dDist + ' km',
+      rangeStyle: 'background: linear-gradient(90deg, #0A1740 ' + pct + '%, #DDE1E7 ' + pct + '%)',
+      applyLabel: draftCount === 0 ? 'Ingen treff – juster filtrene' : 'Vis ' + draftCount + ' treff',
+      applyFilters: () => {
+        this.setState({ fOpen: false, cats: S.dCats.slice(), ver: S.dVer, dist: S.dDist, sort: S.dSort, savedSearch: false });
+        this.flash('Filtre oppdatert · ' + draftCount + ' treff', 'i i-sliders s14');
+      },
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo,
+      undo: () => { if (S.lastSaved) { const saved = Object.assign({}, S.saved); saved[S.lastSaved] = false; this.setState({ saved, toast: null }); } }
+    };
+  }
+}
+</script>
+</body>
+</html>

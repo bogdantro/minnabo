@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Avtalesammendrag</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.doc{position:relative;background:#fff;border-radius:28px;box-shadow:var(--sh-m);border:1px solid rgba(10,23,64,.04);overflow:hidden}
+.doc .edge{height:6px;background:var(--grad)}
+.doc.off .edge{background:#D9DDE4}
+.doc .paper{padding:20px 20px 8px;background:#fff}
+.stamp{position:absolute;right:16px;top:26px;pointer-events:none}
+.stamp .in{transform:rotate(-12deg);border:2.5px solid rgba(43,143,78,.5);color:rgba(29,110,58,.72);border-radius:14px;padding:7px 11px;font:800 14px/1 var(--fd);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:6px;background:rgba(227,245,232,.35)}
+.stamp.off .in{border-color:rgba(194,48,41,.55);color:rgba(194,48,41,.8);background:rgba(253,235,233,.45)}
+.parties{display:flex;align-items:center;gap:8px;padding:16px 0 14px}
+.party{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.party b{font:700 14.5px/1.2 var(--fb)}
+.link-line{flex:0 0 70px;position:relative;height:40px;display:grid;place-items:center}
+.link-line::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:2px dashed #C9CFD9}
+.link-line .hs{position:relative;width:40px;height:40px;border-radius:50%;background:#0A1740;color:#B8EE3C;display:grid;place-items:center;box-shadow:0 0 0 4px #fff}
+.doc.off .link-line .hs{background:#ECEFF3;color:#8A93A8}
+.kv b{max-width:210px}
+.doc.off .kvs{opacity:.55}
+.ptl{display:flex;align-items:flex-start;justify-content:space-between;position:relative}
+.ptl::before{content:"";position:absolute;left:30px;right:30px;top:15px;height:3px;background:#E6E9EE;border-radius:2px}
+.ptl .fill{position:absolute;left:30px;top:15px;height:3px;background:#8BD21E;border-radius:2px;animation:growW 1.2s .4s var(--ease) both}
+.pn{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;width:60px;text-align:center;font:600 11.5px/1.2 var(--fb);color:var(--mute)}
+.pn .c{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid #E1E5EA;color:#C3C9D4}
+.pn.done{color:var(--ink)}
+.pn.done .c{background:#2B8F4E;border-color:#2B8F4E;color:#fff}
+.pn.cur{color:var(--ink)}
+.pn.cur .c{background:#0A1740;border-color:#0A1740;color:#B8EE3C}
+.pn.x{color:var(--danger)}
+.pn.x .c{background:var(--danger-t);border-color:#F2C9C5;color:var(--danger)}
+.qa{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qa > a,.qa > button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:96px;padding:12px 6px;border-radius:22px;background:#fff;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.035);text-decoration:none;color:var(--ink);font:700 13px/1.2 var(--fb);text-align:center;cursor:pointer;transition:transform .15s var(--ease)}
+.qa > a:active,.qa > button:active{transform:scale(.96)}
+.qa .ic{width:42px;height:42px;border-radius:14px;display:grid;place-items:center}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+
+    <div class="subbar">
+      <a href="MineAvtaler.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Avtalesammendrag</div>
+      <a href="TryggeKontakter.dc.html" class="iconbtn" aria-label="Del med en trygg kontakt"><i class="i i-shield s18"></i></a>
+    </div>
+
+    <!-- cancelled banner -->
+    <sc-if value="{{cancelled}}" hint-placeholder-val="{{ false }}">
+      <div class="px as" style="position: relative; margin-bottom: 10px">
+        <div style="display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 20px; background: #FDEBE9; color: #C23029">
+          <span class="icirc" style="width: 36px; height: 36px; background: #ffffff"><i class="i i-ban s18"></i></span>
+          <div class="stack" style="gap: 2px; flex: 1">
+            <b style="font-size: 15px">Avtalen er avlyst</b>
+            <span style="font-size: 13px; color: #8E2A24">Jonas har fått beskjed. {{cancelReasonText}}</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- heading -->
+    <div class="px au" style="position: relative; display: flex; flex-direction: column; gap: 10px; padding-top: 4px">
+      <span class="eyebrow">Male gjerdet i hagen</span>
+      <h1 class="h1">{{headline}}</h1>
+      <div class="rowf" style="gap: 8px">
+        <sc-if value="{{active}}" hint-placeholder-val="{{ true }}"><span class="pill pill-grad lg"><i class="i i-hourglass s14"></i>Om 11 dager</span></sc-if>
+        <span class="pill pill-line lg"><i class="i i-cal s14"></i>Lør 10. okt · 10:00</span>
+      </div>
+    </div>
+
+    <!-- document -->
+    <div class="px au d2" style="position: relative; margin-top: 18px">
+      <article class="{{docCls}}" aria-label="Avtaledokument">
+        <div class="edge"></div>
+        <div class="{{stampCls}}" aria-hidden="true"><div class="in"><i class="{{stampIcon}}"></i>{{stampText}}</div></div>
+        <div class="paper">
+          <div class="rowf" style="gap: 10px">
+            <span class="icirc" style="width: 34px; height: 34px; background: #0A1740; color: #B8EE3C"><i class="i i-lock s16"></i></span>
+            <div class="stack" style="gap: 3px">
+              <b style="font-size: 14.5px">Låst avtale</b>
+              <span class="meta">Avtalt 30. sep kl. 19:42</span>
+            </div>
+          </div>
+
+          <div class="parties">
+            <div class="party">
+              <span class="av s56 av-me">MH</span>
+              <b>Mari Haugen</b>
+              <span class="pill pill-need" style="height: 22px; font-size: 11px">Oppdragsgiver</span>
+            </div>
+            <div class="link-line"><span class="hs"><i class="i i-hand s18"></i></span></div>
+            <div class="party">
+              <span class="av s56 av-b">JL</span>
+              <b>Jonas Lie</b>
+              <span class="pill pill-offer" style="height: 22px; font-size: 11px">Oppdragstaker</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="kvs">
+            <div class="kv"><span>Oppdrag</span><b>Male gjerdet i hagen</b></div>
+            <div class="kv"><span>Pris</span><b class="num" style="font-size: 18px">1 400 kr</b></div>
+            <div class="kv"><span>Dato</span><b>Lør 10. okt kl. 10:00</b></div>
+            <div class="kv"><span>Varighet</span><b>ca. 5 t</b></div>
+            <div class="kv"><span>Sted</span><b>Nordre Ål (adressen er delt i chatten)</b></div>
+            <div class="kv"><span>Beskrivelse</span><b>Ca. 25 m tregjerde skal beises. Pensler, stige og presenning tas med av Jonas.</b></div>
+            <div class="kv"><span>Forbehold</span><b>Maling/beis kjøpes av deg. Utsettes ved regn.</b></div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- progress -->
+    <div class="px au d3" style="position: relative; margin-top: 14px">
+      <div class="card" style="padding: 18px 12px 16px">
+        <div class="eyebrow" style="padding: 0 8px 14px">Fremdrift</div>
+        <div class="ptl">
+          <sc-if value="{{active}}" hint-placeholder-val="{{ true }}"><span class="fill" style="width: calc((100% - 60px) * .5)"></span></sc-if>
+          <sc-for list="{{progress}}" as="p" hint-placeholder-count="5">
+            <div class="{{p.cls}}"><span class="c"><i class="{{p.icon}}"></i></span>{{p.label}}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- notes -->
+    <div class="px au d4" style="position: relative; margin-top: 14px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 20px; background: #FFF2D9; color: #7A4800">
+        <i class="i i-repeat s18" style="margin-top: 1px"></i>
+        <span style="font: 600 14px/1.4 var(--fb)">Endringer må avtales på nytt i chatten.</span>
+      </div>
+      <div class="note" style="padding: 0 4px"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    </div>
+
+    <!-- quick actions -->
+    <div class="px au d5" style="position: relative; margin-top: 20px">
+      <div class="qa">
+        <button onClick="{{addCal}}" aria-pressed="{{calPressed}}">
+          <span class="ic" style="display: grid; {{calIcStyle}}"><i class="{{calIcon}}"></i></span>{{calLabel}}
+        </button>
+        <a href="Chat.dc.html"><span class="ic" style="background: #DFF2FB; color: #065C8F"><i class="i i-msg s18"></i></span>Åpne chat</a>
+        <a href="TryggeKontakter.dc.html"><span class="ic" style="background: #F3F5F1; color: #0A1740"><i class="i i-shield s18"></i></span>Del med trygg kontakt</a>
+      </div>
+    </div>
+
+    <sc-if value="{{active}}" hint-placeholder-val="{{ true }}">
+      <div class="px au d6" style="position: relative; margin-top: 18px">
+        <button class="btn btn-dangerghost btn-block" onClick="{{openCancel}}"><i class="i i-ban s18"></i>Avlys avtalen</button>
+      </div>
+    </sc-if>
+    <div class="spacer-foot"></div>
+  </div>
+
+  <!-- foot -->
+  <div class="foot">
+    <sc-if value="{{active}}" hint-placeholder-val="{{ true }}">
+      <div class="fr">
+        <a href="Chat.dc.html" class="btn btn-ghost" style="flex: 1"><i class="i i-msg s18"></i>Åpne chat</a>
+        <a href="Jobbdag.dc.html" class="btn btn-lime" style="flex: 1.35">Åpne jobbdag<i class="i i-arrow s18"></i></a>
+      </div>
+    </sc-if>
+    <sc-if value="{{cancelled}}" hint-placeholder-val="{{ false }}">
+      <div class="fr">
+        <a href="Chat.dc.html" class="btn btn-ghost" style="flex: 1"><i class="i i-msg s18"></i>Åpne chat</a>
+        <a href="MottatteTilbud.dc.html" class="btn btn-ink" style="flex: 1.35">Se andre tilbud<i class="i i-arrow s18"></i></a>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undoCal}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+
+  <!-- cancel dialog -->
+  <sc-if value="{{dialog}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeCancel}}" aria-label="Lukk"></button>
+    <div class="dialog" role="alertdialog" aria-label="Avlys avtalen">
+      <span class="icirc as" style="width: 60px; height: 60px; background: #FDEBE9; color: #C23029; margin: 0 auto"><i class="i i-ban s28"></i></span>
+      <h2 class="h3" style="margin-top: 14px">Avlyse avtalen?</h2>
+      <p class="body p muted" style="margin-top: 8px">Jonas får beskjed med en gang. Dette kan ikke angres.</p>
+      <div class="rowf" style="gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 16px">
+        <sc-for list="{{reasons}}" as="r" hint-placeholder-count="4">
+          <button class="{{r.cls}}" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}">{{r.label}}</button>
+        </sc-for>
+      </div>
+      <div class="stack" style="gap: 10px; margin-top: 20px">
+        <button class="btn btn-danger btn-block" onClick="{{confirmCancel}}">
+          <sc-if value="{{cancelling}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: #ffffff"></span>Avlyser …</sc-if>
+          <sc-if value="{{notCancelling}}" hint-placeholder-val="{{ true }}">Avlys avtalen</sc-if>
+        </button>
+        <button class="btn btn-ghost btn-block" onClick="{{closeCancel}}">Behold avtalen</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { cancelled: false, dialog: false, cancelling: false, reason: null, cal: false, toast: null, toastIcon: 'i i-check s16', toastUndo: false };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.ct); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const off = S.cancelled;
+    const P = off
+      ? [['done', 'Tilbud sendt', 'i i-check s16'], ['done', 'Godtatt', 'i i-check s16'], ['x', 'Avlyst', 'i i-x s16'], ['', 'Fullført', 'i i-checks s16'], ['', 'Vurdert', 'i i-star s16']]
+      : [['done', 'Tilbud sendt', 'i i-check s16'], ['done', 'Godtatt', 'i i-check s16'], ['cur', 'Jobbdag', 'i i-cal s16'], ['', 'Fullført', 'i i-checks s16'], ['', 'Vurdert', 'i i-star s16']];
+    const REASONS = ['Planene er endret', 'Været', 'Sykdom', 'Annet'];
+    return {
+      cancelled: off, active: !off,
+      headline: off ? 'Avtalen er avlyst' : 'Avtalen er klar',
+      docCls: 'doc' + (off ? ' off' : ''),
+      stampCls: 'stamp as d5' + (off ? ' off' : ''),
+      stampIcon: off ? 'i i-ban s14' : 'i i-lock s14',
+      stampText: off ? 'Avlyst' : 'Avtalt',
+      cancelReasonText: S.reason ? 'Grunn: ' + S.reason.toLowerCase() + '.' : '',
+      progress: P.map(([k, label, icon]) => ({ cls: 'pn' + (k ? ' ' + k : ''), label, icon })),
+      calLabel: S.cal ? 'Lagt i kalender' : 'Legg i kalender',
+      calIcon: S.cal ? 'i i-check s18' : 'i i-cal s18',
+      calIcStyle: S.cal ? 'background: #E3F5E8; color: #2B8F4E' : 'background: #EDF8D6; color: #3B7300',
+      calPressed: S.cal ? 'true' : 'false',
+      addCal: () => {
+        if (S.cal) { this.setState({ cal: false }); this.flash('Fjernet fra kalenderen', 'i i-x s14'); return; }
+        this.setState({ cal: true });
+        this.flash('Lagt i kalenderen: Lør 10. okt kl. 10:00', 'i i-cal s14', true);
+      },
+      undoCal: () => { clearTimeout(this.tt); this.setState({ cal: false, toast: null }); },
+      dialog: S.dialog,
+      openCancel: () => this.setState({ dialog: true, reason: null }),
+      closeCancel: () => { if (!S.cancelling) this.setState({ dialog: false }); },
+      reasons: REASONS.map((label) => ({
+        label,
+        cls: 'chip plain sm' + (S.reason === label ? ' on' : ''),
+        pressed: S.reason === label ? 'true' : 'false',
+        pick: () => this.setState({ reason: S.reason === label ? null : label })
+      })),
+      cancelling: S.cancelling, notCancelling: !S.cancelling,
+      confirmCancel: () => {
+        if (S.cancelling) return;
+        this.setState({ cancelling: true });
+        this.ct = setTimeout(() => {
+          this.setState({ cancelling: false, dialog: false, cancelled: true });
+          this.flash('Avtalen er avlyst. Jonas har fått beskjed.', 'i i-ban s14');
+        }, 1100);
+      },
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo
+    };
+  }
+}
+</script>
+</body>
+</html>

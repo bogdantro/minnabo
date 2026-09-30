@@ -1,114 +1,94 @@
-# MinNabo
+# MinNabo – design handoff pack
 
-MinNabo gjør det enkelt og trygt for folk i Innlandet å finne hjelp til småjobber –
-eller tilby egen hjelp i nærheten. Appen handler **kun** om småjobber. Den håndterer
-**ikke betaling** mellom brukere: pris og betaling avtales og gjennomføres direkte
-mellom partene.
-
-> Småjobber nær deg. Enkelt, trygt og lokalt.
-
-**Fase 2** kobler appen til et ekte **Supabase**-backend (Postgres + Auth +
-Storage + Realtime + RLS). Alt – innlogging, profiler, oppføringer, tilbud,
-chat, fullføring, vurderinger, rapporter, bilder – lagres nå server-side.
-Testene kjører fortsatt mot et in-memory mock-lag (`MockApiClient`).
-
-Backend-oppsett, migrasjoner, seeding og QA-sjekkliste: **[`BACKEND.md`](BACKEND.md)**.
-
-## Kom i gang
-
-```bash
-npm install
-cp .env.example .env   # fyll inn Supabase-nøkler – se BACKEND.md
-npm start              # åpner Expo – trykk i (iOS), a (Android) eller w (web)
-```
-
-Krever Node 20+. Enklest: installer **Expo Go** på telefonen og skann QR-koden.
-
-## Tester
-
-```bash
-npm test           # Jest + React Native Testing Library (78 tester)
-npm run typecheck  # tsc --noEmit (strict)
-```
-
-## Skjermer som er bygget
-
-- **Onboarding**: velkommen → logg inn (engangskode `0000` i demoen) → samtykker →
-  rolle og sted
-- **Oppdrag** (forside): søk, kategorier, «Folk som trenger hjelp» og «Folk som tilbyr
-  hjelp» med «Se alle» → egne lister; tilbyderlista har en rad med aktive brukere
-- **Søk**: fritekst, filtre (type, kategori, avstand, verifisert) i bunnark, sortering
-- **Oppdragsdetaljer** (`TASK_REQUEST`) og **Tilbyderdetaljer** (`SERVICE_OFFER`) –
-  ulik terminologi, status og knapper; ruting skjer på `Listing.type`
-- **Legg ut**: valgskjerm → to stegvise skjemaer → forhåndsvisning → publiseringssuksess
-- **Gi tilbud / Be om tilbud**: oppretter samtale og sender tilbud/forespørsel
-- **Innboks** og **Chat**: oppføringskort, chatbobler, sendt/lest, tilbudskort med
-  «Godta tilbud»/«Avslå», «Tilbud godtatt»-divider, «marker som fullført»
-- **Fullføring** (begge bekrefter) og **Vurdering** (én per avtale)
-- **Profil** (egen + offentlig), **rediger profil**, **verifiseringssenter** (stubb)
-- **Varsler**, **Lagrede oppføringer**, **Mine oppdrag og tjenester**
-- **Fellesskap**: hovedpartnere, lokale støttespillere, dokumenterte bidrag
-- **Meny** (halvskjerms bunnark med alle sider), **Innstillinger**, **Personvern**,
-  **Vilkår**, **Varslinger**, **Kontosletting**
-- **Sikkerhet**: rapportering (5 årsaker → moderator) og blokkering (skjuler brukerens
-  oppføringer og samtaler)
-
-Hver hovedskjerm har laste-, tom-, feil-, frakoblet- og suksesstilstander, og en fast
-topplinje med tilbakepil og MinNabo-logo (også på feilsider).
-
-## Prosjektstruktur
+Everything Claude (Claude Code) needs to rebuild your existing Expo app so it matches the design 1:1.
 
 ```
-app/                 expo-router-ruter (filbasert)
-  (tabs)/            Oppdrag (forside), Fellesskap, Innboks
-src/
-  theme/             design-tokens utledet fra skjermbildene
-  i18n/nb.ts         all synlig tekst på norsk bokmål (ingen språkvelger)
-  domain/            entitetstyper, pris (NOK, minste enhet), proposal-tilstandsmaskin
-  data/              seed + in-memory repositories/stores (listings, chat, profil,
-                     lagrede, sikkerhet, auth, utkast)
-  api/               MockApiClient (speiler et framtidig REST-API) + React Query-hooks
-  components/         designsystem-primitiver + sammensatte komponenter
-  screens/           skjermkomponenter
-docs/                design- og byggespesifikasjon + implementasjonsplaner
-tests/               domene, komponenter, skjermer og to E2E-flyter
+minnabo-handoff/
+├── CLAUDE.md                        → merge into your repo's CLAUDE.md
+├── .claude/commands/implement-screen.md  → adds the /implement-screen command
+├── src/theme/theme.ts               → all design tokens (colours, type, spacing, radii, shadows, motion, icons)
+├── docs/COMPONENTS.md               → every UI component, exact specs and states
+├── docs/SCREENS.md                  → checklist per screen: flows, interactions, states, youth rules
+└── design/
+    ├── screens/*.dc.html + mn.css   → the 47 designed screens (source of truth)
+    ├── minnabo-icon.png, minnabo-wordmark.png
+    └── screenshots/                 → put exported PNGs here (step 2)
 ```
 
-## E2E-flyter (testet på mock-data)
+## Step 1 – Copy into your repo
+1. Create a branch: `git checkout -b redesign`
+2. Copy `design/`, `docs/`, `.claude/` and `src/theme/theme.ts` into the repo root
+   (adjust `src/` if your code lives elsewhere, e.g. `app/` or `lib/`).
+3. Merge `CLAUDE.md` into your existing `CLAUDE.md` (or add it if you don't have one).
+   Keep your own build/test/backend notes in it – Claude reads this file on every task.
+4. Commit: `git commit -am "Add design handoff"`
 
-1. Finn oppdrag → gi tilbud → chat → godta → fullfør → vurder
-2. Finn tilbyder → ta kontakt → be om tilbud → godta → fullfør → vurder
+## Step 2 – Add screenshots (strongly recommended)
+Claude matches visuals much better with a picture next to the code.
+On the design canvas, use Share › Export to export each artboard as PNG and save them as
+`design/screenshots/<ScreenName>.png` (e.g. `Oppdrag.png`). Also useful: a few screenshots of
+interaction states (an open sheet, the offer-accepted chat, a wizard step).
 
-## Bekreftelser (produktregler)
+## Step 3 – Let Claude set up the foundation (one session)
+Start Claude Code in the repo and paste:
 
-- «Oppdrag» er appens forside. Det finnes ingen «Hjem»-fane.
-- Profilbildet er en fast sirkulær snarvei øverst til høyre på alle innloggede
-  hovedsider og åpner profilen (tilgjengelighetsnavn «Åpne profil»).
-- To tydelig forskjellige oppføringstyper: `TASK_REQUEST` og `SERVICE_OFFER`. Typen er
-  et lagret felt og utledes aldri fra tekst.
-- Tilbud kan godtas i chat, men **betaling skjer aldri i MinNabo** – i ingen fase.
-- Kun lyst tema. De vedlagte lyse skjermbildene er visuell fasit.
+> Read CLAUDE.md, docs/COMPONENTS.md and src/theme/theme.ts. Then look through our current app
+> structure and tell me: how navigation is set up, where UI components live, and which screens in
+> our repo correspond to each file in design/screens/. Make a mapping table and add it to the top of
+> docs/SCREENS.md. Don't change code yet.
 
-## Hva som er mocket / utenfor omfang
+Review the mapping. Then:
 
-Ekte server/API/database · ekte innlogging + BankID · ekte bildeopplasting/objektlagring
-(mock-velger mangler foreløpig) · adminpanel · bedriftsregistrering (stubb) · ekte
-analysepipeline · feature-flag-tjeneste (kun `src/config/featureFlags.ts`) · GDPR
-eksport/sletting-*backend* (kun UI + lokal oppførsel) · Røde Kors-innhold (feature-flagg
-**av**) · **betaling – aldri**.
+> Install the fonts, icons and libraries listed under "Tech choices" in CLAUDE.md, load the fonts,
+> and wire theme.ts in. Then build every component in docs/COMPONENTS.md in src/components/ui/
+> with a simple preview screen that shows all variants (like design/screens/Komponenter.dc.html).
+> Stop when the preview screen matches the component sheet.
 
-## Reversible antakelser
+Then:
 
-- Fargeverdier er øyemålt fra PNG-ene; justeres når offisielle tokens finnes
-  (`src/theme/tokens.ts`).
-- Font antatt Mulish; kan byttes uten endring utenfor `src/theme`.
-- Fellesskap-, onboarding-, skjema- og innstillingsskjermer er utledet fra det delte
-  designsystemet (mangler egne skjermbilder).
-- Hjemskjermens resultatkort har et lite «Trenger hjelp»/«Tilbyr hjelp»-merke i tillegg
-  til kategorimerket.
-- `authStore.isOnboarded` er `true` som standard, så appen åpner på Oppdrag. Onboarding
-  nås via «Logg ut» / «Slett konto».
-- «Aktiv nå» / online-status er mock.
-- Test: `fireEvent` må alltid `await`-es i dette RNTL 14-oppsettet.
+> Rebuild the tab bar (with the raised Legg ut button), the main header and the sub header exactly
+> as specified, and apply them to the existing navigation.
 
-Se `docs/minnabo-build-spec-design.md` for full skjermliste og faseplan.
+## Step 4 – Screens, one at a time
+Use the command that the pack adds:
+
+```
+/implement-screen Oppdrag
+```
+
+Recommended order (each one depends on components proven by the one before):
+1. Oppdrag → Oppdragsdetaljer → Chat → Innboks
+2. LeggUt → Forhandsvisning → Publisert
+3. MottatteTilbud → TilbudDetaljer → Sammenlign → Avtale → MineAvtaler
+4. Jobbdag → Fullforing → Vurdering
+5. Main → LoggInn → Samtykke → Oppsett (Vipps login – see step 5)
+6. Profil, RedigerProfil, MineOppforinger, Lagrede, Sok, SeAlle, ForMeg, Varsler, Meny
+7. Verifisering, Sikkerhet, Rapporter, TryggeKontakter, Personvern
+8. Fellesskap, Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkar, SlettKonto, Bedrift, Admin
+9. Ungdomskonto + OppdragUng (after step 5)
+10. Tilstander: make sure every screen has these states
+
+After each screen: run the app on a phone/simulator, compare with the screenshot, and tell Claude
+exactly what differs ("title is 2px too small", "card shadow too strong on Android"). Commit when it matches.
+
+## Step 5 – The two product changes (need backend work)
+Do these as separate tasks, planned first:
+
+> Plan (don't code yet) how to replace our current login with Vipps Login only (OpenID Connect via
+> expo-auth-session, code exchange on our backend). We need name, phone, e-mail and birth date.
+> Check the current Vipps MobilePay Login API docs. List what our backend and app need to change.
+
+> Plan (don't code yet) the youth account: role `youth` when Vipps birth date says under 18,
+> automatic upgrade at 18, and server-side permission checks for everything in CLAUDE.md rule 5.
+> Then list the UI changes from OppdragUng.dc.html and Ungdomskonto.dc.html.
+
+Also decide with a lawyer: minimum age and whether guardian consent is needed (marked `[minstealder]` in the design).
+
+## Tips for best results
+- **One screen per session/task.** Long sessions drift; start fresh (`/clear`) between screens. CLAUDE.md carries the rules.
+- **Ask for a plan first** on anything touching data, navigation or auth (the command already does this).
+- **Give precise visual feedback** with screenshots from the device next to the design screenshot.
+- **Keep business logic.** If the design needs data your API doesn't have, Claude should say so, not fake it.
+- **Check Android and iOS** – shadows, blur and fonts differ; fix per platform in the component, not the screen.
+- **Use git** – commit after each finished screen so you can always roll back.
+- Placeholders like `[Hovedpartner 1]`, `[x] måneder`, `[minstealder]` in the design are for you to fill with real content.

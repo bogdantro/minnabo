@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Komponenter</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+a.btn-ink:hover,a.btn-cyan:hover{color:#fff}
+.ks{position:relative;overflow:hidden;color:var(--ink);-webkit-font-smoothing:antialiased;padding:24px 40px 0}
+.kglow{position:absolute;left:0;right:0;top:0;height:520px;pointer-events:none;background:none}
+.khead{position:relative;height:48px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.band{position:relative;display:flex;gap:16px;margin-bottom:16px}
+.col{display:flex;flex-direction:column;gap:16px;flex:none}
+.cd{position:relative;background:#fff;border-radius:24px;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.04);padding:18px 20px;overflow:hidden;display:flex;flex-direction:column;flex:none}
+.ch{display:flex;align-items:center;gap:10px;height:22px;margin-bottom:10px;flex:none}
+.ch .no{font:700 11px/1 var(--fb);color:var(--mute);background:var(--bg);border-radius:999px;padding:5px 7px;letter-spacing:.04em}
+.ch h2{font:700 18px/1 var(--fd);letter-spacing:-.02em;margin:0;white-space:nowrap}
+.ch .cs{margin-left:auto;font-size:12.5px;color:var(--mute);white-space:nowrap}
+.spec{font:700 10.5px/12px var(--fb);color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.cap{font:600 11px/13px var(--fb);color:var(--mute);white-space:nowrap}
+.swg{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
+.sw .t{height:36px;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(10,23,64,.08)}
+.sw b{display:block;font:700 12px/14px var(--fb);margin-top:6px}
+.sw .hx{display:block;font:500 11px/13px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute);margin-top:1px}
+.gbar{margin-top:12px;height:26px;border-radius:13px;background:var(--grad);display:flex;align-items:center;justify-content:space-between;padding:0 14px;font:700 11px/1 var(--fb);color:var(--ink);flex:none}
+.brow{display:flex;gap:16px;align-items:flex-end;margin-bottom:10px}
+.bc{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.prow{display:flex;align-items:center;height:26px;margin-bottom:14px}
+.pl{width:88px;flex:none;font:700 10.5px/1 var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.pp{display:flex;gap:8px;align-items:center}
+.fgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px}
+.fcol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.okt{font-size:13px;color:#1D6E3A;font-weight:600;display:flex;gap:6px;align-items:center}
+.orow{display:flex;align-items:center;gap:10px;height:40px;width:100%;background:none;border:0;padding:0;cursor:pointer;font:600 14px var(--fb);color:var(--ink);text-align:left}
+.tagc{height:30px;padding:0 8px 0 12px;border-radius:999px;background:var(--lime-t);color:var(--lime-d);border:0;font:700 13px var(--fb);display:inline-flex;align-items:center;gap:4px;cursor:pointer;animation:scaleIn .35s var(--spring) both}
+.tbrow{display:flex;align-items:center;gap:14px}
+.tbf{width:390px;height:64px;border-radius:16px;background:#F3F5F1;overflow:hidden;position:relative;flex:none;box-shadow:inset 0 0 0 1px rgba(10,23,64,.05)}
+.tbl{display:flex;flex-direction:column;gap:3px;font-size:12px;line-height:1.3;color:var(--mute);min-width:0}
+.tbl b{font:700 13.5px var(--fb);color:var(--ink)}
+.ann{margin-top:12px;display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:3px solid #B8EE3C}
+.ann.offer{border-left-color:#19B8EE}
+.ar{display:flex;align-items:center;gap:8px;min-height:16px;font-size:13px}
+.ar .k{width:74px;flex:none;font:700 10.5px/1 var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.ar b{font-weight:700;font-size:13px}
+.bxs{height:30px;padding:0 12px;font-size:13px}
+.avc{display:flex;flex-direction:column;align-items:center;gap:5px}
+.navstrip{position:relative;width:390px;height:110px;margin:0 auto;border-radius:18px;background:#E9EDEA}
+.stage{position:relative;height:196px;border-radius:20px;overflow:hidden;background:#F3F5F1;isolation:isolate;flex:none;box-shadow:inset 0 0 0 1px rgba(10,23,64,.05)}
+.fx{position:absolute;left:14px;height:10px;border-radius:5px;background:#E1E5EA}
+.chatp{flex:1;display:flex;flex-direction:column;gap:8px;background:#F3F5F1;border-radius:18px;padding:10px 12px;min-height:0;overflow:hidden}
+.ofc{align-self:flex-start;width:78%;background:#fff;border:1.5px solid #CDEB93;border-radius:20px;border-bottom-left-radius:7px;padding:12px 14px;display:flex;flex-direction:column;animation:bubIn .35s var(--ease) both}
+.bxm{height:34px;padding:0 12px;font-size:13.5px;flex:1}
+.icg{display:grid;grid-template-columns:repeat(16,1fr);grid-auto-rows:35px}
+.icc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:10px;transition:background .2s}
+.icc:hover{background:var(--bg)}
+.icc span{font:600 9.5px/11px var(--fb);color:var(--mute);white-space:nowrap;letter-spacing:-.01em}
+</style>
+</helmet>
+<div class="ks" style="width: 1440px; height: 2400px; font-family: var(--fb); background: #F3F5F1">
+  <div class="kglow"></div>
+
+  <!-- header -->
+  <header class="khead au">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="" style="width: 46px; height: 46px; display: block">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <span style="font: 800 26px/1 var(--fd); letter-spacing: -.03em">MinNabo</span>
+          <span style="font: 700 18px/1 var(--fd); letter-spacing: -.02em; color: #5F6983">· Nabolys designsystem</span>
+        </div>
+        <span style="font-size: 14px; line-height: 1; color: #34405F">Småjobber nær deg. Enkelt, trygt og lokalt.</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span class="pill pill-line lg"><span class="pd" style="background: #8BD21E"></span>Oppdrag = lime</span>
+      <span class="pill pill-line lg"><span class="pd" style="background: #19B8EE"></span>Tjenestetilbud = cyan</span>
+      <a href="Tilstander.dc.html" class="btn btn-sm btn-ghost">Skjermtilstander<i class="i i-arrow s16"></i></a>
+      <a href="Main.dc.html" class="btn btn-sm btn-ink">Åpne appen<i class="i i-arrowur s16"></i></a>
+    </div>
+  </header>
+
+  <!-- BAND 1 -->
+  <div class="band" style="height: 256px">
+    <section class="cd au d1" style="width: 800px">
+      <div class="ch"><span class="no">01</span><h2>Farger</h2><span class="cs">Lime = oppdrag og primærhandling · Cyan = lenker og sekundær · Ink = nøytral tekst og handling</span></div>
+      <div class="swg">
+        <sc-for list="{{swatches}}" as="s" hint-placeholder-count="16">
+          <div class="sw"><div class="t" style="display: block; {{s.bg}}"></div><b>{{s.name}}</b><span class="hx">{{s.hex}}</span></div>
+        </sc-for>
+      </div>
+      <div class="gbar"><span>--grad · primær aksent (Legg ut, fremdrift) – ingen gradienter</span><span>#B8EE3C</span></div>
+    </section>
+
+    <section class="cd au d2" style="width: 544px">
+      <div class="ch"><span class="no">02</span><h2>Typografi</h2><span class="cs">Bricolage Grotesque · Figtree</span></div>
+      <div style="display: grid; grid-template-columns: 272px 214px; gap: 18px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div><div class="spec">Display · 34 · 700</div><p class="display" style="font-size: 34px">Nær deg.</p></div>
+          <div><div class="spec">H1 · 31 · 700</div><p class="h1">Klippe plen</p></div>
+          <div><div class="spec">H2 · 24 · 700</div><p class="h2">Mine avtaler</p></div>
+          <div><div class="spec">H3 · 20 · 700</div><p class="h3">Folk som trenger hjelp</p></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div><div class="spec">H4 · Figtree 16,5 · 700</div><p class="h4">Klippe plen og rake løv</p></div>
+          <div><div class="spec">Brødtekst · 15 · 400</div><p class="body p">Enkelt, trygt og lokalt.</p></div>
+          <div><div class="spec">Meta · 13 · 400</div><p class="meta p">Nordre Ål · ca. 1,2 km</p></div>
+          <div><div class="spec">Eyebrow · 12 · 700</div><p class="eyebrow p">Hei, Mari</p></div>
+          <div><div class="spec">Tall · Bricolage 22 · 700</div><p class="num p" style="font-size: 22px; line-height: 24px">1 400 kr</p></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BAND 2 -->
+  <div class="band" style="height: 306px">
+    <section class="cd au d3" style="width: 800px">
+      <div class="ch"><span class="no">03</span><h2>Knapper</h2><span class="cs">Pilleform · 52 px standard · trykk skalerer til 97 %</span></div>
+      <div class="brow">
+        <div class="bc"><button class="btn btn-lime">Gi tilbud</button><span class="cap">Lime · oppdrag</span></div>
+        <div class="bc"><button class="btn btn-cyan">Legg i kalender</button><span class="cap">Cyan · sekundær handling</span></div>
+        <div class="bc"><button class="btn btn-ink">Fortsett</button><span class="cap">Ink · nøytral sterk</span></div>
+        <div class="bc"><button class="btn btn-ghost">Send melding</button><span class="cap">Ghost · sekundær</span></div>
+        <div class="bc"><button class="btn btn-soft">Avbryt</button><span class="cap">Soft · dempet</span></div>
+      </div>
+      <div class="brow">
+        <div class="bc"><button class="btn btn-danger"><i class="i i-trash s18"></i>Slett</button><span class="cap">Danger · destruktiv</span></div>
+        <div class="bc"><button class="btn btn-dangerghost"><i class="i i-flag s18"></i>Rapporter</button><span class="cap">Dangerghost · rapporter</span></div>
+        <div class="bc"><button class="btn btn-vipps">Logg inn med Vipps</button><span class="cap">Vipps · kun innlogging</span></div>
+        <div class="bc"><button class="btn btn-text">Hopp over</button><span class="cap">Tekst · lenkeknapp</span></div>
+      </div>
+      <div class="brow" style="margin-bottom: 0">
+        <div class="bc"><button class="btn btn-ink btn-sm">Liten</button><span class="cap">btn-sm · 40</span></div>
+        <div class="bc"><button class="btn btn-ink">Standard</button><span class="cap">Standard · 52</span></div>
+        <div class="bc"><button class="btn btn-ink btn-lg">Stor</button><span class="cap">btn-lg · 58</span></div>
+        <div class="bc"><button class="btn btn-lime disabled" aria-disabled="true" tabindex="-1">Gi tilbud</button><span class="cap">Deaktivert · 38 %</span></div>
+        <div class="bc">
+          <button class="btn btn-lime" style="min-width: 158px" onClick="{{liveGo}}" aria-live="polite">
+            <sc-if value="{{liveIdle}}" hint-placeholder-val="{{ true }}"><i class="i i-send s18"></i>Send tilbud</sc-if>
+            <sc-if value="{{liveLoading}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(10,23,64,.2); border-top-color: #0A1740"></span>Sender …</sc-if>
+            <sc-if value="{{liveDone}}" hint-placeholder-val="{{ false }}"><i class="i i-check s18 as"></i>Sendt!</sc-if>
+          </button>
+          <span class="cap">Live · trykk → laster → ferdig</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="cd au d4" style="width: 544px">
+      <div class="ch"><span class="no">04</span><h2>Piller og merker</h2><span class="cs">26 px høye · 12 px fet</span></div>
+      <div class="prow"><span class="pl">Annonse</span><div class="pp">
+        <span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span>
+        <span class="pill pill-need"><span class="pd"></span>Åpent oppdrag</span>
+      </div></div>
+      <div class="prow"><span class="pl">Egenskap</span><div class="pp">
+        <span class="pill pill-neutral"><i class="i i-users s14"></i>Dugnad</span>
+        <span class="pill pill-neutral"><i class="i i-repeat s14"></i>Gjentakende</span>
+        <span class="pill pill-line"><i class="i i-tag s14"></i>Lavest pris</span>
+      </div></div>
+      <div class="prow"><span class="pl">Tilbud</span><div class="pp">
+        <span class="pill pill-dark"><span class="pd" style="background: #B8EE3C"></span>Nytt tilbud</span>
+        <span class="pill pill-ok"><i class="i i-check s14"></i>Tilbud godtatt</span>
+        <span class="pill pill-warn"><i class="i i-edit s14"></i>Endring forespurt</span>
+      </div></div>
+      <div class="prow"><span class="pl">Status</span><div class="pp">
+        <span class="pill pill-danger"><i class="i i-x s14"></i>Avslått</span>
+        <span class="pill pill-neutral"><i class="i i-pause s14"></i>Pauset</span>
+        <span class="pill pill-line"><i class="i i-checks s14"></i>Fullført</span>
+      </div></div>
+      <div class="prow"><span class="pl">Merker</span><div class="pp" style="gap: 14px">
+        <span class="vbadge"><i class="i i-verified s16"></i>Verifisert</span>
+        <span class="stars"><i class="i i-star"></i>4,9 <span>(32)</span></span>
+        <span style="position: relative; display: inline-flex; align-items: center; width: 34px; height: 26px; color: #34405F"><i class="i i-msg s22"></i><b class="count" style="top: -3px; right: 0">3</b></span>
+        <span class="pill pill-grad"><i class="i i-sparkle s14"></i>6 nye</span>
+      </div></div>
+      <div class="note" style="margin-top: auto"><i class="i i-info"></i><span>Oppdrag er alltid lime, tjenestetilbud alltid cyan.</span></div>
+    </section>
+  </div>
+
+  <!-- BAND 3 : Felter -->
+  <div class="band" style="height: 364px">
+    <section class="cd au d5" style="width: 1360px">
+      <div class="ch"><span class="no">05</span><h2>Felter</h2><span class="cs">56 px høye · 17 px radius · fokus = cyan ring · feil = rød ramme og tekst · alle feltene virker</span></div>
+      <div class="fgrid">
+        <!-- c1 -->
+        <div class="fcol">
+          <div class="field"><label class="label" for="k-title">Tittel <small>Standard</small></label><input id="k-title" class="input" placeholder="F.eks. Klippe plen" value="{{title}}" onChange="{{onTitle}}"></div>
+          <div class="field"><label class="label" for="k-place">Område <small>Fokus</small></label><input id="k-place" class="input" style="border-color: #0A74B4; box-shadow: 0 0 0 4px rgba(25,184,238,.16)" value="{{place}}" onChange="{{onPlace}}"></div>
+          <div class="field"><label class="label" for="k-tel">Telefon <small>Feil</small></label><input id="k-tel" class="{{telCls}}" inputmode="numeric" value="{{tel}}" onChange="{{onTel}}">
+            <sc-if value="{{telBad}}" hint-placeholder-val="{{ true }}"><span class="errtxt"><i class="i i-alert s16"></i>Skriv inn 8 siffer</span></sc-if>
+            <sc-if value="{{telOk}}" hint-placeholder-val="{{ false }}"><span class="okt"><i class="i i-check s16"></i>Ser bra ut</span></sc-if>
+          </div>
+        </div>
+        <!-- c2 -->
+        <div class="fcol">
+          <div class="field"><label class="label" for="k-desc">Beskrivelse <small>{{descCount}}</small></label><textarea id="k-desc" class="input" style="min-height: 84px; height: 84px" maxlength="500" value="{{desc}}" onChange="{{onDesc}}"></textarea><span class="help">Ikke del adressen din her.</span></div>
+          <div class="field"><label class="label" for="k-amt">Budsjett <small>NOK</small></label><div class="inwrap"><input id="k-amt" class="input amount" inputmode="numeric" value="{{amtFmt}}" onChange="{{onAmt}}"><span class="suf">kr</span></div><div class="note"><i class="i i-info"></i><span>Avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div></div>
+        </div>
+        <!-- c3 -->
+        <div class="fcol">
+          <div class="field"><span class="label">Kommune <small>Trykk for å bytte</small></span><button class="selectbox" onClick="{{nextKom}}" aria-label="Velg kommune, valgt {{kom}}"><i class="i i-pin s18" style="color: #5F6983"></i><span class="v">{{kom}}</span><i class="i i-down s18"></i></button></div>
+          <div class="field"><span class="label">Dager <small>{{dayCount}}</small></span><div class="dayrow">
+            <sc-for list="{{days}}" as="d" hint-placeholder-count="7"><button class="{{d.cls}}" onClick="{{d.tog}}" aria-pressed="{{d.pressed}}" style="font-size: 12px; padding: 0">{{d.l}}</button></sc-for>
+          </div></div>
+          <div class="field"><span class="label">Tidspunkt <small>Segmentert</small></span><div class="seg">
+            <sc-for list="{{segs}}" as="s" hint-placeholder-count="3"><button class="{{s.cls}}" onClick="{{s.pick}}">{{s.l}}</button></sc-for>
+          </div></div>
+        </div>
+        <!-- c4 -->
+        <div class="fcol">
+          <div class="field"><label class="label" for="k-km">Rekkevidde <small style="font: 700 14px var(--fd); color: #0A1740">{{km}} km</small></label>
+            <input id="k-km" type="range" class="range" min="1" max="50" value="{{km}}" onChange="{{onKm}}" style="height: 6px; margin: 11px 0; {{rangeSt}}">
+            <div class="meta" style="display: flex; justify-content: space-between"><span>1 km</span><span>50 km</span></div>
+          </div>
+          <div class="field"><span class="label">Valg <small>Bryter · avkrysning · radio</small></span>
+            <div class="stack" style="gap: 6px">
+              <button class="orow" role="switch" aria-checked="{{notifyA}}" onClick="{{togNotify}}" style="justify-content: space-between"><span>Varsle meg om nye oppdrag</span><span class="{{notifyCls}}" style="display: block"></span></button>
+              <button class="orow" role="checkbox" aria-checked="{{termsA}}" onClick="{{togTerms}}"><span class="{{termsCls}}"><i class="i i-check s16"></i></span><span>Jeg godtar vilkårene</span></button>
+              <div class="orow" role="radiogroup" aria-label="Type annonse" style="cursor: default; gap: 14px">
+                <sc-for list="{{kinds}}" as="r" hint-placeholder-count="2"><button class="orow" role="radio" aria-checked="{{r.checked}}" onClick="{{r.pick}}" style="width: auto; flex: 1"><span class="{{r.radCls}}"></span>{{r.l}}</button></sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- c5 -->
+        <div class="fcol">
+          <div class="field"><span class="label">Bilder <small>{{photoCount}} av 3 · trykk for å fjerne</small></span>
+            <div style="display: flex; gap: 8px">
+              <sc-for list="{{photos}}" as="p" hint-placeholder-count="2"><button class="{{p.cls}}" onClick="{{p.rm}}" aria-label="Fjern bilde {{p.n}}" style="width: 72px; height: 72px; border-radius: 16px; border: 0; padding: 0; cursor: pointer; animation: scaleIn .4s var(--spring) both"><i class="{{p.icon}}"></i></button></sc-for>
+              <sc-if value="{{canAddPhoto}}" hint-placeholder-val="{{ true }}"><button class="photo-add" onClick="{{addPhoto}}" style="width: 72px; height: 72px; gap: 2px; align-content: center"><i class="i i-camera s22"></i>Legg til</button></sc-if>
+            </div>
+          </div>
+          <div class="field"><label class="label" for="k-tag">Ferdigheter <small>Enter eller Legg til</small></label>
+            <div class="inwrap"><input id="k-tag" class="input" style="height: 48px; padding-right: 96px; border-radius: 15px; font-size: 15px" placeholder="F.eks. Raking" value="{{tagText}}" onChange="{{onTag}}" onKeyDown="{{onTagKey}}"><button class="btn btn-ink" style="position: absolute; right: 5px; height: 38px; padding: 0 12px; font-size: 13px" onClick="{{addTag}}">Legg til</button></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{tags}}" as="t" hint-placeholder-count="2"><button class="tagc" onClick="{{t.rm}}" aria-label="Fjern {{t.l}}">{{t.l}}<i class="i i-x s14"></i></button></sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BAND 4 -->
+  <div class="band" style="height: 568px">
+    <div class="col" style="width: 544px">
+      <section class="cd au d6" style="height: 232px">
+        <div class="ch"><span class="no">06</span><h2>Topplinjer</h2><span class="cs">Statuslinjen holdes fri · 56 px topp i appen</span></div>
+        <div class="tbrow">
+          <div class="tbf">
+            <div class="mesh" style="height: 64px"></div>
+            <div class="topbar" style="padding: 10px 12px">
+              <a href="Oppdrag.dc.html" class="brand" aria-label="MinNabo, til forsiden"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</a>
+              <div class="tb-r">
+                <a href="Varsler.dc.html" class="iconbtn" aria-label="Varsler, 2 uleste"><i class="i i-bell"></i><span class="dot"></span></a>
+                <a href="Profil.dc.html" class="avbtn" aria-label="Åpne profil"><span class="av av-me">MH</span></a>
+              </div>
+            </div>
+          </div>
+          <div class="tbl"><b>Hovedskjerm</b><span>Logo, varsler og profil</span></div>
+        </div>
+        <div class="tbrow" style="margin-top: 12px">
+          <div class="tbf">
+            <div class="subbar" style="padding: 10px 10px">
+              <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+              <div class="title">Mine avtaler</div>
+              <a href="MineAvtaler.dc.html" class="iconbtn" aria-label="Flere valg"><i class="i i-more"></i></a>
+            </div>
+          </div>
+          <div class="tbl"><b>Underside</b><span>Tilbake, tittel og handling</span></div>
+        </div>
+      </section>
+
+      <section class="cd au d7" style="height: 118px">
+        <div class="ch"><span class="no">07</span><h2>Seksjonsoverskrift</h2><span class="cs">Ikonbrikke · tittel · undertittel · lenke</span></div>
+        <div class="sh" style="margin: 0; padding: 0; align-items: center">
+          <div class="t">
+            <span class="ti" style="background: #EDF8D6; color: #3B7300"><i class="i i-clip s18"></i></span>
+            <div><h2>Folk som trenger hjelp</h2><div class="sub">Småjobber du kan ta i nærheten</div></div>
+          </div>
+          <a href="SeAlle.dc.html" class="link">Se alle<i class="i i-arrow"></i></a>
+        </div>
+      </section>
+
+      <section class="cd au d8" style="height: 186px">
+        <div class="ch"><span class="no">08</span><h2>Skjeletter</h2><span class="cs">Shimmer 1,4 s · samme form som innholdet</span></div>
+        <div style="display: flex; gap: 16px" aria-hidden="true">
+          <div class="lcard" style="width: 300px; height: 118px; padding: 11px; box-shadow: none; border: 1px solid #E4E8EE; flex: none">
+            <div class="sk" style="width: 88px; height: 94px; border-radius: 15px; flex: none"></div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; padding-top: 2px">
+              <div class="sk" style="width: 96px; height: 18px; border-radius: 9px"></div>
+              <div class="sk" style="width: 150px; height: 13px"></div>
+              <div class="sk" style="width: 120px; height: 10px"></div>
+              <div class="sk" style="width: 100px; height: 10px"></div>
+              <div class="sk" style="width: 64px; height: 15px; margin-top: auto"></div>
+            </div>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; gap: 8px"><div class="sk" style="width: 88px; height: 36px; border-radius: 18px"></div><div class="sk" style="width: 88px; height: 36px; border-radius: 18px"></div></div>
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div class="sk" style="width: 36px; height: 36px; border-radius: 50%; flex: none"></div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 6px"><div class="sk" style="height: 12px; width: 100%"></div><div class="sk" style="height: 10px; width: 70%"></div></div>
+            </div>
+            <span class="cap">Vises til innholdet er hentet</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="col" style="width: 800px">
+      <section class="cd au d6" style="height: 360px">
+        <div class="ch"><span class="no">09</span><h2>Listing-kort</h2><span class="cs">Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+          <div>
+            <div class="lcard">
+              <a href="Oppdragsdetaljer.dc.html">
+                <div class="lthumb art art-hage"><i class="i i-hage"></i></div>
+                <div class="lbody">
+                  <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div>
+                  <p class="ltitle">Klippe plen og rake løv</p>
+                  <div class="lmeta"><b>Kari Holm</b><span class="stars"><i class="i i-star"></i>4,9</span></div>
+                  <div class="lmeta"><i class="i i-pin"></i>Nordre Ål · 1,2 km</div>
+                  <div class="lmeta"><i class="i i-clock"></i>Lør 3. okt · ca. 2 t</div>
+                  <div class="lprice"><span class="l">Budsjett</span><span class="v">400 kr</span></div>
+                </div>
+              </a>
+              <button class="{{needSaveCls}}" onClick="{{saveNeed}}" aria-label="{{needSaveLbl}}"><i class="{{needHeart}}"></i></button>
+            </div>
+            <div class="ann">
+              <div class="ar"><span class="k">Merke</span><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div>
+              <div class="ar"><span class="k">Begrep</span><b>Oppdrag · «jeg trenger hjelp»</b></div>
+              <div class="ar"><span class="k">Knapper</span><a href="Oppdragsdetaljer.dc.html" class="btn btn-lime bxs">Gi tilbud</a><a href="Chat.dc.html" class="btn btn-ghost bxs">Send melding</a></div>
+              <div class="ar"><span class="k">Pris</span><b>Budsjett · eller «Ønsker tilbud»</b></div>
+            </div>
+          </div>
+          <div>
+            <div class="lcard">
+              <a href="Oppdragsdetaljer.dc.html">
+                <div class="lthumb art art-montering"><i class="i i-montering"></i></div>
+                <div class="lbody">
+                  <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span><span class="pill pill-neutral"><i class="i i-repeat s14"></i>Gjentakende</span></div>
+                  <p class="ltitle">Montere garderobeskap</p>
+                  <div class="lmeta"><b>Thea Lund</b><span class="stars"><i class="i i-star"></i>5,0</span></div>
+                  <div class="lmeta"><i class="i i-pin"></i>Søre Ål · 3,1 km</div>
+                  <div class="lmeta"><i class="i i-clock"></i>Denne uka · fleksibel</div>
+                  <div class="lprice"><span class="l"></span><span class="v">Ønsker tilbud</span></div>
+                </div>
+              </a>
+              <button class="{{offerSaveCls}}" onClick="{{saveOffer}}" aria-label="{{offerSaveLbl}}"><i class="{{offerHeart}}"></i></button>
+            </div>
+            <div class="ann">
+              <div class="ar"><span class="k">Variant</span><b>Uten budsjett · ekstra merke</b></div>
+              <div class="ar"><span class="k">Merker</span><span class="pill pill-neutral"><i class="i i-users s14"></i>Dugnad</span><span class="pill pill-neutral"><i class="i i-repeat s14"></i>Gjentakende</span></div>
+              <div class="ar"><span class="k">Lagre</span><b>Hjerte · toast «Lagret i Lagrede»</b></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cd au d7" style="height: 192px; padding-top: 13px; padding-bottom: 13px">
+        <div class="ch"><span class="no">10</span><h2>Kategori-chips</h2><span class="cs">Enkeltvalg · valgt: <b style="color: #0A1740">{{catLabel}}</b></span></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px 8px" role="radiogroup" aria-label="Kategorier">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="11">
+            <button class="{{c.cls}}" onClick="{{c.pick}}" role="radio" aria-checked="{{c.pressed}}"><span class="{{c.ciCls}}"><i class="{{c.icon}}"></i></span>{{c.label}}</button>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- BAND 5 -->
+  <div class="band" style="height: 430px">
+    <div class="col" style="width: 460px">
+      <section class="cd au d8" style="height: 236px">
+        <div class="ch"><span class="no">11</span><h2>Avatarer</h2><span class="cs">Initialer · cyan ring · pålogget-prikk</span></div>
+        <div style="display: flex; align-items: flex-end; gap: 12px">
+          <div class="avc"><span class="av av-b s28">JL</span><span class="cap">28</span></div>
+          <div class="avc"><span class="av av-a">SN</span><span class="cap">40</span></div>
+          <div class="avc"><span class="av av-c s48">EM</span><span class="cap">48</span></div>
+          <div class="avc"><span class="av av-g s64">AS</span><span class="cap">64</span></div>
+          <div class="avc"><span class="av av-me s88">MH</span><span class="cap">88</span></div>
+          <div class="avc" style="margin-left: auto">
+            <div style="display: flex; padding-left: 8px">
+              <span class="av av-b s28 plain" style="box-shadow: 0 0 0 2px #fff; margin-left: -8px">JL</span>
+              <span class="av av-a s28 plain" style="box-shadow: 0 0 0 2px #fff; margin-left: -8px">SN</span>
+              <span class="av av-c s28 plain" style="box-shadow: 0 0 0 2px #fff; margin-left: -8px">EM</span>
+              <span class="av s28 plain" style="box-shadow: 0 0 0 2px #fff; margin-left: -8px; background: #EAEDF2; color: #34405F; font-size: 10px">+4</span>
+            </div>
+            <span class="cap">Stabel</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-end; gap: 16px; margin-top: 12px">
+          <div class="avc" style="align-items: flex-start">
+            <div style="display: flex; gap: 6px">
+              <span class="av av-a s32 plain">SN</span><span class="av av-b s32 plain">JL</span><span class="av av-c s32 plain">KH</span><span class="av av-d s32 plain">HB</span><span class="av av-e s32 plain">LB</span><span class="av av-f s32 plain">OD</span><span class="av av-g s32 plain">TL</span><span class="av av-me s32 plain">MH</span>
+            </div>
+            <span class="cap">Fallback-farger a–g + deg (ink)</span>
+          </div>
+          <div class="avc"><span class="av av-b s32">JL<span class="on-dot"></span></span><span class="cap">Pålogget</span></div>
+        </div>
+      </section>
+
+      <section class="cd au d9" style="height: 178px">
+        <div class="ch"><span class="no">12</span><h2>Bunnmeny</h2><span class="cs">Flytende · Legg ut åpner alltid valget</span></div>
+        <div class="navstrip">
+          <nav class="nav" aria-label="Hovedmeny (eksempel)" style="bottom: 6px">
+            <a href="Oppdrag.dc.html" class="on" aria-current="page"><span class="ni"><i class="i i-clip"></i></span>Oppdrag</a>
+            <a href="Fellesskap.dc.html"><span class="ni"><i class="i i-users"></i></span>Fellesskap</a>
+            <a href="LeggUt.dc.html" class="fabw" aria-label="Legg ut"><span class="fab"><i class="i i-plus"></i></span>Legg ut</a>
+            <a href="Innboks.dc.html" aria-label="Innboks, 3 uleste"><span class="ni"><i class="i i-msg"></i><b class="count">3</b></span>Innboks</a>
+            <a href="Meny.dc.html"><span class="ni"><i class="i i-menu"></i></span>Meny</a>
+          </nav>
+        </div>
+      </section>
+    </div>
+
+    <section class="cd au d8" style="width: 460px">
+      <div class="ch"><span class="no">13</span><h2>Ark / Dialog / Toast</h2><span class="cs">Prøv live-demoen i feltet</span></div>
+      <div class="stage">
+        <div class="mesh" style="height: 196px"></div>
+        <div style="position: absolute; left: 14px; right: 14px; top: 12px; display: flex; align-items: center; gap: 8px">
+          <span class="eyebrow" style="flex: 1; font-size: 11px">Ark · statisk</span>
+          <button class="btn btn-ink" style="height: 36px; padding: 0 14px; font-size: 13.5px" onClick="{{openSheet}}"><i class="i i-up s16"></i>Åpne ark</button>
+          <button class="btn btn-ghost" style="height: 36px; padding: 0 14px; font-size: 13.5px" onClick="{{showToast}}"><i class="i i-bell s16"></i>Vis toast</button>
+        </div>
+        <div class="fx" style="top: 60px; width: 180px"></div>
+        <div class="sheet" style="animation: none; padding: 8px 16px 14px; border-radius: 24px 24px 0 0; z-index: 2">
+          <div class="grab" style="margin-bottom: 10px"></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px"><b class="h4">Rekkevidde</b><span class="meta">Lillehammer</span></div>
+          <div class="seg">
+            <sc-for list="{{reachBtns}}" as="r" hint-placeholder-count="3"><button class="{{r.cls}}" onClick="{{r.pick}}">{{r.l}}</button></sc-for>
+          </div>
+        </div>
+        <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+          <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+          <div class="sheet" role="dialog" aria-label="Velg rekkevidde" style="padding: 10px 16px 16px">
+            <div class="grab"></div>
+            <div class="sheet-h" style="margin-bottom: 12px"><h3 class="h3">Velg rekkevidde</h3><button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button></div>
+            <div class="seg">
+              <sc-for list="{{reachLive}}" as="r" hint-placeholder-count="3"><button class="{{r.cls}}" onClick="{{r.pick}}">{{r.l}}</button></sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+          <div class="toast" role="status" style="bottom: 12px; left: 12px; right: 12px">
+            <span class="ti"><i class="i i-check s16"></i></span><span>{{toast}}</span>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px">
+        <div role="dialog" aria-label="Eksempel på dialog" style="background: #fff; border-radius: 24px; padding: 14px 12px; box-shadow: var(--sh-l); border: 1px solid rgba(10,23,64,.05); display: flex; flex-direction: column; align-items: center; text-align: center">
+          <span class="icirc" style="width: 34px; height: 34px; background: #FDEBE9; color: #C23029"><i class="i i-trash s18"></i></span>
+          <b style="font: 700 15px/19px var(--fb); margin-top: 8px">Slette annonsen?</b>
+          <span class="meta" style="margin-top: 3px">Dette kan ikke angres.</span>
+          <div style="display: flex; gap: 6px; margin-top: 10px">
+            <button class="btn btn-soft" style="height: 32px; padding: 0 12px; font-size: 13px">Avbryt</button>
+            <button class="btn btn-danger" style="height: 32px; padding: 0 12px; font-size: 13px">Slett</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span class="eyebrow" style="font-size: 11px">Toast · statisk</span>
+          <div class="toast" style="position: relative; left: auto; right: auto; bottom: auto; animation: none; padding: 11px 12px; font-size: 13px; gap: 10px">
+            <span class="ti"><i class="i i-check s16"></i></span><span>Tilbudet er sendt</span>
+          </div>
+          <div class="toast" style="position: relative; left: auto; right: auto; bottom: auto; animation: none; padding: 11px 8px 11px 12px; font-size: 13px; gap: 10px">
+            <span class="ti"><i class="i i-heartf s14"></i></span><span>Lagret</span><button class="ta" style="font-size: 13px">Angre</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cd au d9" style="width: 408px">
+      <div class="ch"><span class="no">14</span><h2>Chat</h2><span class="cs">MinNabo håndterer ikke betaling</span></div>
+      <div class="chatp">
+        <div class="stack" style="align-self: flex-start; max-width: 78%"><div class="bub bub-in" style="max-width: none">Hei Mari! Jeg har malt flere gjerder i sommer.</div><span class="btime">Jonas · 18:02</span></div>
+        <div class="stack" style="align-self: flex-end; align-items: flex-end; max-width: 78%"><div class="bub bub-out" style="max-width: none">Så fint! Send gjerne et tilbud.</div><span class="btime">18:04<i class="i i-checks s14" style="color: #19B8EE"></i></span></div>
+        <span class="sys" style="padding: 6px 12px"><i class="{{sysIcon}}"></i>{{sysText}}</span>
+        <div class="ofc">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span class="eyebrow" style="font-size: 11px">Tilbud fra Jonas</span><span class="{{ofPillCls}}">{{ofPill}}</span></div>
+          <span class="num" style="font-size: 22px; line-height: 24px; margin-top: 4px">1 400 kr</span>
+          <span class="meta" style="margin-top: 2px">Lør 10. okt kl. 10:00 · ca. 5 t</span>
+          <div style="display: flex; gap: 6px; margin-top: 8px">
+            <sc-if value="{{ofPending}}" hint-placeholder-val="{{ true }}">
+              <button class="btn btn-lime bxm" onClick="{{accept}}"><i class="i i-check s16"></i>Godta</button>
+              <button class="btn btn-ghost bxm" onClick="{{decline}}">Avslå</button>
+            </sc-if>
+            <sc-if value="{{ofAccepted}}" hint-placeholder-val="{{ false }}">
+              <a href="Avtale.dc.html" class="btn btn-ink bxm as">Se avtalen<i class="i i-arrow s16"></i></a>
+            </sc-if>
+            <sc-if value="{{ofDeclined}}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-soft bxm as" onClick="{{undoOffer}}"><i class="i i-undo s16"></i>Angre</button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BAND 6 -->
+  <div class="band" style="height: 280px; margin-bottom: 0">
+    <section class="cd au d9" style="width: 402px">
+      <div class="ch"><span class="no">15</span><h2>Veiviser</h2><span class="cs">Fremdrift · steg · fast bunnfelt</span></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><b style="font: 700 13px/16px var(--fb)">Steg {{step}} av 4</b><span class="meta">{{stepName}}</span></div>
+      <div class="prog" style="margin-top: 8px"><i style="display: block; {{progSt}}"></i></div>
+      <div class="steps" style="margin-top: 14px">
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="4"><i class="{{s.cls}}"></i></sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 6px">
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="4"><span class="cap" style="{{s.st}}">{{s.l}}</span></sc-for>
+      </div>
+      <div class="foot" style="position: relative; margin-top: auto; padding: 12px; border-radius: 20px; border: 1px solid #EEF1F4; box-shadow: var(--sh)">
+        <div class="note"><i class="i i-info"></i><span>Utkastet lagres automatisk underveis.</span></div>
+        <div class="fr">
+          <button class="{{backCls}}" onClick="{{stepBack}}" aria-disabled="{{backDis}}"><i class="i i-back s18"></i>Tilbake</button>
+          <sc-if value="{{notLast}}" hint-placeholder-val="{{ true }}"><button class="btn btn-lime" style="flex: 1" onClick="{{stepNext}}">Neste<i class="i i-arrow s18"></i></button></sc-if>
+          <sc-if value="{{isLast}}" hint-placeholder-val="{{ false }}"><a href="Forhandsvisning.dc.html" class="btn btn-lime as" style="flex: 1">Forhåndsvis<i class="i i-eye s18"></i></a></sc-if>
+        </div>
+      </div>
+    </section>
+
+    <section class="cd au d10" style="width: 942px">
+      <div class="ch"><span class="no">16</span><h2>Ikoner</h2><span class="cs">82 grunnikoner + 11 kategorier · 24-rutenett, 2 px strek · klasse «i i-navn»</span></div>
+      <div class="icg">
+        <sc-for list="{{icons}}" as="ic" hint-placeholder-count="93">
+          <div class="icc" title="{{ic.name}}"><i class="{{ic.cls}}" style="flex: none; {{ic.st}}"></i><span>{{ic.name}}</span></div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2400}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      live: 'idle', cat: 'hage',
+      title: '', place: 'Nordre Ål', tel: '12 34 5',
+      desc: 'Plenen er ca. 300 m². Løvet rakes i sekker som står i garasjen. Gressklipper finnes.',
+      amt: '1500', kom: 0, days: [false, false, false, false, false, true, true], seg: 1, km: 10,
+      notify: true, terms: false, kind: 'need',
+      photos: ['hage', 'maling'], tags: ['Plenklipping', 'Hekkklipp'], tagText: '',
+      savedNeed: false, savedOffer: true,
+      sheetOpen: false, reach: 0, toast: null,
+      offer: 'pending', step: 2
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.t1); clearTimeout(this.t2); clearTimeout(this.tt); }
+  flash(msg) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  runLive() {
+    if (this.state.live !== 'idle') return;
+    this.setState({ live: 'loading' });
+    this.t1 = setTimeout(() => {
+      this.setState({ live: 'done' });
+      this.t2 = setTimeout(() => this.setState({ live: 'idle' }), 1600);
+    }, 1300);
+  }
+  addTag() {
+    const v = this.state.tagText.trim();
+    if (!v) return;
+    const tags = this.state.tags;
+    const dup = tags.some((t) => t.toLowerCase() === v.toLowerCase());
+    if (dup || tags.length >= 5) { this.setState({ tagText: '' }); return; }
+    this.setState({ tags: tags.concat([v.charAt(0).toUpperCase() + v.slice(1)]), tagText: '' });
+  }
+  renderVals() {
+    const S = this.state;
+    const SW = [
+      ['ink', '#0A1740'], ['ink2', '#34405F'], ['mute', '#5F6983'], ['bg', '#F3F5F1'],
+      ['surface', '#FFFFFF'], ['lime', '#B8EE3C'], ['lime-d', '#3B7300'], ['lime-t', '#EDF8D6'],
+      ['cyan', '#19B8EE'], ['cyan2', '#0A74B4'], ['cyan-d', '#065C8F'], ['cyan-t', '#DFF2FB'],
+      ['star', '#F0A500'], ['danger', '#C23029'], ['ok', '#2B8F4E'], ['warn', '#9A5B00']
+    ];
+    const CATS = [
+      ['hage', 'Hage'], ['rengjoring', 'Rengjøring'], ['flytting', 'Flytting/bæring'], ['transport', 'Transport/levering'],
+      ['montering', 'Montering'], ['snomaking', 'Snømåking'], ['maling', 'Maling/vedlikehold'], ['dyrepass', 'Dyrepass'],
+      ['data', 'Datahjelp'], ['arrangement', 'Arrangementshjelp'], ['annet', 'Annet']
+    ];
+    const cur = CATS.filter((c) => c[0] === S.cat)[0];
+    const cats = CATS.map(([id, label]) => ({
+      label,
+      cls: 'chip' + (S.cat === id ? ' on' : ''),
+      ciCls: 'ci art art-' + id,
+      icon: 'i i-' + id,
+      pressed: S.cat === id ? 'true' : 'false',
+      pick: () => this.setState({ cat: id })
+    }));
+    const digits = S.tel.replace(/\D/g, '');
+    const telOk = digits.length === 8;
+    const KOM = ['Lillehammer', 'Øyer', 'Gausdal', 'Ringsaker', 'Hamar', 'Gjøvik'];
+    const DAYS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+    const nDays = S.days.filter(Boolean).length;
+    const SEGS = ['Morgen', 'Dag', 'Kveld'];
+    const pct = Math.round(((S.km - 1) / 49) * 100);
+    const REACH = ['Min kommune', 'Nabokommuner', 'Innlandet'];
+    const PHOTO_ALL = ['hage', 'maling', 'montering', 'flytting'];
+    const GEN = 'clip users plus minus msg menu bell search pin clock heart heartf star staro back right left down up arrow arrowur x check checks sliders shield verified cal send clipper image camera more share locate nav user gear lock flag ban trash edit bookmark tag brief info alert wifioff refresh play pause home phone mail building file download eye sun zap repeat smile thumb pinned gift map logout chart archive list award hand key globe mic undo moon sparkle copy reply hourglass'.split(' ');
+    const CC = { hage: '#3A7010', rengjoring: '#0B6FA3', flytting: '#8C5714', transport: '#4F40B5', montering: '#A5461F', snomaking: '#2E5A9A', maling: '#9E335E', dyrepass: '#7A5F00', data: '#136F5C', arrangement: '#7B359F', annet: '#46506A' };
+    const icons = GEN.map((n) => ({ cls: 'i i-' + n + ' s18', name: n, st: 'color: #0A1740' }))
+      .concat(Object.keys(CC).map((n) => ({ cls: 'i i-' + n + ' s18', name: n, st: 'color: ' + CC[n] })));
+    const STEPS = ['Kategori', 'Beskrivelse', 'Tid og sted', 'Pris'];
+    const OF = {
+      pending: { pill: 'Nytt tilbud', cls: 'pill pill-dark', sys: 'Jonas sendte et tilbud', icon: 'i i-sparkle s14' },
+      accepted: { pill: 'Tilbud godtatt', cls: 'pill pill-ok as', sys: 'Du godtok tilbudet · avtale opprettet', icon: 'i i-check s14' },
+      declined: { pill: 'Avslått', cls: 'pill pill-danger as', sys: 'Du avslo tilbudet', icon: 'i i-x s14' }
+    }[S.offer];
+    return {
+      swatches: SW.map(([name, hex]) => ({ name, hex, bg: 'background: ' + hex })),
+
+      liveIdle: S.live === 'idle', liveLoading: S.live === 'loading', liveDone: S.live === 'done',
+      liveGo: () => this.runLive(),
+
+      cats, catLabel: cur ? cur[1] : 'Ingen',
+
+      title: S.title, onTitle: (e) => this.setState({ title: e.target.value }),
+      place: S.place, onPlace: (e) => this.setState({ place: e.target.value }),
+      tel: S.tel, onTel: (e) => this.setState({ tel: e.target.value.replace(/[^\d ]/g, '').slice(0, 11) }),
+      telCls: 'input' + (telOk ? '' : ' err'), telBad: !telOk, telOk,
+      desc: S.desc, onDesc: (e) => this.setState({ desc: e.target.value.slice(0, 500) }),
+      descCount: S.desc.length + ' / 500',
+      amtFmt: S.amt.replace(/\B(?=(\d{3})+(?!\d))/g, ' '),
+      onAmt: (e) => this.setState({ amt: e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 6) }),
+      kom: KOM[S.kom], nextKom: () => this.setState({ kom: (S.kom + 1) % KOM.length }),
+      days: DAYS.map((l, i) => ({
+        l, cls: 'day' + (S.days[i] ? ' on' : ''), pressed: S.days[i] ? 'true' : 'false',
+        tog: () => { const d = S.days.slice(); d[i] = !d[i]; this.setState({ days: d }); }
+      })),
+      dayCount: nDays === 0 ? 'Ingen valgt' : nDays + ' valgt',
+      segs: SEGS.map((l, i) => ({ l, cls: i === S.seg ? 'on' : '', pick: () => this.setState({ seg: i }) })),
+      km: S.km, onKm: (e) => this.setState({ km: parseInt(e.target.value, 10) || 1 }),
+      rangeSt: '--p: ' + pct + '%',
+      notifyA: S.notify ? 'true' : 'false', notifyCls: 'tgl' + (S.notify ? ' on' : ''), togNotify: () => this.setState({ notify: !S.notify }),
+      termsA: S.terms ? 'true' : 'false', termsCls: 'chk' + (S.terms ? ' on' : ''), togTerms: () => this.setState({ terms: !S.terms }),
+      kinds: [['need', 'Budsjett'], ['offer', 'Ønsker tilbud']].map(([id, l]) => ({
+        l, checked: S.kind === id ? 'true' : 'false', radCls: 'rad' + (S.kind === id ? ' on' : ''),
+        pick: () => this.setState({ kind: id })
+      })),
+      photos: S.photos.map((c, i) => ({
+        n: i + 1, cls: 'art art-' + c, icon: 'i i-' + c,
+        rm: () => this.setState({ photos: S.photos.filter((x, j) => j !== i) })
+      })),
+      photoCount: S.photos.length,
+      canAddPhoto: S.photos.length < 3,
+      addPhoto: () => {
+        const next = PHOTO_ALL.filter((c) => S.photos.indexOf(c) === -1)[0];
+        if (next && S.photos.length < 3) this.setState({ photos: S.photos.concat([next]) });
+      },
+      tagText: S.tagText, onTag: (e) => this.setState({ tagText: e.target.value.slice(0, 24) }),
+      onTagKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.addTag(); } },
+      addTag: () => this.addTag(),
+      tags: S.tags.map((l) => ({ l, rm: () => this.setState({ tags: S.tags.filter((x) => x !== l) }) })),
+
+      needSaveCls: 'save' + (S.savedNeed ? ' on' : ''), needHeart: S.savedNeed ? 'i i-heartf s18' : 'i i-heart s18',
+      needSaveLbl: S.savedNeed ? 'Fjern fra lagrede' : 'Lagre', saveNeed: () => this.setState({ savedNeed: !S.savedNeed }),
+      offerSaveCls: 'save' + (S.savedOffer ? ' on' : ''), offerHeart: S.savedOffer ? 'i i-heartf s18' : 'i i-heart s18',
+      offerSaveLbl: S.savedOffer ? 'Fjern fra lagrede' : 'Lagre', saveOffer: () => this.setState({ savedOffer: !S.savedOffer }),
+
+      reachBtns: REACH.map((l, i) => ({ l, cls: i === S.reach ? 'on' : '', pick: () => this.setState({ reach: i }) })),
+      reachLive: REACH.map((l, i) => ({ l, cls: i === S.reach ? 'on' : '', pick: () => { this.setState({ reach: i, sheetOpen: false }); this.flash('Rekkevidde: ' + l); } })),
+      sheetOpen: S.sheetOpen,
+      openSheet: () => this.setState({ sheetOpen: true }),
+      closeSheet: () => this.setState({ sheetOpen: false }),
+      showToast: () => this.flash('Endringene er lagret'),
+      toast: S.toast,
+
+      sysText: OF.sys, sysIcon: OF.icon, ofPill: OF.pill, ofPillCls: OF.cls,
+      ofPending: S.offer === 'pending', ofAccepted: S.offer === 'accepted', ofDeclined: S.offer === 'declined',
+      accept: () => this.setState({ offer: 'accepted' }),
+      decline: () => this.setState({ offer: 'declined' }),
+      undoOffer: () => this.setState({ offer: 'pending' }),
+
+      step: S.step, stepName: STEPS[S.step - 1],
+      progSt: 'width: ' + (S.step * 25) + '%',
+      steps: STEPS.map((l, i) => ({ l, cls: i < S.step ? 'on' : '', st: i === S.step - 1 ? 'color: #0A1740' : 'color: #8A93A8' })),
+      backCls: 'btn btn-ghost' + (S.step === 1 ? ' disabled' : ''), backDis: S.step === 1 ? 'true' : 'false',
+      stepBack: () => { if (S.step > 1) this.setState({ step: S.step - 1 }); },
+      stepNext: () => { if (S.step < 4) this.setState({ step: S.step + 1 }); },
+      notLast: S.step < 4, isLast: S.step === 4,
+
+      icons
+    };
+  }
+}
+</script>
+</body>
+</html>

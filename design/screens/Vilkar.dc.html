@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Vilkår for bruk</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.vhead{position:absolute;top:0;left:0;right:0;z-index:10;background:rgba(243,245,241,.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--line2)}
+.vhead .subbar{padding-bottom:8px}
+.vsub{text-align:center;font:600 12px/1 var(--fb);color:var(--mute);height:18px;margin-top:-4px;padding-bottom:6px}
+.vprog{height:3px;background:transparent}
+.vprog i{display:block;height:100%;background:var(--grad);border-radius:0 3px 3px 0;transition:width .12s linear}
+.vscroll{top:122px;scroll-behavior:smooth;scroll-padding-top:14px}
+.toc{display:flex;flex-wrap:wrap;gap:8px}
+.toc a{height:36px;padding:0 13px;border-radius:999px;background:#fff;border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px;font:600 13px/1 var(--fb);color:var(--ink);text-decoration:none;transition:all .2s}
+.toc a b{font:800 11px/1 var(--fb);color:var(--mute)}
+.toc a.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.toc a.on b{color:var(--lime)}
+.doc h2{font:700 21px/1.2 var(--fd);letter-spacing:-.02em;margin:0 0 12px;display:flex;gap:10px;align-items:baseline}
+.doc h2 span{font:800 14px/1 var(--fb);color:var(--lime-d);background:var(--lime-t);border-radius:8px;padding:5px 7px}
+.doc section{padding:26px 0 8px;border-top:1px solid var(--line)}
+.doc p{font-size:15px;line-height:1.62;color:var(--ink2);margin:0 0 12px}
+.kort{display:flex;gap:10px;padding:14px;border-radius:18px;background:#fff;box-shadow:var(--sh);margin-bottom:14px;border-left:4px solid #9BDD2C}
+.kort b{display:block;font:800 11px/1 var(--fb);letter-spacing:.08em;text-transform:uppercase;color:var(--lime-d);margin-bottom:6px}
+.kort div{font-size:14.5px;line-height:1.5;color:var(--ink)}
+.jur{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;border:1.5px dashed #E0B35A;background:#FFF8EA;color:#9A5B00;font:700 12px/1.2 var(--fb);margin-bottom:6px}
+.totop{position:absolute;right:18px;bottom:28px;z-index:20;height:46px;padding:0 16px 0 12px;border-radius:999px;background:var(--ink);color:#fff;display:inline-flex;align-items:center;gap:6px;font:700 14px var(--fb);text-decoration:none;box-shadow:var(--sh-l)}
+.totop:hover{color:#fff}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="vhead">
+    <div class="subbar">
+      <a href="Innstillinger.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Vilkår for bruk</div>
+      <button class="iconbtn" onClick="{{download}}" aria-label="Last ned som PDF"><i class="i i-download s18"></i></button>
+    </div>
+    <div class="vsub">{{current}}</div>
+    <div class="vprog" role="progressbar" aria-label="Lesefremdrift" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pct}}"><i style="display: block; {{progStyle}}"></i></div>
+  </div>
+
+  <div class="scroll vscroll" onScroll="{{onScroll}}">
+    <div id="top" class="px doc" style="padding-top: 18px">
+      <div class="au stack" style="gap: 10px">
+        <span class="eyebrow">MinNabo</span>
+        <h1 class="h1">Vilkår for bruk</h1>
+        <span class="meta">Versjon [x.x] · gjelder fra [dato] · ca. 6 min å lese</span>
+        <div class="jur" style="align-self: flex-start"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </div>
+
+      <div class="card pad au d2" style="margin-top: 18px; background: var(--grad-soft); box-shadow: none">
+        <b style="font: 700 16px var(--fd)">Det viktigste på 20 sekunder</b>
+        <div class="stack" style="gap: 8px; margin-top: 10px; font-size: 14px; line-height: 1.45; color: #34405F">
+          <span style="display: flex; gap: 8px"><i class="i i-check s16" style="color: #3B7300; margin-top: 2px"></i>Du logger inn med Vipps, så vi vet at du er deg.</span>
+          <span style="display: flex; gap: 8px"><i class="i i-check s16" style="color: #3B7300; margin-top: 2px"></i>Avtaler inngås mellom dere, ikke med MinNabo.</span>
+          <span style="display: flex; gap: 8px"><i class="i i-check s16" style="color: #3B7300; margin-top: 2px"></i>MinNabo håndterer ikke betaling.</span>
+          <span style="display: flex; gap: 8px"><i class="i i-check s16" style="color: #3B7300; margin-top: 2px"></i>Vær ærlig, vær grei, og si fra hvis noe er galt.</span>
+        </div>
+      </div>
+
+      <div class="au d3" style="margin: 22px 0 8px">
+        <span class="eyebrow">Innhold</span>
+        <nav class="toc" aria-label="Innhold" style="margin-top: 12px">
+          <sc-for list="{{toc}}" as="t" hint-placeholder-count="9">
+            <a href="{{t.href}}" class="{{t.cls}}"><b>{{t.n}}</b>{{t.label}}</a>
+          </sc-for>
+        </nav>
+      </div>
+
+      <section id="s1" data-sec="1">
+        <h2><span>1</span>Om MinNabo</h2>
+        <div class="kort"><div><b>Kort fortalt</b>MinNabo kobler naboer som trenger hjelp med naboer som kan hjelpe. Vi er møteplassen – ikke arbeidsgiver.</div></div>
+        <p>MinNabo er en tjeneste for småjobber i nærmiljøet. Du kan legge ut et oppdrag når du trenger hjelp, og gi tilbud på oppdrag når du kan hjelpe andre. Tjenesten er foreløpig tilgjengelig i Innlandet.</p>
+        <p>MinNabo er ikke part i avtalene mellom brukerne, og er ikke arbeidsgiver eller oppdragsgiver for noen som utfører jobber gjennom tjenesten.</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s2" data-sec="2">
+        <h2><span>2</span>Konto og innlogging med Vipps</h2>
+        <div class="kort"><div><b>Kort fortalt</b>Én person, én konto. Du logger inn med Vipps, og navnet ditt hentes derfra.</div></div>
+        <p>For å bruke MinNabo må du logge inn med Vipps. Vi bruker Vipps kun til å bekrefte hvem du er – aldri til betaling. Navnet på profilen din hentes fra Vipps og kan ikke endres fritt.</p>
+        <p>Du er ansvarlig for det som skjer på kontoen din. Du må være minst [aldersgrense] år for å opprette konto.</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s3" data-sec="3">
+        <h2><span>3</span>Oppføringer</h2>
+        <div class="kort"><div><b>Kort fortalt</b>Beskriv jobben ærlig. Andre ser bare omtrentlig område, aldri adressen din.</div></div>
+        <p>Oppføringer er oppdrag – en jobb du trenger hjelp til. Oppføringen skal beskrive en reell jobb, med riktig kategori og omtrentlig sted.</p>
+        <p>Det er ikke lov å legge ut ulovlige tjenester, reklame, diskriminerende innhold eller oppføringer som ber om betaling på forhånd. Vi kan skjule eller fjerne oppføringer som bryter reglene.</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s4" data-sec="4">
+        <h2><span>4</span>Tilbud og avtaler</h2>
+        <div class="kort"><div><b>Kort fortalt</b>Når et tilbud godtas, blir det en avtale mellom dere to. Endringer gjør dere i chatten.</div></div>
+        <p>Et tilbud inneholder pris, tidspunkt og eventuelle forbehold. Når tilbudet godtas, lagrer MinNabo en oversikt over avtalen med tidspunkt, slik at dere begge har det samme utgangspunktet.</p>
+        <p>Avtalen er mellom dere som brukere. Må en avtale endres eller avlyses, gi beskjed så tidlig som mulig i chatten.</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s5" data-sec="5">
+        <h2><span>5</span>Betaling</h2>
+        <div class="kort"><div><b>Kort fortalt</b>MinNabo håndterer ikke betaling. Pris og betaling avtales direkte mellom dere.</div></div>
+        <p>Vi tar ikke imot, holder eller formidler penger. Hvordan og når det betales, avtaler dere selv. Vær forsiktig med å betale på forhånd til noen du ikke kjenner.</p>
+        <p>Hver bruker er selv ansvarlig for eventuelle plikter knyttet til skatt og rapportering av inntekt. [Henvisning til gjeldende regler]</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s6" data-sec="6">
+        <h2><span>6</span>Vurderinger</h2>
+        <div class="kort"><div><b>Kort fortalt</b>Etter en fullført jobb kan dere vurdere hverandre. Vurderinger skal være ærlige og handle om jobben.</div></div>
+        <p>En vurdering består av 1–5 stjerner, korte stikkord som «Punktlig» eller «Grundig», og en valgfri kommentar. Bare de som har hatt en avtale sammen, kan vurdere hverandre.</p>
+        <p>Det er ikke lov å kjøpe, bytte eller presse fram vurderinger. Vi kan fjerne vurderinger som er usanne, krenkende eller ikke handler om jobben.</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s7" data-sec="7">
+        <h2><span>7</span>Trygghet og rapportering</h2>
+        <div class="kort"><div><b>Kort fortalt</b>Si fra hvis noe virker galt. Vi ser på alle rapporter. Ved fare – ring 112.</div></div>
+        <p>Du kan rapportere brukere, oppføringer, meldinger og oppslag. Rapporter behandles av MinNabos moderatorer, og vi kan advare, skjule innhold eller stenge kontoer.</p>
+        <p>Du kan legge til trygge kontakter som får beskjed når du skal på en jobb. Er noen i akutt fare, kontakt nødetatene direkte.</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s8" data-sec="8">
+        <h2><span>8</span>Personvern</h2>
+        <div class="kort"><div><b>Kort fortalt</b>Vi bruker opplysningene dine bare for at tjenesten skal virke. Du kan laste ned eller slette dem.</div></div>
+        <p>Hvordan vi behandler personopplysninger, står i personvernerklæringen. Der kan du også laste ned dataene dine og endre samtykker.</p>
+        <p><a href="Personvern.dc.html" style="font-weight: 700">Les personvernerklæringen</a></p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <section id="s9" data-sec="9">
+        <h2><span>9</span>Endringer</h2>
+        <div class="kort"><div><b>Kort fortalt</b>Hvis vilkårene endres, sier vi fra i appen før endringene gjelder.</div></div>
+        <p>Vi kan oppdatere vilkårene når tjenesten endres eller regelverket krever det. Større endringer varsles i appen minst [antall] dager før de trer i kraft, med nytt versjonsnummer og dato.</p>
+        <p>Spørsmål om vilkårene? Kontakt oss på [e-postadresse].</p>
+        <div class="jur"><i class="i i-edit s14"></i>[Endelig juridisk tekst settes inn av jurist]</div>
+      </section>
+
+      <div class="dash-card" style="margin-top: 20px; padding: 18px; display: flex; gap: 12px; align-items: center; background: #ffffff">
+        <span class="icirc" style="width: 40px; height: 40px; background: #E3F5E8; color: #2B8F4E"><i class="i i-checks s18"></i></span>
+        <span style="flex: 1; font-size: 14px; line-height: 1.4; color: #34405F">Du godtok vilkårene <b style="color: #0A1740">12. mars 2024</b> da du opprettet kontoen. Nye versjoner varsles i appen.</span>
+      </div>
+      <div style="height: 110px"></div>
+    </div>
+  </div>
+
+  <sc-if value="{{showTop}}" hint-placeholder-val="{{ false }}">
+    <a href="#top" class="totop as" aria-label="Til toppen"><i class="i i-up s18"></i>Til toppen</a>
+  </sc-if>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 86px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { pct: 0, sec: 0, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  onScroll(e) {
+    const el = e.currentTarget || e.target;
+    const max = el.scrollHeight - el.clientHeight;
+    const pct = max > 0 ? Math.round(Math.min(100, Math.max(0, el.scrollTop / max * 100))) : 0;
+    let sec = 0;
+    const secs = el.querySelectorAll('[data-sec]');
+    for (let i = 0; i < secs.length; i++) {
+      if (secs[i].offsetTop - 80 <= el.scrollTop) sec = parseInt(secs[i].getAttribute('data-sec'), 10);
+    }
+    if (pct !== this.state.pct || sec !== this.state.sec) this.setState({ pct, sec });
+  }
+  renderVals() {
+    const S = this.state;
+    const TOC = ['Om MinNabo', 'Konto og innlogging med Vipps', 'Oppføringer', 'Tilbud og avtaler', 'Betaling', 'Vurderinger', 'Trygghet og rapportering', 'Personvern', 'Endringer'];
+    return {
+      toc: TOC.map((label, i) => ({ label, n: i + 1, href: '#s' + (i + 1), cls: S.sec === i + 1 ? 'on' : '' })),
+      onScroll: (e) => this.onScroll(e),
+      pct: S.pct,
+      progStyle: 'width: ' + S.pct + '%',
+      current: S.sec ? S.sec + ' · ' + TOC[S.sec - 1] + ' · ' + S.pct + ' %' : 'Versjon [x.x]',
+      showTop: S.pct > 12,
+      download: () => this.flash('PDF-en lastes ned', 'i i-download s14'),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

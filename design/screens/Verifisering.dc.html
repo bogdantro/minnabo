@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Verifisering</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.trust{position:relative;overflow:hidden;border-radius:30px;background:var(--ink);color:#fff;padding:22px 20px 20px}
+.trust .glow{position:absolute;right:-60px;top:-70px;width:220px;height:220px;border-radius:50%;background:var(--grad);opacity:.38}
+.lvl{display:flex;gap:6px;margin-top:16px}
+.lvl i{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.16);position:relative;overflow:hidden}
+.lvl i.on::after{content:"";position:absolute;inset:0;background:var(--grad);animation:growW .9s var(--ease) both}
+.lvl i:nth-child(2).on::after{animation-delay:.15s}.lvl i:nth-child(3).on::after{animation-delay:.3s}
+.vrow{background:#fff;border-radius:22px;box-shadow:var(--sh);overflow:hidden}
+.vhead{display:flex;align-items:center;gap:14px;padding:14px 14px 14px 16px;width:100%;background:none;border:0;cursor:pointer;text-align:left;font:inherit;color:inherit;min-height:68px}
+.vhead .icirc{width:44px;height:44px;border-radius:14px}
+.vhead b{display:block;font:700 15.5px/1.25 var(--fb)}
+.vhead small{display:block;font-size:12.5px;color:var(--mute);margin-top:3px}
+.chev{transition:transform .3s var(--ease);color:var(--faint)}
+.chev.up{transform:rotate(180deg)}
+.vbody{padding:0 16px 16px 74px;display:flex;flex-direction:column;gap:8px}
+.vbody .li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--ink2)}
+.vbody .li .i{width:16px;height:16px;margin-top:2px;flex:none}
+.how{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line2)}
+.how:last-child{border-bottom:0}
+.how .icirc{width:34px;height:34px;background:#F3F5F1}
+.how span{font-size:14px;line-height:1.45}
+.tip{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;border-radius:16px;text-decoration:none;color:inherit;background:none;border:0;width:100%;font:inherit;text-align:left}
+.tip .chk{pointer-events:none}
+.tip.todo{background:#F7F8FA}
+.tip.done b{color:var(--mute);text-decoration:line-through;text-decoration-color:#C3C9D4}
+.ring{transform:rotate(-90deg)}
+.ring circle.p{transition:stroke-dashoffset 1s var(--ease)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+    <div class="subbar">
+      <a href="Meny.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Vurderinger og verifisering</div>
+      <span></span>
+    </div>
+
+    <!-- trust header -->
+    <div class="px au" style="position: relative; padding-top: 6px">
+      <div class="trust">
+        <div class="glow"></div>
+        <div style="position: relative; display: flex; align-items: center; gap: 16px">
+          <div class="as d2" style="position: relative; width: 66px; height: 66px; flex: none">
+            <span class="icirc pulse" style="position: absolute; inset: 0; background: rgba(184,238,60,.18)"></span>
+            <span class="icirc" style="position: absolute; inset: 7px; background: #B8EE3C; color: #0A1740"><i class="i i-shield s28"></i></span>
+          </div>
+          <div>
+            <span class="eyebrow" style="color: rgba(255,255,255,.6)">Mari Haugen</span>
+            <h1 class="h2" style="color: #ffffff; margin-top: 6px">Du er verifisert</h1>
+            <span style="font-size: 13.5px; color: rgba(255,255,255,.78)">Fullt verifisert med Vipps</span>
+          </div>
+        </div>
+        <div class="lvl" aria-label="Verifisert: Vipps-ID, telefon og e-post"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div style="position: relative; display: flex; justify-content: space-between; margin-top: 8px; font: 600 11px/1 var(--fb); color: rgba(255,255,255,.55)"><span>Vipps-ID</span><span>Telefon</span><span>E-post</span></div>
+      </div>
+    </div>
+
+    <div class="sh"><div class="t"><span class="ti" style="background: #DFF2FB; color: #065C8F"><i class="i i-verified s18"></i></span><div><h2>Verifiseringer</h2><div class="sub">Trykk for å se hva som ble sjekket</div></div></div></div>
+
+    <div class="px stack" style="gap: 10px">
+      <sc-for list="{{verifs}}" as="v" hint-placeholder-count="5">
+        <div class="vrow au">
+          <button class="vhead" onClick="{{v.toggle}}" aria-expanded="{{v.exp}}">
+            <span class="icirc" style="background: {{v.bg}}; color: {{v.fg}}"><i class="{{v.icon}}"></i></span>
+            <span style="flex: 1; min-width: 0"><b>{{v.title}}</b><small>{{v.sub}}</small></span>
+            <span class="{{v.pillCls}}">{{v.pill}}</span>
+            <i class="{{v.chev}}"></i>
+          </button>
+          <sc-if value="{{v.open}}" hint-placeholder-val="{{ false }}">
+            <div class="vbody au">
+              <span class="eyebrow" style="font-size: 11px">Hva ble sjekket?</span>
+              <sc-for list="{{v.lines}}" as="l" hint-placeholder-count="2">
+                <div class="li"><i class="{{l.icon}}"></i><span>{{l.t}}</span></div>
+              </sc-for>
+              <sc-if value="{{v.isBiz}}" hint-placeholder-val="{{ false }}">
+                <a href="Bedrift.dc.html" class="btn btn-sm btn-ghost" style="align-self: flex-start; margin-top: 4px"><i class="i i-building s16"></i>Registrer bedrift</a>
+              </sc-if>
+              <sc-if value="{{v.isSoon}}" hint-placeholder-val="{{ false }}">
+                <button class="btn btn-sm btn-ghost" style="align-self: flex-start; margin-top: 4px" onClick="{{notify}}"><i class="i i-bell s16"></i>{{notifyLabel}}</button>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- rating summary -->
+    <div class="sh"><div class="t"><span class="ti" style="background: #FFF2D9; color: #9A5B00"><i class="i i-star s18"></i></span><div><h2>Dine vurderinger</h2><div class="sub">Fra 11 fullførte avtaler</div></div></div></div>
+    <div class="px au">
+      <div class="card pad">
+        <div style="display: flex; align-items: center; gap: 18px">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 92px; flex: none">
+            <span class="num" style="font-size: 46px; line-height: 1">4,9</span>
+            <span style="display: inline-flex; gap: 1px; color: #F0A500"><i class="i i-star s14"></i><i class="i i-star s14"></i><i class="i i-star s14"></i><i class="i i-star s14"></i><i class="i i-star s14"></i></span>
+            <span class="meta" style="font-size: 12px">11 vurderinger</span>
+          </div>
+          <div class="stack" style="gap: 7px; flex: 1">
+            <sc-for list="{{dist}}" as="d" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 8px; font: 600 12.5px/1 var(--fb); color: #5F6983">
+                <span style="width: 10px">{{d.s}}</span>
+                <div class="bar" style="flex: 1; height: 7px"><i style="display: block; {{d.w}}"></i></div>
+                <span style="width: 16px; text-align: right">{{d.n}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 16px">
+          <div style="flex: 1; padding: 12px; border-radius: 16px; background: #F7F8FA"><b class="num" style="font-size: 18px">5,0</b><span class="meta" style="display: block; font-size: 12px; margin-top: 3px">som hjelper (8)</span></div>
+          <div style="flex: 1; padding: 12px; border-radius: 16px; background: #F7F8FA"><b class="num" style="font-size: 18px">4,7</b><span class="meta" style="display: block; font-size: 12px; margin-top: 3px">som oppdragsgiver (3)</span></div>
+        </div>
+        <a href="Profil.dc.html" class="link" style="margin-top: 6px">Se alle vurderingene<i class="i i-arrow"></i></a>
+      </div>
+    </div>
+
+    <!-- how reviews work -->
+    <div class="sh"><div class="t"><span class="ti" style="background: #EDF8D6; color: #3B7300"><i class="i i-info s18"></i></span><div><h2>Slik fungerer vurderinger</h2></div></div></div>
+    <div class="px au">
+      <div class="card" style="padding: 6px 18px">
+        <div class="how"><span class="icirc"><i class="i i-hand s16"></i></span><span>Bare parter i en fullført avtale kan vurdere hverandre.</span></div>
+        <div class="how"><span class="icirc"><i class="i i-checks s16"></i></span><span>Én vurdering per avtale – fra hver side.</span></div>
+        <div class="how"><span class="icirc"><i class="i i-eye s16"></i></span><span>Vurderingen vises når begge har vurdert, eller når fristen går ut.</span></div>
+        <div class="how"><span class="icirc"><i class="i i-reply s16"></i></span><span>Du kan svare offentlig på en vurdering du har fått.</span></div>
+        <div class="how"><span class="icirc"><i class="i i-flag s16"></i></span><span>Bryter en vurdering reglene? <a href="Rapporter.dc.html" style="font-weight: 700">Rapporter den</a>.</span></div>
+      </div>
+    </div>
+
+    <!-- trust tips -->
+    <div class="sh"><div class="t"><span class="ti" style="background: #F8DCE7; color: #9E335E"><i class="i i-sparkle s18"></i></span><div><h2>Bygg tillit</h2><div class="sub">En komplett profil får flere svar</div></div></div></div>
+    <div class="px au">
+      <div class="card pad">
+        <div style="display: flex; align-items: center; gap: 16px">
+          <div style="position: relative; width: 72px; height: 72px; flex: none">
+            <svg class="ring" width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+              <circle cx="36" cy="36" r="30" fill="none" stroke="#EEF1F4" stroke-width="8"></circle>
+              <circle class="p" cx="36" cy="36" r="30" fill="none" stroke="#3F9A1A" stroke-width="8" stroke-linecap="round" stroke-dasharray="188.5" style="stroke-dashoffset: {{ringOffset}}"></circle>
+            </svg>
+            <span class="num" style="position: absolute; inset: 0; display: grid; place-items: center; font-size: 18px">{{pct}}</span>
+          </div>
+          <div style="flex: 1">
+            <b style="font: 700 16px/1.25 var(--fb)">{{doneLabel}}</b>
+            <p class="meta p" style="margin-top: 4px">{{tipHint}}</p>
+          </div>
+        </div>
+        <div class="stack" style="gap: 6px; margin-top: 16px">
+          <sc-for list="{{tips}}" as="t" hint-placeholder-count="6">
+            <button class="{{t.cls}}" onClick="{{t.tap}}" aria-pressed="{{t.pressed}}">
+              <span class="{{t.chk}}"><i class="i i-check s14"></i></span>
+              <span style="flex: 1; min-width: 0"><b style="display: block; font: 600 14.5px/1.3 var(--fb)">{{t.label}}</b><small class="meta" style="display: block; font-size: 12px; margin-top: 2px">{{t.sub}}</small></span>
+              <sc-if value="{{t.todo}}" hint-placeholder-val="{{ true }}"><i class="i i-right s18" style="color: #8A93A8"></i></sc-if>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 14px">
+          <a href="RedigerProfil.dc.html" class="btn btn-ink btn-sm" style="flex: 1">Rediger profil</a>
+          <a href="TryggeKontakter.dc.html" class="btn btn-ghost btn-sm" style="flex: 1">Trygge kontakter</a>
+        </div>
+      </div>
+    </div>
+    <div style="height: 60px"></div>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { open: 'vipps', notify: false, tips: { photo: false, bio: true, cats: true, port: true, notes: true, contacts: false }, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const ok = 'i i-check s16';
+    const V = [
+      { id: 'vipps', title: 'Identitet med Vipps', sub: 'Mari Haugen · over 18 år', icon: 'i i-shield s22', bg: '#FFE6DC', fg: '#C2410C', state: 'ok',
+        lines: [[ok, 'Navn hentet fra Vipps: Mari Haugen'], [ok, 'Alder bekreftet – over 18 år'], ['i i-lock s16', 'Fødselsnummer og adresse lagres ikke og vises aldri'], ['i i-cal s16', 'Bekreftet 12. mars 2024']] },
+      { id: 'phone', title: 'Telefon', sub: '+47 9•• •• 412', icon: 'i i-phone s22', bg: '#DFF2FB', fg: '#065C8F', state: 'ok',
+        lines: [[ok, 'Hentet fra Vipps da du logget inn'], ['i i-lock s16', 'Nummeret vises aldri offentlig'], ['i i-cal s16', 'Bekreftet 12. mars 2024']] },
+      { id: 'email', title: 'E-post', sub: 'm••••@••••.no', icon: 'i i-mail s22', bg: '#EDF8D6', fg: '#3B7300', state: 'ok',
+        lines: [[ok, 'Hentet fra Vipps-profilen din'], ['i i-lock s16', 'Brukes bare til kvitteringer og varsler du har valgt'], ['i i-cal s16', 'Bekreftet 12. mars 2024']] },
+      { id: 'biz', title: 'Bedrift', sub: 'Ikke registrert', icon: 'i i-building s22', bg: '#EEF1F4', fg: '#46506A', state: 'na',
+        lines: [['i i-info s16', 'Gjelder bare deg som tar oppdrag gjennom et enkeltpersonforetak eller AS.'], ['i i-info s16', 'Org.nr. sjekkes mot Enhetsregisteret og vises på profilen.']] }
+    ];
+    const PILL = { ok: ['pill pill-ok', 'Bekreftet'], na: ['pill pill-neutral', 'Ikke aktuelt'], soon: ['pill pill-warn', 'Kommer'] };
+    const TIPS = [
+      ['photo', 'Legg til profilbilde', 'Naboer svarer oftere når de ser hvem du er', 'RedigerProfil'],
+      ['bio', 'Skriv en presentasjon', 'Fortell kort hva du kan', 'RedigerProfil'],
+      ['cats', 'Velg tjenester og kategorier', 'Datahjelp, Hage, Maling, Montering', 'RedigerProfil'],
+      ['port', 'Vis før og etter i porteføljen', '4 eksempler lagt ut', 'RedigerProfil'],
+      ['notes', 'Legg inn hjemmenotater', 'Deles bare ved avtale', 'RedigerProfil'],
+      ['contacts', 'Legg til trygge kontakter', 'For trygg tur på jobbdager', 'TryggeKontakter']
+    ];
+    const done = TIPS.filter((t) => S.tips[t[0]]).length;
+    const pct = Math.round(done / TIPS.length * 100);
+    return {
+      verifs: V.map((v) => {
+        const open = S.open === v.id;
+        return {
+          title: v.title, sub: v.sub, icon: v.icon, bg: v.bg, fg: v.fg,
+          pillCls: PILL[v.state][0], pill: PILL[v.state][1],
+          chev: 'i i-down s18 chev' + (open ? ' up' : ''),
+          exp: open ? 'true' : 'false', open,
+          lines: v.lines.map((l) => ({ icon: l[0], t: l[1] })),
+          isBiz: v.id === 'biz', isSoon: v.id === 'bankid',
+          toggle: () => this.setState({ open: open ? null : v.id })
+        };
+      }),
+      notifyLabel: S.notify ? 'Du får beskjed' : 'Gi meg beskjed',
+      notify: () => { const on = !S.notify; this.setState({ notify: on }); this.flash(on ? 'Vi sier fra når BankID er klart' : 'Du får ikke beskjed om BankID', on ? 'i i-bell s14' : 'i i-x s14'); },
+      dist: [[5, 10], [4, 1], [3, 0], [2, 0], [1, 0]].map(([s, n]) => ({ s, n, w: 'width: ' + Math.round(n / 11 * 100) + '%; background: #F0A500' })),
+      pct: pct + ' %',
+      ringOffset: String(188.5 * (1 - pct / 100)),
+      doneLabel: done + ' av ' + TIPS.length + ' fullført',
+      tipHint: done === TIPS.length ? 'Profilen din er komplett. Godt jobbet!' : 'Fullfør de siste punktene for å bygge enda mer tillit.',
+      tips: TIPS.map(([id, label, sub, href]) => {
+        const d = !!S.tips[id];
+        return {
+          label, sub, todo: !d, pressed: d ? 'true' : 'false',
+          cls: 'tip' + (d ? ' done' : ' todo'),
+          chk: 'chk' + (d ? ' on' : ''),
+          tap: () => {
+            const tips = Object.assign({}, S.tips);
+            tips[id] = !d;
+            this.setState({ tips });
+            if (!d) this.flash('Markert som fullført: ' + label.toLowerCase(), 'i i-check s14');
+          }
+        };
+      }),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Tilbud fra Jonas</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.dbar{position:relative;z-index:5;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:56px 16px 10px}
+.dbar .t{display:flex;align-items:center;justify-content:center;gap:8px;font:700 17px/1.2 var(--fb);white-space:nowrap;overflow:hidden}
+.dbar .t img{width:24px;height:24px}
+.ctx{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:20px;background:rgba(255,255,255,.75);border:1px solid var(--line);text-decoration:none;color:inherit;backdrop-filter:blur(16px)}
+.vchip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:999px;font:700 12px/1 var(--fb);background:#F3F5F1;color:var(--ink2)}
+.vchip .i{width:14px;height:14px}
+.vchip.ok{background:var(--ok-t);color:#1D6E3A}
+.pricebar{position:relative;height:10px;border-radius:5px;background:#E6E9EE;margin-top:16px}
+.pricebar > i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#8FD12A;animation:growW 1.1s .3s var(--ease) both}
+.pricebar .mk{position:absolute;top:-6px;width:3px;height:22px;border-radius:2px;background:var(--ink)}
+.tiles{display:flex;gap:10px}
+.tile{flex:1;padding:14px;border-radius:20px;background:#fff;box-shadow:var(--sh);display:flex;flex-direction:column;gap:8px}
+.tile .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center}
+.quote{position:relative;padding:16px 16px 16px 18px;border-radius:22px 22px 22px 8px;background:#fff;border:1px solid var(--line);font-size:15px;line-height:1.5}
+.tl{display:flex;flex-direction:column}
+.tli{display:flex;gap:14px;position:relative;padding-bottom:18px}
+.tli:last-child{padding-bottom:0}
+.tli::before{content:"";position:absolute;left:12px;top:28px;bottom:2px;width:2px;border-radius:1px;background:var(--line)}
+.tli:last-child::before{display:none}
+.tli.done::before{background:#9BDD2C}
+.tdot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;position:relative;z-index:1}
+.banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;font:600 14px/1.35 var(--fb)}
+.ackrow{display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:18px;border:1.5px solid var(--line);background:#fff;width:100%;text-align:left;cursor:pointer;font:600 14.5px/1.4 var(--fb);color:var(--ink);transition:border-color .2s,background .2s}
+.ackrow.on{border-color:var(--ink);background:#FAFBF7}
+.ackrow.err{border-color:var(--danger);animation:shake .35s}
+.lockchip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:#0A1740;color:#fff;font:700 12px/1 var(--fb)}
+.success{position:absolute;inset:0;z-index:70;background:#fff;overflow:hidden;animation:fadeIn .3s both;display:flex;flex-direction:column}
+.bigok{width:128px;height:128px;border-radius:50%;background:var(--grad);display:grid;place-items:center;box-shadow:0 24px 50px -16px rgba(20,160,140,.7)}
+.bigok svg{width:64px;height:64px}
+.hbadge{position:absolute;right:-6px;bottom:2px;width:46px;height:46px;border-radius:50%;background:#0A1740;color:#B8EE3C;display:grid;place-items:center;box-shadow:0 0 0 4px #fff}
+.menu-row{display:flex;align-items:center;gap:14px;padding:12px 4px;min-height:56px;width:100%;background:none;border:0;border-bottom:1px solid var(--line2);text-align:left;cursor:pointer;font:600 15.5px/1.3 var(--fb);color:var(--ink);text-decoration:none}
+.menu-row:last-child{border-bottom:0}
+.menu-row .ri{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--bg);flex:none}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh"></div>
+
+    <div class="dbar">
+      <a href="MottatteTilbud.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="t"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">{{barTitle}}</div>
+      <button class="iconbtn" onClick="{{openMenu}}" aria-label="Flere valg"><i class="i i-more"></i></button>
+    </div>
+
+    <!-- demo sender banner -->
+    <sc-if value="{{sender}}" hint-placeholder-val="{{ false }}">
+      <div class="px as" style="position: relative; margin-bottom: 10px">
+        <div class="banner" style="background: #0A1740; color: #ffffff">
+          <span class="icirc" style="width: 30px; height: 30px; background: #19B8EE; color: #0A1740"><i class="i i-eye s16"></i></span>
+          <span style="flex: 1">Du ser tilbudet som Jonas (demo)</span>
+          <button class="btn btn-sm" style="height: 34px; padding: 0 12px; background: rgba(255,255,255,.14); color: #ffffff" onClick="{{toggleSender}}">Bytt tilbake</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- listing context -->
+    <div class="px au" style="position: relative">
+      <a href="MineOppforinger.dc.html" class="ctx">
+        <span class="art art-maling" style="width: 44px; height: 44px; border-radius: 14px"><i class="i i-maling s22"></i></span>
+        <span class="stack" style="gap: 5px; flex: 1; min-width: 0">
+          <span class="pill pill-need" style="align-self: flex-start; height: 22px; font-size: 11px"><span class="pd"></span>Åpent oppdrag</span>
+          <b style="font-size: 14.5px">Male gjerdet i hagen</b>
+        </span>
+        <i class="i i-right s18" style="color: #8A93A8"></i>
+      </a>
+    </div>
+
+    <!-- status banner -->
+    <sc-if value="{{hasBanner}}" hint-placeholder-val="{{ false }}">
+      <div class="px as" style="position: relative; margin-top: 12px">
+        <div class="banner" style="display: flex; {{bannerStyle}}">
+          <span class="icirc" style="width: 30px; height: 30px; background: #ffffff"><i class="{{bannerIcon}}"></i></span>
+          <span style="flex: 1">{{bannerText}}</span>
+          <sc-if value="{{bannerLink}}" hint-placeholder-val="{{ false }}"><a href="Avtale.dc.html" class="link" style="color: #1D6E3A">Se avtalen<i class="i i-arrow"></i></a></sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- helper card -->
+    <div class="px au d1" style="position: relative; margin-top: 14px">
+      <div class="card" style="padding: 18px">
+        <div class="rowf" style="gap: 14px; align-items: flex-start">
+          <span class="av s64 av-b">JL<span class="on-dot"></span></span>
+          <div class="stack" style="gap: 6px; flex: 1; min-width: 0">
+            <span class="eyebrow">{{eyebrow}}</span>
+            <h1 class="h3">Jonas Lie</h1>
+            <div class="rowf" style="gap: 8px">
+              <span class="stars"><i class="i i-star"></i>4,9 <span>(32)</span></span>
+              <span class="meta">· Nordre Ål</span>
+            </div>
+          </div>
+          <span class="{{stCls}}">{{stLabel}}</span>
+        </div>
+        <div class="rowf" style="gap: 6px; flex-wrap: wrap; margin-top: 14px">
+          <span class="vchip ok"><i class="i i-verified"></i>Vipps-verifisert</span>
+          <span class="vchip"><i class="i i-phone"></i>Telefon bekreftet</span>
+          <span class="vchip"><i class="i i-award"></i>38 fullførte</span>
+        </div>
+        <div class="divider" style="margin: 14px 0 4px"></div>
+        <div class="rowf" style="justify-content: space-between">
+          <span class="meta">Medlem siden mai 2023</span>
+          <a href="Oppdragsdetaljer.dc.html" class="link">Profil<i class="i i-arrow"></i></a>
+        </div>
+      </div>
+    </div>
+
+    <!-- price hero -->
+    <div class="px au d2" style="position: relative; margin-top: 12px">
+      <div class="card" style="padding: 20px; overflow: hidden; position: relative">
+        <div style="position: absolute; right: -60px; top: -60px; width: 170px; height: 170px; border-radius: 50%; background: var(--grad-soft)"></div>
+        <div style="position: relative">
+          <div class="rowf" style="justify-content: space-between">
+            <span class="eyebrow">Pris for hele jobben</span>
+            <span class="pill pill-ok"><i class="i i-down s14"></i>100 kr under</span>
+          </div>
+          <div class="display" style="font-size: 48px; margin-top: 10px">1 400 kr</div>
+          <div class="meta" style="margin-top: 6px">{{budgetLine}}</div>
+          <div class="pricebar" aria-hidden="true">
+            <i style="width: 70%"></i>
+            <span class="mk" style="left: 75%"></span>
+          </div>
+          <div style="position: relative; height: 16px; margin-top: 8px; font: 600 11.5px var(--fb); color: #8A93A8">
+            <span style="position: absolute; left: 0; top: 0">0 kr</span>
+            <span style="position: absolute; left: 75%; top: 0; transform: translateX(-50%); color: #0A1740; white-space: nowrap">Budsjett 1 500</span>
+            <span style="position: absolute; right: 0; top: 0">2 000 kr</span>
+          </div>
+          <div class="note" style="margin-top: 14px; padding: 10px 12px; border-radius: 14px; background: #F7F8FA"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- schedule -->
+    <div class="px au d3" style="position: relative; margin-top: 12px">
+      <div class="tiles">
+        <div class="tile">
+          <span class="ic" style="background: #EDF8D6; color: #3B7300"><i class="i i-cal s18"></i></span>
+          <span class="meta">Dato</span>
+          <b class="num" style="font-size: 18px">Lør 10. okt</b>
+          <span class="meta">kl. 10:00</span>
+        </div>
+        <div class="tile">
+          <span class="ic" style="background: #DFF2FB; color: #065C8F"><i class="i i-clock s18"></i></span>
+          <span class="meta">Varighet</span>
+          <b class="num" style="font-size: 18px">ca. 5 t</b>
+          <span class="meta">10:00–15:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- message -->
+    <div class="px au d4" style="position: relative; margin-top: 22px">
+      <div class="eyebrow" style="margin-bottom: 10px">Melding fra Jonas</div>
+      <div class="rowf" style="gap: 10px; align-items: flex-end">
+        <span class="av s32 av-b plain">JL</span>
+        <div class="quote">Hei Mari! Jeg har malt flere gjerder i Nordre Ål i sommer. Jeg tar med pensler, stige og presenning.</div>
+      </div>
+    </div>
+
+    <!-- forbehold -->
+    <div class="px au d5" style="position: relative; margin-top: 18px">
+      <div class="card" style="padding: 16px 18px">
+        <div class="rowf" style="gap: 10px; margin-bottom: 10px">
+          <span class="icirc" style="width: 32px; height: 32px; background: #FFF2D9; color: #9A5B00"><i class="i i-alert s16"></i></span>
+          <b style="font-size: 15.5px">Forbehold</b>
+        </div>
+        <div class="stack" style="gap: 8px">
+          <div class="rowf" style="gap: 10px; font-size: 14.5px"><i class="i i-check s16" style="color: #9A5B00"></i>Maling/beis kjøpes av deg.</div>
+          <div class="rowf" style="gap: 10px; font-size: 14.5px"><i class="i i-check s16" style="color: #9A5B00"></i>Utsettes ved regn.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- timeline -->
+    <div class="px au d6" style="position: relative; margin-top: 12px">
+      <div class="card" style="padding: 18px">
+        <div class="eyebrow" style="margin-bottom: 14px">Status</div>
+        <div class="tl">
+          <sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+            <div class="{{s.cls}}">
+              <span class="{{s.dotCls}}" style="display: grid; {{s.dotStyle}}"><i class="{{s.icon}}"></i></span>
+              <div class="stack" style="gap: 3px; padding-top: 3px">
+                <b style="font-size: 15px">{{s.title}}</b>
+                <span class="meta">{{s.sub}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- compare -->
+    <sc-if value="{{showCompare}}" hint-placeholder-val="{{ true }}">
+      <div class="px au d7" style="position: relative; margin-top: 12px">
+        <a href="Sammenlign.dc.html" class="ctx" style="background: #ffffff; padding: 14px">
+          <span class="icirc" style="width: 40px; height: 40px; background: #DFF2FB; color: #065C8F"><i class="i i-chart s18"></i></span>
+          <span class="stack" style="gap: 3px; flex: 1">
+            <b style="font-size: 15px">Sammenlign med 2 andre tilbud</b>
+            <span class="meta">Erik Moen · Lise Brekke</span>
+          </span>
+          <i class="i i-right s18" style="color: #8A93A8"></i>
+        </a>
+      </div>
+    </sc-if>
+
+    <div class="px" style="margin-top: 18px">
+      <div class="note"><i class="i i-shield"></i><span>Del adressen først når dere har en avtale, og hold kontakten i MinNabo-chatten.</span></div>
+    </div>
+    <div style="height: 190px"></div>
+  </div>
+
+  <!-- foot: receiver, can respond -->
+  <sc-if value="{{canRespond}}" hint-placeholder-val="{{ true }}">
+    <div class="foot">
+      <div class="fr">
+        <button class="btn btn-dangerghost" style="flex: 1" onClick="{{openAvsla}}"><i class="i i-x s18"></i>Avslå</button>
+        <button class="btn btn-ghost" style="flex: 1.3" onClick="{{openEndring}}"><i class="i i-edit s18"></i>Be om endring</button>
+      </div>
+      <button class="btn btn-lime btn-block btn-lg" onClick="{{openGodta}}"><i class="i i-check"></i>Godta tilbud<span class="shine"></span></button>
+    </div>
+  </sc-if>
+  <sc-if value="{{footAccepted}}" hint-placeholder-val="{{ false }}">
+    <div class="foot">
+      <div class="fr">
+        <a href="Chat.dc.html" class="btn btn-ghost" style="flex: 1"><i class="i i-msg s18"></i>Åpne chat</a>
+        <a href="Avtale.dc.html" class="btn btn-lime" style="flex: 1.3">Se avtalen<i class="i i-arrow s18"></i></a>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{footClosed}}" hint-placeholder-val="{{ false }}">
+    <div class="foot">
+      <div class="rowf" style="gap: 10px; justify-content: center"><i class="{{closedIcon}}"></i><b style="font-size: 14.5px">{{closedText}}</b></div>
+      <a href="MottatteTilbud.dc.html" class="btn btn-ghost btn-block">Tilbake til tilbudene</a>
+    </div>
+  </sc-if>
+  <sc-if value="{{footSender}}" hint-placeholder-val="{{ false }}">
+    <div class="foot">
+      <div class="meta" style="text-align: center">Mari har ikke svart ennå. Du kan trekke tilbudet så lenge det ikke er godtatt.</div>
+      <button class="btn btn-dangerghost btn-block" onClick="{{openTrekk}}"><i class="i i-undo s18"></i>Trekk tilbudet</button>
+    </div>
+  </sc-if>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 190px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+
+  <!-- GODTA sheet -->
+  <sc-if value="{{sGodta}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Godta tilbud">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <div class="stack" style="gap: 8px">
+          <span class="lockchip"><i class="i i-lock s14"></i>Låses når du godtar</span>
+          <h2 class="h2">Dette blir avtalegrunnlaget</h2>
+        </div>
+        <button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <div class="card flat" style="padding: 4px 16px; background: #FBFCFA">
+        <div class="kv"><span>Oppdrag</span><b>Male gjerdet i hagen</b></div>
+        <div class="kv"><span>Hjelper</span><b>Jonas Lie</b></div>
+        <div class="kv"><span>Pris</span><b class="num" style="font-size: 17px">1 400 kr</b></div>
+        <div class="kv"><span>Dato</span><b>Lør 10. okt kl. 10:00</b></div>
+        <div class="kv"><span>Varighet</span><b>ca. 5 t</b></div>
+        <div class="kv"><span>Sted</span><b>Nordre Ål</b></div>
+        <div class="kv"><span>Forbehold</span><b style="max-width: 190px">Maling/beis kjøpes av deg. Utsettes ved regn.</b></div>
+      </div>
+      <div class="note" style="margin-top: 12px"><i class="i i-info"></i><span>Endringer etter at avtalen er inngått må avtales på nytt i chatten.</span></div>
+      <button class="{{ackCls}}" style="margin-top: 16px" onClick="{{toggleAck}}" role="checkbox" aria-checked="{{ackAria}}">
+        <span class="{{chkCls}}"><i class="i i-check s16"></i></span>
+        <span>Jeg forstår at pris og betaling avtales direkte med Jonas</span>
+      </button>
+      <sc-if value="{{ackErr}}" hint-placeholder-val="{{ false }}">
+        <div class="errtxt" style="margin-top: 8px"><i class="i i-alert s16"></i>Kryss av for å bekrefte før du godtar.</div>
+      </sc-if>
+      <div class="note" style="margin-top: 12px"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+      <button class="{{confirmCls}}" style="margin-top: 16px" onClick="{{confirm}}" aria-disabled="{{confirmAria}}">
+        <sc-if value="{{confirming}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(10,23,64,.2); border-top-color: #0A1740"></span>Inngår avtale …</sc-if>
+        <sc-if value="{{notConfirming}}" hint-placeholder-val="{{ true }}"><i class="i i-check"></i>Bekreft og godta</sc-if>
+      </button>
+    </div>
+  </sc-if>
+
+  <!-- AVSLÅ sheet -->
+  <sc-if value="{{sAvsla}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Avslå tilbud">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Avslå tilbudet fra Jonas?</h2>
+        <button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <p class="body p muted">Jonas får en vennlig beskjed. Du kan gjerne si hvorfor – det er valgfritt.</p>
+      <div class="label" style="margin: 18px 0 10px">Grunn <small>Valgfritt</small></div>
+      <div class="rowf" style="gap: 8px; flex-wrap: wrap">
+        <sc-for list="{{reasons}}" as="r" hint-placeholder-count="4">
+          <button class="{{r.cls}}" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}">{{r.label}}</button>
+        </sc-for>
+      </div>
+      <div class="fr" style="display: flex; gap: 10px; margin-top: 24px">
+        <button class="btn btn-ghost" style="flex: 1" onClick="{{closeSheet}}">Avbryt</button>
+        <button class="btn btn-danger" style="flex: 1.4" onClick="{{confirmAvsla}}">Avslå tilbudet</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ENDRING sheet -->
+  <sc-if value="{{sEndring}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Be om endring">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 class="h2">Be om endring</h2>
+        <button class="iconbtn" onClick="{{closeSheet}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <p class="body p muted">Hva vil du at Jonas skal se på? Han kan sende et oppdatert tilbud.</p>
+      <div class="label" style="margin: 18px 0 10px">Gjelder <small>Velg minst én</small></div>
+      <div class="rowf" style="gap: 8px; flex-wrap: wrap">
+        <sc-for list="{{chgChips}}" as="c" hint-placeholder-count="4">
+          <button class="{{c.cls}}" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}"><span class="ci" style="background: #F3F5F1"><i class="{{c.icon}}"></i></span>{{c.label}}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{chgErr}}" hint-placeholder-val="{{ false }}">
+        <div class="errtxt" style="margin-top: 10px"><i class="i i-alert s16"></i>Velg hva endringen gjelder.</div>
+      </sc-if>
+      <div class="field" style="margin-top: 18px">
+        <label class="label" for="chgmsg">Melding til Jonas <small>{{chgCount}}/300</small></label>
+        <textarea id="chgmsg" class="input" placeholder="F.eks. Kan du komme søndag i stedet?" value="{{chgMsg}}" onChange="{{onChgMsg}}"></textarea>
+      </div>
+      <button class="btn btn-ink btn-block btn-lg" style="margin-top: 18px" onClick="{{sendEndring}}"><i class="i i-send s18"></i>Send forespørsel</button>
+    </div>
+  </sc-if>
+
+  <!-- MENU sheet -->
+  <sc-if value="{{sMenu}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeSheet}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Flere valg">
+      <div class="grab"></div>
+      <div class="stack">
+        <a href="Chat.dc.html" class="menu-row"><span class="ri"><i class="i i-msg s18"></i></span>Åpne chat med Jonas</a>
+        <a href="Oppdragsdetaljer.dc.html" class="menu-row"><span class="ri"><i class="i i-user s18"></i></span>Se profilen til Jonas</a>
+        <button class="menu-row" onClick="{{toggleSender}}"><span class="ri" style="background: #DFF2FB; color: #065C8F"><i class="i i-eye s18"></i></span><span style="flex: 1">{{senderLabel}}</span><span class="pill pill-line">Demo</span></button>
+        <sc-if value="{{canReset}}" hint-placeholder-val="{{ false }}">
+          <button class="menu-row" onClick="{{resetDemo}}"><span class="ri"><i class="i i-refresh s18"></i></span>Tilbakestill demo</button>
+        </sc-if>
+        <a href="Rapporter.dc.html" class="menu-row" style="color: #C23029"><span class="ri" style="background: #FDEBE9"><i class="i i-flag s18"></i></span>Rapporter tilbudet</a>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- TREKK dialog -->
+  <sc-if value="{{dTrekk}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeDialog}}" aria-label="Lukk"></button>
+    <div class="dialog" role="alertdialog" aria-label="Trekk tilbudet">
+      <span class="icirc as" style="width: 60px; height: 60px; background: #FDEBE9; color: #C23029; margin: 0 auto"><i class="i i-undo s28"></i></span>
+      <h2 class="h3" style="margin-top: 14px">Trekke tilbudet?</h2>
+      <p class="body p muted" style="margin-top: 8px">Mari får beskjed om at tilbudet på 1 400 kr ikke lenger gjelder. Dette kan ikke angres.</p>
+      <div class="stack" style="gap: 10px; margin-top: 20px">
+        <button class="btn btn-danger btn-block" onClick="{{confirmTrekk}}">Trekk tilbudet</button>
+        <button class="btn btn-ghost btn-block" onClick="{{closeDialog}}">Avbryt</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- SUCCESS -->
+  <sc-if value="{{success}}" hint-placeholder-val="{{ false }}">
+    <div class="success" role="dialog" aria-label="Avtale inngått">
+      <div style="position: absolute; inset: 0; background: none"></div>
+      <div class="confetti" style="position: absolute; inset: 0; pointer-events: none">
+        <sc-for list="{{confetti}}" as="c" hint-placeholder-count="12">
+          <i style="display: block; {{c.st}}"></i>
+        </sc-for>
+      </div>
+      <div style="position: relative; display: flex; justify-content: flex-end; padding: 56px 16px 0">
+        <button class="iconbtn" onClick="{{closeSuccess}}" aria-label="Lukk"><i class="i i-x s18"></i></button>
+      </div>
+      <div style="position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px 26px 0; text-align: center">
+        <div class="as" style="position: relative">
+          <div class="bigok pulse">
+            <svg class="checkdraw" viewBox="0 0 24 24" fill="none" stroke="#0A1740" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+          </div>
+          <span class="hbadge as d6"><i class="i i-hand s22"></i></span>
+        </div>
+        <h1 class="h1 au d4" style="margin-top: 28px">Avtale inngått med Jonas!</h1>
+        <p class="body p au d5" style="color: #34405F; margin-top: 10px">De andre tilbudene får beskjed automatisk.</p>
+        <div class="card au d6" style="width: 100%; margin-top: 22px; padding: 14px; display: flex; align-items: center; gap: 12px; text-align: left">
+          <div style="display: flex">
+            <span class="av av-me plain" style="box-shadow: 0 0 0 2.5px #ffffff">MH</span>
+            <span class="av av-b plain" style="margin-left: -10px; box-shadow: 0 0 0 2.5px #ffffff">JL</span>
+          </div>
+          <div class="stack" style="gap: 3px; flex: 1; min-width: 0">
+            <b style="font-size: 14.5px">Male gjerdet i hagen</b>
+            <span class="meta">Lør 10. okt kl. 10:00 · ca. 5 t</span>
+          </div>
+          <span class="num" style="font-size: 18px">1 400 kr</span>
+        </div>
+        <div class="note au d7" style="margin-top: 12px; text-align: left"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+      </div>
+      <div class="au d8" style="position: relative; padding: 0 24px 34px; display: flex; flex-direction: column; gap: 10px">
+        <a href="Avtale.dc.html" class="btn btn-lime btn-lg btn-block">Se avtalen<i class="i i-arrow"></i><span class="shine"></span></a>
+        <a href="Chat.dc.html" class="btn btn-ghost btn-block"><i class="i i-msg s18"></i>Åpne chat</a>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      status: 'ny', prev: 'ny', sender: false,
+      sheet: null, dialog: null,
+      ack: false, ackErr: false, confirming: false, success: false,
+      reasons: {}, chg: {}, chgMsg: '', chgErr: false, chgWhat: '',
+      toast: null, toastIcon: 'i i-check s16', toastUndo: false
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.ct); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const st = S.status;
+    const ST = {
+      ny: ['pill pill-dark', 'Ny'],
+      endring: ['pill pill-warn', 'Endring forespurt'],
+      godtatt: ['pill pill-ok', 'Godtatt'],
+      avslatt: ['pill pill-danger', 'Avslått'],
+      trukket: ['pill pill-neutral', 'Trukket']
+    };
+    const BANNERS = {
+      endring: ['background: #FFF2D9; color: #9A5B00', 'i i-edit s16', (S.sender ? 'Mari ba om endring' : 'Du ba om endring') + (S.chgWhat ? ': ' + S.chgWhat : '') + '. Venter på svar fra Jonas.'],
+      godtatt: ['background: #E3F5E8; color: #1D6E3A', 'i i-check s16', 'Avtale inngått 30. sep kl. 19:42'],
+      avslatt: ['background: #FDEBE9; color: #C23029', 'i i-x s16', S.sender ? 'Mari har avslått tilbudet.' : 'Du avslo tilbudet. Jonas har fått beskjed.'],
+      trukket: ['background: #ECEFF3; color: #34405F', 'i i-undo s16', S.sender ? 'Du har trukket tilbudet.' : 'Jonas har trukket tilbudet.']
+    };
+    const B = BANNERS[st];
+    const done = (title, sub) => ({ cls: 'tli done', dotCls: 'tdot', dotStyle: 'background: #2B8F4E; color: #ffffff', icon: 'i i-check s14', title, sub });
+    const steps = [
+      done('Sendt', '30. sep kl. 18:05'),
+      done(S.sender ? 'Sett av Mari' : 'Sett av deg', '30. sep kl. 18:20')
+    ];
+    if (st === 'ny') steps.push({ cls: 'tli', dotCls: 'tdot pulse', dotStyle: 'background: #0A1740; color: #B8EE3C', icon: 'i i-hourglass s14', title: S.sender ? 'Venter på svar fra Mari' : 'Venter på ditt svar', sub: 'Tilbudet gjelder til Fre 9. okt' });
+    if (st === 'endring') steps.push({ cls: 'tli', dotCls: 'tdot', dotStyle: 'background: #FFF2D9; color: #9A5B00', icon: 'i i-edit s14', title: 'Endring forespurt', sub: 'I dag · venter på nytt tilbud fra Jonas' });
+    if (st === 'godtatt') { steps.push(done('Godtatt', '30. sep kl. 19:42')); steps.push({ cls: 'tli', dotCls: 'tdot', dotStyle: 'background: #EDF8D6; color: #3B7300', icon: 'i i-cal s14', title: 'Jobbdag', sub: 'Lør 10. okt · om 11 dager' }); }
+    if (st === 'avslatt') steps.push({ cls: 'tli', dotCls: 'tdot', dotStyle: 'background: #FDEBE9; color: #C23029', icon: 'i i-x s14', title: 'Avslått', sub: 'Jonas har fått beskjed' });
+    if (st === 'trukket') steps.push({ cls: 'tli', dotCls: 'tdot', dotStyle: 'background: #ECEFF3; color: #34405F', icon: 'i i-undo s14', title: 'Trukket', sub: 'Tilbudet gjelder ikke lenger' });
+
+    const REASONS = ['Valgte et annet tilbud', 'Prisen passer ikke', 'Tidspunktet passer ikke', 'Trenger ikke hjelp lenger'];
+    const CHG = [['Pris', 'i i-tag s16'], ['Tidspunkt', 'i i-clock s16'], ['Beskrivelse', 'i i-file s16'], ['Annet', 'i i-annet s16']];
+    const open = (sheet) => () => this.setState({ sheet, ackErr: false, chgErr: false });
+    const canRespond = !S.sender && (st === 'ny' || st === 'endring');
+    const COLORS = ['#B8EE3C', '#19B8EE', '#1E86F4', '#63E08A', '#0A1740', '#F0A500', '#C6F43C'];
+    const confetti = [];
+    for (let k = 0; k < 26; k++) {
+      const left = (k * 37) % 100;
+      const w = 6 + (k % 3) * 2;
+      confetti.push({ st: 'left: ' + left + '%; background: ' + COLORS[k % COLORS.length] + '; animation-delay: ' + ((k % 9) * 0.12).toFixed(2) + 's; width: ' + w + 'px; height: ' + (w + 6) + 'px; border-radius: ' + (k % 4 === 0 ? '50%' : '2px') });
+    }
+    return {
+      barTitle: S.sender ? 'Ditt tilbud' : 'Tilbud fra Jonas',
+      sender: S.sender,
+      eyebrow: S.sender ? 'Ditt tilbud til Mari Haugen' : 'Tilbud fra',
+      stCls: ST[st][0], stLabel: ST[st][1],
+      hasBanner: !!B,
+      bannerStyle: B ? B[0] : '',
+      bannerIcon: B ? B[1] : '',
+      bannerText: B ? B[2] : '',
+      bannerLink: st === 'godtatt' && !S.sender,
+      budgetLine: (S.sender ? 'Maris budsjett' : 'Ditt budsjett') + ': ca. 1 500 kr',
+      steps,
+      showCompare: !S.sender && st !== 'godtatt',
+      canRespond,
+      footAccepted: !S.sender && st === 'godtatt',
+      footClosed: st === 'avslatt' || st === 'trukket' || (S.sender && st === 'godtatt'),
+      closedIcon: st === 'godtatt' ? 'i i-check s18' : (st === 'avslatt' ? 'i i-x s18' : 'i i-undo s18'),
+      closedText: st === 'godtatt' ? 'Mari har godtatt tilbudet ditt' : (st === 'avslatt' ? (S.sender ? 'Mari har avslått tilbudet' : 'Du har avslått dette tilbudet') : (S.sender ? 'Du har trukket tilbudet' : 'Jonas har trukket tilbudet')),
+      footSender: S.sender && (st === 'ny' || st === 'endring'),
+      openMenu: open('menu'),
+      openGodta: () => this.setState({ sheet: 'godta', ack: false, ackErr: false, confirming: false }),
+      openAvsla: () => this.setState({ sheet: 'avsla', reasons: {} }),
+      openEndring: () => this.setState({ sheet: 'endring', chg: {}, chgMsg: '', chgErr: false }),
+      closeSheet: () => { if (!S.confirming) this.setState({ sheet: null }); },
+      sGodta: S.sheet === 'godta', sAvsla: S.sheet === 'avsla', sEndring: S.sheet === 'endring', sMenu: S.sheet === 'menu',
+      ackCls: 'ackrow' + (S.ack ? ' on' : '') + (S.ackErr ? ' err' : ''),
+      chkCls: 'chk' + (S.ack ? ' on' : ''),
+      ackAria: S.ack ? 'true' : 'false',
+      ackErr: S.ackErr,
+      toggleAck: () => this.setState({ ack: !S.ack, ackErr: false }),
+      confirmCls: 'btn btn-lime btn-block btn-lg' + (S.ack ? '' : ' disabled'),
+      confirmAria: S.ack ? 'false' : 'true',
+      confirming: S.confirming, notConfirming: !S.confirming,
+      confirm: () => {
+        if (S.confirming) return;
+        if (!S.ack) { this.setState({ ackErr: true }); return; }
+        this.setState({ confirming: true });
+        this.ct = setTimeout(() => this.setState({ confirming: false, sheet: null, success: true, prev: this.state.status, status: 'godtatt' }), 1500);
+      },
+      success: S.success,
+      confetti,
+      closeSuccess: () => this.setState({ success: false }),
+      reasons: REASONS.map((label) => ({
+        label,
+        cls: 'chip plain sm' + (S.reasons[label] ? ' on' : ''),
+        pressed: S.reasons[label] ? 'true' : 'false',
+        pick: () => { const r = Object.assign({}, S.reasons); r[label] = !r[label]; this.setState({ reasons: r }); }
+      })),
+      confirmAvsla: () => {
+        this.setState({ sheet: null, prev: st, status: 'avslatt' });
+        this.flash('Tilbudet er avslått. Jonas får beskjed.', 'i i-x s14', true);
+      },
+      undo: () => { clearTimeout(this.tt); this.setState({ status: S.prev, toast: null }); },
+      chgChips: CHG.map(([label, icon]) => ({
+        label, icon,
+        cls: 'chip sm' + (S.chg[label] ? ' on' : ''),
+        pressed: S.chg[label] ? 'true' : 'false',
+        pick: () => { const c = Object.assign({}, S.chg); c[label] = !c[label]; this.setState({ chg: c, chgErr: false }); }
+      })),
+      chgErr: S.chgErr,
+      chgMsg: S.chgMsg,
+      chgCount: String(S.chgMsg.length),
+      onChgMsg: (e) => this.setState({ chgMsg: e.target.value.slice(0, 300) }),
+      sendEndring: () => {
+        const picked = CHG.map((c) => c[0]).filter((l) => S.chg[l]);
+        if (!picked.length) { this.setState({ chgErr: true }); return; }
+        this.setState({ sheet: null, prev: st, status: 'endring', chgWhat: picked.join(', ').toLowerCase() });
+        this.flash('Forespørsel sendt til Jonas', 'i i-send s14');
+      },
+      senderLabel: S.sender ? 'Vis som mottaker (Mari)' : 'Vis som avsender (demo)',
+      toggleSender: () => {
+        this.setState({ sender: !S.sender, sheet: null });
+        this.flash(S.sender ? 'Viser som Mari igjen' : 'Viser som Jonas (demo)', 'i i-eye s14');
+      },
+      canReset: st !== 'ny',
+      resetDemo: () => { this.setState({ status: 'ny', sheet: null, chgWhat: '' }); this.flash('Demo tilbakestilt', 'i i-refresh s14'); },
+      dTrekk: S.dialog === 'trekk',
+      openTrekk: () => this.setState({ dialog: 'trekk' }),
+      closeDialog: () => this.setState({ dialog: null }),
+      confirmTrekk: () => {
+        this.setState({ dialog: null, prev: st, status: 'trukket' });
+        this.flash('Tilbudet er trukket. Mari får beskjed.', 'i i-undo s14');
+      },
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo
+    };
+  }
+}
+</script>
+</body>
+</html>

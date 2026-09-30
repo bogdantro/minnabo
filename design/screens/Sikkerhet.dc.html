@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Sikkerhet</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.tt{position:relative;overflow:hidden;border-radius:30px;padding:20px;transition:background .4s}
+.tt.idle{background:var(--grad-soft);border:1px solid rgba(10,23,64,.05)}
+.tt.live{background:var(--ink);color:#fff}
+.tt .glow{position:absolute;right:-70px;bottom:-90px;width:240px;height:240px;border-radius:50%;background:var(--grad);opacity:.3}
+.beacon{position:relative;width:64px;height:64px;flex:none}
+.beacon .c{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center}
+.ringL{position:absolute;inset:0;border-radius:50%;border:2px solid #B8EE3C;animation:ringL 2.2s ease-out infinite}
+.ringL.b{animation-delay:.75s}.ringL.c2{animation-delay:1.5s}
+@keyframes ringL{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.1);opacity:0}}
+.tchip{height:40px;padding:0 14px;border-radius:999px;border:1.5px solid rgba(10,23,64,.12);background:rgba(255,255,255,.75);font:700 13.5px/1 var(--fb);color:var(--ink);cursor:pointer;transition:all .2s}
+.tchip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.kvl{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.4;color:rgba(255,255,255,.86)}
+.kvl .i{width:16px;height:16px;margin-top:1px;color:#B8EE3C;flex:none}
+.brow{display:flex;align-items:center;gap:12px;padding:12px 14px 12px 16px;max-height:120px;overflow:hidden}
+.brow + .brow{border-top:1px solid var(--line2)}
+.brow.gone{animation:bOut .45s var(--ease) forwards}
+@keyframes bOut{0%{opacity:1}40%{opacity:0;transform:translateX(-40px);max-height:120px}100%{opacity:0;transform:translateX(-40px);max-height:0;padding-top:0;padding-bottom:0}}
+.acc{border-bottom:1px solid var(--line2)}
+.acc:last-child{border-bottom:0}
+.acc button{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:10px 16px;background:none;border:0;cursor:pointer;font:600 15px/1.3 var(--fb);color:var(--ink);text-align:left}
+.acc .ai-i{width:34px;height:34px;border-radius:11px;background:#F3F5F1;display:grid;place-items:center;flex:none}
+.acc .chev{transition:transform .3s var(--ease);color:var(--faint);margin-left:auto}
+.acc .chev.up{transform:rotate(180deg)}
+.acc p{margin:0;padding:0 16px 16px 62px;font-size:14px;line-height:1.5;color:var(--ink2)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+    <div class="subbar">
+      <a href="Meny.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Sikkerhet</div>
+      <span></span>
+    </div>
+
+    <div class="px au" style="position: relative; padding-top: 6px">
+      <h1 class="h1">Sikkerhet, rapportering og blokkering</h1>
+      <p class="meta p" style="margin-top: 8px">Verktøy som hjelper deg å møte naboer trygt.</p>
+    </div>
+
+    <!-- Trygg tur -->
+    <div class="px au d2" style="position: relative; margin-top: 18px">
+      <sc-if value="{{idle}}" hint-placeholder-val="{{ true }}">
+        <div class="tt idle as">
+          <div style="display: flex; align-items: center; gap: 14px">
+            <span class="icirc" style="width: 52px; height: 52px; background: #0A1740; color: #B8EE3C"><i class="i i-nav s22"></i></span>
+            <div>
+              <span class="pill pill-line" style="height: 22px; font-size: 11px">Trygg tur</span>
+              <h2 class="h3" style="margin-top: 6px">Del jobbdagen din</h2>
+            </div>
+          </div>
+          <p class="p" style="margin-top: 12px; font-size: 14.5px; line-height: 1.5; color: #34405F">Skal du på jobb hos en du ikke kjenner? Trygge kontakter får en SMS med hvem du møter, omtrentlig område og når du regner med å være ferdig. Du stopper selv når du er trygt hjemme.</p>
+          <div class="label" style="margin: 16px 0 8px">Del til</div>
+          <div style="display: flex; gap: 8px">
+            <sc-for list="{{times}}" as="t" hint-placeholder-count="3">
+              <button class="{{t.cls}}" onClick="{{t.pick}}" aria-pressed="{{t.pressed}}">kl. {{t.label}}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 16px">
+            <div style="display: flex"><span class="av av-b s32 plain" style="box-shadow: 0 0 0 2px #ffffff">OH</span><span class="av av-g s32 plain" style="margin-left: -8px; box-shadow: 0 0 0 2px #ffffff">SB</span></div>
+            <span class="meta" style="flex: 1">Ola og Siri får beskjed</span>
+            <a href="TryggeKontakter.dc.html" class="link" style="font-size: 13px">Endre</a>
+          </div>
+          <button class="btn btn-ink btn-block btn-lg" style="margin-top: 14px" onClick="{{start}}"><i class="i i-nav s18"></i>Start trygg tur</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{starting}}" hint-placeholder-val="{{ false }}">
+        <div class="tt live ai" style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 36px 20px">
+          <span class="spin" style="width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.2); border-top-color: #B8EE3C"></span>
+          <b style="font: 700 16px var(--fb)">Sender SMS til Ola og Siri …</b>
+        </div>
+      </sc-if>
+      <sc-if value="{{live}}" hint-placeholder-val="{{ false }}">
+        <div class="tt live as" role="status">
+          <div class="glow"></div>
+          <div style="position: relative; display: flex; align-items: center; gap: 16px">
+            <div class="beacon">
+              <span class="ringL"></span><span class="ringL b"></span><span class="ringL c2"></span>
+              <span class="c" style="background: #B8EE3C; color: #0A1740"><i class="i i-nav s24"></i></span>
+            </div>
+            <div style="flex: 1">
+              <span class="pill" style="background: rgba(184,238,60,.18); color: #B8EE3C; height: 22px; font-size: 11px"><span class="pd"></span>Trygg tur er aktiv</span>
+              <b style="display: block; font: 700 17px/1.3 var(--fd); margin-top: 6px">Deler jobbdagen med Ola og Siri til kl. {{until}}</b>
+            </div>
+          </div>
+          <div class="stack" style="position: relative; gap: 9px; margin-top: 18px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,.07)">
+            <div class="kvl"><i class="i i-hage"></i><span>Klippe plen og rake løv hos Kari Holm</span></div>
+            <div class="kvl"><i class="i i-pin"></i><span>Nordre Ål, Lillehammer (omtrentlig)</span></div>
+            <div class="kvl"><i class="i i-clock"></i><span>Startet kl. {{startedAt}} · ferdig senest kl. {{until}}</span></div>
+          </div>
+          <div style="position: relative; display: flex; gap: 10px; margin-top: 14px">
+            <button class="btn" style="flex: 1; background: rgba(255,255,255,.12); color: #ffffff" onClick="{{extend}}"><i class="i i-plus s16"></i>Forleng 1 t</button>
+            <button class="btn btn-lime" style="flex: 1" onClick="{{stop}}"><i class="i i-check s16"></i>Stopp</button>
+          </div>
+          <p class="p" style="position: relative; margin-top: 12px; font-size: 12px; color: rgba(255,255,255,.6); text-align: center">Stopper du ikke innen fristen, får kontaktene dine en påminnelse.</p>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- quick rows -->
+    <div class="px au d3" style="margin-top: 16px">
+      <div class="list">
+        <a href="Rapporter.dc.html" class="lrow"><span class="ri" style="background: #FDEBE9; color: #C23029"><i class="i i-flag s18"></i></span><span class="rt"><b>Rapporter noe</b><small>En bruker, oppføring, melding eller vurdering</small></span><i class="i i-right chev"></i></a>
+        <a href="TryggeKontakter.dc.html" class="lrow"><span class="ri" style="background: #EDF8D6; color: #3B7300"><i class="i i-users s18"></i></span><span class="rt"><b>Trygge kontakter</b><small>Ola Haugen og Siri Berg</small></span><span style="display: flex"><span class="av av-b s28 plain" style="box-shadow: 0 0 0 2px #ffffff">OH</span><span class="av av-g s28 plain" style="margin-left: -7px; box-shadow: 0 0 0 2px #ffffff">SB</span></span><i class="i i-right chev"></i></a>
+        <a href="Personvern.dc.html" class="lrow"><span class="ri" style="background: #DFF2FB; color: #065C8F"><i class="i i-lock s18"></i></span><span class="rt"><b>Personvern og samtykker</b><small>Se og endre hva du har godtatt</small></span><i class="i i-right chev"></i></a>
+      </div>
+    </div>
+
+    <!-- blocked -->
+    <div class="sh"><div class="t"><span class="ti" style="background: #ECEFF3; color: #34405F"><i class="i i-ban s18"></i></span><div><h2>Blokkerte brukere</h2><div class="sub">De kan ikke se oppføringene dine eller sende deg meldinger</div></div></div></div>
+    <div class="px au">
+      <div class="list">
+        <sc-for list="{{blocked}}" as="b" hint-placeholder-count="2">
+          <div class="{{b.cls}}">
+            <span class="av s40 plain" style="background: #ECEFF3; color: #5F6983">{{b.ini}}</span>
+            <div style="flex: 1; min-width: 0"><b style="display: block; font: 600 15.5px/1.3 var(--fb)">{{b.name}}</b><span class="meta" style="font-size: 12.5px">{{b.meta}}</span></div>
+            <button class="btn btn-sm btn-ghost" onClick="{{b.ask}}" aria-label="{{b.aria}}">Opphev</button>
+          </div>
+        </sc-for>
+        <sc-if value="{{noBlocked}}" hint-placeholder-val="{{ false }}">
+          <div class="as" style="padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+            <span class="icirc" style="width: 48px; height: 48px; background: #E3F5E8; color: #2B8F4E"><i class="i i-check s22"></i></span>
+            <b>Du har ikke blokkert noen</b>
+            <span class="meta">Du kan blokkere fra en profil, en chat eller når du rapporterer.</span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- tips -->
+    <div class="sh"><div class="t"><span class="ti" style="background: #FFF2D9; color: #9A5B00"><i class="i i-shield s18"></i></span><div><h2>Tips for trygge avtaler</h2></div></div></div>
+    <div class="px au">
+      <div class="list">
+        <sc-for list="{{tips}}" as="t" hint-placeholder-count="5">
+          <div class="acc">
+            <button onClick="{{t.toggle}}" aria-expanded="{{t.exp}}"><span class="ai-i"><i class="{{t.icon}}"></i></span><span style="flex: 1">{{t.q}}</span><i class="{{t.chev}}"></i></button>
+            <sc-if value="{{t.open}}" hint-placeholder-val="{{ false }}"><p class="au">{{t.a}}</p></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="px au" style="margin-top: 16px">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 20px; background: #FDEBE9; color: #8E1F19">
+        <span class="icirc" style="width: 40px; height: 40px; background: #C23029; color: #ffffff"><i class="i i-alert s18"></i></span>
+        <span style="font-size: 13.5px; line-height: 1.4"><b>Er du i akutt fare?</b> Ring 112. Politiets vanlige nummer er 02800.</span>
+      </div>
+    </div>
+    <div style="height: 60px"></div>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{confirmOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{cancel}}" aria-label="Lukk"></button>
+    <div class="dialog" role="alertdialog" aria-label="Oppheve blokkering">
+      <span class="av s64 plain as" style="background: #ECEFF3; color: #5F6983; margin: 0 auto 14px">{{cf.ini}}</span>
+      <h2 class="h3">Oppheve blokkeringen av {{cf.name}}?</h2>
+      <p class="meta p" style="margin-top: 8px; font-size: 14px">{{cf.name}} kan igjen se oppføringene dine og sende deg meldinger. Vi sier ikke fra til {{cf.name}}.</p>
+      <div class="stack" style="gap: 8px; margin-top: 20px">
+        <button class="btn btn-ink btn-block" onClick="{{confirm}}">Opphev blokkering</button>
+        <button class="btn btn-ghost btn-block" onClick="{{cancel}}">Avbryt</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      trip: 'idle', until: '15:00', startedAt: '', ask: null, leaving: {}, tip: 0,
+      blocked: [
+        { id: 'b1', ini: 'TO', name: 'Tor O.', meta: 'Blokkert 14. sep 2026 · via rapport' },
+        { id: 'b2', ini: 'SK', name: 'Stian K.', meta: 'Blokkert 2. aug 2026' }
+      ],
+      toast: null, toastIcon: 'i i-check s16'
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.st); clearTimeout(this.lt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2800);
+  }
+  renderVals() {
+    const S = this.state;
+    const pad = (n) => (n < 10 ? '0' : '') + n;
+    const TIPS = [
+      ['i i-sun s16', 'Møt i dagslys', 'Avtal jobben på dagtid når det er mulig, særlig første gang dere møtes. Da er det lettere å finne fram og se hvem du møter.'],
+      ['i i-ban s16', 'Aldri betal på forhånd til ukjente', 'Ber noen om forskudd før jobben er gjort, er det et vanlig tegn på svindel. Pris og betaling avtaler dere direkte – helst når jobben er ferdig.'],
+      ['i i-msg s16', 'Hold avtalen i chatten', 'Da har begge en oversikt over pris, tid og hva som er avtalt. Det gjør det også enklere for oss å hjelpe hvis noe går galt.'],
+      ['i i-nav s16', 'Del jobbdagen med en trygg kontakt', 'Start Trygg tur før du drar, så vet noen hvor du er og når du regner med å være ferdig.'],
+      ['i i-smile s16', 'Stol på magefølelsen', 'Føles noe feil, kan du avlyse. Blokker og rapporter brukere som presser deg eller oppfører seg upassende.']
+    ];
+    const cf = S.blocked.find((b) => b.id === S.ask) || { ini: '', name: '' };
+    return {
+      idle: S.trip === 'idle', starting: S.trip === 'starting', live: S.trip === 'live',
+      times: ['13:00', '15:00', '17:00'].map((t) => ({ label: t, cls: 'tchip' + (S.until === t ? ' on' : ''), pressed: S.until === t ? 'true' : 'false', pick: () => this.setState({ until: t }) })),
+      start: () => {
+        const d = new Date();
+        this.setState({ trip: 'starting', startedAt: pad(d.getHours()) + ':' + pad(d.getMinutes()) });
+        this.st = setTimeout(() => { this.setState({ trip: 'live' }); this.flash('Ola og Siri har fått SMS', 'i i-send s14'); }, 1500);
+      },
+      until: S.until, startedAt: S.startedAt,
+      extend: () => {
+        const h = Math.min(23, parseInt(S.until, 10) + 1);
+        const nu = pad(h) + ':00';
+        this.setState({ until: nu });
+        this.flash('Forlenget til kl. ' + nu + '. Kontaktene er oppdatert.', 'i i-clock s14');
+      },
+      stop: () => { this.setState({ trip: 'idle', until: '15:00' }); this.flash('Trygg tur er avsluttet. Ola og Siri har fått beskjed.', 'i i-check s16'); },
+      blocked: S.blocked.map((b) => ({
+        ini: b.ini, name: b.name, meta: b.meta,
+        cls: 'brow' + (S.leaving[b.id] ? ' gone' : ''),
+        aria: 'Opphev blokkering av ' + b.name,
+        ask: () => this.setState({ ask: b.id })
+      })),
+      noBlocked: S.blocked.length === 0,
+      confirmOpen: !!S.ask,
+      cf,
+      cancel: () => this.setState({ ask: null }),
+      confirm: () => {
+        const id = S.ask;
+        const name = cf.name;
+        const leaving = Object.assign({}, S.leaving);
+        leaving[id] = true;
+        this.setState({ ask: null, leaving });
+        this.lt = setTimeout(() => {
+          const l = Object.assign({}, this.state.leaving);
+          delete l[id];
+          this.setState({ blocked: this.state.blocked.filter((b) => b.id !== id), leaving: l });
+          this.flash('Blokkeringen av ' + name + ' er opphevet', 'i i-check s16');
+        }, 440);
+      },
+      tips: TIPS.map((t, i) => ({
+        icon: t[0], q: t[1], a: t[2], open: S.tip === i, exp: S.tip === i ? 'true' : 'false',
+        chev: 'i i-down s18 chev' + (S.tip === i ? ' up' : ''),
+        toggle: () => this.setState({ tip: S.tip === i ? null : i })
+      })),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

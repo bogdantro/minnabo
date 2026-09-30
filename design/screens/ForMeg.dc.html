@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Oppdrag for meg</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.stackwrap{position:relative;height:492px;margin:0 20px}
+.bcard{position:absolute;left:0;right:0;top:0;height:452px;border-radius:30px;background:#fff;box-shadow:var(--sh);border:1px solid rgba(10,23,64,.05);overflow:hidden;transform-origin:50% 100%;transition:transform .45s var(--spring),opacity .35s}
+.bcard .bart{height:150px}
+.bcard.b1{transform:translateY(18px) scale(.94);opacity:.92;z-index:2}
+.bcard.b2{transform:translateY(36px) scale(.88);opacity:.6;z-index:1}
+.fcard{position:absolute;left:0;right:0;top:0;height:452px;border-radius:30px;background:#fff;box-shadow:0 2px 6px rgba(10,23,64,.05),0 30px 60px -24px rgba(10,23,64,.35);border:1px solid rgba(10,23,64,.04);overflow:hidden;z-index:3;display:flex;flex-direction:column}
+.fcard.rise{animation:rise .5s var(--spring) both}
+.fcard.backA{animation:backIn .5s var(--spring) both}
+.fcard.backB{animation:backIn2 .5s var(--spring) both}
+@keyframes rise{from{transform:translateY(18px) scale(.94);opacity:.9}to{transform:none;opacity:1}}
+@keyframes backIn{from{transform:translateX(-420px) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes backIn2{from{transform:translateX(-420px) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+.fart{height:168px;position:relative;flex:none}
+.fart .big{width:64px;height:64px}
+.fart .tl{position:absolute;left:14px;top:14px}
+.fart .tr{position:absolute;right:14px;top:14px}
+.fart .deco{position:absolute;border-radius:50%;background:rgba(255,255,255,.35)}
+.why{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:999px;background:#F3F5F1;border:1px solid var(--line2);font:600 12.5px var(--fb);color:var(--ink2);white-space:nowrap}
+.why .i{width:14px;height:14px;color:var(--lime-d)}
+.rbtn{width:64px;height:64px;border-radius:50%;border:0;background:#fff;box-shadow:var(--sh-m);display:grid;place-items:center;cursor:pointer;color:var(--ink);transition:transform .2s var(--spring)}
+.rbtn:active{transform:scale(.88)}
+.rbtn.no{color:#C23029}
+.rbtn.yes.on{color:#E5484D;background:#FDECEC}
+.rbtn.yes.on .i{animation:pop .45s var(--spring)}
+.rlab{font:700 11.5px var(--fb);color:var(--mute);text-align:center;margin-top:7px}
+.skill{height:32px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.8);border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px;font:600 13px var(--fb);color:var(--ink);flex:none}
+.skill .i{width:15px;height:15px}
+.undo{height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:6px;font:700 13.5px var(--fb);color:var(--ink);cursor:pointer}
+.undo[disabled]{opacity:.4;cursor:default}
+.ctr{display:flex;align-items:center;gap:10px}
+.ctr .bars{display:flex;gap:4px}
+.ctr .bars i{width:14px;height:5px;border-radius:3px;background:#DADFE6;transition:background .3s,width .3s}
+.ctr .bars i.on{background:var(--ink);width:22px}
+.ctr .bars i.done{background:#B6BDCA}
+.lx{position:absolute;top:10px;right:10px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+
+    <div class="subbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Oppdrag for meg</div>
+      <a href="Varslinger.dc.html" class="iconbtn" aria-label="Varsel om nye forslag"><i class="i i-bell s18"></i></a>
+    </div>
+
+    <!-- intro -->
+    <div class="px au" style="position: relative; margin-top: 6px; display: flex; flex-direction: column; gap: 6px">
+      <span class="pill pill-grad" style="align-self: flex-start"><i class="i i-sparkle s14"></i>6 nye forslag i dag</span>
+      <h1 class="h2" style="font-size: 26px; margin-top: 4px">Småjobber som passer deg, Mari</h1>
+      <p class="meta p" style="font-size: 14px">Utvalgt ut fra det du kan og hvor du bor.</p>
+    </div>
+    <div class="au d2" style="position: relative; margin-top: 12px">
+      <div class="chips" style="padding-top: 0">
+        <span class="skill"><i class="i i-data"></i>Datahjelp</span>
+        <span class="skill"><i class="i i-hage"></i>Hage</span>
+        <span class="skill"><i class="i i-montering"></i>Montering</span>
+        <span class="skill"><i class="i i-pin"></i>Nordre Ål · 10 km</span>
+        <a href="RedigerProfil.dc.html" class="link" style="font-size: 13px; flex: none; padding: 0 4px">Endre</a>
+      </div>
+    </div>
+
+    <!-- view toggle + counter -->
+    <div class="px au d3" style="position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0 16px">
+      <div class="seg" style="width: 190px">
+        <button class="{{stackTab}}" onClick="{{viewStack}}" aria-pressed="{{stackPressed}}">Stabel</button>
+        <button class="{{listTab}}" onClick="{{viewList}}" aria-pressed="{{listPressed}}">Liste</button>
+      </div>
+      <sc-if value="{{notDone}}" hint-placeholder-val="{{ true }}">
+        <div class="ctr" aria-live="polite">
+          <div class="bars">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="6"><i class="{{b.cls}}"></i></sc-for>
+          </div>
+          <b class="num" style="font-size: 15px">{{counter}}</b>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- ===== STACK VIEW ===== -->
+    <sc-if value="{{showStack}}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div class="stackwrap">
+          <sc-if value="{{hasB2}}" hint-placeholder-val="{{ true }}">
+            <div class="bcard b2" aria-hidden="true"><div class="{{b2Art}}"><i class="{{b2Icon}}" style="width: 48px; height: 48px"></i></div></div>
+          </sc-if>
+          <sc-if value="{{hasB1}}" hint-placeholder-val="{{ true }}">
+            <div class="bcard b1" aria-hidden="true">
+              <div class="{{b1Art}}"><i class="{{b1Icon}}" style="width: 52px; height: 52px"></i></div>
+              <div style="padding: 16px 20px"><b style="font: 700 19px var(--fd); color: #34405F">{{b1Title}}</b></div>
+            </div>
+          </sc-if>
+
+          <div class="{{topCls}}">
+            <div class="{{top.artCls}}">
+              <span class="deco" style="width: 120px; height: 120px; left: -30px; bottom: -50px"></span>
+              <span class="deco" style="width: 60px; height: 60px; right: 40px; top: 30px"></span>
+              <i class="{{top.bigIcon}}"></i>
+              <span class="pill pill-need tl" style="box-shadow: 0 0 0 3px rgba(255,255,255,.7)"><span class="pd"></span>Trenger hjelp</span>
+              <span class="pill pill-line tr"><i class="i i-clock s14"></i>{{top.posted}}</span>
+            </div>
+            <div style="padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0">
+              <h2 class="h3" style="font-size: 22px">{{top.title}}</h2>
+              <div class="rowf" style="gap: 10px">
+                <span class="{{top.avCls}}">{{top.ini}}</span>
+                <div class="stack" style="gap: 3px; flex: 1; min-width: 0">
+                  <b style="font-size: 14.5px">{{top.who}}</b>
+                  <span class="stars"><i class="i i-star"></i>{{top.rating}}<span>({{top.n}}) · {{top.cat}}</span></span>
+                </div>
+                <div class="stack" style="align-items: flex-end; gap: 2px">
+                  <span class="meta" style="font-size: 11.5px; font-weight: 700">{{top.plabel}}</span>
+                  <span class="num" style="font-size: 22px">{{top.price}}</span>
+                </div>
+              </div>
+              <div class="rowf" style="gap: 14px; flex-wrap: wrap">
+                <span class="lmeta"><i class="i i-pin"></i>{{top.place}} · {{top.dist}}</span>
+                <span class="lmeta"><i class="i i-cal"></i>{{top.when}}</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto">
+                <sc-for list="{{top.why}}" as="w" hint-placeholder-count="3">
+                  <span class="why"><i class="{{w.icon}}"></i>{{w.text}}</span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- controls -->
+        <div class="px" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 4px">
+          <div class="stack" style="align-items: center">
+            <button class="rbtn no" onClick="{{dismiss}}" aria-label="Ikke aktuelt"><i class="i i-x s28"></i></button>
+            <span class="rlab">Ikke aktuelt</span>
+          </div>
+          <a href="Oppdragsdetaljer.dc.html" class="btn btn-lime btn-lg" style="flex: 1; margin-top: 3px">Se og gi tilbud<i class="i i-arrow s18"></i></a>
+          <div class="stack" style="align-items: center">
+            <button class="{{heartCls}}" onClick="{{saveTop}}" aria-label="{{heartLabel}}"><i class="{{heartIcon}}"></i></button>
+            <span class="rlab">{{heartText}}</span>
+          </div>
+        </div>
+        <div class="px" style="display: flex; justify-content: center; margin-top: 14px">
+          <button class="undo" onClick="{{undo}}" disabled="{{undoDisabled}}" aria-label="Angre siste"><i class="i i-undo s16"></i>Angre</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== LIST VIEW ===== -->
+    <sc-if value="{{showList}}" hint-placeholder-val="{{ false }}">
+      <div class="px stack" style="gap: 12px">
+        <sc-for list="{{remaining}}" as="it" hint-placeholder-count="4">
+          <div class="lcard au">
+            <a href="Oppdragsdetaljer.dc.html">
+              <div class="{{it.thumbCls}}"><i class="{{it.icon}}"></i></div>
+              <div class="lbody">
+                <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div>
+                <p class="ltitle">{{it.title}}</p>
+                <div class="lmeta"><b>{{it.who}}</b><span class="stars"><i class="i i-star"></i>{{it.rating}}</span></div>
+                <div class="lmeta"><i class="i i-pin"></i>{{it.place}} · {{it.dist}}</div>
+                <div class="lmeta"><i class="i i-sparkle"></i>{{it.why0}}</div>
+                <div class="lprice"><span class="l">{{it.plabel}}</span><span class="v">{{it.price}}</span></div>
+              </div>
+            </a>
+            <button class="save lx" onClick="{{it.dismiss}}" aria-label="Ikke aktuelt: {{it.title}}"><i class="i i-x s18"></i></button>
+          </div>
+        </sc-for>
+        <sc-if value="{{canUndoList}}" hint-placeholder-val="{{ false }}">
+          <button class="undo" onClick="{{undo}}" style="align-self: center; margin-top: 4px"><i class="i i-undo s16"></i>Angre siste</button>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ===== DONE ===== -->
+    <sc-if value="{{done}}" hint-placeholder-val="{{ false }}">
+      <div class="px" style="margin-top: 4px">
+        <div class="card as" style="padding: 30px 22px 22px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; overflow: hidden; position: relative">
+          <div style="position: absolute; top: -80px; left: 50%; margin-left: -150px; width: 300px; height: 220px; border-radius: 50%; background: var(--grad-soft)"></div>
+          <div style="position: relative; width: 150px; height: 128px; margin-bottom: 8px">
+            <div style="position: absolute; left: 22px; top: 16px; width: 76px; height: 96px; border-radius: 18px; background: #ffffff; box-shadow: var(--sh); transform: rotate(-12deg)"></div>
+            <div style="position: absolute; left: 52px; top: 8px; width: 76px; height: 96px; border-radius: 18px; background: #ffffff; box-shadow: var(--sh); transform: rotate(9deg)"></div>
+            <div class="as d3" style="position: absolute; left: 36px; top: 12px; width: 78px; height: 100px">
+              <div class="art art-hage" style="width: 78px; height: 100px; border-radius: 18px; box-shadow: var(--sh-m)"><i class="i i-check s32"></i></div>
+            </div>
+            <span class="icirc ai d6" style="position: absolute; right: 6px; top: 0; width: 30px; height: 30px; background: #B8EE3C; color: #0A1740"><i class="i i-sparkle s16"></i></span>
+            <span class="ai d8" style="position: absolute; left: 4px; bottom: 16px; width: 10px; height: 10px; border-radius: 50%; background: #19B8EE"></span>
+          </div>
+          <h2 class="h3" style="position: relative">Du har sett alle forslagene</h2>
+          <p class="meta p" style="position: relative; max-width: 290px; font-size: 14px">Vi sier fra når det kommer nye oppdrag som passer det du kan. {{savedLine}}</p>
+          <div class="stack" style="gap: 10px; align-self: stretch; margin-top: 10px; position: relative">
+            <a href="Oppdrag.dc.html" class="btn btn-lime btn-block"><i class="i i-locate s18"></i>Utvid rekkevidde</a>
+            <button class="btn btn-ghost btn-block" onClick="{{restart}}"><i class="i i-refresh s18"></i>Start på nytt</button>
+            <a href="Lagrede.dc.html" class="link" style="align-self: center">Se lagrede oppdrag<i class="i i-right"></i></a>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="px" style="margin-top: 22px">
+      <div class="note" style="justify-content: center; text-align: center"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    </div>
+    <div style="height: 48px"></div>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 28px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+      <sc-if value="{{toastUndo}}" hint-placeholder-val="{{ false }}"><button class="ta" onClick="{{undo}}">Angre</button></sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { view: 'stack', gone: [], leaving: false, backFlip: 0, anim: 'rise', saved: {}, toast: null, toastIcon: 'i i-check s16', toastUndo: false };
+  }
+  componentWillUnmount() { clearTimeout(this.ft); clearTimeout(this.tt); }
+  flash(msg, icon, undo) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16', toastUndo: !!undo });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  tasks() {
+    return [
+      { id: 't1', cat: 'hage', catL: 'Hage', title: 'Klippe plen og rake løv', who: 'Kari Holm', ini: 'KH', av: 'c', rating: '4,9', n: '27', place: 'Nordre Ål', dist: '1,2 km', when: 'Lør 3. okt · ca. 2 t', plabel: 'Budsjett', price: '400 kr', posted: 'for 3 t siden',
+        why: [['i i-check', 'Passer Hage'], ['i i-pin', '1,2 km unna'], ['i i-verified', 'Verifisert oppdragsgiver']] },
+      { id: 't2', cat: 'data', catL: 'Datahjelp', title: 'Sette opp ny mobil for pappa', who: 'Nora Solberg', ini: 'NS', av: 'f', rating: '4,8', n: '14', place: 'Søre Ål', dist: '2,2 km', when: 'Tor 1. okt · etter kl. 17', plabel: 'Budsjett', price: '300 kr', posted: 'for 1 t siden',
+        why: [['i i-check', 'Passer Datahjelp'], ['i i-moon', 'Kveld – når du er ledig'], ['i i-verified', 'Verifisert oppdragsgiver']] },
+      { id: 't3', cat: 'data', catL: 'Datahjelp', title: 'Koble opp skriver og wifi', who: 'Magnus Aas', ini: 'MA', av: 'd', rating: '4,7', n: '9', place: 'Stampesletta', dist: '2,8 km', when: 'Fre 2. okt · kveld', plabel: 'Budsjett', price: '350 kr', posted: 'for 2 t siden',
+        why: [['i i-check', 'Passer Datahjelp'], ['i i-pin', '2,8 km unna'], ['i i-star', '4,7 i snitt']] },
+      { id: 't4', cat: 'montering', catL: 'Montering', title: 'Montere garderobeskap', who: 'Thea Lund', ini: 'TL', av: 'g', rating: '5,0', n: '6', place: 'Søre Ål', dist: '3,1 km', when: 'Denne uka · fleksibel', plabel: '', price: 'Ønsker tilbud', posted: 'i går',
+        why: [['i i-check', 'Passer Montering'], ['i i-cal', 'Fleksibel dato'], ['i i-verified', 'Verifisert oppdragsgiver']] },
+      { id: 't5', cat: 'data', catL: 'Datahjelp', title: 'Overføre bilder fra gammel PC', who: 'Ida Sæther', ini: 'IS', av: 'a', rating: '4,9', n: '11', place: 'Kanten', dist: '3,4 km', when: 'Man 5. okt · kveld', plabel: 'Budsjett', price: '400 kr', posted: 'for 5 t siden',
+        why: [['i i-check', 'Passer Datahjelp'], ['i i-moon', 'Kveld – når du er ledig'], ['i i-pin', '3,4 km unna']] },
+      { id: 't6', cat: 'hage', catL: 'Hage', title: 'Rake løv og tømme takrenner', who: 'Ola Dahl', ini: 'OD', av: 'f', rating: '4,7', n: '29', place: 'Vingrom', dist: '6,0 km', when: 'Søn 4. okt · formiddag', plabel: 'Budsjett', price: '500 kr', posted: 'for 20 min siden',
+        why: [['i i-check', 'Passer Hage'], ['i i-sun', 'Helg'], ['i i-verified', 'Verifisert oppdragsgiver']] }
+    ];
+  }
+  dismissId(id, fromList) {
+    if (fromList) {
+      this.setState({ gone: this.state.gone.concat([id]) });
+      this.flash('Skjult fra forslagene', 'i i-x s14', true);
+      return;
+    }
+    if (this.state.leaving) return;
+    this.setState({ leaving: true });
+    this.ft = setTimeout(() => this.setState({ leaving: false, anim: 'rise', gone: this.state.gone.concat([id]) }), 430);
+  }
+  renderVals() {
+    const S = this.state;
+    const ALL = this.tasks();
+    const rem = ALL.filter((t) => S.gone.indexOf(t.id) < 0);
+    const top = rem[0];
+    const b1 = rem[1];
+    const b2 = rem[2];
+    const done = rem.length === 0;
+    const isStack = S.view === 'stack';
+    const topD = top ? {
+      title: top.title, who: top.who, ini: top.ini, rating: top.rating, n: top.n, cat: top.catL, place: top.place, dist: top.dist, when: top.when,
+      plabel: top.plabel || 'Pris', price: top.price, posted: top.posted,
+      artCls: 'fart art art-' + top.cat, bigIcon: 'i i-' + top.cat + ' big',
+      avCls: 'av s40 av-' + top.av,
+      why: top.why.map((w) => ({ icon: w[0], text: w[1] }))
+    } : { why: [] };
+    const saved = top ? !!S.saved[top.id] : false;
+    const idx = ALL.length - rem.length;
+    const undoFn = () => {
+      if (!S.gone.length) return;
+      const g = S.gone.slice(0, -1);
+      this.setState({ gone: g, anim: S.backFlip % 2 ? 'backB' : 'backA', backFlip: S.backFlip + 1, toast: null });
+    };
+    return {
+      stackTab: isStack ? 'on' : '', listTab: isStack ? '' : 'on',
+      stackPressed: isStack ? 'true' : 'false', listPressed: isStack ? 'false' : 'true',
+      viewStack: () => this.setState({ view: 'stack' }),
+      viewList: () => this.setState({ view: 'list' }),
+      notDone: !done,
+      counter: (idx + 1) + ' av ' + ALL.length,
+      bars: ALL.map((t, i) => ({ cls: i < idx ? 'done' : (i === idx ? 'on' : '') })),
+      showStack: isStack && !done,
+      showList: !isStack && !done,
+      done,
+      hasB1: !!b1, hasB2: !!b2,
+      b1Art: b1 ? 'bart art art-' + b1.cat : 'bart art', b1Icon: b1 ? 'i i-' + b1.cat : 'i i-annet', b1Title: b1 ? b1.title : '',
+      b2Art: b2 ? 'bart art art-' + b2.cat : 'bart art', b2Icon: b2 ? 'i i-' + b2.cat : 'i i-annet',
+      topCls: 'fcard ' + (S.leaving ? 'flyL' : S.anim),
+      top: topD,
+      dismiss: () => { if (top) this.dismissId(top.id, false); },
+      heartCls: 'rbtn yes' + (saved ? ' on' : ''),
+      heartIcon: saved ? 'i i-heartf s24' : 'i i-heart s24',
+      heartLabel: saved ? 'Fjern fra lagrede' : 'Lagre oppdraget',
+      heartText: saved ? 'Lagret' : 'Lagre',
+      saveTop: () => {
+        if (!top) return;
+        const sv = Object.assign({}, S.saved); sv[top.id] = !sv[top.id];
+        this.setState({ saved: sv });
+        this.flash(sv[top.id] ? 'Lagret – finn det igjen under Lagrede' : 'Fjernet fra Lagrede', sv[top.id] ? 'i i-heartf s14' : 'i i-x s14');
+      },
+      undo: undoFn,
+      undoDisabled: S.gone.length === 0,
+      canUndoList: S.gone.length > 0,
+      remaining: rem.map((t) => ({
+        title: t.title, who: t.who, rating: t.rating, place: t.place, dist: t.dist, plabel: t.plabel, price: t.price,
+        why0: t.why[0][1], thumbCls: 'lthumb art art-' + t.cat, icon: 'i i-' + t.cat,
+        dismiss: () => this.dismissId(t.id, true)
+      })),
+      savedLine: Object.keys(S.saved).filter((k) => S.saved[k]).length ? 'Du har lagret ' + Object.keys(S.saved).filter((k) => S.saved[k]).length + ' av dem.' : '',
+      restart: () => this.setState({ gone: [], anim: S.backFlip % 2 ? 'backB' : 'backA', backFlip: S.backFlip + 1, view: 'stack' }),
+      toast: S.toast, toastIcon: S.toastIcon, toastUndo: S.toastUndo
+    };
+  }
+}
+</script>
+</body>
+</html>

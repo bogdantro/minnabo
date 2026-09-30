@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Samtykker</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.stepper{display:flex;align-items:flex-start;padding:4px 20px 0}
+.stp{display:flex;flex-direction:column;align-items:center;gap:8px;width:76px;flex:none;font:700 12.5px/1 var(--fb);color:var(--faint)}
+.stp .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1.5px solid var(--line);font:700 14px/1 var(--fd);color:var(--faint)}
+.stp.done{color:#1D6E3A}
+.stp.done .n{background:#2B8F4E;border-color:#2B8F4E;color:#fff}
+.stp.cur{color:var(--ink)}
+.stp.cur .n{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:0 0 0 5px rgba(10,23,64,.1)}
+.sline{flex:1;height:3px;border-radius:2px;background:#E1E5EA;margin-top:16px;position:relative;overflow:hidden}
+.sline.done::after{content:"";position:absolute;inset:0;background:#2B8F4E;animation:growW .8s var(--ease) both}
+.idc{position:relative;overflow:hidden;border-radius:26px;background:#fff;box-shadow:var(--sh-m);padding:18px}
+.idc .bgc{position:absolute;right:-60px;top:-80px;width:200px;height:200px;border-radius:50%;background:var(--grad-soft)}
+.crow{display:flex;gap:6px;padding:10px 12px 12px 6px;align-items:flex-start}
+.cbox{background:#fff;border-radius:22px;box-shadow:var(--sh);border:1.5px solid transparent;transition:border-color .25s,background .25s}
+.cbox.on{border-color:#CDEBA0;background:#FBFEF4}
+.chkhit{width:44px;height:44px;border:0;background:none;padding:0;display:grid;place-items:center;cursor:pointer;flex:none}
+.ctext{flex:1;min-width:0;padding-top:10px}
+.ct{font:600 15.5px/1.4 var(--fb);color:var(--ink)}
+.ct a{color:var(--cyan-d);font-weight:700;text-underline-offset:3px}
+.cmeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.tstamp{font-size:12px;color:#1D6E3A;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.more{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:0;min-height:36px;margin-top:4px;font:700 13px var(--fb);color:var(--mute);cursor:pointer}
+.more .i{transition:transform .3s var(--ease)}
+.more.open .i{transform:rotate(180deg)}
+.explain{margin-top:2px;padding:12px 14px;border-radius:14px;background:var(--surf2);font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.explain ul{margin:6px 0 0;padding-left:18px}
+.explain li{margin:3px 0}
+.reqbar{height:6px;border-radius:3px;background:#E1E5EA;overflow:hidden;flex:1}
+.reqbar i{display:block;height:100%;border-radius:3px;background:var(--grad);transition:width .5s var(--ease)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh lime"></div>
+    <div class="subbar">
+      <a href="LoggInn.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Verifisering og samtykker</div>
+      <span></span>
+    </div>
+
+    <!-- stepper -->
+    <div class="stepper au" aria-label="Steg 2 av 3">
+      <div class="stp done"><span class="n"><i class="i i-check s16"></i></span>Identitet</div>
+      <span class="sline done"></span>
+      <div class="stp cur" aria-current="step"><span class="n">2</span>Samtykker</div>
+      <span class="sline"></span>
+      <div class="stp"><span class="n">3</span>Oppsett</div>
+    </div>
+
+    <!-- heading -->
+    <div class="px au d2" style="position: relative; margin-top: 24px">
+      <h1 class="h1" style="font-size: 29px">Nesten klar, Mari</h1>
+      <p class="body muted p" style="margin-top: 8px">Vi trenger noen samtykker før du kan bruke MinNabo. Det tar under ett minutt.</p>
+    </div>
+
+    <!-- identity card -->
+    <div class="px au d3" style="position: relative; margin-top: 20px">
+      <div class="idc">
+        <div class="bgc"></div>
+        <div style="position: relative; display: flex; align-items: center; gap: 14px">
+          <span class="av av-me s56">MH</span>
+          <div class="stack" style="gap: 5px; flex: 1; min-width: 0">
+            <span class="eyebrow" style="font-size: 11px">Bekreftet identitet</span>
+            <b class="h3">Mari Haugen</b>
+          </div>
+          <span class="icirc" style="width: 40px; height: 40px; background: #E3F5E8; color: #2B8F4E"><i class="i i-shield s18"></i></span>
+        </div>
+        <div style="position: relative; margin-top: 14px; border-top: 1px solid #EEF1F4">
+          <div class="kv"><span>Telefon</span><b>+47 ••• •• 234</b></div>
+          <div class="kv"><span>Fødselsår</span><b>1991</b></div>
+          <div class="kv"><span>Status</span><b class="vbadge" style="font-size: 13.5px"><i class="i i-verified s16"></i>Bekreftet med Vipps</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- consents header -->
+    <div class="px au d4" style="position: relative; margin-top: 28px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+      <div>
+        <h2 class="h3">Samtykker</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px; width: 170px">
+          <span class="reqbar"><i style="width: 0; {{reqStyle}}"></i></span>
+          <span class="meta" style="white-space: nowrap; font-weight: 600">{{reqLabel}}</span>
+        </div>
+      </div>
+      <button class="{{allCls}}" onClick="{{toggleAll}}"><i class="{{allIcon}}"></i>{{allLabel}}</button>
+    </div>
+
+    <!-- consents -->
+    <div class="px stack" style="gap: 12px; margin-top: 14px">
+      <sc-for list="{{consents}}" as="c" hint-placeholder-count="4">
+        <div class="{{c.boxCls}}">
+          <div class="crow">
+            <button class="chkhit" onClick="{{c.toggle}}" aria-pressed="{{c.pressed}}" aria-label="{{c.aria}}"><span class="{{c.chkCls}}"><i class="i i-check s16"></i></span></button>
+            <div class="ctext">
+              <div class="ct">{{c.pre}}<sc-if value="{{c.hasLink}}" hint-placeholder-val="{{ true }}"><a href="{{c.href}}">{{c.linkText}}</a></sc-if>{{c.post}}</div>
+              <div class="cmeta">
+                <span class="{{c.tagCls}}">{{c.tag}}</span>
+                <sc-if value="{{c.vipps}}" hint-placeholder-val="{{ false }}"><span class="vbadge"><i class="i i-verified s14"></i>Bekreftet via Vipps</span></sc-if>
+                <sc-if value="{{c.on}}" hint-placeholder-val="{{ false }}"><span class="tstamp ai"><i class="i i-clock s14"></i>{{c.stamp}}</span></sc-if>
+              </div>
+              <button class="{{c.moreCls}}" onClick="{{c.expand}}" aria-expanded="{{c.expanded}}">Hva betyr dette?<i class="i i-down s14"></i></button>
+              <sc-if value="{{c.open}}" hint-placeholder-val="{{ false }}">
+                <div class="explain au">
+                  <b style="color: #0A1740">{{c.exTitle}}</b>
+                  <ul>
+                    <sc-for list="{{c.points}}" as="p" hint-placeholder-count="3">
+                      <li>{{p.t}}</li>
+                    </sc-for>
+                  </ul>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- GDPR note -->
+    <div class="px" style="margin-top: 18px">
+      <div style="display: flex; gap: 12px; padding: 14px 16px; border-radius: 18px; background: #DFF2FB; color: #065C8F">
+        <i class="i i-lock s18" style="margin-top: 1px"></i>
+        <span style="font: 500 13.5px/1.45 var(--fb)">Samtykkene lagres med tidspunkt (GDPR). Du kan endre dem når som helst under <a href="Personvern.dc.html" style="font-weight: 700; color: #065C8F">Personvern</a>.</span>
+      </div>
+    </div>
+    <div class="spacer-foot"></div>
+  </div>
+
+  <!-- sticky footer -->
+  <div class="foot">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font: 600 13px var(--fb); color: #5F6983">
+      <sc-if value="{{ready}}" hint-placeholder-val="{{ false }}"><span class="icirc as" style="width: 20px; height: 20px; background: #2B8F4E; color: #ffffff"><i class="i i-check s14"></i></span><span style="color: #1D6E3A">Alt klart – du kan gå videre</span></sc-if>
+      <sc-if value="{{notReady}}" hint-placeholder-val="{{ true }}"><i class="i i-info s16"></i><span>{{missingLabel}}</span></sc-if>
+    </div>
+    <sc-if value="{{ready}}" hint-placeholder-val="{{ false }}">
+      <a href="Oppsett.dc.html" class="btn btn-lime btn-lg btn-block as">Fortsett til oppsett<i class="i i-arrow s18"></i><span class="shine"></span></a>
+    </sc-if>
+    <sc-if value="{{notReady}}" hint-placeholder-val="{{ true }}">
+      <button class="btn btn-lime btn-lg btn-block" disabled="disabled">Fortsett til oppsett<i class="i i-arrow s18"></i></button>
+    </sc-if>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 150px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { on: { terms: false, privacy: false, age: true, tips: false }, open: {}, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const C = [
+      { id: 'terms', req: true, pre: 'Jeg godtar ', link: 'vilkårene for MinNabo', href: 'Vilkar.dc.html', post: '',
+        exTitle: 'Kort fortalt',
+        points: ['MinNabo kobler naboer som trenger hjelp med naboer som kan hjelpe.', 'Dere avtaler pris, tid og betaling direkte – MinNabo håndterer ikke betaling.', 'Du er selv ansvarlig for at avtalen følger norsk lov, f.eks. skatteregler.', 'Oppføringer som bryter retningslinjene kan fjernes.'] },
+      { id: 'privacy', req: true, pre: 'Jeg har lest ', link: 'personvernerklæringen', href: 'Personvern.dc.html', post: '',
+        exTitle: 'Slik bruker vi opplysningene dine',
+        points: ['Andre ser navnet ditt, profilbilde og omtrentlig område – aldri adressen din.', 'Meldinger lagres kryptert og brukes bare for å vise samtalen og ved rapportering.', 'Du kan laste ned eller slette dataene dine når som helst.'] },
+      { id: 'age', req: true, pre: 'Alderen min er bekreftet (18 år eller eldre)', post: '', vipps: true,
+        exTitle: 'Hva med deg under 18?',
+        points: ['Er du under 18, får du en ungdomskonto. Den kan bare brukes til å gi tilbud på oppdrag.', 'Alderen din ble bekreftet automatisk via Vipps – vi lagrer bare fødselsåret.'] },
+      { id: 'tips', req: false, pre: 'Send meg tips om nye oppdrag i nærheten', post: '',
+        exTitle: 'Helt valgfritt',
+        points: ['Maks ett varsel om dagen med nye oppdrag i Lillehammer og omegn.', 'Du kan skru det av under Varslinger når du vil.'] }
+    ];
+    const reqIds = C.filter((c) => c.req).map((c) => c.id);
+    const done = reqIds.filter((id) => S.on[id]).length;
+    const ready = done === reqIds.length;
+    const allOn = C.every((c) => S.on[c.id]);
+    const consents = C.map((c) => {
+      const on = !!S.on[c.id];
+      const open = !!S.open[c.id];
+      return {
+        pre: c.pre, post: c.post, hasLink: !!c.link, href: c.href || '', linkText: c.link || '',
+        on, open, vipps: !!c.vipps, exTitle: c.exTitle, points: c.points.map((t) => ({ t })),
+        boxCls: 'cbox' + (on ? ' on' : ''),
+        chkCls: 'chk' + (on ? ' on' : ''),
+        pressed: on ? 'true' : 'false',
+        aria: (c.pre + (c.link || '')).trim(),
+        tag: c.req ? 'Påkrevd' : 'Valgfritt',
+        tagCls: 'pill ' + (c.req ? 'pill-neutral' : 'pill-line'),
+        stamp: 'Godtatt i dag kl. 14:32',
+        moreCls: 'more' + (open ? ' open' : ''),
+        expanded: open ? 'true' : 'false',
+        expand: () => { const o = Object.assign({}, S.open); o[c.id] = !o[c.id]; this.setState({ open: o }); },
+        toggle: () => {
+          const n = Object.assign({}, S.on); n[c.id] = !n[c.id]; this.setState({ on: n });
+          if (c.id === 'tips') this.flash(n.tips ? 'Du får tips om oppdrag i nærheten' : 'Ingen tips – det er helt greit', n.tips ? 'i i-bell s14' : 'i i-x s14');
+        }
+      };
+    });
+    const missing = reqIds.length - done;
+    return {
+      consents, ready, notReady: !ready,
+      reqLabel: done + ' av ' + reqIds.length + ' påkrevde',
+      reqStyle: 'width: ' + Math.round((done / reqIds.length) * 100) + '%',
+      missingLabel: missing === 1 ? 'Ett påkrevd samtykke gjenstår' : missing + ' påkrevde samtykker gjenstår',
+      allCls: 'btn btn-sm ' + (allOn ? 'btn-soft' : 'btn-ink'),
+      allIcon: allOn ? 'i i-undo s16' : 'i i-checks s16',
+      allLabel: allOn ? 'Fjern alle' : 'Godta alle',
+      toggleAll: () => {
+        if (allOn) { this.setState({ on: { terms: false, privacy: false, age: false, tips: false } }); this.flash('Alle samtykker fjernet', 'i i-undo s14'); }
+        else { this.setState({ on: { terms: true, privacy: true, age: true, tips: true } }); this.flash('Alle samtykker godtatt · 14:32', 'i i-checks s14'); }
+      },
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

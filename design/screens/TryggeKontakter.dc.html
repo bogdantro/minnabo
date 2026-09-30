@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Trygge kontakter</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.hero{position:relative;border-radius:28px;background:#0A1740;color:#fff;padding:22px 20px;overflow:hidden}
+.hero .c1{position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:#B8EE3C;opacity:.9}
+.hero .c2{position:absolute;right:60px;bottom:-60px;width:110px;height:110px;border-radius:50%;background:#19B8EE;opacity:.35}
+.crow{display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;border-radius:20px;box-shadow:var(--sh)}
+.rel{display:flex;gap:8px;flex-wrap:wrap}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="subbar">
+    <a href="Sikkerhet.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+    <div class="title">Trygge kontakter</div>
+    <span></span>
+  </div>
+  <div class="scroll" style="top: 110px">
+    <div class="px stack" style="gap: 18px; padding-top: 8px">
+      <div class="hero au">
+        <span class="c1"></span><span class="c2"></span>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 10px; max-width: 250px">
+          <span class="icirc" style="width: 44px; height: 44px; background: #ffffff; color: #0A1740"><i class="i i-shield s22"></i></span>
+          <b style="font: 700 21px/1.15 var(--fd); letter-spacing: -.02em">Noen som vet hvor du er</b>
+          <span style="font-size: 14px; line-height: 1.45; color: rgba(255,255,255,.8)">Trygge kontakter kan få en SMS når du starter en jobbdag – med omtrentlig område og når du regner med å være ferdig.</span>
+        </div>
+      </div>
+
+      <div class="rowf" style="justify-content: space-between">
+        <b class="h4">Dine kontakter ({{count}})</b>
+        <button class="link" onClick="{{openAdd}}"><i class="i i-plus s16"></i>Legg til</button>
+      </div>
+
+      <div class="stack" style="gap: 10px">
+        <sc-for list="{{contacts}}" as="c" hint-placeholder-count="2">
+          <div class="crow au">
+            <span class="{{c.avCls}}">{{c.ini}}</span>
+            <div class="stack" style="gap: 3px; flex: 1; min-width: 0">
+              <b style="font-size: 15.5px">{{c.name}}</b>
+              <span class="meta">{{c.rel}} · {{c.phone}}</span>
+            </div>
+            <button class="iconbtn" onClick="{{c.ask}}" aria-label="{{c.removeLabel}}"><i class="i i-trash s18"></i></button>
+          </div>
+        </sc-for>
+        <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+          <div class="dash-card as" style="padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center">
+            <span class="icirc" style="width: 52px; height: 52px; background: #EDF8D6; color: #3B7300"><i class="i i-users s22"></i></span>
+            <b>Ingen trygge kontakter ennå</b>
+            <button class="btn btn-sm btn-ink" onClick="{{openAdd}}">Legg til kontakt</button>
+          </div>
+        </sc-if>
+      </div>
+
+      <div class="note"><i class="i i-lock"></i><span>Kontaktene dine er private. De får bare beskjed når du selv starter «Trygg tur» fra en avtale.</span></div>
+      <a href="Sikkerhet.dc.html" class="btn btn-ghost btn-block"><i class="i i-nav s18"></i>Om Trygg tur</a>
+      <div style="height: 40px"></div>
+    </div>
+  </div>
+
+  <sc-if value="{{addOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeAdd}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Legg til trygg kontakt">
+      <div class="grab"></div>
+      <div class="sheet-h"><h2 class="h3">Legg til trygg kontakt</h2><button class="iconbtn" onClick="{{closeAdd}}" aria-label="Lukk"><i class="i i-x s18"></i></button></div>
+      <div class="stack" style="gap: 16px">
+        <div class="field">
+          <label class="label" for="tk-navn">Navn</label>
+          <input id="tk-navn" class="{{nameCls}}" value="{{name}}" onChange="{{onName}}" placeholder="F.eks. Ola Haugen">
+        </div>
+        <div class="field">
+          <label class="label" for="tk-tlf">Mobilnummer</label>
+          <div class="inwrap"><span class="pre">+47</span><input id="tk-tlf" class="{{phoneCls}}" value="{{phone}}" onChange="{{onPhone}}" inputmode="numeric" placeholder="123 45 678"></div>
+          <sc-if value="{{phoneErr}}" hint-placeholder-val="{{ false }}"><span class="errtxt"><i class="i i-alert s14"></i>Skriv inn 8 siffer</span></sc-if>
+        </div>
+        <div class="field">
+          <span class="label">Relasjon</span>
+          <div class="rel">
+            <sc-for list="{{rels}}" as="r" hint-placeholder-count="5">
+              <button class="{{r.cls}}" onClick="{{r.pick}}">{{r.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <button class="btn btn-lime btn-block btn-lg" onClick="{{save}}">Legg til</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{confirm}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{cancel}}" aria-label="Avbryt"></button>
+    <div class="dialog" role="alertdialog" aria-label="Fjern kontakt">
+      <span class="icirc" style="width: 52px; height: 52px; background: #FDEBE9; color: #C23029; margin: 0 auto 12px"><i class="i i-trash s22"></i></span>
+      <b class="h3" style="display: block">Fjerne {{confirmName}}?</b>
+      <p class="meta p" style="margin: 8px 0 18px">Hen får ikke lenger beskjed når du starter en jobbdag.</p>
+      <div class="fr" style="display: flex; gap: 10px">
+        <button class="btn btn-ghost" style="flex: 1" onClick="{{cancel}}">Avbryt</button>
+        <button class="btn btn-danger" style="flex: 1" onClick="{{remove}}">Fjern</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px"><span class="ti"><i class="i i-check s16"></i></span><span>{{toast}}</span></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      contacts: [
+        { id: 1, name: 'Ola Haugen', ini: 'OH', rel: 'Bror', phone: '+47 924 11 380', c: 'f' },
+        { id: 2, name: 'Siri Berg', ini: 'SB', rel: 'Venninne', phone: '+47 481 56 207', c: 'g' }
+      ],
+      addOpen: false, name: '', phone: '', rel: 'Familie', tried: false, confirmId: null, toast: null
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.t); }
+  flash(msg) { clearTimeout(this.t); this.setState({ toast: msg }); this.t = setTimeout(() => this.setState({ toast: null }), 2800); }
+  renderVals() {
+    const S = this.state;
+    const digits = S.phone.replace(/\D/g, '');
+    const phoneOk = digits.length === 8;
+    const nameOk = S.name.trim().length >= 2;
+    const target = S.contacts.find((c) => c.id === S.confirmId);
+    const fmt = (d) => d.replace(/(\d{3})(\d{0,2})(\d{0,3})/, (m, a, b, c) => [a, b, c].filter(Boolean).join(' '));
+    return {
+      count: S.contacts.length, empty: S.contacts.length === 0,
+      contacts: S.contacts.map((c) => ({
+        name: c.name, ini: c.ini, rel: c.rel, phone: c.phone, avCls: 'av s48 av-' + c.c,
+        removeLabel: 'Fjern ' + c.name,
+        ask: () => this.setState({ confirmId: c.id })
+      })),
+      addOpen: S.addOpen,
+      openAdd: () => this.setState({ addOpen: true, name: '', phone: '', tried: false }),
+      closeAdd: () => this.setState({ addOpen: false }),
+      name: S.name, phone: S.phone,
+      onName: (e) => this.setState({ name: e.target.value }),
+      onPhone: (e) => this.setState({ phone: fmt(e.target.value.replace(/\D/g, '').slice(0, 8)) }),
+      nameCls: 'input' + (S.tried && !nameOk ? ' err' : ''),
+      phoneCls: 'input' + (S.tried && !phoneOk ? ' err' : ''),
+      phoneErr: S.tried && !phoneOk,
+      rels: ['Familie', 'Partner', 'Venn', 'Nabo', 'Kollega'].map((label) => ({ label, cls: 'chip plain sm' + (S.rel === label ? ' on' : ''), pick: () => this.setState({ rel: label }) })),
+      save: () => {
+        if (!nameOk || !phoneOk) { this.setState({ tried: true }); return; }
+        const parts = S.name.trim().split(/\s+/);
+        const ini = (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+        const c = { id: Date.now(), name: S.name.trim(), ini, rel: S.rel, phone: '+47 ' + S.phone, c: 'b' };
+        this.setState({ contacts: S.contacts.concat([c]), addOpen: false });
+        this.flash(parts[0] + ' får en SMS når du deler en jobbdag');
+      },
+      confirm: !!target, confirmName: target ? target.name.split(' ')[0] : '',
+      cancel: () => this.setState({ confirmId: null }),
+      remove: () => { this.setState({ contacts: S.contacts.filter((c) => c.id !== S.confirmId), confirmId: null }); this.flash('Kontakten er fjernet'); },
+      toast: S.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

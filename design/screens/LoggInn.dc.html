@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Logg inn</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.glow{display:none;position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 38% at 0% 0%,#E6F9B9 0%,rgba(230,249,185,0) 70%),radial-gradient(70% 40% at 100% 12%,#CDEFFC 0%,rgba(205,239,252,0) 70%),radial-gradient(60% 30% at 40% 42%,#E8FBF1 0%,rgba(232,251,241,0) 70%)}
+.lhead{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:56px 16px 0}
+.logobox{width:104px;height:104px;border-radius:32px;background:#fff;display:grid;place-items:center;box-shadow:0 26px 50px -20px rgba(10,23,64,.35),0 0 0 1px rgba(10,23,64,.04)}
+.vmark{width:28px;height:28px;border-radius:9px;background:#fff;display:grid;place-items:center;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
+.vmark i{display:block;width:12px;height:12px;border-radius:50%;border:3px solid #FF5B24}
+.orline{display:flex;align-items:center;gap:14px;color:var(--faint);font:600 13px var(--fb)}
+.orline::before,.orline::after{content:"";flex:1;height:1px;background:var(--line)}
+.softrow{width:100%;height:56px;border-radius:999px;border:1.5px dashed #D4D9E1;background:rgba(255,255,255,.6);display:flex;align-items:center;gap:12px;padding:0 10px 0 18px;color:var(--faint);font:700 15.5px var(--fb);cursor:not-allowed}
+.softrow b{flex:1;text-align:left;font-weight:700}
+.shA{animation:shA .4s}.shB{animation:shB .4s}
+@keyframes shA{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+@keyframes shB{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+.pre47{position:absolute;left:14px;display:flex;align-items:center;gap:8px;font:700 16px var(--fb);color:var(--ink);pointer-events:none}
+.pre47 .flag{width:22px;height:16px;border-radius:4px;background:#BA0C2F;position:relative;overflow:hidden}
+.pre47 .flag::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:4px;background:#fff;box-shadow:0 0 0 0 #fff}
+.pre47 .flag::after{content:"";position:absolute;left:0;right:0;top:6px;height:4px;background:#fff}
+.pre47 .sep{width:1px;height:22px;background:var(--line)}
+.inphone{padding-left:98px;font:600 18px var(--fb);letter-spacing:.04em}
+.okmark{position:absolute;right:14px;width:26px;height:26px;border-radius:50%;background:#2B8F4E;color:#fff;display:grid;place-items:center}
+.otpw{position:relative;display:flex;gap:8px}
+.otpb{flex:1;height:62px;border-radius:16px;background:#fff;border:1.5px solid var(--line);display:grid;place-items:center;font:700 26px var(--fd);color:var(--ink);position:relative;transition:border-color .2s,box-shadow .2s,background .2s,transform .2s}
+.otpb.fill{border-color:#C3C9D4;animation:popIn .25s var(--spring)}
+.otpb.cur{border-color:var(--cyan2);box-shadow:0 0 0 4px rgba(25,184,238,.16)}
+.otpb.cur::after{content:"";width:2px;height:26px;background:var(--ink);border-radius:1px;animation:blink 1s steps(1) infinite}
+.otpb.ok{background:#E3F5E8;border-color:#7CC795;color:#1D6E3A}
+.otpb.gap{margin-left:8px}
+.otpin{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;font-size:16px;cursor:text}
+@keyframes blink{50%{opacity:0}}
+.vspin{width:72px;height:72px;border-radius:50%;border:4px solid rgba(255,91,36,.16);border-top-color:#FF5B24}
+.vring{position:absolute;left:50%;top:50%;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;background:rgba(255,91,36,.14);animation:vpulse 2.2s ease-out infinite}
+.vring.r2{animation-delay:1.1s}
+@keyframes vpulse{0%{transform:scale(.55);opacity:1}100%{transform:scale(1.65);opacity:0}}
+.vphone{position:relative;width:74px;height:130px;border-radius:18px;background:var(--ink);padding:6px;box-shadow:0 20px 34px -14px rgba(10,23,64,.5)}
+.vscreen{height:100%;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 8px}
+.vbar{width:100%;height:20px;border-radius:7px;background:#FF5B24}
+.vline{width:84%;height:5px;border-radius:3px;background:#E4E8EE}
+.vline.s{width:56%}
+.vok{margin-top:auto;width:100%;height:20px;border-radius:10px;background:#FF5B24;color:#fff;display:grid;place-items:center;animation:vtap 1.8s ease-in-out infinite}
+@keyframes vtap{0%,60%,100%{transform:scale(1)}70%{transform:scale(.88)}}
+.wdots{display:inline-flex;gap:4px;margin-left:6px}
+.wdots i{width:6px;height:6px;border-radius:50%;background:#FF5B24;animation:bounce 1.2s infinite}
+.wdots i:nth-child(2){animation-delay:.15s}.wdots i:nth-child(3){animation-delay:.3s}
+.okc{width:84px;height:84px;border-radius:50%;background:#2B8F4E;display:grid;place-items:center;box-shadow:0 0 0 10px #E3F5E8,0 18px 36px -12px rgba(43,143,78,.6)}
+.idcard{border-radius:22px;background:var(--surf2);border:1px solid var(--line2);padding:6px 16px}
+.foottxt{font-size:12.5px;line-height:1.5;color:var(--mute);text-align:center}
+.foottxt a{color:var(--ink);font-weight:700;text-underline-offset:2px}
+</style>
+</helmet>
+<div class="phone white" style="width: 390px; height: 844px">
+  <div class="glow"></div>
+  <div class="scroll">
+
+    <!-- header -->
+    <div class="lhead">
+      <sc-if value="{{isStart}}" hint-placeholder-val="{{ true }}">
+        <a href="Main.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      </sc-if>
+      <sc-if value="{{notStart}}" hint-placeholder-val="{{ false }}">
+        <button class="iconbtn" onClick="{{goBack}}" aria-label="Tilbake"><i class="i i-back"></i></button>
+      </sc-if>
+      <sc-if value="{{notStart}}" hint-placeholder-val="{{ false }}">
+        <div class="brand" style="font-size: 18px"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="" style="width: 28px; height: 28px">MinNabo</div>
+      </sc-if>
+      <span style="width: 44px"></span>
+    </div>
+
+    <!-- ============ START ============ -->
+    <sc-if value="{{isStart}}" hint-placeholder-val="{{ true }}">
+      <div class="px" style="position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 6px; padding-bottom: 36px">
+        <div class="logobox as d1"><div class="float" style="display: grid; place-items: center"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="MinNabo" style="width: 78px; height: 78px"></div></div>
+        <h1 class="h1 au d2" style="margin-top: 24px; font-size: 32px">Logg inn eller opprett konto</h1>
+        <p class="body au d3 p" style="color: #34405F; margin-top: 12px; max-width: 320px">Vi bruker Vipps for å bekrefte hvem du er. Det gjør MinNabo tryggere for alle.</p>
+
+        <div class="stack au d4" style="gap: 14px; width: 100%; margin-top: 30px">
+          <button class="btn btn-vipps btn-lg btn-block" onClick="{{startVipps}}"><span class="vmark"><i></i></span>Fortsett med Vipps<span class="shine"></span></button>
+          <p class="meta p" style="font-size: 13px">Innlogging skjer bare med Vipps. Har du ikke Vipps, kan du laste det ned gratis.</p>
+        </div>
+
+        <div class="au d6" style="margin-top: 22px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,.75); border: 1px solid #E4E8EE; text-align: left; width: 100%">
+          <span class="icirc" style="width: 32px; height: 32px; background: #E3F5E8; color: #2B8F4E"><i class="i i-shield s16"></i></span>
+          <span style="font: 600 13.5px/1.35 var(--fb); color: #34405F">Vipps brukes kun til innlogging – aldri til betaling.</span>
+        </div>
+
+        <p class="foottxt au d7 p" style="margin-top: 22px; max-width: 310px">Ved å fortsette godtar du <a href="Vilkar.dc.html">vilkårene for MinNabo</a> og bekrefter at du har lest <a href="Personvern.dc.html">personvernerklæringen</a>.</p>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 34px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- ============ VIPPS SHEET ============ -->
+  <sc-if value="{{vippsOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{cancelVipps}}" aria-label="Lukk"></button>
+    <div class="sheet" role="dialog" aria-label="Innlogging med Vipps" style="padding-bottom: 30px">
+      <div class="grab"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px">
+        <span class="pill pill-line" style="gap: 8px"><span class="vmark" style="width: 18px; height: 18px; border-radius: 6px; background: #FF5B24"><i style="width: 8px; height: 8px; border-width: 2px; border-color: #ffffff"></i></span>Innlogging med Vipps</span>
+        <div class="steps" style="width: 90px">
+          <i class="{{vs1}}"></i><i class="{{vs2}}"></i><i class="{{vs3}}"></i>
+        </div>
+      </div>
+
+      <sc-if value="{{vOpening}}" hint-placeholder-val="{{ false }}">
+        <div class="au" style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 6px 8px">
+          <div style="position: relative; width: 72px; height: 72px">
+            <div class="vspin spin"></div>
+            <span style="position: absolute; inset: 0; display: grid; place-items: center"><span class="vmark" style="width: 34px; height: 34px; border-radius: 11px; background: #FFF1EB"><i></i></span></span>
+          </div>
+          <h2 class="h2" style="margin-top: 22px">Åpner Vipps …</h2>
+          <p class="body muted p" style="margin-top: 8px; max-width: 290px">Du sendes videre til Vipps-appen for å bekrefte hvem du er.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{vConfirm}}" hint-placeholder-val="{{ false }}">
+        <div class="au" style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 18px 6px 8px">
+          <div style="position: relative; width: 170px; height: 170px; display: grid; place-items: center">
+            <span class="vring"></span><span class="vring r2"></span>
+            <div class="float">
+              <div class="vphone">
+                <div class="vscreen">
+                  <span class="vbar"></span>
+                  <span class="vline"></span>
+                  <span class="vline s"></span>
+                  <span class="vline"></span>
+                  <span class="vok"><i class="i i-check s14"></i></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <h2 class="h2" style="margin-top: 8px">Bekreft i Vipps-appen</h2>
+          <p class="body muted p" style="margin-top: 8px; max-width: 290px">Åpne Vipps på telefonen din og godkjenn innloggingen til MinNabo.</p>
+          <span class="pill lg" style="margin-top: 14px; background: #FFF1EB; color: #B53A0F">Vi venter på bekreftelse<span class="wdots"><i></i><i></i><i></i></span></span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{vDone}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 22px 0 4px">
+          <div class="okc as">
+            <svg class="checkdraw" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+          <h2 class="h2 au d3" style="margin-top: 22px">Identitet bekreftet</h2>
+          <p class="body muted p au d4" style="margin-top: 6px">Hei, Mari! Vi har hentet dette fra Vipps:</p>
+        </div>
+        <div class="idcard au d5" style="margin-top: 14px">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF1F4">
+            <span class="av av-me s48">MH</span>
+            <div class="stack" style="gap: 3px; flex: 1">
+              <b style="font-size: 16px">Mari Haugen · født 1991</b>
+              <span class="vbadge"><i class="i i-verified s16"></i>Bekreftet med Vipps</span>
+            </div>
+          </div>
+          <div class="kv"><span>Telefon</span><b>+47 ••• •• 234</b></div>
+          <div class="kv"><span>Alder</span><b>Over 18 år</b></div>
+        </div>
+        <div class="note au d6" style="margin-top: 12px"><i class="i i-info"></i><span>Vi henter kun navn, fødselsår og telefonnummer. Ingen betalingsinformasjon.</span></div>
+        <a href="Samtykke.dc.html" class="btn btn-lime btn-lg btn-block au d7" style="margin-top: 18px">Fortsett<i class="i i-arrow s18"></i></a>
+        <a href="Ungdomskonto.dc.html" class="btn btn-text btn-block" style="font-size: 14px">Under 18 år? Se ungdomskonto</a>
+        <button class="btn btn-text btn-block" style="margin-top: 4px; color: #5F6983; text-decoration: none" onClick="{{cancelVipps}}">Ikke deg? Avbryt</button>
+      </sc-if>
+
+      <sc-if value="{{vPending}}" hint-placeholder-val="{{ true }}">
+        <button class="btn btn-ghost btn-block" style="margin-top: 20px" onClick="{{cancelVipps}}">Avbryt</button>
+        <p class="note p" style="justify-content: center; margin-top: 12px"><i class="i i-lock"></i><span>Vipps brukes kun til innlogging – aldri til betaling.</span></p>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'start', chan: 'phone', phone: '', email: '', err: null, shakeN: 0, sending: false, code: '', verifying: false, verified: false, resend: 30, vipps: null, toast: null, toastIcon: 'i i-check s16' };
+  }
+  componentWillUnmount() { this.clearVipps(); clearTimeout(this.st); clearTimeout(this.vt); clearInterval(this.ri); clearTimeout(this.tt); }
+  clearVipps() { clearTimeout(this.v1); clearTimeout(this.v2); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  fmt(d) {
+    if (d.length <= 3) return d;
+    if (d.length <= 5) return d.slice(0, 3) + ' ' + d.slice(3);
+    return d.slice(0, 3) + ' ' + d.slice(3, 5) + ' ' + d.slice(5);
+  }
+  validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()); }
+  startCountdown() {
+    clearInterval(this.ri);
+    this.setState({ resend: 30 });
+    this.ri = setInterval(() => {
+      const r = this.state.resend - 1;
+      if (r <= 0) clearInterval(this.ri);
+      this.setState({ resend: Math.max(0, r) });
+    }, 1000);
+  }
+  fail(msg) { this.setState({ err: msg, shakeN: this.state.shakeN + 1 }); }
+  sendCode() {
+    const S = this.state;
+    if (S.sending) return;
+    if (S.chan === 'phone') {
+      if (!S.phone.length) return this.fail('Skriv inn mobilnummeret ditt');
+      if (S.phone.length < 8) return this.fail('Nummeret må ha 8 siffer – du har skrevet ' + S.phone.length);
+      if (!/^[49]/.test(S.phone)) return this.fail('Bruk et mobilnummer (starter med 4 eller 9)');
+    } else {
+      if (!S.email.trim()) return this.fail('Skriv inn e-postadressen din');
+      if (!this.validEmail(S.email)) return this.fail('Sjekk e-postadressen, f.eks. navn@epost.no');
+    }
+    this.setState({ sending: true, err: null });
+    this.st = setTimeout(() => {
+      this.setState({ sending: false, mode: 'otp', code: '', verifying: false, verified: false });
+      this.startCountdown();
+      this.flash(S.chan === 'phone' ? 'Kode sendt på SMS' : 'Kode sendt på e-post', 'i i-send s14');
+    }, 1000);
+  }
+  onCode(v) {
+    const S = this.state;
+    if (S.verifying || S.verified) return;
+    const code = v.replace(/\D/g, '').slice(0, 6);
+    this.setState({ code });
+    if (code.length === 6) {
+      this.setState({ verifying: true });
+      this.vt = setTimeout(() => { clearInterval(this.ri); this.setState({ verifying: false, verified: true }); }, 1400);
+    }
+  }
+  renderVals() {
+    const S = this.state;
+    const m = S.mode;
+    const isPhoneChan = S.chan === 'phone';
+    const phoneOk = S.phone.length === 8 && /^[49]/.test(S.phone);
+    const emailOk = this.validEmail(S.email);
+    const target = isPhoneChan ? '+47 ' + this.fmt(S.phone) : S.email.trim();
+    const boxes = [0, 1, 2, 3, 4, 5].map((i) => ({
+      d: S.code[i] || '',
+      cls: 'otpb' + (i === 3 ? ' gap' : '') + (S.code[i] ? ' fill' : '') + (i === S.code.length && !S.verifying && !S.verified ? ' cur' : '') + (S.verified ? ' ok' : '')
+    }));
+    const v = S.vipps;
+    return {
+      isStart: m === 'start', notStart: m !== 'start', isPhone: m === 'phone', isOtp: m === 'otp',
+      goBack: () => {
+        if (m === 'otp') { clearInterval(this.ri); clearTimeout(this.vt); this.setState({ mode: 'phone', code: '', verifying: false, verified: false }); }
+        else this.setState({ mode: 'start', err: null });
+      },
+      toPhone: () => this.setState({ mode: 'phone', chan: 'phone', err: null }),
+      chanPhone: isPhoneChan, chanEmail: !isPhoneChan,
+      chanIcon: isPhoneChan ? 'i i-phone s24' : 'i i-mail s24',
+      chanEyebrow: 'Steg 1 av 2 · ' + (isPhoneChan ? 'Telefon' : 'E-post'),
+      chanTitle: isPhoneChan ? 'Hva er mobilnummeret ditt?' : 'Hva er e-postadressen din?',
+      chanSub: isPhoneChan ? 'Vi sender deg en engangskode på SMS. Ingen passord å huske.' : 'Vi sender deg en engangskode på e-post. Ingen passord å huske.',
+      chanNote: isPhoneChan ? 'Nummeret ditt vises aldri for andre brukere uten at du selv velger det.' : 'E-postadressen din vises aldri for andre brukere.',
+      wrapCls: 'inwrap' + (S.err ? (S.shakeN % 2 ? ' shA' : ' shB') : ''),
+      phoneInCls: 'input inphone' + (S.err ? ' err' : ''),
+      emailInCls: 'input' + (S.err ? ' err' : ''),
+      phoneFmt: this.fmt(S.phone), phoneOk, email: S.email, emailOk,
+      onPhone: (e) => {
+        let d = e.target.value.replace(/\D/g, '');
+        if (d.length > 8 && d.indexOf('47') === 0) d = d.slice(2);
+        this.setState({ phone: d.slice(0, 8), err: null });
+      },
+      onEmail: (e) => this.setState({ email: e.target.value, err: null }),
+      err: S.err,
+      sending: S.sending, notSending: !S.sending,
+      sendCode: () => this.sendCode(),
+      switchChan: () => this.setState({ chan: isPhoneChan ? 'email' : 'phone', err: null }),
+      switchLabel: isPhoneChan ? 'Bruk e-post i stedet' : 'Bruk telefonnummer i stedet',
+      switchIcon: isPhoneChan ? 'i i-mail s16' : 'i i-phone s16',
+      target, boxes, code: S.code,
+      otpWrapCls: 'otpw' + (S.verified ? ' as' : ''),
+      onCode: (e) => this.onCode(e.target.value),
+      editTarget: () => { clearInterval(this.ri); this.setState({ mode: 'phone', code: '' }); },
+      verifying: S.verifying, verified: S.verified, codeIdle: !S.verifying && !S.verified,
+      verifiedTitle: isPhoneChan ? 'Nummeret er bekreftet' : 'E-posten er bekreftet',
+      counting: S.resend > 0, canResend: S.resend === 0,
+      resendLabel: '0:' + String(S.resend).padStart(2, '0'),
+      resend: () => { this.startCountdown(); this.setState({ code: '' }); this.flash(isPhoneChan ? 'Ny kode sendt til ' + target : 'Ny kode sendt på e-post', 'i i-refresh s14'); },
+      otpSwitchLabel: isPhoneChan ? 'Bruk e-post i stedet' : 'Bruk telefon i stedet',
+      otpToEmail: () => { clearInterval(this.ri); this.setState({ mode: 'phone', chan: isPhoneChan ? 'email' : 'phone', code: '', err: null }); },
+      startVipps: () => {
+        this.clearVipps();
+        this.setState({ vipps: 'opening' });
+        this.v1 = setTimeout(() => this.setState({ vipps: 'confirm' }), 1600);
+        this.v2 = setTimeout(() => this.setState({ vipps: 'done' }), 3400);
+      },
+      cancelVipps: () => { this.clearVipps(); const was = S.vipps; this.setState({ vipps: null }); if (was !== 'done') this.flash('Innlogging med Vipps avbrutt', 'i i-x s14'); },
+      vippsOpen: !!v, vOpening: v === 'opening', vConfirm: v === 'confirm', vDone: v === 'done', vPending: v === 'opening' || v === 'confirm',
+      vs1: v ? 'on' : '', vs2: v === 'confirm' || v === 'done' ? 'on' : '', vs3: v === 'done' ? 'on' : '',
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

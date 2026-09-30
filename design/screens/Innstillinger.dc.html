@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Innstillinger</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+span.tgl{display:block}
+.sec{padding:0 20px;margin:26px 0 10px}
+.lrow .rt b,.lrow .rt small,.sec,.xp,.big-demo{transition:font-size .3s var(--ease)}
+.big .lrow .rt b{font-size:18px}
+.big .lrow .rt small{font-size:15px}
+.big .eyebrow{font-size:14px}
+.big .xp{font-size:16px}
+.big .big-demo{font-size:19px}
+.big .pname{font-size:23px}
+.pname{font:700 20px/1.1 var(--fd);letter-spacing:-.02em;transition:font-size .3s var(--ease)}
+.big-demo{font-size:15px}
+.xp{font-size:13.5px;line-height:1.5;color:var(--mute)}
+.dev{background:#0A1740;color:#fff;border-radius:22px;padding:16px;margin-top:10px;position:relative;overflow:hidden}
+.dev .glow{position:absolute;right:-60px;top:-70px;width:180px;height:180px;border-radius:50%;background:var(--grad);opacity:.22}
+.flag{display:flex;align-items:center;gap:12px;min-height:52px;width:100%;background:none;border:0;color:#fff;font:inherit;text-align:left;cursor:pointer;padding:0;position:relative}
+.flag+.flag{border-top:1px solid rgba(255,255,255,.1)}
+.flag code{font:600 11.5px/1 ui-monospace,Menlo,monospace;color:rgba(255,255,255,.55)}
+.flag .tgl{background:rgba(255,255,255,.22)}
+.flag .tgl.on{background:#9BDD2C}
+.ferie{margin-top:10px;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:#FFF2D9;color:#9A5B00;font:600 13.5px/1.4 var(--fb)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="{{scrollCls}}">
+    <div class="mesh"></div>
+    <div class="subbar">
+      <a href="Oppdrag.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Innstillinger</div>
+      <span></span>
+    </div>
+
+    <!-- profile -->
+    <div class="px au" style="position: relative; margin-top: 8px">
+      <a href="Profil.dc.html" class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px; text-decoration: none; color: #0A1740">
+        <span class="av av-me s56">MH</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+          <b class="pname">Mari Haugen</b>
+          <span class="vbadge"><i class="i i-verified s16"></i>Bekreftet med Vipps</span>
+        </span>
+        <i class="i i-right" style="color: #8A93A8"></i>
+      </a>
+    </div>
+
+    <!-- Konto -->
+    <div class="sec eyebrow au d2">Konto</div>
+    <div class="px au d2">
+      <div class="list">
+        <a href="RedigerProfil.dc.html" class="lrow">
+          <span class="ri"><i class="i i-user s18"></i></span>
+          <span class="rt"><b>Mari Haugen</b><small>Bekreftet med Vipps · Medlem siden mars 2024</small></span>
+          <i class="i i-right chev"></i>
+        </a>
+        <a href="RedigerProfil.dc.html" class="lrow">
+          <span class="ri"><i class="i i-phone s18"></i></span>
+          <span class="rt"><b>Telefon</b><small>+47 912 34 567</small></span>
+          <span class="pill pill-ok" style="height: 22px; font-size: 11px"><i class="i i-check s14"></i>Bekreftet</span>
+        </a>
+        <a href="RedigerProfil.dc.html" class="lrow">
+          <span class="ri"><i class="i i-mail s18"></i></span>
+          <span class="rt"><b>E-post</b><small>mari.haugen@epost.no</small></span>
+          <span class="pill pill-ok" style="height: 22px; font-size: 11px"><i class="i i-check s14"></i>Bekreftet</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Sted -->
+    <div class="sec eyebrow">Sted</div>
+    <div class="px">
+      <div class="list">
+        <a href="Oppdrag.dc.html" class="lrow">
+          <span class="ri" style="background: #EDF8D6; color: #3B7300"><i class="i i-pin s18"></i></span>
+          <span class="rt"><b>Lillehammer kommune</b><small>Bare min kommune</small></span>
+          <span class="meta">Endre</span><i class="i i-right chev"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Varslinger -->
+    <div class="sec eyebrow">Varslinger</div>
+    <div class="px">
+      <div class="list">
+        <sc-for list="{{quick}}" as="q" hint-placeholder-count="2">
+          <button class="lrow" role="switch" aria-checked="{{q.checked}}" onClick="{{q.flip}}">
+            <span class="ri"><i class="{{q.icon}}"></i></span>
+            <span class="rt"><b>{{q.label}}</b><small>{{q.sub}}</small></span>
+            <span class="{{q.cls}}"></span>
+          </button>
+        </sc-for>
+        <a href="Varslinger.dc.html" class="lrow">
+          <span class="ri"><i class="i i-sliders s18"></i></span>
+          <span class="rt"><b>Flere innstillinger</b><small>Velg hva du vil bli varslet om</small></span>
+          <i class="i i-right chev"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Feriemodus -->
+    <div class="sec eyebrow">Feriemodus</div>
+    <div class="px">
+      <div class="list">
+        <button class="lrow" role="switch" aria-checked="{{ferieChecked}}" onClick="{{flipFerie}}">
+          <span class="ri" style="background: #FFF2D9; color: #9A5B00"><i class="i i-sun s18"></i></span>
+          <span class="rt"><b>Feriemodus</b><small>Ta en pause uten å slette noe</small></span>
+          <span class="{{ferieCls}}"></span>
+        </button>
+      </div>
+      <p class="xp p" style="margin: 10px 4px 0">Oppføringene dine skjules midlertidig, og du får ikke nye forespørsler. Samtaler og avtaler du allerede har, fortsetter som før.</p>
+      <sc-if value="{{ferie}}" hint-placeholder-val="{{ false }}">
+        <div class="ferie au"><i class="i i-eye s18"></i>Aktiv – 2 oppføringer er skjult til du slår av feriemodus.</div>
+      </sc-if>
+    </div>
+
+    <!-- Tekststørrelse -->
+    <div class="sec eyebrow">Tekststørrelse</div>
+    <div class="px">
+      <div class="card pad stack" style="gap: 14px">
+        <div class="seg" role="radiogroup" aria-label="Tekststørrelse">
+          <sc-for list="{{sizes}}" as="s" hint-placeholder-count="2">
+            <button class="{{s.cls}}" onClick="{{s.pick}}" role="radio" aria-checked="{{s.checked}}">{{s.label}}</button>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center">
+          <span class="icirc" style="width: 40px; height: 40px; background: #F3F5F1"><b class="num" style="font-size: 18px">Aa</b></span>
+          <p class="big-demo p" style="line-height: 1.4; color: #34405F">Slik ser teksten ut i appen.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Personvern og vilkår -->
+    <div class="sec eyebrow">Personvern og vilkår</div>
+    <div class="px">
+      <div class="list">
+        <a href="Personvern.dc.html" class="lrow">
+          <span class="ri"><i class="i i-lock s18"></i></span>
+          <span class="rt"><b>Personvern</b><small>Data, samtykker og nedlasting</small></span>
+          <i class="i i-right chev"></i>
+        </a>
+        <a href="Vilkar.dc.html" class="lrow">
+          <span class="ri"><i class="i i-file s18"></i></span>
+          <span class="rt"><b>Vilkår for bruk</b><small>Versjon [x.x]</small></span>
+          <i class="i i-right chev"></i>
+        </a>
+        <a href="Bedrift.dc.html" class="lrow">
+          <span class="ri" style="background: #DFF2FB; color: #065C8F"><i class="i i-building s18"></i></span>
+          <span class="rt"><b>For bedrifter</b><small>Registrer bedriften din og bli verifisert</small></span>
+          <i class="i i-right chev"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Utvikler -->
+    <div class="sec eyebrow">Utvikler</div>
+    <div class="px">
+      <div class="list">
+        <button class="lrow" role="switch" aria-checked="{{devChecked}}" onClick="{{flipDev}}">
+          <span class="ri"><i class="i i-key s18"></i></span>
+          <span class="rt"><b>Utviklermodus</b><small>Funksjonsflagg og testverktøy</small></span>
+          <span class="{{devCls}}"></span>
+        </button>
+      </div>
+      <sc-if value="{{dev}}" hint-placeholder-val="{{ false }}">
+        <div class="dev au">
+          <span class="glow"></span>
+          <div style="display: flex; align-items: center; justify-content: space-between; position: relative; margin-bottom: 6px">
+            <b style="font: 700 16px var(--fd)">Funksjonsflagg</b>
+            <span class="pill" style="background: rgba(255,255,255,.12); color: #B8EE3C; height: 22px; font-size: 11px">{{flagsOn}} på</span>
+          </div>
+          <sc-for list="{{flags}}" as="f" hint-placeholder-count="4">
+            <button class="flag" role="switch" aria-checked="{{f.checked}}" onClick="{{f.flip}}">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 5px">
+                <b style="font-size: 14.5px">{{f.label}}</b>
+                <code>{{f.key}}</code>
+              </span>
+              <span class="{{f.cls}}"></span>
+            </button>
+          </sc-for>
+          <div style="position: relative; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.1); display: flex; justify-content: space-between; font: 600 12px/1 ui-monospace,Menlo,monospace; color: rgba(255,255,255,.6)">
+            <span>Miljø: test</span><span>Build [nr]</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- actions -->
+    <div class="px stack" style="gap: 10px; margin-top: 30px">
+      <button class="btn btn-ghost btn-block" onClick="{{askLogout}}"><i class="i i-logout s18"></i>Logg ut</button>
+      <a href="SlettKonto.dc.html" class="btn btn-dangerghost btn-block"><i class="i i-trash s18"></i>Slett konto</a>
+      <p class="meta p" style="text-align: center; margin-top: 10px">MinNabo [versjon]</p>
+    </div>
+    <div class="spacer-foot" style="height: 60px"></div>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status" style="bottom: 30px">
+      <span class="ti"><i class="{{toastIcon}}"></i></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+
+  <!-- logout dialog -->
+  <sc-if value="{{logoutOpen}}" hint-placeholder-val="{{ false }}">
+    <button class="scrim" onClick="{{closeLogout}}" aria-label="Lukk"></button>
+    <div class="dialog" role="alertdialog" aria-label="Logg ut">
+      <span class="icirc as" style="width: 60px; height: 60px; margin: 0 auto 14px; background: #F3F5F1; color: #0A1740"><i class="i i-logout s24"></i></span>
+      <h2 class="h3">Logge ut?</h2>
+      <p class="body p" style="color: #5F6983; margin-top: 8px">Neste gang logger du inn med Vipps igjen. Samtaler og avtaler blir liggende.</p>
+      <div class="stack" style="gap: 10px; margin-top: 20px">
+        <a href="Main.dc.html" class="btn btn-ink btn-block">Logg ut</a>
+        <button class="btn btn-ghost btn-block" onClick="{{closeLogout}}">Avbryt</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      push: true, mail: false, ferie: false, big: false, dev: false, logout: false,
+      flags: { redcross: false, search: true, photos: true, debug: false },
+      toast: null, toastIcon: 'i i-check s16'
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(msg, icon) {
+    clearTimeout(this.tt);
+    this.setState({ toast: msg, toastIcon: icon || 'i i-check s16' });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const S = this.state;
+    const tg = (on) => 'tgl' + (on ? ' on' : '');
+    const QUICK = [
+      { key: 'push', label: 'Push-varsler', sub: 'Meldinger, tilbud og påminnelser', icon: 'i i-bell s18' },
+      { key: 'mail', label: 'E-post', sub: 'Oppsummeringer og viktige endringer', icon: 'i i-mail s18' }
+    ];
+    const FLAGS = [
+      { key: 'redcross', label: 'Røde Kors-samarbeid', code: 'ff_redcross_partner' },
+      { key: 'search', label: 'Nytt søk (beta)', code: 'ff_search_v2' },
+      { key: 'photos', label: 'Bilder på oppslagstavla', code: 'ff_board_photos' },
+      { key: 'debug', label: 'Debug-logg', code: 'ff_debug_log' }
+    ];
+    return {
+      scrollCls: 'scroll' + (S.big ? ' big' : ''),
+      quick: QUICK.map((q) => ({
+        label: q.label, sub: q.sub, icon: q.icon, cls: tg(S[q.key]), checked: S[q.key] ? 'true' : 'false',
+        flip: () => { const on = !S[q.key]; const o = {}; o[q.key] = on; this.setState(o); this.flash(q.label + (on ? ' er slått på' : ' er slått av'), on ? 'i i-bell s14' : 'i i-x s14'); }
+      })),
+      ferie: S.ferie, ferieCls: tg(S.ferie), ferieChecked: S.ferie ? 'true' : 'false',
+      flipFerie: () => { const on = !S.ferie; this.setState({ ferie: on }); this.flash(on ? 'Feriemodus er på. God tur!' : 'Velkommen tilbake! Oppføringene er synlige igjen', on ? 'i i-sun s14' : 'i i-check s16'); },
+      sizes: [['std', 'Standard'], ['big', 'Stor']].map(([id, label]) => {
+        const on = (id === 'big') === S.big;
+        return { label, cls: on ? 'on' : '', checked: on ? 'true' : 'false', pick: () => this.setState({ big: id === 'big' }) };
+      }),
+      dev: S.dev, devCls: tg(S.dev), devChecked: S.dev ? 'true' : 'false',
+      flipDev: () => { const on = !S.dev; this.setState({ dev: on }); this.flash(on ? 'Utviklermodus er på' : 'Utviklermodus er av', on ? 'i i-key s14' : 'i i-x s14'); },
+      flags: FLAGS.map((f) => ({
+        label: f.label, key: f.code, cls: tg(S.flags[f.key]), checked: S.flags[f.key] ? 'true' : 'false',
+        flip: () => { const flags = Object.assign({}, S.flags); flags[f.key] = !flags[f.key]; this.setState({ flags }); this.flash(f.label + ': ' + (flags[f.key] ? 'på' : 'av'), 'i i-zap s14'); }
+      })),
+      flagsOn: FLAGS.filter((f) => S.flags[f.key]).length,
+      logoutOpen: S.logout,
+      askLogout: () => this.setState({ logout: true }),
+      closeLogout: () => this.setState({ logout: false }),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

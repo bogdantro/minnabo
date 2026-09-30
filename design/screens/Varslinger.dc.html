@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Varslinger</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+span.tgl{display:block}
+.tcell{width:62px;height:48px;display:grid;place-items:center;background:none;border:0;padding:0;cursor:pointer;flex:none}
+.tcell .tgl{width:44px;height:28px}
+.tcell .tgl::after{width:22px;height:22px}
+.tcell .tgl.on::after{transform:translateX(16px)}
+.mx{background:#fff;border-radius:var(--r-l);box-shadow:var(--sh);overflow:hidden;transition:opacity .35s}
+.mx.off{opacity:.42;pointer-events:none;filter:saturate(.3)}
+.mxh{display:flex;align-items:center;padding:12px 6px 10px 16px;background:var(--surf2);border-bottom:1px solid var(--line2)}
+.mxh span{font:700 11.5px/1 var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.mxr{display:flex;align-items:center;gap:10px;padding:8px 6px 8px 16px;position:relative}
+.mxr+.mxr::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--line2)}
+.mxr .lb{flex:1;min-width:0}
+.mxr .lb b{display:block;font:600 14.5px/1.3 var(--fb)}
+.mxr .lb small{display:block;font-size:12.5px;color:var(--mute);margin-top:2px;line-height:1.3}
+.grp{padding:0 20px;margin:24px 0 10px;display:flex;align-items:center;gap:8px}
+.tchip{flex:1;height:64px;border-radius:18px;border:1.5px solid var(--line);background:#fff;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:0 16px;cursor:pointer;font:inherit;color:inherit;transition:border-color .2s,box-shadow .2s}
+.tchip.on{border-color:var(--ink);box-shadow:0 0 0 3px rgba(10,23,64,.08)}
+.tchip small{font:700 11px/1 var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.tchip b{font:700 22px/1 var(--fd);letter-spacing:-.02em}
+.topt{height:48px;border-radius:14px;border:1.5px solid var(--line);background:#fff;font:700 15px var(--fb);cursor:pointer;color:var(--ink2);transition:all .2s}
+.topt.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.night{position:relative;height:14px;border-radius:7px;background:#EDF8D6;overflow:hidden}
+.night i{position:absolute;top:0;bottom:0;background:#0A1740;border-radius:7px;transition:left .4s var(--ease),width .4s var(--ease)}
+.saved{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:60}
+.saved > div{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px 0 8px;border-radius:999px;background:var(--ink);color:#fff;font:700 14px var(--fb);box-shadow:var(--sh-m);white-space:nowrap}
+.saved .icirc{width:26px;height:26px;background:var(--lime);color:var(--ink)}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+    <div class="subbar">
+      <a href="Innstillinger.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">Varslinger</div>
+      <span></span>
+    </div>
+
+    <div class="px au" style="position: relative; margin-top: 8px; display: flex; flex-direction: column; gap: 8px">
+      <h1 class="h1">Hva vil du høre om?</h1>
+      <p class="body p" style="color: #34405F">Velg push og e-post for hver type varsel. Endringer lagres med én gang.</p>
+    </div>
+
+    <!-- master -->
+    <div class="px au d2" style="position: relative; margin-top: 18px">
+      <button class="card" role="switch" aria-checked="{{masterChecked}}" onClick="{{flipMaster}}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px; cursor: pointer; text-align: left; font: inherit; color: #0A1740">
+        <span class="icirc" style="width: 48px; height: 48px; background: #0A1740; color: #B8EE3C"><i class="i i-bell s22"></i></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+          <b style="font: 700 17px var(--fd); letter-spacing: -.02em">Alle varsler</b>
+          <span class="meta">{{masterSub}}</span>
+        </span>
+        <span class="{{masterCls}}"></span>
+      </button>
+    </div>
+    <sc-if value="{{masterOff}}" hint-placeholder-val="{{ false }}">
+      <div class="px au" style="margin-top: 10px">
+        <div style="display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: #FFF2D9; color: #9A5B00; font: 600 13.5px/1.4 var(--fb)"><i class="i i-alert s18"></i><span>Alle varsler er satt på pause. Du får fortsatt beskjed om sikkerhet og moderering.</span></div>
+      </div>
+    </sc-if>
+
+    <!-- matrix -->
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+      <div>
+        <div class="grp"><i class="{{g.icon}}" style="color: #5F6983"></i><span class="eyebrow">{{g.title}}</span></div>
+        <div class="px">
+          <div class="{{g.mxCls}}">
+            <div class="mxh"><span style="flex: 1">Varsel</span><span style="width: 62px; text-align: center">Push</span><span style="width: 62px; text-align: center">E-post</span></div>
+            <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+              <div class="mxr">
+                <div class="lb"><b>{{r.label}}</b><small>{{r.sub}}</small></div>
+                <button class="tcell" role="switch" aria-checked="{{r.pChecked}}" aria-label="{{r.pAria}}" onClick="{{r.flipP}}"><span class="{{r.pCls}}"></span></button>
+                <button class="tcell" role="switch" aria-checked="{{r.eChecked}}" aria-label="{{r.eAria}}" onClick="{{r.flipE}}"><span class="{{r.eCls}}"></span></button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+
+    <!-- quiet hours -->
+    <div class="grp"><i class="i i-moon s18" style="color: #5F6983"></i><span class="eyebrow">Stille timer</span></div>
+    <div class="px">
+      <div class="card" style="overflow: hidden">
+        <button role="switch" aria-checked="{{quietChecked}}" onClick="{{flipQuiet}}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px; background: none; border: 0; cursor: pointer; text-align: left; font: inherit; color: #0A1740">
+          <span class="icirc" style="width: 40px; height: 40px; background: #E8E3FB; color: #46379E"><i class="i i-moon s18"></i></span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+            <b style="font-size: 15.5px">Stille timer</b>
+            <span class="meta">Ingen push-varsler om natta</span>
+          </span>
+          <span class="{{quietCls}}"></span>
+        </button>
+        <sc-if value="{{quiet}}" hint-placeholder-val="{{ true }}">
+          <div class="au" style="padding: 0 16px 16px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; gap: 10px">
+              <button class="{{fromCls}}" onClick="{{editFrom}}" aria-label="Endre starttid"><small>Fra</small><b>{{from}}</b></button>
+              <button class="{{toCls}}" onClick="{{editTo}}" aria-label="Endre sluttid"><small>Til</small><b>{{to}}</b></button>
+            </div>
+            <div class="stack" style="gap: 6px">
+              <div class="night"><i style="display: block; {{nightA}}"></i><i style="display: block; {{nightB}}"></i></div>
+              <div style="display: flex; justify-content: space-between" class="meta"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+            </div>
+            <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+              <div class="au stack" style="gap: 8px">
+                <span class="label">{{editLabel}}</span>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px">
+                  <sc-for list="{{opts}}" as="o" hint-placeholder-count="4">
+                    <button class="{{o.cls}}" onClick="{{o.pick}}">{{o.t}}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <div class="note"><i class="i i-info"></i><span>Varsler samles og kommer når stille timer er over. Sikkerhetsvarsler kommer alltid fram.</span></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div class="px" style="margin-top: 22px">
+      <button class="btn btn-ghost btn-block" onClick="{{test}}"><i class="i i-send s18"></i>Send et testvarsel</button>
+    </div>
+    <div class="spacer-foot" style="height: 90px"></div>
+  </div>
+
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="saved" role="status">
+      <div class="as"><span class="icirc"><i class="{{toastIcon}}"></i></span>{{toast}}</div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      master: true, quiet: true, from: '22:00', to: '07:00', editing: null,
+      p: { msg: true, offer: true, changed: true, decided: true, time: true, done: true, review: true, match: true, board: false, mod: true },
+      e: { msg: false, offer: true, changed: false, decided: true, time: true, done: false, review: false, match: false, board: false, mod: true },
+      toast: null, toastIcon: 'i i-check s14', tick: 0
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.st); }
+  saved(msg, icon) {
+    clearTimeout(this.tt); clearTimeout(this.st);
+    this.setState({ toast: null });
+    this.st = setTimeout(() => this.setState({ toast: msg || 'Lagret', toastIcon: icon || 'i i-check s14' }), 20);
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2000);
+  }
+  flip(ch, id) {
+    const m = Object.assign({}, this.state[ch]);
+    m[id] = !m[id];
+    const o = {}; o[ch] = m;
+    this.setState(o);
+    this.saved();
+  }
+  renderVals() {
+    const S = this.state;
+    const tg = (on) => 'tgl' + (on ? ' on' : '');
+    const GROUPS = [
+      { title: 'Samtaler og tilbud', icon: 'i i-msg s18', rows: [
+        ['msg', 'Nye meldinger', 'Når noen skriver til deg'],
+        ['offer', 'Nye tilbud', 'På oppdragene du har lagt ut'],
+        ['changed', 'Endrede eller trukne tilbud', 'Ny pris, tid eller forbehold'],
+        ['decided', 'Tilbud godtatt/avslått', 'Svar på tilbud du har sendt']
+      ] },
+      { title: 'Avtaler', icon: 'i i-cal s18', rows: [
+        ['time', 'Avtalt tid og påminnelser', 'Dagen før og samme morgen'],
+        ['done', 'Fullføring', 'Når en jobb markeres som ferdig'],
+        ['review', 'Vurderinger', 'Når du får eller kan gi en vurdering']
+      ] },
+      { title: 'Nabolaget', icon: 'i i-home s18', rows: [
+        ['match', 'Nye oppdrag som passer meg', 'Basert på det du tilbyr'],
+        ['board', 'Oppslag i nabolaget', 'Nye oppslag i Nordre Ål']
+      ] },
+      { title: 'Konto', icon: 'i i-shield s18', rows: [
+        ['mod', 'Moderering', 'Om rapporter og innhold ditt']
+      ] }
+    ];
+    const groups = GROUPS.map((g) => ({
+      title: g.title, icon: g.icon, mxCls: 'mx' + (S.master ? '' : ' off'),
+      rows: g.rows.map(([id, label, sub]) => ({
+        label, sub,
+        pCls: tg(S.p[id]), eCls: tg(S.e[id]),
+        pChecked: S.p[id] ? 'true' : 'false', eChecked: S.e[id] ? 'true' : 'false',
+        pAria: label + ', push', eAria: label + ', e-post',
+        flipP: () => this.flip('p', id), flipE: () => this.flip('e', id)
+      }))
+    }));
+    const pCount = Object.keys(S.p).filter((k) => S.p[k]).length;
+    const eCount = Object.keys(S.e).filter((k) => S.e[k]).length;
+    const h = (t) => parseInt(t, 10);
+    const f = h(S.from), t = h(S.to);
+    const pct = (x) => (x / 24 * 100).toFixed(2);
+    let nightA, nightB;
+    if (f > t) {
+      nightA = 'left: ' + pct(f) + '%; width: ' + pct(24 - f) + '%';
+      nightB = 'left: 0%; width: ' + pct(t) + '%';
+    } else {
+      nightA = 'left: ' + pct(f) + '%; width: ' + pct(t - f) + '%';
+      nightB = 'left: 0%; width: 0%';
+    }
+    const FROM_OPTS = ['20:00', '21:00', '22:00', '23:00'];
+    const TO_OPTS = ['06:00', '07:00', '08:00', '09:00'];
+    const ed = S.editing;
+    return {
+      groups,
+      mxCls: 'mx' + (S.master ? '' : ' off'),
+      masterCls: tg(S.master), masterChecked: S.master ? 'true' : 'false', masterOff: !S.master,
+      masterSub: S.master ? pCount + ' push og ' + eCount + ' e-post er på' : 'Satt på pause',
+      flipMaster: () => { const on = !S.master; this.setState({ master: on }); this.saved(on ? 'Varsler er på igjen' : 'Varsler er satt på pause', on ? 'i i-bell s14' : 'i i-pause s14'); },
+      quiet: S.quiet, quietCls: tg(S.quiet), quietChecked: S.quiet ? 'true' : 'false',
+      flipQuiet: () => { this.setState({ quiet: !S.quiet, editing: null }); this.saved(); },
+      from: S.from, to: S.to,
+      fromCls: 'tchip' + (ed === 'from' ? ' on' : ''), toCls: 'tchip' + (ed === 'to' ? ' on' : ''),
+      editFrom: () => this.setState({ editing: ed === 'from' ? null : 'from' }),
+      editTo: () => this.setState({ editing: ed === 'to' ? null : 'to' }),
+      editing: !!ed, editLabel: ed === 'from' ? 'Stille fra' : 'Stille til',
+      opts: (ed === 'to' ? TO_OPTS : FROM_OPTS).map((o) => ({
+        t: o, cls: 'topt' + ((ed === 'to' ? S.to : S.from) === o ? ' on' : ''),
+        pick: () => { const x = { editing: null }; x[ed === 'to' ? 'to' : 'from'] = o; this.setState(x); this.saved('Lagret · stille ' + (ed === 'to' ? S.from + '–' + o : o + '–' + S.to), 'i i-moon s14'); }
+      })),
+      nightA, nightB,
+      test: () => this.saved('Testvarsel sendt til telefonen din', 'i i-send s14'),
+      toast: S.toast, toastIcon: S.toastIcon
+    };
+  }
+}
+</script>
+</body>
+</html>

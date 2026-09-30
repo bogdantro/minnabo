@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Skjermtilstander</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#065C8F}a:hover{color:#0A1740}
+.st{display:flex;flex-direction:column;gap:14px}
+.st .lb{display:flex;align-items:center;gap:10px;font:700 15px var(--fb);color:var(--ink)}
+.st .lb span{font:600 12px var(--fb);color:var(--mute)}
+.ph{border-radius:38px;box-shadow:0 30px 60px -30px rgba(10,23,64,.35),0 0 0 1px rgba(10,23,64,.06)}
+.ill{position:relative;width:170px;height:150px;margin:0 auto}
+.ill .b1{position:absolute;left:10px;top:10px;width:130px;height:130px;border-radius:50%}
+.ill .b2{position:absolute;right:0;bottom:6px;width:56px;height:56px;border-radius:50%}
+.ill .core{position:absolute;left:35px;top:35px;width:80px;height:80px;border-radius:26px;background:#fff;box-shadow:var(--sh-m);display:grid;place-items:center}
+.center{position:absolute;left:0;right:0;top:150px;bottom:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 32px;text-align:center}
+.mini-top{display:flex;align-items:center;justify-content:space-between;padding:56px 20px 10px}
+.banner{margin:0 16px;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px;font:600 13.5px/1.3 var(--fb)}
+.gray{filter:grayscale(1);opacity:.55}
+</style>
+</helmet>
+<div style="width: 2530px; height: 1000px; background: #F3F5F1; font-family: var(--fb); color: #0A1740; position: relative; padding: 40px; box-sizing: border-box">
+  <div style="display: flex; align-items: baseline; gap: 18px">
+    <h1 class="h1" style="font-size: 34px">Skjermtilstander</h1>
+    <span class="meta" style="font-size: 15px">Alle viktige skjermer har lasting, tom, feil, frakoblet, suksess og ingen tilgang – med samme illustrasjonsstil.</span>
+  </div>
+
+  <div style="display: flex; gap: 38px; margin-top: 34px">
+
+    <!-- LASTING -->
+    <div class="st">
+      <div class="lb">Lasting<span>Skjeletter mens innhold hentes</span></div>
+      <div class="phone ph" style="width: 390px; height: 844px">
+        <div class="mini-top"><div class="brand"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</div><span class="sk" style="width: 44px; height: 44px; border-radius: 50%"></span></div>
+        <div class="px stack" style="gap: 12px; padding-top: 10px">
+          <span class="sk" style="width: 90px; height: 12px"></span>
+          <span class="sk" style="width: 300px; height: 30px"></span>
+          <span class="sk" style="width: 220px; height: 30px"></span>
+          <span class="sk" style="width: 100%; height: 56px; border-radius: 18px; margin-top: 8px"></span>
+          <span class="sk" style="width: 100%; height: 54px; border-radius: 27px"></span>
+          <div class="rowf" style="gap: 8px"><span class="sk" style="width: 70px; height: 40px; border-radius: 20px"></span><span class="sk" style="width: 96px; height: 40px; border-radius: 20px"></span><span class="sk" style="width: 110px; height: 40px; border-radius: 20px"></span></div>
+          <sc-for list="{{skel}}" as="s" hint-placeholder-count="3">
+            <div class="card" style="padding: 12px; display: flex; gap: 14px">
+              <span class="sk" style="width: 96px; height: 118px; border-radius: 17px"></span>
+              <div class="stack" style="gap: 10px; flex: 1; padding-top: 4px">
+                <span class="sk" style="width: 90px; height: 20px; border-radius: 10px"></span>
+                <span class="sk" style="width: 150px; height: 14px"></span>
+                <span class="sk" style="width: 110px; height: 12px"></span>
+                <span class="sk" style="width: 80px; height: 18px; margin-top: 10px"></span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOM -->
+    <div class="st">
+      <div class="lb">Tom<span>Ingen treff i området</span></div>
+      <div class="phone ph" style="width: 390px; height: 844px">
+        <div class="mini-top"><div class="brand"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</div><span class="av av-me">MH</span></div>
+        <div class="center">
+          <div class="ill as"><span class="b1" style="background: #EDF8D6"></span><span class="b2" style="background: #DFF2FB"></span><span class="core"><i class="i i-clip s32" style="color: #3B7300"></i></span></div>
+          <b class="h3">{{emptyTitle}}</b>
+          <p class="meta p" style="font-size: 14.5px">Prøv å utvide rekkevidden.</p>
+          <button class="btn btn-ink" onClick="{{widen}}"><i class="i i-map s18"></i>Utvid rekkevidde</button>
+          <sc-if value="{{widened}}" hint-placeholder-val="{{ false }}"><span class="pill pill-ok lg as">Viser nå nabokommuner</span></sc-if>
+        </div>
+        <nav class="nav" aria-label="Hovedmeny">
+          <a href="Oppdrag.dc.html" class="on"><span class="ni"><i class="i i-clip"></i></span>Oppdrag</a>
+          <a href="Fellesskap.dc.html"><span class="ni"><i class="i i-users"></i></span>Fellesskap</a>
+          <a href="LeggUt.dc.html" class="fabw" aria-label="Legg ut"><span class="fab"><i class="i i-plus"></i></span>Legg ut</a>
+          <a href="Innboks.dc.html"><span class="ni"><i class="i i-msg"></i></span>Innboks</a>
+          <a href="Meny.dc.html"><span class="ni"><i class="i i-menu"></i></span>Meny</a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- FEIL -->
+    <div class="st">
+      <div class="lb">Feil<span>Med «Prøv igjen»</span></div>
+      <div class="phone ph" style="width: 390px; height: 844px">
+        <div class="mini-top"><div class="brand"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</div><span class="av av-me">MH</span></div>
+        <sc-if value="{{errShow}}" hint-placeholder-val="{{ true }}">
+          <div class="center">
+            <div class="ill as"><span class="b1" style="background: #FDEBE9"></span><span class="b2" style="background: #FFF2D9"></span><span class="core"><i class="i i-alert s32" style="color: #C23029"></i></span></div>
+            <b class="h3">Noe gikk galt</b>
+            <p class="meta p" style="font-size: 14.5px">Vi fikk ikke kontakt med MinNabo. Prøv igjen om litt.</p>
+            <button class="btn btn-ink" onClick="{{retry}}">
+              <sc-if value="{{errBusy}}" hint-placeholder-val="{{ false }}"><i class="i i-refresh s18 spin"></i>Prøver …</sc-if>
+              <sc-if value="{{errIdle}}" hint-placeholder-val="{{ true }}"><i class="i i-refresh s18"></i>Prøv igjen</sc-if>
+            </button>
+          </div>
+        </sc-if>
+        <sc-if value="{{errFixed}}" hint-placeholder-val="{{ false }}">
+          <div class="px stack" style="gap: 12px; padding-top: 12px">
+            <span class="pill pill-ok lg as" style="align-self: flex-start">Innholdet er lastet</span>
+            <div class="lcard au"><a href="Oppdragsdetaljer.dc.html"><div class="lthumb art art-hage"><i class="i i-hage"></i></div><div class="lbody"><div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div><p class="ltitle">Klippe plen og rake løv</p><div class="lmeta"><i class="i i-pin"></i>Nordre Ål · 1,2 km</div><div class="lprice"><span class="l">Budsjett</span><span class="v">400 kr</span></div></div></a></div>
+            <button class="btn btn-text" onClick="{{resetErr}}" style="align-self: center">Vis feilen igjen</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- FRAKOBLET -->
+    <div class="st">
+      <div class="lb">Frakoblet<span>Viser sist lagrede innhold</span></div>
+      <div class="phone ph" style="width: 390px; height: 844px">
+        <div class="mini-top"><div class="brand"><img src="/_blob/ce533b7d7b255c52d851b70b7da4b2d8" alt="">MinNabo</div><span class="av av-me">MH</span></div>
+        <sc-if value="{{offline}}" hint-placeholder-val="{{ true }}">
+          <div class="banner au" style="background: #0A1740; color: #ffffff"><i class="i i-wifioff s18"></i><span style="flex: 1">Du er frakoblet – viser sist lagrede innhold</span></div>
+        </sc-if>
+        <sc-if value="{{online}}" hint-placeholder-val="{{ false }}">
+          <div class="banner as" style="background: #E3F5E8; color: #1D6E3A"><i class="i i-check s18"></i><span style="flex: 1">Tilkoblet igjen</span></div>
+        </sc-if>
+        <div class="{{cacheCls}}" style="padding: 16px 20px 0; display: flex; flex-direction: column; gap: 12px; transition: all .5s">
+          <div class="lcard"><a href="Oppdragsdetaljer.dc.html"><div class="lthumb art art-flytting"><i class="i i-flytting"></i></div><div class="lbody"><div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div><p class="ltitle">Bære sofa til 3. etasje</p><div class="lmeta"><i class="i i-pin"></i>Stampesletta · 2,8 km</div><div class="lprice"><span class="l">Budsjett</span><span class="v">350 kr</span></div></div></a></div>
+          <div class="lcard"><a href="Oppdragsdetaljer.dc.html"><div class="lthumb art art-montering"><i class="i i-montering"></i></div><div class="lbody"><div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div><p class="ltitle">Montere garderobeskap</p><div class="lmeta"><i class="i i-pin"></i>Søre Ål · 3,1 km</div><div class="lprice"><span class="l"></span><span class="v">Ønsker tilbud</span></div></div></a></div>
+          <span class="meta" style="text-align: center">Sist oppdatert kl. 14:32</span>
+        </div>
+        <div style="position: absolute; left: 20px; right: 20px; bottom: 40px">
+          <button class="btn btn-ghost btn-block" onClick="{{reconnect}}">
+            <sc-if value="{{recBusy}}" hint-placeholder-val="{{ false }}"><i class="i i-refresh s18 spin"></i>Kobler til …</sc-if>
+            <sc-if value="{{recIdle}}" hint-placeholder-val="{{ true }}"><i class="i i-refresh s18"></i>{{recLabel}}</sc-if>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUKSESS -->
+    <div class="st">
+      <div class="lb">Suksess<span>Bekreftelse etter handling</span></div>
+      <div class="phone ph white" style="width: 390px; height: 844px">
+        <sc-for list="{{succ}}" as="s" hint-placeholder-count="1">
+          <div class="center">
+            <div class="as" style="width: 120px; height: 120px; border-radius: 50%; background: #B8EE3C; display: grid; place-items: center; box-shadow: 0 0 0 12px #EDF8D6">
+              <svg class="checkdraw" viewBox="0 0 24 24" fill="none" stroke="#0A1740" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="width: 56px; height: 56px"><path d="M5 12.5 10 17.5 19.5 7"></path></svg>
+            </div>
+            <b class="h2 au d3">Tilbudet er sendt!</b>
+            <p class="meta p au d4" style="font-size: 14.5px">Kari får beskjed nå. Du får varsel når hun svarer.</p>
+            <div class="note au d5" style="justify-content: center"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere.</span></div>
+          </div>
+        </sc-for>
+        <div style="position: absolute; left: 20px; right: 20px; bottom: 40px; display: flex; flex-direction: column; gap: 10px">
+          <a href="Chat.dc.html" class="btn btn-lime btn-block">Gå til samtalen</a>
+          <button class="btn btn-text" onClick="{{replay}}" style="align-self: center"><i class="i i-refresh s16"></i>Spill av igjen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- INGEN TILGANG -->
+    <div class="st">
+      <div class="lb">Ingen tilgang<span>Beskyttede sider</span></div>
+      <div class="phone ph" style="width: 390px; height: 844px">
+        <div class="subbar"><a href="Meny.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a><div class="title">Adminpanel</div><span></span></div>
+        <div class="center">
+          <div class="ill as"><span class="b1" style="background: #E6E9EE"></span><span class="b2" style="background: #DFF2FB"></span><span class="core"><i class="i i-lock s32" style="color: #0A1740"></i></span></div>
+          <b class="h3">Denne siden er bare for administratorer</b>
+          <p class="meta p" style="font-size: 14.5px">Tror du dette er feil? Ta kontakt med MinNabo.</p>
+          <a href="Oppdrag.dc.html" class="btn btn-ink">Til forsiden</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2530,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { widened: false, err: 'idle', rec: 'offline', play: 0 }; }
+  componentWillUnmount() { clearTimeout(this.a); clearTimeout(this.b); }
+  renderVals() {
+    const S = this.state;
+    return {
+      skel: [1, 2, 3],
+      emptyTitle: 'Ingen oppdrag i Lillehammer akkurat nå.',
+      widened: S.widened, widen: () => this.setState({ widened: true }),
+      errShow: S.err !== 'fixed', errFixed: S.err === 'fixed', errBusy: S.err === 'busy', errIdle: S.err === 'idle',
+      retry: () => { if (S.err !== 'idle') return; this.setState({ err: 'busy' }); this.a = setTimeout(() => this.setState({ err: 'fixed' }), 1500); },
+      resetErr: () => this.setState({ err: 'idle' }),
+      offline: S.rec !== 'online', online: S.rec === 'online',
+      cacheCls: S.rec === 'online' ? '' : 'gray',
+      recBusy: S.rec === 'busy', recIdle: S.rec !== 'busy',
+      recLabel: S.rec === 'online' ? 'Simuler frakobling' : 'Prøv igjen',
+      reconnect: () => {
+        if (S.rec === 'online') { this.setState({ rec: 'offline' }); return; }
+        this.setState({ rec: 'busy' }); this.b = setTimeout(() => this.setState({ rec: 'online' }), 1400);
+      },
+      succ: S.play >= 0 ? [1] : [],
+      replay: () => { this.setState({ play: -1 }); this.b = setTimeout(() => this.setState({ play: 1 }), 40); }
+    };
+  }
+}
+</script>
+</body>
+</html>

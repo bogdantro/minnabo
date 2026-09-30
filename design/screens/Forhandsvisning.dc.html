@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – Forhåndsvisning</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.frame{border-radius:28px;background:#fff;box-shadow:var(--sh-m);overflow:hidden;border:1px solid var(--line)}
+.ck{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line2);font:600 14.5px/1.3 var(--fb)}
+.ck:last-child{border-bottom:0}
+.ck .ok{width:26px;height:26px;border-radius:50%;background:#E3F5E8;color:#2B8F4E;display:grid;place-items:center;flex:none}
+.area{position:relative;height:120px;border-radius:18px;background:#EEF1EC;overflow:hidden}
+.area .rd{position:absolute;height:10px;background:#fff;border-radius:5px}
+.area .zone{position:absolute;left:50%;top:50%;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;background:rgba(184,238,60,.3);border:2px solid #8FD12A}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="subbar">
+    <a href="LeggUt.dc.html" class="iconbtn" aria-label="Tilbake til veiviseren"><i class="i i-back"></i></a>
+    <div class="title">Forhåndsvisning</div>
+    <span></span>
+  </div>
+  <div class="scroll" style="top: 110px">
+    <div class="px au">
+      <p class="meta p" style="text-align: center; margin-bottom: 14px">Slik ser naboene oppdraget ditt</p>
+      <div class="seg">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+          <button class="{{t.cls}}" onClick="{{t.pick}}">{{t.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{isCard}}" hint-placeholder-val="{{ true }}">
+      <div class="px slideR" style="margin-top: 20px">
+        <div class="eyebrow" style="margin-bottom: 10px">I listen på Oppdrag</div>
+        <div class="lcard">
+          <a href="Oppdragsdetaljer.dc.html">
+            <div class="lthumb art art-maling"><i class="i i-maling"></i></div>
+            <div class="lbody">
+              <div class="lbadges"><span class="pill pill-need"><span class="pd"></span>Trenger hjelp</span></div>
+              <p class="ltitle">Male gjerdet i hagen</p>
+              <div class="lmeta"><b>Mari Haugen</b><span class="stars"><i class="i i-star"></i>4,9</span></div>
+              <div class="lmeta"><i class="i i-pin"></i>Nordre Ål · ca. 1 km</div>
+              <div class="lmeta"><i class="i i-clock"></i>Uke 41 · fleksibel</div>
+              <div class="lprice"><span class="l"></span><span class="v">Ønsker tilbud</span></div>
+            </div>
+          </a>
+          <button class="save" aria-label="Lagre (forhåndsvisning)"><i class="i i-heart s18"></i></button>
+        </div>
+        <div class="note" style="margin-top: 12px"><i class="i i-info"></i><span>Kortet viser bare omtrentlig område. Adressen deler du i chatten når dere har avtalt.</span></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isDetail}}" hint-placeholder-val="{{ false }}">
+      <div class="px slideL" style="margin-top: 20px">
+        <div class="frame">
+          <div class="art art-maling" style="height: 170px"><i class="i i-maling s48"></i></div>
+          <div style="padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 12px">
+            <div class="rowf" style="gap: 6px"><span class="pill pill-need"><span class="pd"></span>Åpent oppdrag</span><span class="pill pill-neutral">Maling/vedlikehold</span></div>
+            <h2 class="h3">Male gjerdet i hagen</h2>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+              <div class="card flat" style="padding: 10px 12px"><div class="meta">Sted</div><b style="font-size: 13.5px">Nordre Ål · ca. 1 km</b></div>
+              <div class="card flat" style="padding: 10px 12px"><div class="meta">Når</div><b style="font-size: 13.5px">Uke 41, fleksibel</b></div>
+              <div class="card flat" style="padding: 10px 12px"><div class="meta">Varighet</div><b style="font-size: 13.5px">ca. 5 timer</b></div>
+              <div class="card flat" style="padding: 10px 12px"><div class="meta">Pris</div><b style="font-size: 13.5px">Ønsker tilbud</b></div>
+            </div>
+            <div class="area">
+              <span class="rd" style="left: -20px; right: -20px; top: 38px; transform: rotate(-6deg)"></span>
+              <span class="rd" style="left: 150px; width: 10px; top: -20px; height: 180px"></span>
+              <span class="zone"></span>
+            </div>
+            <p class="body p" style="font-size: 14px; color: #34405F">Ca. 25 meter tregjerde som trenger nytt strøk beis. Gjerdet er vasket. Beis kjøper jeg selv – du tar med pensler om du har.</p>
+            <div class="rowf" style="gap: 10px; padding-top: 10px; border-top: 1px solid #EEF1F4">
+              <span class="av av-me s40">MH</span>
+              <div class="stack" style="gap: 2px"><b style="font-size: 14px">Mari Haugen</b><span class="meta">★ 4,9 · Bekreftet med Vipps</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="px au d3" style="margin-top: 22px">
+      <div class="card pad">
+        <div class="rowf" style="justify-content: space-between; margin-bottom: 4px">
+          <b class="h4">Klar til publisering</b>
+          <span class="pill pill-ok">4 av 4</span>
+        </div>
+        <div class="ck"><span class="ok"><i class="i i-check s14"></i></span>Tydelig tittel og kategori</div>
+        <div class="ck"><span class="ok"><i class="i i-check s14"></i></span>Beskrivelse med størrelse og utstyr</div>
+        <div class="ck"><span class="ok"><i class="i i-check s14"></i></span>2 bilder lagt ved</div>
+        <div class="ck"><span class="ok"><i class="i i-check s14"></i></span>Bare omtrentlig sted vises</div>
+      </div>
+      <div class="note" style="margin-top: 14px"><i class="i i-info"></i><span>Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.</span></div>
+    </div>
+    <div class="spacer-foot"></div>
+  </div>
+
+  <div class="foot">
+    <sc-if value="{{idle}}" hint-placeholder-val="{{ true }}">
+      <div class="fr">
+        <a href="LeggUt.dc.html" class="btn btn-ghost" style="flex: 1"><i class="i i-edit s18"></i>Rediger</a>
+        <button class="btn btn-lime" style="flex: 1.4" onClick="{{publish}}">Publiser</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{busy}}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-lime btn-block" disabled="{{ true }}" style="opacity: 1"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(10,23,64,.25); border-top-color: #0A1740"></span>Publiserer …</button>
+    </sc-if>
+    <sc-if value="{{done}}" hint-placeholder-val="{{ false }}">
+      <a href="Publisert.dc.html" class="btn btn-ink btn-block as"><i class="i i-check s18"></i>Publisert – fortsett</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 0, phase: 'idle' }; }
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const S = this.state;
+    return {
+      tabs: ['Kortet', 'Detaljsiden'].map((label, i) => ({ label, cls: S.tab === i ? 'on' : '', pick: () => this.setState({ tab: i }) })),
+      isCard: S.tab === 0, isDetail: S.tab === 1,
+      idle: S.phase === 'idle', busy: S.phase === 'busy', done: S.phase === 'done',
+      publish: () => { this.setState({ phase: 'busy' }); this.t = setTimeout(() => this.setState({ phase: 'done' }), 1400); }
+    };
+  }
+}
+</script>
+</body>
+</html>

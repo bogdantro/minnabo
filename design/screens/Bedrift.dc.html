@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>MinNabo – For bedrifter</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="mn.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE7}
+a{color:#065C8F}a:hover{color:#0A1740}
+.bhero{position:relative;border-radius:28px;background:var(--ink);color:#fff;padding:22px 20px;overflow:hidden}
+.bhero .glow{position:absolute;right:-70px;top:-80px;width:220px;height:220px;border-radius:50%;background:var(--grad);opacity:.3}
+.ben{display:flex;gap:12px;align-items:flex-start;position:relative}
+.ben .icirc{width:36px;height:36px;background:rgba(255,255,255,.1);color:#B8EE3C}
+.ben b{display:block;font-size:15px}
+.ben small{display:block;font-size:13px;color:rgba(255,255,255,.7);margin-top:2px;line-height:1.4}
+.orgin{letter-spacing:.06em;font-family:var(--fd);font-weight:700;font-size:20px}
+.stat-r{position:absolute;right:14px;display:grid;place-items:center}
+.found{border-radius:18px;background:#E3F5E8;padding:14px;display:flex;gap:12px}
+.ro{height:56px;border-radius:17px;background:var(--surf2);border:1.5px solid var(--line);padding:0 16px;display:flex;align-items:center;gap:10px;font:600 16px var(--fb)}
+.chip.sm{padding:0 13px 0 4px;gap:7px}
+.chip.sm .ci{width:28px;height:28px}
+.consent{display:flex;gap:12px;align-items:flex-start;width:100%;background:none;border:0;padding:4px 0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.tl{position:relative;display:flex;flex-direction:column;gap:0}
+.tli{display:flex;gap:14px;position:relative;padding-bottom:22px}
+.tli:last-child{padding-bottom:0}
+.tli .dotc{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;position:relative;z-index:1}
+.tli::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.tli:last-child::before{display:none}
+.tli.done::before{background:#9BDD2C}
+.tli.done .dotc{background:#3F9A1A;color:#fff}
+.tli.now .dotc{background:var(--cyan-t);color:var(--cyan-d)}
+.tli.todo .dotc{background:#ECEFF3;color:var(--faint)}
+.tli b{display:block;font:700 15.5px/1.3 var(--fb)}
+.tli small{display:block;font-size:13px;color:var(--mute);margin-top:3px}
+</style>
+</helmet>
+<div class="phone" style="width: 390px; height: 844px">
+  <div class="scroll">
+    <div class="mesh cyan"></div>
+    <div class="subbar">
+      <a href="Innstillinger.dc.html" class="iconbtn" aria-label="Tilbake"><i class="i i-back"></i></a>
+      <div class="title">For bedrifter</div>
+      <span></span>
+    </div>
+
+    <!-- FORM -->
+    <sc-if value="{{isForm}}" hint-placeholder-val="{{ true }}">
+      <div class="px au" style="position: relative; margin-top: 8px">
+        <div class="bhero">
+          <span class="glow"></span>
+          <span class="icirc" style="width: 50px; height: 50px; background: #B8EE3C; color: #0A1740; position: relative"><i class="i i-building s24"></i></span>
+          <h1 class="h2" style="margin-top: 14px; position: relative; color: #ffffff">Registrer bedriften din</h1>
+          <p class="p" style="margin-top: 6px; font-size: 14.5px; line-height: 1.45; color: rgba(255,255,255,.78); position: relative">For firma som vil tilby tjenester til naboer i Innlandet.</p>
+          <div class="stack" style="gap: 14px; margin-top: 18px">
+            <div class="ben"><span class="icirc"><i class="i i-verified s18"></i></span><span><b>Verifisert-merke</b><small>Vi sjekker organisasjonsnummeret mot Enhetsregisteret.</small></span></div>
+            <div class="ben"><span class="icirc"><i class="i i-brief s18"></i></span><span><b>Vis firmanavnet</b><small>Navnet vises på profilen og oppføringene dine.</small></span></div>
+            <div class="ben"><span class="icirc"><i class="i i-shield s18"></i></span><span><b>Samme regler for alle</b><small>Bedrifter får ingen bedre plass i søket.</small></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px stack" style="gap: 18px; margin-top: 26px">
+        <span class="eyebrow">Om bedriften</span>
+
+        <div class="field">
+          <label class="label" for="org">Organisasjonsnummer <small>9 siffer</small></label>
+          <div class="inwrap">
+            <input id="org" class="{{orgCls}}" value="{{org}}" onChange="{{onOrg}}" inputmode="numeric" placeholder="123 456 789" autocomplete="off">
+            <sc-if value="{{looking}}" hint-placeholder-val="{{ false }}"><span class="stat-r"><span class="spin" style="width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid #DFF2FB; border-top-color: #0A74B4"></span></span></sc-if>
+            <sc-if value="{{found}}" hint-placeholder-val="{{ false }}"><span class="stat-r"><span class="icirc as" style="width: 26px; height: 26px; background: #2B8F4E; color: #ffffff"><i class="i i-check s14"></i></span></span></sc-if>
+          </div>
+          <sc-if value="{{looking}}" hint-placeholder-val="{{ false }}"><div class="help au" style="color: #0A74B4; font-weight: 600">Slår opp i Enhetsregisteret …</div></sc-if>
+          <sc-if value="{{orgErr}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s14"></i>{{orgErr}}</div></sc-if>
+          <sc-if value="{{orgHelp}}" hint-placeholder-val="{{ true }}"><div class="help">Du finner det i Brønnøysundregistrene.</div></sc-if>
+        </div>
+
+        <sc-if value="{{found}}" hint-placeholder-val="{{ false }}">
+          <div class="stack au" style="gap: 14px">
+            <div class="field">
+              <span class="label">Firmanavn <small>Fra Enhetsregisteret</small></span>
+              <div class="ro"><i class="i i-building s18" style="color: #5F6983"></i>[Firmanavn AS]</div>
+            </div>
+            <div class="found">
+              <span class="icirc" style="width: 34px; height: 34px; background: #ffffff; color: #2B8F4E"><i class="i i-map s16"></i></span>
+              <span style="flex: 1; font-size: 13.5px; line-height: 1.45; color: #1D6E3A"><b style="display: block; color: #0A1740">[Forretningsadresse]</b>[Postnummer] Lillehammer · [Organisasjonsform]</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <div class="divider" style="margin: 4px 0"></div>
+        <span class="eyebrow">Kontakt</span>
+
+        <div class="field">
+          <label class="label" for="kp">Kontaktperson</label>
+          <input id="kp" class="{{kpCls}}" value="{{kp}}" onChange="{{onKp}}" placeholder="Fullt navn">
+          <sc-if value="{{kpErr}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s14"></i>Skriv navnet til kontaktpersonen</div></sc-if>
+        </div>
+        <div class="field">
+          <label class="label" for="em">E-post</label>
+          <input id="em" class="{{emCls}}" value="{{em}}" onChange="{{onEm}}" type="email" placeholder="post@firma.no">
+          <sc-if value="{{emErr}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s14"></i>Skriv en gyldig e-postadresse</div></sc-if>
+        </div>
+        <div class="field">
+          <label class="label" for="tlf">Telefon</label>
+          <div class="inwrap">
+            <span class="pre" style="font: 600 16px var(--fb)">+47</span>
+            <input id="tlf" class="{{tlfCls}}" value="{{tlf}}" onChange="{{onTlf}}" inputmode="tel" placeholder="8 siffer" style="padding-left: 56px">
+          </div>
+          <sc-if value="{{tlfErr}}" hint-placeholder-val="{{ false }}"><div class="errtxt"><i class="i i-alert s14"></i>Telefonnummeret skal ha 8 siffer</div></sc-if>
+        </div>
+
+        <div class="divider" style="margin: 4px 0"></div>
+        <div class="label">Kategorier <small>{{catCount}}</small></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: -6px">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="8">
+            <button class="{{c.cls}}" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}"><span class="{{c.ciCls}}"><i class="{{c.icon}}"></i></span>{{c.label}}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{catErr}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: -6px"><i class="i i-alert s14"></i>Velg minst én kategori</div></sc-if>
+
+        <button class="consent" onClick="{{flipConsent}}" role="checkbox" aria-checked="{{consentChecked}}">
+          <span class="{{chkCls}}"><i class="i i-check s16"></i></span>
+          <span style="font-size: 14px; line-height: 1.45; color: #34405F">Jeg bekrefter at jeg kan representere bedriften, og godtar <b style="color: #0A1740">vilkårene for bedrifter</b>.</span>
+        </button>
+        <sc-if value="{{consentErr}}" hint-placeholder-val="{{ false }}"><div class="errtxt" style="margin-top: -8px"><i class="i i-alert s14"></i>Du må bekrefte for å sende inn</div></sc-if>
+        <a href="Vilkar.dc.html" class="link" style="margin-top: -10px">Les vilkårene<i class="i i-arrowur"></i></a>
+      </div>
+      <div class="spacer-foot"></div>
+    </sc-if>
+
+    <!-- PENDING -->
+    <sc-if value="{{isPending}}" hint-placeholder-val="{{ false }}">
+      <div class="px" style="margin-top: 14px">
+        <div class="stack" style="align-items: center; text-align: center; gap: 10px">
+          <div class="as" style="position: relative; width: 96px; height: 96px; border-radius: 30px; background: #ffffff; box-shadow: var(--sh-m); display: grid; place-items: center">
+            <span class="pulse" style="position: absolute; inset: 0; border-radius: 30px"></span>
+            <i class="i i-hourglass s40" style="color: #0A74B4"></i>
+          </div>
+          <h1 class="h1 au d2" style="margin-top: 10px">Sendt til verifisering</h1>
+          <p class="body p au d3" style="color: #34405F">Vi sjekker opplysningene mot Enhetsregisteret.</p>
+        </div>
+
+        <div class="card pad au d4" style="margin-top: 22px">
+          <div class="tl">
+            <div class="tli done"><span class="dotc"><i class="i i-check s16"></i></span><span><b>Sendt</b><small>I dag kl. {{sentAt}}</small></span></div>
+            <div class="tli now"><span class="dotc pulse"><i class="i i-hourglass s16"></i></span><span><b>Til verifisering</b><small>Vanligvis innen [antall] virkedager</small></span></div>
+            <div class="tli todo"><span class="dotc"><i class="i i-verified s16"></i></span><span><b>Verifisert</b><small>Merket vises på profilen din</small></span></div>
+          </div>
+        </div>
+
+        <div class="card au d5" style="margin-top: 12px; padding: 4px 18px">
+          <div class="kv"><span>Firmanavn</span><b>[Firmanavn AS]</b></div>
+          <div class="kv"><span>Org.nr.</span><b>{{org}}</b></div>
+          <div class="kv"><span>Kontaktperson</span><b>{{kp}}</b></div>
+          <div class="kv"><span>Kategorier</span><b>{{catNames}}</b></div>
+        </div>
+
+        <div class="au d6" style="margin-top: 14px; display: flex; gap: 10px; align-items: center; padding: 14px; border-radius: 18px; background: #DFF2FB; color: #065C8F; font: 600 14px/1.4 var(--fb)">
+          <i class="i i-bell s18"></i><span>Du får varsel når bedriften er verifisert.</span>
+        </div>
+        <a href="Innstillinger.dc.html" class="btn btn-ink btn-block au d7" style="margin-top: 20px">Tilbake til innstillinger</a>
+      </div>
+      <div style="height: 40px"></div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{isForm}}" hint-placeholder-val="{{ true }}">
+    <div class="foot">
+      <button class="btn btn-cyan btn-block btn-lg" onClick="{{submit}}">
+        <sc-if value="{{sending}}" hint-placeholder-val="{{ false }}"><span class="spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: #ffffff"></span>Sender …</sc-if>
+        <sc-if value="{{notSending}}" hint-placeholder-val="{{ true }}"><i class="i i-send s18"></i>Send til verifisering</sc-if>
+      </button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      phase: 'form', digits: '', lookup: 'idle', kp: 'Mari Haugen', em: '', tlf: '', cats: {}, consent: false,
+      tried: false, sending: false, sentAt: ''
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.lt); clearTimeout(this.sd); }
+  onOrg(v) {
+    const d = v.replace(/\D/g, '').slice(0, 9);
+    clearTimeout(this.lt);
+    if (d.length === 9 && /^[89]/.test(d)) {
+      this.setState({ digits: d, lookup: 'looking' });
+      this.lt = setTimeout(() => this.setState({ lookup: 'found' }), 1500);
+    } else {
+      this.setState({ digits: d, lookup: 'idle' });
+    }
+  }
+  renderVals() {
+    const S = this.state;
+    const CATS = [['hage', 'Hage'], ['rengjoring', 'Rengjøring'], ['flytting', 'Flytting/bæring'], ['transport', 'Transport/levering'], ['montering', 'Montering'], ['snomaking', 'Snømåking'], ['maling', 'Maling/vedlikehold'], ['dyrepass', 'Dyrepass'], ['data', 'Datahjelp'], ['arrangement', 'Arrangementshjelp'], ['annet', 'Annet']];
+    const d = S.digits;
+    const org = d.replace(/(\d{3})(?=\d)/g, '$1 ');
+    let orgErr = '';
+    if (d.length === 9 && !/^[89]/.test(d)) orgErr = 'Organisasjonsnummer starter med 8 eller 9';
+    else if (S.tried && d.length < 9) orgErr = d.length ? 'Organisasjonsnummeret skal ha 9 siffer' : 'Skriv organisasjonsnummeret';
+    const found = S.lookup === 'found';
+    const emOk = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(S.em.trim());
+    const tlfD = S.tlf.replace(/\D/g, '');
+    const tlfOk = tlfD.length === 8;
+    const kpOk = S.kp.trim().length >= 2;
+    const catIds = Object.keys(S.cats).filter((k) => S.cats[k]);
+    const t = S.tried;
+    const allOk = found && kpOk && emOk && tlfOk && catIds.length > 0 && S.consent;
+    return {
+      isForm: S.phase === 'form', isPending: S.phase === 'pending',
+      org, onOrg: (e) => this.onOrg(e.target.value),
+      orgCls: 'input orgin' + (orgErr ? ' err' : ''),
+      looking: S.lookup === 'looking', found,
+      orgErr, orgHelp: !orgErr && S.lookup === 'idle',
+      kp: S.kp, onKp: (e) => this.setState({ kp: e.target.value }),
+      kpCls: 'input' + (t && !kpOk ? ' err' : ''), kpErr: t && !kpOk,
+      em: S.em, onEm: (e) => this.setState({ em: e.target.value }),
+      emCls: 'input' + (t && !emOk ? ' err' : ''), emErr: t && !emOk,
+      tlf: S.tlf,
+      onTlf: (e) => { const x = e.target.value.replace(/\D/g, '').slice(0, 8); this.setState({ tlf: x.replace(/^(\d{3})(\d{0,2})(\d{0,3})$/, (m, a, b, c) => [a, b, c].filter(Boolean).join(' ')) }); },
+      tlfCls: 'input' + (t && !tlfOk ? ' err' : ''), tlfErr: t && !tlfOk,
+      cats: CATS.map(([id, label]) => ({
+        label, icon: 'i i-' + id,
+        cls: 'chip sm' + (S.cats[id] ? ' on' : ''),
+        ciCls: 'ci art art-' + id,
+        pressed: S.cats[id] ? 'true' : 'false',
+        pick: () => { const cats = Object.assign({}, S.cats); cats[id] = !cats[id]; this.setState({ cats }); }
+      })),
+      catCount: catIds.length ? catIds.length + ' valgt' : 'Velg én eller flere',
+      catErr: t && catIds.length === 0,
+      chkCls: 'chk' + (S.consent ? ' on' : ''), consentChecked: S.consent ? 'true' : 'false',
+      flipConsent: () => this.setState({ consent: !S.consent }),
+      consentErr: t && !S.consent,
+      sending: S.sending, notSending: !S.sending,
+      submit: () => {
+        if (S.sending) return;
+        if (!allOk) { this.setState({ tried: true }); return; }
+        this.setState({ sending: true });
+        this.sd = setTimeout(() => this.setState({ sending: false, phase: 'pending', sentAt: '14:32' }), 1300);
+      },
+      sentAt: S.sentAt,
+      catNames: CATS.filter(([id]) => S.cats[id]).map(([, l]) => l).join(', ')
+    };
+  }
+}
+</script>
+</body>
+</html>
