@@ -83,8 +83,8 @@ Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
 
 ## 0 · Global (build first)
 
-- [ ] `theme.ts` in place, fonts loaded (Bricolage Grotesque + Figtree), splash waits for fonts
-- [ ] All components in COMPONENTS.md
+- [x] `theme.ts` in place, fonts loaded (Bricolage Grotesque + Figtree), splash waits for fonts
+- [x] All components in COMPONENTS.md (preview: `/komponenter`, dev builds only)
 - [ ] Tab bar: Oppdrag · Fellesskap · (Legg ut FAB) · Innboks (badge) · Meny. Hidden on detail, chat, wizards
 - [ ] Main header: logo left, bell (dot) → Varsler, avatar → Profil on every main screen
 - [ ] No gradients anywhere. No payment UI anywhere. Payment note near every price

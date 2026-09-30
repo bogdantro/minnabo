@@ -28,6 +28,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { tokens } from '@/theme';
 import { InboxRealtime } from '@/api/realtime';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -102,20 +103,22 @@ export default function RootLayout() {
           client={queryClient}
           persistOptions={{ persister, buster: CACHE_BUSTER, maxAge: CACHE_MAX_AGE }}
         >
-          <AppErrorBoundary>
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: tokens.color.bg },
-              }}
-            />
-            <InboxRealtime />
-            <OfflineOutbox />
-            <OfflineBanner />
-            <SafeTripBanner />
-            <ToastHost />
-          </AppErrorBoundary>
+          <BottomSheetModalProvider>
+            <AppErrorBoundary>
+              <StatusBar style="dark" />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: tokens.color.bg },
+                }}
+              />
+              <InboxRealtime />
+              <OfflineOutbox />
+              <OfflineBanner />
+              <SafeTripBanner />
+              <ToastHost />
+            </AppErrorBoundary>
+          </BottomSheetModalProvider>
         </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

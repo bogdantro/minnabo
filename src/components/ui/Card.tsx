@@ -1,59 +1,54 @@
-import { View, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
-import { tokens } from '@/theme';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { colors, radius, shadow } from '@/theme/theme';
+import { PressableScale } from './PressableScale';
 
 export type CardProps = {
   children: ReactNode;
   onPress?: () => void;
-  style?: ViewStyle | ViewStyle[];
+  /** `.card.flat` – no shadow, 1px line border. */
+  flat?: boolean;
+  /** `.card.pad` – 18 px padding. */
+  pad?: boolean;
+  /** @deprecated use `pad` */
   padded?: boolean;
   accessibilityLabel?: string;
   testID?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function Card({
-  children,
-  onPress,
-  style,
-  padded = true,
-  accessibilityLabel,
-  testID,
-}: CardProps) {
-  const base = [styles.card, padded && styles.padded, style];
-
+/** `.card` – white, radius 22, soft shadow + hairline. */
+export function Card({ children, onPress, flat = false, pad, padded, accessibilityLabel, testID, style }: CardProps) {
+  const padding = pad ?? padded ?? false;
+  const s = [styles.base, flat ? styles.flat : shadow.card, padding ? styles.pad : null, style];
   if (onPress) {
     return (
-      <Pressable
+      <PressableScale
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         onPress={onPress}
-        style={({ pressed }) => [...base, pressed && styles.pressed]}
+        scaleTo={0.985}
+        style={s}
       >
         {children}
-      </Pressable>
+      </PressableScale>
     );
   }
-
   return (
-    <View testID={testID} style={base}>
+    <View testID={testID} style={s}>
       {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.card,
+  base: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    ...tokens.shadow.card,
+    borderColor: colors.hairline,
   },
-  padded: {
-    padding: tokens.space.lg,
-  },
-  pressed: {
-    opacity: 0.96,
-  },
+  flat: { borderColor: colors.line },
+  pad: { padding: 18 },
 });

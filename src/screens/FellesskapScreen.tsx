@@ -45,7 +45,7 @@ export function FellesskapScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ScreenTitle>{nb.community.title}</ScreenTitle>
 
-        <Card style={styles.hero}>
+        <Card pad style={styles.hero}>
           <Icon name="heart" size={24} color="lime" />
           <AppText variant="cardTitle" weight="bold">
             {nb.community.heading}
@@ -136,7 +136,7 @@ export function FellesskapScreen() {
             </AppText>
           ) : null}
           {donations.map((d) => (
-            <Card key={d.id} style={styles.donation}>
+            <Card pad key={d.id} style={styles.donation}>
               <View style={styles.donationRow}>
                 <AppText variant="body" weight="bold">
                   {formatPrice(nok(d.amountKr))}
@@ -151,7 +151,7 @@ export function FellesskapScreen() {
         </View>
 
         {!isEnabled('redCross') ? (
-          <Card style={styles.pending}>
+          <Card pad style={styles.pending}>
             <Icon name="info" size={16} color="navyMuted" />
             <AppText variant="meta" color="navyMuted">
               {nb.community.redCrossPending}
@@ -165,7 +165,7 @@ export function FellesskapScreen() {
 
 function PartnerCard({ partner, featured = false }: { partner: Partner; featured?: boolean }) {
   return (
-    <Card style={[styles.partner, featured ? styles.partnerFeatured : styles.partnerLocal]}>
+    <Card pad style={[styles.partner, featured ? styles.partnerFeatured : styles.partnerLocal]}>
       <View style={styles.partnerLogo}>
         <AppText weight="extrabold" color="navy" style={styles.partnerInitials}>
           {partner.name

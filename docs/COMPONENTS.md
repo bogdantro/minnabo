@@ -11,6 +11,28 @@ Global rules
 - Entrance motion: lists stagger in with `FadeInDown` 16px, 550 ms, 50 ms between items.
 - Put rotation/translation on an INNER view, never on the animated one.
 
+## Where they live
+
+All in `src/components/ui/`, exported from `@/components/ui`. Live preview of every variant: `/komponenter` (dev builds only).
+
+| File | Components |
+|---|---|
+| `Layout.tsx` | Screen, MainHeader, SubHeader, StickyFooter, FooterRow |
+| `SectionHeader.tsx` | SectionHeader |
+| `Button.tsx` · `IconButton.tsx` · `TextLink.tsx` | Button, IconButton, TextLink |
+| `Pill.tsx` · `Badges.tsx` · `Chip.tsx` | Pill, CountBadge, VerifiedBadge, Stars, Chip, ChipRow |
+| `Card.tsx` · `ListingCard.tsx` · `CategoryArt.tsx` · `Avatar.tsx` | Card, ListingCard, SaveButton, CategoryArt, Avatar |
+| `List.tsx` | ListGroup, ListRow, KeyValueRow, StatTile |
+| `Field.tsx` | Field, Input (= `<TextInput>`), AmountInput, SelectBox, ErrorText |
+| `Controls.tsx` | Toggle, Checkbox, Radio, OptionCard |
+| `Segmented.tsx` · `RangeSlider.tsx` · `Wizard.tsx` | Segmented, Tabs, RangeSlider, DayChips, StepProgress, PhotoAddTile (= `<PhotoPicker>` tile) |
+| `Sheet.tsx` · `Dialog.tsx` · `../ToastHost.tsx` + `@/lib/toast` | Sheet, Dialog, Toast (`toast.success(text, { icon, action })`) |
+| `Chat.tsx` | Bubble, SystemMessage, TypingIndicator, OfferCard, PaymentNote, Note |
+| `Skeleton.tsx` · `States.tsx` · `Celebrate.tsx` | Skeleton (+ ListingCardSkeleton, RowSkeleton), EmptyState, ErrorState, SuccessState, NoAccess, DrawnCheck, Confetti |
+| `Txt.tsx` · `Icon.tsx` · `PressableScale.tsx` · `Spinner.tsx` | typography (`theme.text`), icons (`theme.icons` keys), press-scale, spinner |
+
+Shadows are CSS `boxShadow` strings (`theme.shadow`), rendered natively on iOS, Android (new architecture) and web.
+
 ---
 
 ## Layout

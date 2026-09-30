@@ -4,6 +4,11 @@ import { cleanup, configure } from '@testing-library/react-native';
 // RNTL 14 + react-query settle slowly on a loaded machine; give waitFor room.
 configure({ asyncUtilTimeout: 8000 });
 
+// Reanimated 4 / worklets have no native runtime under jest: use their mocks.
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+jest.mock('@gorhom/bottom-sheet', () => require('@mocks/bottomSheet'));
+
 // The app must never hit the network in tests. The runtime `apiClient` is the
 // Supabase one; tests swap in the in-memory MockApiClient from tests/mocks.
 jest.mock('@/api/client', () => {

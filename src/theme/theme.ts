@@ -3,7 +3,7 @@
  * Source of truth: design/screens/mn.css. Every value here is copied from it.
  * Rule: NO gradients anywhere in the app. Flat colours only.
  */
-import { Platform, TextStyle, ViewStyle } from 'react-native';
+import type { TextStyle, ViewStyle } from 'react-native';
 
 // ---------------------------------------------------------------- colours
 export const colors = {
@@ -37,6 +37,45 @@ export const colors = {
   online: '#2FBF62',
   scrim: 'rgba(10,23,64,0.45)',
   vipps: '#FF5B24',      // ONLY the login button
+
+  // component colours (also from mn.css)
+  softBg: '#EAEDF2',       // btn-soft, "+4" avatar stack
+  dangerBorder: '#F2C9C5', // btn-dangerghost border
+  neutralPill: '#ECEFF3',  // pill-neutral
+  savedBg: '#FDECEC',      // .save.on
+  heart: '#E5484D',        // .save.on heart
+  control: '#C3C9D4',      // checkbox / radio border
+  track: '#E6E9EE',        // segmented bg, skeleton, bars
+  progressTrack: '#E1E5EA',// wizard progress / steps
+  rangeTrack: '#DDE1E7',
+  grabber: '#D6DAE1',
+  dashed: '#C9CFD9',       // photo-add / dash-card border, dots
+  placeholder: '#8F97AA',
+  verified: '#1B8F4E',
+  typingDot: '#A3AABB',
+  offerBorder: '#CDEB93',  // inline offer card in chat
+  chipLimeBorder: '#BFE07F',
+  chipCyanBorder: '#9FD5EF',
+  white: '#FFFFFF',
+  hairline: 'rgba(10,23,64,0.035)',
+  navHairline: 'rgba(10,23,64,0.05)',
+  iconBtnBg: 'rgba(255,255,255,0.9)',
+  glassBg: 'rgba(255,255,255,0.82)',
+  glassBorder: 'rgba(255,255,255,0.6)',
+  navBg: 'rgba(255,255,255,0.93)',
+  footBg: 'rgba(255,255,255,0.94)',
+  onDark16: 'rgba(255,255,255,0.16)', // selected chip icon circle
+  spinnerTrackDark: 'rgba(10,23,64,0.2)',
+  spinnerTrackLight: 'rgba(255,255,255,0.3)',
+  focusRing: 'rgba(25,184,238,0.16)',
+  errorRing: 'rgba(194,48,41,0.1)',
+  selectRing: 'rgba(10,23,64,0.08)',
+  // chat offer card (Chat.dc.html .offer)
+  offerCardBorder: '#C9E8F6',
+  offerHeadBg: '#F1F8E3',
+  offerAcceptedBorder: '#8FD3A6',
+  offerDeclinedIcon: '#9AA2B3',
+  caveatText: '#6E4300',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */
@@ -105,6 +144,44 @@ export const text = {
   label: { fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 17, color: colors.ink },
   input: { fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.ink },
   amount: { fontFamily: fonts.display, fontSize: 34, letterSpacing: -0.68, color: colors.ink },
+  display34: { fontFamily: fonts.display, fontSize: 34, lineHeight: 35, letterSpacing: -1.19, color: colors.ink },
+  num: { fontFamily: fonts.display, fontSize: 22, lineHeight: 24, letterSpacing: -0.44, color: colors.ink },
+  brand: { fontFamily: fonts.displayHeavy, fontSize: 21, lineHeight: 21, letterSpacing: -0.63, color: colors.ink },
+  buttonLg: { fontFamily: fonts.bodyBold, fontSize: 17, lineHeight: 17 },
+  link: { fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 14, color: colors.cyanDeep },
+  note: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17.5, color: colors.mute },
+  subbarTitle: { fontFamily: fonts.bodyBold, fontSize: 17, lineHeight: 20.4, color: colors.ink },
+  rowTitle: { fontFamily: fonts.bodySemi, fontSize: 15.5, lineHeight: 20, color: colors.ink },
+  rowSub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 17.5, color: colors.mute },
+  metaBold: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 17.5, color: colors.ink },
+  hint: { fontFamily: fonts.bodyMedium, fontSize: 12.5, lineHeight: 15, color: colors.mute },
+  help: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.2, color: colors.mute },
+  error: { fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 17, color: colors.danger },
+  chipSm: { fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 13 },
+  segment: { fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 14 },
+  tab: { fontFamily: fonts.bodyBold, fontSize: 15, lineHeight: 15 },
+  day: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 13 },
+  kvLabel: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 19, color: colors.mute },
+  kvValue: { fontFamily: fonts.bodyBold, fontSize: 14.5, lineHeight: 19, color: colors.ink },
+  bubble: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21.3 },
+  time: { fontFamily: fonts.body, fontSize: 11.5, lineHeight: 14, color: colors.faint },
+  system: { fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 16, color: colors.ink2 },
+  toast: { fontFamily: fonts.bodySemi, fontSize: 14.5, lineHeight: 18.9, color: colors.white },
+  toastAction: { fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 14, color: colors.lime },
+  count: { fontFamily: fonts.bodyHeavy, fontSize: 11, lineHeight: 15, color: colors.white },
+  pillLg: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 13, letterSpacing: 0.13 },
+  verified: { fontFamily: fonts.bodyBold, fontSize: 12.5, lineHeight: 12.5 },
+  stars: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 13, color: colors.ink },
+  statLabel: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 16, color: colors.mute },
+  avatar: { fontFamily: fonts.bodyBold, letterSpacing: 0.28 },
+  dialogTitle: { fontFamily: fonts.display, fontSize: 22, lineHeight: 25, letterSpacing: -0.5, color: colors.ink },
+  stateBody: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 19.6, color: colors.mute },
+  offerTitle: { fontFamily: fonts.display, fontSize: 16, lineHeight: 17.6, letterSpacing: -0.16, color: colors.ink },
+  offerPrice: { fontFamily: fonts.display, fontSize: 38, lineHeight: 38, letterSpacing: -1.33, color: colors.ink },
+  fact: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 13 },
+  offerDesc: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20.3, color: colors.ink2 },
+  small: { fontFamily: fonts.body, fontSize: 12, lineHeight: 15, color: colors.mute },
+  priceLabel: { fontFamily: fonts.bodySemi, fontSize: 12, lineHeight: 12, color: colors.mute },
 } satisfies Record<string, TextStyle>;
 
 // ---------------------------------------------------------------- layout
@@ -115,6 +192,8 @@ export const safeTopExtra = 10;            // add to safe-area top inset under h
 export const radius = {
   s: 10, m: 16, card: 22, listingCard: 24, sheet: 32, dialog: 28,
   input: 17, thumb: 17, tile: 18, pill: 999,
+  checkbox: 8, sectionIcon: 12, rowIcon: 13, day: 14, toast: 18, option: 20, nav: 30,
+  stateTile: 26, bubble: 22, bubbleTail: 7,
 } as const;
 
 export const sizes = {
@@ -124,23 +203,45 @@ export const sizes = {
   navHeight: 74, navBottom: 16, navSide: 12, fab: 62, fabLift: 30,
   listingThumbW: 96, listingThumbMinH: 118,
   minTouch: 44,
+  buttonText: 44, saveButton: 38, rowIcon: 40, sectionIcon: 34, chipIcon: 30, count: 19, dot: 10,
+  navItemW: 48, navItemH: 32, navIcon: 22, fabIcon: 26, toggleKnob: 26, rangeThumb: 28, rangeTrack: 6,
+  day: 46, segment: 40, tab: 46, progress: 6, grabberW: 42, grabberH: 5, toastIcon: 28,
+  stateIllW: 170, stateIllH: 150, stateTile: 80, rowMin: 60, amountSuffixRight: 16,
+  multilineMin: 112, spacerNav: 128, spacerFoot: 140, headerTop: 10,
 } as const;
 
 export const avatarSizes = { 28: 28, 32: 32, 40: 40, 48: 48, 56: 56, 64: 64, 88: 88 } as const;
 
 // ---------------------------------------------------------------- depth
-// iOS uses shadow*, Android uses elevation (will look slightly softer).
-const sh = (y: number, blur: number, opacity: number, elevation: number): ViewStyle =>
-  Platform.select({
-    ios: { shadowColor: colors.ink, shadowOffset: { width: 0, height: y }, shadowRadius: blur / 2, shadowOpacity: opacity },
-    default: { elevation },
-  }) as ViewStyle;
+// CSS box-shadow strings copied 1:1 from mn.css. React Native 0.76+ (new
+// architecture) and react-native-web both render `boxShadow` natively,
+// including spread and multiple layers, so iOS/Android/web look the same.
+const sh = (css: string): ViewStyle => ({ boxShadow: css });
 
 export const shadow = {
-  card: sh(8, 24, 0.10, 2),     // --sh
-  medium: sh(16, 36, 0.16, 6),  // --sh-m
-  large: sh(24, 60, 0.26, 12),  // --sh-l  (nav, toast, dialog)
-  fab: sh(14, 26, 0.30, 10),
+  card: sh('0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),   // --sh
+  medium: sh('0 2px 6px rgba(10,23,64,.05), 0 16px 36px -14px rgba(10,23,64,.22)'), // --sh-m
+  large: sh('0 24px 60px -16px rgba(10,23,64,.34)'),                                // --sh-l (dialog, toast)
+  nav: sh('0 18px 44px -14px rgba(10,23,64,.32), 0 0 0 1px rgba(10,23,64,.05)'),
+  fab: sh('0 14px 26px -10px rgba(20,160,140,.75), 0 0 0 5px #fff'),
+  sheet: sh('0 -10px 40px rgba(10,23,64,.12)'),
+  btnLime: sh('0 10px 22px -10px rgba(110,180,10,.85)'),
+  btnCyan: sh('0 10px 22px -10px rgba(8,101,158,.8)'),
+  btnInk: sh('0 10px 22px -12px rgba(10,23,64,.8)'),
+  btnVipps: sh('0 10px 22px -10px rgba(255,91,36,.8)'),
+  segment: sh('0 2px 8px rgba(10,23,64,.12)'),
+  knob: sh('0 2px 6px rgba(10,23,64,.25)'),
+  thumb: sh('0 3px 10px rgba(10,23,64,.25)'),
+  focus: sh('0 0 0 4px rgba(25,184,238,.16)'),
+  error: sh('0 0 0 4px rgba(194,48,41,.1)'),
+  selected: sh('0 0 0 3px rgba(10,23,64,.08)'),
+  offerAccepted: sh('0 0 0 4px rgba(43,143,78,.12), 0 2px 6px rgba(10,23,64,.05), 0 16px 36px -14px rgba(10,23,64,.22)'),
+  avatarRing: sh('0 0 0 2px #fff, 0 0 0 4px #19B8EE'),
+  avatarRingSm: sh('0 0 0 1.5px #fff, 0 0 0 3px #19B8EE'),
+  avatarRingLg: sh('0 0 0 3px #fff, 0 0 0 6px #19B8EE'),
+  whiteRing2: sh('0 0 0 2px #fff'),
+  drawnCheck: sh('0 0 0 12px #EDF8D6'),
+  none: { boxShadow: 'none' } as ViewStyle,
 } as const;
 
 // ---------------------------------------------------------------- motion (react-native-reanimated)
@@ -150,6 +251,8 @@ export const motion = {
   // CSS cubic-bezier(.3,1.45,.5,1) springy overshoot -> withSpring(config below)
   spring: { damping: 14, stiffness: 220, mass: 0.9 },
   durations: {
+    press: 150,       // :active scale transitions
+    fade: 250,        // scrim fade, colour transitions
     fadeUp: 550,      // entering: FadeInDown.duration(550).easing(Easing.bezier(...ease))
     stagger: 50,      // .d1..d10 = 50ms steps (d9=500, d10=600)
     sheet: 450,
