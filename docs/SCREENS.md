@@ -85,8 +85,8 @@ Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
 
 - [x] `theme.ts` in place, fonts loaded (Bricolage Grotesque + Figtree), splash waits for fonts
 - [x] All components in COMPONENTS.md (preview: `/komponenter`, dev builds only)
-- [ ] Tab bar: Oppdrag · Fellesskap · (Legg ut FAB) · Innboks (badge) · Meny. Hidden on detail, chat, wizards
-- [ ] Main header: logo left, bell (dot) → Varsler, avatar → Profil on every main screen
+- [x] Tab bar: Oppdrag · Fellesskap · (Legg ut FAB) · Innboks (badge) · Meny. Hidden on detail, chat, wizards
+- [x] Main header: logo left, bell (dot) → Varsler, avatar → Profil on every main screen
 - [ ] No gradients anywhere. No payment UI anywhere. Payment note near every price
 - [ ] Never show exact address or exact map pin in public views
 - [ ] Account role from backend: `adult` | `youth` (under 18). Youth rules enforced server-side (see §1b)

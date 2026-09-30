@@ -29,7 +29,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { tokens } from '@/theme';
+import { colors } from '@/theme';
 import { InboxRealtime } from '@/api/realtime';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { SafeTripBanner } from '@/components/SafeTripBanner';
@@ -97,7 +97,7 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <PersistQueryClientProvider
           client={queryClient}
@@ -109,7 +109,7 @@ export default function RootLayout() {
               <Stack
                 screenOptions={{
                   headerShown: false,
-                  contentStyle: { backgroundColor: tokens.color.bg },
+                  contentStyle: { backgroundColor: colors.bg },
                 }}
               />
               <InboxRealtime />

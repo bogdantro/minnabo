@@ -77,13 +77,15 @@ export type MainHeaderProps = {
   /** Red dot on the bell. */
   unread?: boolean;
   unreadCount?: number;
+  /** testID for the bell dot (tests). */
+  dotTestID?: string;
   onBell: () => void;
   onAvatar: () => void;
   onLogo?: () => void;
 };
 
 /** `.topbar` – logo + "MinNabo" left; bell (dot) and avatar right. */
-export function MainHeader({ initials, avatarUri, unread, unreadCount, onBell, onAvatar, onLogo }: MainHeaderProps) {
+export function MainHeader({ initials, avatarUri, unread, unreadCount, dotTestID, onBell, onAvatar, onLogo }: MainHeaderProps) {
   const insets = useSafeAreaInsets();
   const bellLabel = unreadCount ? `Varsler, ${unreadCount} uleste` : 'Varsler';
   return (
@@ -99,7 +101,7 @@ export function MainHeader({ initials, avatarUri, unread, unreadCount, onBell, o
         <Text style={text.brand}>MinNabo</Text>
       </Pressable>
       <View style={styles.tbr}>
-        <IconButton icon="bell" accessibilityLabel={bellLabel} dot={unread} onPress={onBell} />
+        <IconButton icon="bell" accessibilityLabel={bellLabel} dot={unread} dotTestID={dotTestID} onPress={onBell} />
         <Pressable accessibilityRole="button" accessibilityLabel="Åpne profil" onPress={onAvatar} style={styles.avbtn}>
           <Avatar initials={initials} uri={avatarUri} me size={40} />
         </Pressable>

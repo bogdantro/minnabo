@@ -1,26 +1,92 @@
 import { useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { tokens } from '@/theme';
 import nb from '@/i18n/nb';
 import { useUnreadConversationCount } from '@/api/queries';
-import { AppText } from './ui/Text';
-import { Icon, type IconName } from './ui/Icon';
+import { colors, motion, radius, shadow, sizes, text } from '@/theme/theme';
+import { CountBadge } from './ui/Badges';
+import { Icon, type IconKey } from './ui/Icon';
 import { MenySheet } from './MenySheet';
 
 export type NavTarget = 'oppdrag' | 'fellesskap' | 'innboks';
 
-const LEFT: { target: NavTarget; label: string; icon: IconName }[] = [
-  { target: 'oppdrag', label: nb.tabs.oppdrag, icon: 'clipboard' },
+type Slot = { target: NavTarget; label: string; icon: IconKey };
+
+const LEFT: Slot[] = [
+  { target: 'oppdrag', label: nb.tabs.oppdrag, icon: 'clip' },
   { target: 'fellesskap', label: nb.tabs.fellesskap, icon: 'users' },
 ];
-const RIGHT: { target: NavTarget; label: string; icon: IconName }[] = [
-  { target: 'innboks', label: nb.tabs.innboks, icon: 'message-circle' },
-];
+const RIGHT: Slot[] = [{ target: 'innboks', label: nb.tabs.innboks, icon: 'msg' }];
+
+/** Total height the floating bar covers, for screens that pad their scroll content. */
+export const NAV_OCCUPIED = sizes.navHeight + sizes.navBottom;
+
+function NavItem({
+  label,
+  icon,
+  active,
+  badge = 0,
+  onPress,
+}: {
+  label: string;
+  icon: IconKey;
+  active: boolean;
+  badge?: number;
+  onPress: () => void;
+}) {
+  const fg = active ? colors.limeDeep : colors.mute;
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={badge > 0 ? `${label}, ${badge} ${badge === 1 ? 'ulest' : 'uleste'}` : label}
+      style={styles.item}
+      onPress={onPress}
+    >
+      <View style={[styles.ni, active && styles.niOn]}>
+        <Icon name={icon} size={sizes.navIcon} color={fg} />
+        {badge > 0 ? <CountBadge count={badge} style={styles.count} /> : null}
+      </View>
+      <Text style={[text.tabLabel, { color: fg }]} maxFontSizeMultiplier={1.2}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** `.fab` – raised 62 px lime button. Press: scale .9 + rotate 90°. Always opens the Legg ut wizard. */
+function PostButton({ onPress }: { onPress: () => void }) {
+  const p = useSharedValue(0);
+  const anim = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - 0.1 * p.value }, { rotate: `${90 * p.value}deg` }],
+  }));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={nb.tabs.leggUt}
+      style={styles.fabw}
+      onPressIn={() => p.set(withTiming(1, { duration: 200 }))}
+      onPressOut={() => p.set(withSpring(0, motion.spring))}
+      onPress={onPress}
+    >
+      <View style={[styles.fabShadow, shadow.fab]}>
+        {/* rotation lives on an inner view (COMPONENTS.md: never on the animated host) */}
+        <Animated.View style={[styles.fab, anim]}>
+          <Icon name="plus" size={sizes.fabIcon} color={colors.ink} strokeWidth={2.4} />
+        </Animated.View>
+      </View>
+      <Text style={[text.tabLabel, { color: colors.ink }]} maxFontSizeMultiplier={1.2}>
+        {nb.tabs.leggUt}
+      </Text>
+    </Pressable>
+  );
+}
 
 /**
- * Presentational bottom nav. The router-driven `TabBar` and the static one on
- * the Legg ut choice screen both render this.
+ * `.nav` – floating tab bar: Oppdrag · Fellesskap · (Legg ut) · Innboks · Meny.
+ * Rendered by the router-driven `TabBar` and by `StaticBottomNav`.
  */
 export function BottomNav({
   active,
@@ -35,66 +101,32 @@ export function BottomNav({
   const [menuOpen, setMenuOpen] = useState(false);
   const unreadInbox = useUnreadConversationCount();
 
-  const slot = (s: { target: NavTarget; label: string; icon: IconName }) => {
-    const isActive = active === s.target;
-    const badge = s.target === 'innboks' ? unreadInbox : 0;
-    return (
-      <Pressable
-        key={s.target}
-        accessibilityRole="button"
-        accessibilityState={{ selected: isActive }}
-        accessibilityLabel={badge > 0 ? `${s.label}, ${badge} ulest` : s.label}
-        style={styles.slot}
-        onPress={() => onNavigate(s.target)}
-      >
-        <View>
-          <Icon name={s.icon} size={23} color={isActive ? 'lime' : 'navy'} />
-          {badge > 0 ? <View style={styles.badge} /> : null}
-        </View>
-        <AppText variant="meta" weight={isActive ? 'bold' : 'medium'} color={isActive ? 'lime' : 'navy'}>
-          {s.label}
-        </AppText>
-      </Pressable>
-    );
-  };
+  const slot = (s: Slot) => (
+    <NavItem
+      key={s.target}
+      label={s.label}
+      icon={s.icon}
+      active={active === s.target}
+      badge={s.target === 'innboks' ? unreadInbox : 0}
+      onPress={() => onNavigate(s.target)}
+    />
+  );
 
   return (
     <>
-      <View style={[styles.bar, { paddingBottom: insets.bottom + tokens.space.sm }]}>
+      <View
+        accessibilityRole="tablist"
+        accessibilityLabel="Hovedmeny"
+        style={[styles.nav, shadow.nav, { bottom: sizes.navBottom + insets.bottom }]}
+      >
+        <View style={styles.bg} pointerEvents="none">
+          <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, styles.bgTint]} />
+        </View>
         {LEFT.map(slot)}
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: active === 'leggUt' }}
-          accessibilityLabel={nb.tabs.leggUt}
-          style={styles.slot}
-          onPress={onLeggUt}
-        >
-          <View style={styles.fab}>
-            <Icon name="plus" size={26} color="white" />
-          </View>
-          <AppText
-            variant="meta"
-            weight={active === 'leggUt' ? 'bold' : 'medium'}
-            color={active === 'leggUt' ? 'lime' : 'navy'}
-          >
-            {nb.tabs.leggUt}
-          </AppText>
-        </Pressable>
-
+        <PostButton onPress={onLeggUt} />
         {RIGHT.map(slot)}
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={nb.tabs.meny}
-          style={styles.slot}
-          onPress={() => setMenuOpen(true)}
-        >
-          <Icon name="menu" size={23} color="navy" />
-          <AppText variant="meta" weight="medium" color="navy">
-            {nb.tabs.meny}
-          </AppText>
-        </Pressable>
+        <NavItem label={nb.tabs.meny} icon="menu" active={false} onPress={() => setMenuOpen(true)} />
       </View>
 
       <MenySheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
@@ -103,46 +135,38 @@ export function BottomNav({
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-around',
-    backgroundColor: tokens.color.surface,
-    borderTopWidth: 1,
-    borderTopColor: tokens.color.line,
-    borderTopLeftRadius: tokens.radius.tile,
-    borderTopRightRadius: tokens.radius.tile,
-    paddingTop: tokens.space.md,
-    shadowColor: tokens.color.navy,
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -3 },
-    elevation: 8,
-  },
-  slot: { flex: 1, alignItems: 'center', gap: 3 },
-  badge: {
+  nav: {
     position: 'absolute',
-    top: -3,
-    right: -6,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: tokens.color.alert,
+    left: sizes.navSide,
+    right: sizes.navSide,
+    height: sizes.navHeight,
+    borderRadius: radius.nav,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 6,
+    zIndex: 30,
   },
-  fab: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    marginTop: -16,
+  bg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.nav, overflow: 'hidden' },
+  bgTint: { backgroundColor: colors.navBg },
+  item: { flex: 1, height: 66, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  ni: {
+    width: sizes.navItemW,
+    height: sizes.navItemH,
+    borderRadius: sizes.navItemH / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: tokens.color.lime,
-    borderWidth: 3,
-    borderColor: tokens.color.surface,
-    shadowColor: tokens.color.lime,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+  },
+  niOn: { backgroundColor: colors.limeTint },
+  count: { position: 'absolute', top: -3, right: 2 },
+  fabw: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: -30 },
+  fabShadow: { width: sizes.fab, height: sizes.fab, borderRadius: sizes.fab / 2 },
+  fab: {
+    width: sizes.fab,
+    height: sizes.fab,
+    borderRadius: sizes.fab / 2,
+    backgroundColor: colors.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

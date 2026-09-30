@@ -1,14 +1,9 @@
 import type { ReactNode } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { tokens, hitSlop } from '@/theme';
-import nb from '@/i18n/nb';
 import { useUnreadNotificationCount } from '@/api/queries';
-import { AppText } from './ui/Text';
-import { Icon } from './ui/Icon';
-import { Avatar } from './ui/Avatar';
-import { BrandMark } from './BrandMark';
+import { MainHeader, SubHeader } from './ui/Layout';
+import { IconButton } from './ui/IconButton';
 
 type AvatarInfo = { uri?: string; initials: string };
 
@@ -21,50 +16,27 @@ type RightClusterProps = {
   testID?: string;
 };
 
-function RightCluster({
-  avatar,
-  onProfilePress,
-  onNotificationsPress,
-  unreadNotifications,
-  testID,
-}: RightClusterProps) {
-  const liveCount = useUnreadNotificationCount();
-  const count = unreadNotifications === undefined ? liveCount : unreadNotifications ? 1 : 0;
-
-  return (
-    <View style={styles.right}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={
-          count > 0 ? `${nb.a11y.notifications}, ${count} ulest` : nb.a11y.notifications
-        }
-        hitSlop={hitSlop}
-        onPress={onNotificationsPress}
-        style={styles.bell}
-      >
-        <Icon name="bell" size={23} color="navy" />
-        {count > 0 ? (
-          <View testID={testID ? `${testID}-noti-dot` : 'noti-dot'} style={styles.badge} />
-        ) : null}
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={nb.a11y.openProfile}
-        onPress={onProfilePress}
-      >
-        <Avatar uri={avatar.uri} initials={avatar.initials} size={38} ring={false} />
-      </Pressable>
-    </View>
-  );
+function useUnread(override?: boolean): number {
+  const live = useUnreadNotificationCount();
+  return override === undefined ? live : override ? 1 : 0;
 }
 
-/** Header for the main tab screens: logo + wordmark left, bell + profile right. */
-export function HomeTopBar(props: RightClusterProps) {
-  const insets = useSafeAreaInsets();
+/** `.topbar` on every main screen: logo + "MinNabo" left, bell (dot) → Varsler, avatar → Profil. */
+export function HomeTopBar({ avatar, onProfilePress, onNotificationsPress, unreadNotifications, testID }: RightClusterProps) {
+  const router = useRouter();
+  const count = useUnread(unreadNotifications);
   return (
-    <View testID={props.testID} style={[styles.bar, { paddingTop: insets.top + tokens.space.sm }]}>
-      <BrandMark />
-      <RightCluster {...props} />
+    <View testID={testID}>
+      <MainHeader
+        initials={avatar.initials}
+        avatarUri={avatar.uri}
+        unread={count > 0}
+        unreadCount={count}
+        dotTestID={testID ? `${testID}-noti-dot` : 'noti-dot'}
+        onBell={onNotificationsPress}
+        onAvatar={onProfilePress}
+        onLogo={() => router.replace('/')}
+      />
     </View>
   );
 }
@@ -73,96 +45,49 @@ export type PageHeaderProps = {
   title?: string;
   onBack?: () => void;
   showBack?: boolean;
+  /** Right slot, e.g. an IconButton "Flere valg". */
   right?: ReactNode;
-  /** show only the logo icon (no wordmark) */
+  /** Use an X instead of the back arrow (modal flows). */
+  close?: boolean;
+  /** @deprecated the redesign sub-header has no logo. Ignored. */
   logoOnly?: boolean;
 };
 
-/**
- * Header for every non-tab screen: back arrow + MinNabo logo, always.
- * Optionally a centered title and a right-side node.
- */
-export function PageHeader({ title, onBack, showBack = true, right, logoOnly = false }: PageHeaderProps) {
-  const insets = useSafeAreaInsets();
+/** `.subbar` for every non-tab screen: back · centred title · optional action. */
+export function PageHeader({ title, onBack, showBack = true, right, close }: PageHeaderProps) {
   const router = useRouter();
   const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
-
-  return (
-    <View style={[styles.bar, { paddingTop: insets.top + tokens.space.sm }]}>
-      <View style={styles.leftGroup}>
-        {showBack ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={nb.a11y.back}
-            hitSlop={hitSlop}
-            onPress={back}
-          >
-            <Icon name="arrow-left" size={24} color="navy" />
-          </Pressable>
-        ) : null}
-        <BrandMark size={26} showWordmark={!title && !logoOnly} />
-      </View>
-
-      {title ? (
-        <AppText variant="cardTitle" weight="bold" numberOfLines={1} style={styles.title}>
-          {title}
-        </AppText>
-      ) : (
-        <View style={styles.title} />
-      )}
-
-      <View style={styles.rightSlot}>{right}</View>
-    </View>
-  );
+  return <SubHeader title={title} onBack={showBack ? back : undefined} close={close} right={right} />;
 }
 
-/** Header for listing detail / offer detail: back + logo + title + bell + profile. */
+/** Sub-header with the bell on the right (detail screens that still show notifications). */
 export function DetailTopBar({
   title,
   onBack,
-  ...rest
+  onNotificationsPress,
+  unreadNotifications,
+  testID,
 }: PageHeaderProps & RightClusterProps) {
-  return <PageHeader title={title} onBack={onBack} right={<RightCluster {...rest} />} />;
+  const count = useUnread(unreadNotifications);
+  return (
+    <PageHeader
+      title={title}
+      onBack={onBack}
+      right={
+        <View style={styles.bell}>
+          <IconButton
+            icon="bell"
+            accessibilityLabel={count > 0 ? `Varsler, ${count} uleste` : 'Varsler'}
+            dot={count > 0}
+            dotTestID={testID ? `${testID}-noti-dot` : 'noti-dot'}
+            onPress={onNotificationsPress}
+          />
+        </View>
+      }
+    />
+  );
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: tokens.space.xl,
-    paddingBottom: tokens.space.lg,
-    backgroundColor: tokens.color.bg,
-    gap: tokens.space.md,
-  },
-  leftGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.space.sm,
-  },
-  right: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.space.md,
-  },
-  rightSlot: {
-    minWidth: 24,
-    alignItems: 'flex-end',
-  },
-  bell: { padding: 2 },
-  badge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: tokens.color.alert,
-    borderWidth: 1.5,
-    borderColor: tokens.color.bg,
-  },
-  title: {
-    flex: 1,
-    textAlign: 'center',
-  },
+  bell: { alignItems: 'flex-end' },
 });

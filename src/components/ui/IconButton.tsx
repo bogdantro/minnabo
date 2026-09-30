@@ -14,6 +14,7 @@ export type IconButtonProps = {
   variant?: IconButtonVariant;
   /** Red unread dot (bell). */
   dot?: boolean;
+  dotTestID?: string;
   iconSize?: number;
   disabled?: boolean;
   testID?: string;
@@ -27,6 +28,7 @@ export function IconButton({
   onPress,
   variant = 'default',
   dot = false,
+  dotTestID,
   iconSize = 20,
   disabled,
   testID,
@@ -50,7 +52,7 @@ export function IconButton({
       <View style={styles.iconLayer}>
         <Icon name={icon} size={iconSize} color={fg} />
       </View>
-      {dot ? <View style={styles.dot} /> : null}
+      {dot ? <View style={styles.dot} testID={dotTestID} /> : null}
     </PressableScale>
   );
 }
