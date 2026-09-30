@@ -1,0 +1,12 @@
+MinNabo – skjermbilder av designet
+
+Legg hele denne mappen i appen din som:  design/screenshots/
+
+  <Skjerm>.png         Skjermen slik den ser ut når den åpnes (390 x 844, 2x oppløsning)
+  full/<Skjerm>.png    Hele skjermen scrollet ned (bare for skjermer som scroller)
+  states/*.png         Viktige tilstander: ark åpnet, dialog vist osv.
+
+Filnavnene er de samme som i design/screens/<Skjerm>.dc.html.
+
+Merk: Skjermbildene bruker Bricolage Grotesque (riktig) for overskrifter, men en lignende
+skrift i stedet for Figtree i brødtekst. Riktig skrift står i theme.ts og i .dc.html-filene.
