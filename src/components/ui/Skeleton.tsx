@@ -70,11 +70,6 @@ export function ListingListSkeleton({ count = 4 }: { count?: number }) {
   return <SkeletonList count={count}>{() => <ListingCardSkeleton />}</SkeletonList>;
 }
 
-/** @deprecated the home feed uses `<ListingCard>` now; kept for the old home screen. */
-export function JobFeedListSkeleton({ count = 3 }: { count?: number }) {
-  return <ListingListSkeleton count={count} />;
-}
-
 /** Row skeleton (inbox, notifications): circle + two lines. */
 export function RowSkeleton() {
   return (

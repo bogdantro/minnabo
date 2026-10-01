@@ -1,142 +1,359 @@
-import { ScrollView, View, RefreshControl, StyleSheet } from 'react-native';
-import { tokens } from '@/theme';
+import { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
-import { HOME_CATEGORIES, categoryBySlug } from '@/domain/categories';
-import { useListings } from '@/api/queries';
-import { useLocationScope } from '@/lib/locationScope';
+import { useListings, useUpdateProfile } from '@/api/queries';
+import { useLocationScope, type Reach } from '@/lib/locationScope';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useDismissedLeads } from '@/lib/dismissedLeads';
 import { safePush } from '@/lib/nav';
+import { toast } from '@/lib/toast';
+import { slugForArtId, categoryArtId } from '@/domain/categories';
+import { categoryLabels, colors, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
 import { HomeTopBar } from '@/components/TopBar';
-import { ScreenState } from '@/components/ui/ScreenState';
-import { JobFeedListSkeleton } from '@/components/ui/Skeleton';
-import { AppText } from '@/components/ui/Text';
-import { Button } from '@/components/ui/Button';
-import { HomeSearchBar } from '@/components/HomeSearchBar';
-import { LocationBar } from '@/components/LocationBar';
-import { HeroCard } from '@/components/home/HeroCard';
-import { CategoryCircleRow, type CategoryCircle } from '@/components/CategoryCircleRow';
-import { JobFeedCard } from '@/components/home/JobFeedCard';
-import { CommunityTeaserCard } from '@/components/home/CommunityTeaserCard';
+import { LocationSheet } from '@/components/LocationSheet';
+import { OppdragCard } from '@/components/OppdragCard';
+import {
+  Button,
+  CategoryArt,
+  Chip,
+  ChipRow,
+  ErrorState,
+  FadeUp,
+  Icon,
+  ListingListSkeleton,
+  Note,
+  Pill,
+  ScaleIn,
+  Screen,
+  SectionHeader,
+} from '@/components/ui';
 
-/**
- * Reuses `HOME_CATEGORIES` (Alle/Hage/Renhold/Transport/Montering — the same
- * short labels the search/list screens show for these) plus one more, so the
- * label/icon here can't drift from what a listing actually shows elsewhere.
- */
-const CATEGORY_CIRCLES: CategoryCircle[] = [
-  ...HOME_CATEGORIES.map((c) => ({ slug: c.slug, label: c.label, icon: c.icon as CategoryCircle['icon'] })),
-  {
-    slug: 'maling',
-    label: categoryBySlug('maling').label.split('/')[0],
-    icon: categoryBySlug('maling').icon as CategoryCircle['icon'],
-  },
-];
+const CATS = Object.keys(categoryLabels) as CategoryId[];
+const SHOWN = 6;
+/** "N nye" on the Oppdrag for meg card = open oppdrag in reach from the last 48 hours. */
+const NEW_WINDOW_MS = 48 * 60 * 60 * 1000;
 
-/** The homepage only teases the newest open tasks — the rest live in search. */
-const NEWEST_COUNT = 8;
-
+/** Oppdrag – home and default route (design/screens/Oppdrag.dc.html). */
 export function OppdragScreen() {
   const me = useCurrentUser();
-  const { municipality, municipalities, ready } = useLocationScope();
+  const { municipality, municipalities, reach, setReach, ready } = useLocationScope();
+  const update = useUpdateProfile();
+  const { dismissed } = useDismissedLeads();
+  const [cat, setCat] = useState<CategoryId | null>(null);
+  const [locOpen, setLocOpen] = useState(false);
+  // Captured once per visit so the 'nye' count is stable while scrolling.
+  const [openedAt] = useState(() => Date.now());
 
   const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
-  const items = (jobs.data ?? []).filter((l) => l.owner.id !== me.id).slice(0, NEWEST_COUNT);
+  const others = useMemo(() => (jobs.data ?? []).filter((l) => l.owner.id !== me.id), [jobs.data, me.id]);
+  const shown = useMemo(
+    () => (cat ? others.filter((l) => categoryArtId(l.category.slug) === cat) : others).slice(0, SHOWN),
+    [others, cat],
+  );
+  const newForMe = useMemo(() => {
+    const since = openedAt - NEW_WINDOW_MS;
+    return others.filter((l) => !dismissed.has(l.id) && Date.parse(l.createdAt) >= since).length;
+  }, [others, dismissed, openedAt]);
 
   const loading = jobs.isLoading || !ready;
   const refreshing = jobs.isFetching && !jobs.isLoading;
-  const emptyText =
-    municipalities.length > 0
-      ? nb.location.emptyListings(municipality ?? '')
-      : nb.state.emptyListings;
+  const first = me.displayName.split(' ')[0] ?? '';
+  const kommuneLabel = municipality ? nb.oppdrag.kommune(municipality) : nb.oppdrag.pickKommune;
 
-  const onCategory = (slug: string) =>
-    safePush(slug === 'alle' ? '/sok' : `/sok?category=${slug}`);
+  const applyLocation = (k: string, r: Reach) => {
+    setLocOpen(false);
+    if (k !== municipality) update.mutate({ municipality: k, place: k });
+    setReach(r);
+    toast.success(nb.oppdrag.showing(nb.oppdrag.reach[r].name, k), { icon: 'pin' });
+  };
 
   return (
-    <View style={styles.wrap}>
-      <HomeTopBar
-        avatar={{ uri: me.avatarUrl, initials: me.initials }}
-        onProfilePress={() => safePush('/profil')}
-        onNotificationsPress={() => safePush('/varsler')}
-      />
-
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        refreshControl={
+    <Screen
+      scroll
+      spacer="nav"
+      header={
+        <HomeTopBar
+          avatar={{ uri: me.avatarUrl, initials: me.initials }}
+          onProfilePress={() => safePush('/profil')}
+          onNotificationsPress={() => safePush('/varsler')}
+        />
+      }
+      scrollProps={{
+        refreshControl: (
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => jobs.refetch()}
-            tintColor={tokens.color.lime}
-            colors={[tokens.color.lime]}
+            tintColor={colors.limeDeep}
+            colors={[colors.limeDeep]}
           />
-        }
-      >
-        <HeroCard onPressCta={() => safePush('/legg-ut')} />
+        ),
+      }}
+    >
+      <FadeUp style={styles.heading}>
+        <Text style={text.eyebrow}>{nb.oppdrag.hello(first)}</Text>
+        <Text style={[text.h1, styles.h1]} accessibilityRole="header">
+          {nb.oppdrag.title}
+        </Text>
+      </FadeUp>
 
-        <View style={styles.filterGroup}>
-          <LocationBar />
-          <HomeSearchBar
-            onPressSearch={() => safePush('/sok')}
-            onPressFilter={() => safePush('/sok')}
-          />
-          <View style={styles.categoryBleed}>
-            <CategoryCircleRow items={CATEGORY_CIRCLES} activeSlug="alle" onSelect={onCategory} />
+      <FadeUp delay={100} style={styles.px}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${kommuneLabel}, ${nb.oppdrag.reach[reach].name}. ${nb.oppdrag.change}`}
+          onPress={() => setLocOpen(true)}
+          style={styles.loc}
+        >
+          <View style={styles.locIcon}>
+            <Icon name="pin" size={18} color={colors.limeDeep} />
           </View>
-        </View>
+          <View style={styles.locText}>
+            <Text style={[text.bodySemi, styles.locTitle]} numberOfLines={1}>
+              {kommuneLabel}
+            </Text>
+            <Text style={text.meta}>{nb.oppdrag.reach[reach].name}</Text>
+          </View>
+          <View style={styles.change}>
+            <Text style={[text.pill, { color: colors.ink2 }]}>{nb.oppdrag.change}</Text>
+            <Icon name="down" size={14} color={colors.ink2} />
+          </View>
+        </Pressable>
+      </FadeUp>
 
-        <View style={styles.jobs}>
-          <AppText variant="sectionHead" numberOfLines={1}>
-            {nb.home.nearYou}
-          </AppText>
+      <FadeUp delay={150} style={[styles.px, styles.mt12]}>
+        <Pressable
+          accessibilityRole="search"
+          accessibilityLabel={nb.oppdrag.searchA11y}
+          onPress={() => safePush('/sok')}
+          style={[styles.search, shadow.card]}
+        >
+          <Icon name="search" size={20} color={colors.mute} />
+          <Text style={styles.searchPh} numberOfLines={1}>
+            {nb.oppdrag.searchPh}
+          </Text>
+          <View style={styles.filt}>
+            <Icon name="sliders" size={18} color={colors.white} />
+          </View>
+        </Pressable>
+      </FadeUp>
 
-          {loading ? (
-            <JobFeedListSkeleton count={3} />
-          ) : jobs.isError || items.length === 0 ? (
-            <ScreenState
-              status={jobs.isError ? 'error' : 'empty'}
-              onRetry={() => jobs.refetch()}
-              emptyText={emptyText}
+      <FadeUp delay={200} style={styles.mt18}>
+        <ChipRow>
+          <Chip label={nb.oppdrag.all} icon="annet" selected={cat === null} onPress={() => setCat(null)} />
+          {CATS.map((c) => (
+            <Chip
+              key={c}
+              label={categoryLabels[c]}
+              category={c}
+              selected={cat === c}
+              onPress={() => setCat(cat === c ? null : c)}
             />
-          ) : (
-            <View style={styles.feed}>
-              {items.map((listing) => (
-                <JobFeedCard
-                  key={listing.id}
-                  listing={listing}
-                  onPress={() => safePush(`/oppdrag/${listing.id}`)}
-                />
-              ))}
-              <Button
-                label={nb.common.seeAll}
-                variant="secondary"
-                iconRight="arrow-right"
-                onPress={() => safePush('/oppdrag-liste')}
-              />
-            </View>
-          )}
-        </View>
+          ))}
+        </ChipRow>
+      </FadeUp>
 
-        <CommunityTeaserCard onPress={() => safePush('/fellesskap')} />
-      </ScrollView>
-    </View>
+      <SectionHeader icon="clip" title={nb.oppdrag.needsTitle} subtitle={nb.oppdrag.needsSub} />
+
+      <View style={styles.list}>
+        {loading ? (
+          <View style={styles.bleed}>
+            <ListingListSkeleton count={3} />
+          </View>
+        ) : jobs.isError ? (
+          <View style={styles.errorBox}>
+            <ErrorState onRetry={() => void jobs.refetch()} retrying={jobs.isFetching} />
+          </View>
+        ) : shown.length === 0 ? (
+          <ScaleIn style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Icon name="clip" size={22} color={colors.limeDeep} />
+            </View>
+            <Text style={[text.bodySemi, styles.center, { fontFamily: text.label.fontFamily }]}>
+              {nb.oppdrag.empty(municipality ?? nb.oppdrag.pickKommune.toLowerCase())}
+            </Text>
+            <Text style={[text.meta, styles.center]}>{nb.oppdrag.emptyHint}</Text>
+            <Button label={nb.oppdrag.widen} variant="ghost" size="sm" block={false} onPress={() => setLocOpen(true)} />
+          </ScaleIn>
+        ) : (
+          shown.map((l, i) => (
+            <FadeUp key={l.id} delay={Math.min(i, 9) * 50}>
+              <OppdragCard listing={l} />
+            </FadeUp>
+          ))
+        )}
+        <Button
+          label={nb.oppdrag.seeAll}
+          variant="ghost"
+          iconRight="arrow"
+          onPress={() => safePush(cat ? `/oppdrag-liste?category=${slugForArtId(cat)}` : '/oppdrag-liste')}
+          style={styles.seeAll}
+        />
+      </View>
+
+      <View style={[styles.px, styles.mt30]}>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={`${nb.oppdrag.forMe}. ${nb.oppdrag.forMeSub}${newForMe ? `. ${nb.oppdrag.newCount(newForMe)}` : ''}`}
+          onPress={() => safePush('/oppdrag-for-meg')}
+          style={({ pressed }) => [styles.lead, pressed && styles.pressed]}
+        >
+          <View style={styles.leadGlow} />
+          <View style={styles.leadArt}>
+            <View style={styles.leadBack} />
+            <CategoryArt category="montering" width={50} height={62} radius={12} iconSize={22} style={styles.leadFront} />
+          </View>
+          <View style={styles.leadText}>
+            {newForMe ? <Pill label={nb.oppdrag.newCount(newForMe)} tone="accent" icon="sparkle" size="sm" style={styles.leadPill} /> : null}
+            <Text style={[text.h3, styles.leadTitle]}>{nb.oppdrag.forMe}</Text>
+            <Text style={[text.body, styles.leadSub]}>{nb.oppdrag.forMeSub}</Text>
+          </View>
+          <View style={styles.leadArrow}>
+            <Icon name="arrow" size={20} color={colors.ink} />
+          </View>
+        </Pressable>
+      </View>
+
+      <View style={[styles.px, styles.mt22]}>
+        <Note style={styles.noteCenter}>{nb.oppdrag.paymentNote}</Note>
+      </View>
+
+      <LocationSheet
+        visible={locOpen}
+        onClose={() => setLocOpen(false)}
+        kommune={municipality}
+        reach={reach}
+        onApply={applyLocation}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
-  content: {
-    paddingHorizontal: tokens.space.xl,
-    paddingTop: tokens.space.xs,
-    paddingBottom: tokens.space.xxxl,
-    gap: tokens.space.xl,
+  px: { paddingHorizontal: screenPadding },
+  mt12: { marginTop: 12 },
+  mt18: { marginTop: 18 },
+  mt22: { marginTop: 22 },
+  mt30: { marginTop: 30 },
+  center: { textAlign: 'center' },
+  heading: { paddingHorizontal: screenPadding, paddingTop: 14, paddingBottom: 18, gap: 8 },
+  h1: { fontSize: 33, lineHeight: 35, letterSpacing: -0.99 },
+  loc: {
+    height: 56,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.locButtonBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingLeft: 8,
+    paddingRight: 14,
   },
-  filterGroup: { gap: tokens.space.md },
-  // CategoryCircleRow pads its own left/right edges, so bleed it back out of
-  // this screen's own horizontal padding to keep it flush with the content
-  // above and below instead of double-padded.
-  categoryBleed: { marginHorizontal: -tokens.space.xl },
-  jobs: { gap: tokens.space.md },
-  feed: { gap: tokens.space.lg },
+  locIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.limeTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locText: { flex: 1, minWidth: 0, gap: 2 },
+  locTitle: { fontFamily: text.label.fontFamily, lineHeight: 18 },
+  change: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+  },
+  search: {
+    height: 54,
+    borderRadius: radius.pill,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingLeft: 18,
+    paddingRight: 6,
+  },
+  searchPh: { ...text.input, flex: 1, fontSize: 15.5, color: colors.mute },
+  filt: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  list: { paddingHorizontal: screenPadding, gap: 12 },
+  bleed: { marginHorizontal: -screenPadding },
+  errorBox: { height: 360 },
+  empty: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.dashed,
+    borderRadius: radius.option,
+    padding: 22,
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.limeTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seeAll: { marginTop: 2 },
+  lead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    padding: 20,
+    borderRadius: 26,
+    backgroundColor: colors.ink,
+    overflow: 'hidden',
+  },
+  pressed: { transform: [{ scale: 0.985 }] },
+  leadGlow: {
+    position: 'absolute',
+    right: -40,
+    top: -60,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: colors.lime,
+    opacity: 0.35,
+  },
+  leadArt: { width: 62, height: 70 },
+  leadBack: {
+    position: 'absolute',
+    left: 8,
+    top: 0,
+    width: 50,
+    height: 62,
+    borderRadius: 12,
+    backgroundColor: colors.onInk14,
+    transform: [{ rotate: '8deg' }],
+  },
+  leadFront: { position: 'absolute', left: 0, top: 6 },
+  leadText: { flex: 1, gap: 5 },
+  leadPill: { height: 22 },
+  leadTitle: { color: colors.white, fontSize: 18, lineHeight: 21.6, letterSpacing: -0.36 },
+  leadSub: { fontSize: 13.5, lineHeight: 18.9, color: colors.onInk78 },
+  leadArrow: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteCenter: { justifyContent: 'center' },
 });

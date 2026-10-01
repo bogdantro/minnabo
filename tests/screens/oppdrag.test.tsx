@@ -1,64 +1,60 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { OppdragScreen } from '@/screens/OppdragScreen';
-import nb from '@/i18n/nb';
 import { renderWithProviders } from '../testUtils';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-test('shows the hero, location, search and category row', async () => {
+test('shows the greeting, header, location row, search and category chips', async () => {
   await renderWithProviders(<OppdragScreen />);
-  expect(screen.getByText('Trenger du en hånd?')).toBeTruthy();
-  expect(screen.getByText('Finn en tjeneste')).toBeTruthy();
+  expect(screen.getByText('Finn hjelp eller en småjobb nær deg')).toBeTruthy();
   expect(screen.getByLabelText('Åpne profil')).toBeTruthy();
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Alle' })).toBeTruthy());
-  await waitFor(() => expect(screen.getByLabelText(/Lillehammer/)).toBeTruthy());
+  expect(screen.getByText('Søk etter plen, flytting, datahjelp …')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Alle' })).toBeTruthy();
+  await waitFor(() => expect(screen.getByText('Lillehammer kommune')).toBeTruthy());
 });
 
-test('shows the newest open tasks as full-width photo cards, capped at 8', async () => {
+test('lists open oppdrag (no service offers) as listing cards', async () => {
   await renderWithProviders(<OppdragScreen />);
-  await waitFor(() => expect(screen.getByText('Jobber nær deg')).toBeTruthy());
+  expect(screen.getByText('Folk som trenger hjelp')).toBeTruthy();
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
-
-  // Only task requests belong in this feed, not offers.
+  // Product rule 1: there is no "Folk som tilbyr hjelp" section.
   expect(screen.queryByText('Jeg kan klippe plenen din')).toBeNull();
-
-  // Each card's badge is its own category (colour-coded), not a "Trenger
-  // hjelp" label repeated on every card in a feed that's all tasks anyway.
-  expect(screen.getAllByText('Hage').length).toBeGreaterThan(0);
-
-  const cards = screen.getAllByLabelText(nb.a11y.save);
-  expect(cards.length).toBeGreaterThan(0);
-  expect(cards.length).toBeLessThanOrEqual(8);
+  expect(screen.queryByText('Folk som tilbyr hjelp')).toBeNull();
+  const hearts = screen.getAllByLabelText('Lagre');
+  expect(hearts.length).toBeGreaterThan(0);
+  expect(hearts.length).toBeLessThanOrEqual(6);
 });
 
-test('a "Se alle" button below the feed goes to the full task list', async () => {
+test('category chips filter the list in place', async () => {
   await renderWithProviders(<OppdragScreen />);
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
-  await fireEvent.press(screen.getByText('Se alle'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Transport/levering' }));
+  await waitFor(() => expect(screen.queryByText('Klippe plen')).toBeNull());
+  expect(screen.getByText('Hjelp med flytting')).toBeTruthy();
+  expect(router.push).not.toHaveBeenCalled();
+});
+
+test('"Se alle oppdrag" goes to the full list', async () => {
+  await renderWithProviders(<OppdragScreen />);
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  await fireEvent.press(screen.getByText('Se alle oppdrag'));
   expect(router.push).toHaveBeenCalledWith('/oppdrag-liste');
 });
 
-test('the community teaser links to Fellesskap', async () => {
+test('the search bar opens Søk and the lead card opens Oppdrag for meg', async () => {
   await renderWithProviders(<OppdragScreen />);
-  await waitFor(() => expect(screen.getByText('Naboer som hjelper naboer')).toBeTruthy());
-  expect(
-    screen.getByRole('button', { name: /Naboer som hjelper naboer/ }),
-  ).toBeTruthy();
-});
-
-test('picking a category sends the user to search, pre-filtered', async () => {
-  await renderWithProviders(<OppdragScreen />);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Hage' })).toBeTruthy());
-  await fireEvent.press(screen.getByRole('button', { name: 'Hage' }));
-  expect(router.push).toHaveBeenCalledWith('/sok?category=hage');
-});
-
-test('picking "Alle" sends the user to unfiltered search', async () => {
-  await renderWithProviders(<OppdragScreen />);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Alle' })).toBeTruthy());
-  await fireEvent.press(screen.getByRole('button', { name: 'Alle' }));
+  await fireEvent.press(screen.getByLabelText('Søk etter oppdrag'));
   expect(router.push).toHaveBeenCalledWith('/sok');
+  await fireEvent.press(screen.getByText('Oppdrag for meg'));
+  expect(router.push).toHaveBeenCalledWith('/oppdrag-for-meg');
+});
+
+test('the payment note is shown', async () => {
+  await renderWithProviders(<OppdragScreen />);
+  expect(
+    screen.getByText('MinNabo håndterer ikke betaling. Pris og betaling avtales direkte mellom dere.'),
+  ).toBeTruthy();
 });

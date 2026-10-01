@@ -17,6 +17,8 @@ export type SheetProps = {
   visible: boolean;
   onClose: () => void;
   title?: string;
+  /** Title style: h3 (default) or the larger h2 some sheets use. */
+  titleSize?: 'h2' | 'h3';
   /** Small text under the title. */
   subtitle?: string;
   /** Use a scroll container (long lists). */
@@ -38,6 +40,7 @@ export function Sheet({
   visible,
   onClose,
   title,
+  titleSize = 'h3',
   subtitle,
   scroll = false,
   hideClose = false,
@@ -108,7 +111,7 @@ export function Sheet({
         {title ? (
           <View style={styles.head}>
             <View style={styles.titles}>
-              <Text style={text.h3} accessibilityRole="header">
+              <Text style={text[titleSize]} accessibilityRole="header">
                 {title}
               </Text>
               {subtitle ? <Text style={[text.meta, styles.sub]}>{subtitle}</Text> : null}

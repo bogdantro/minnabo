@@ -42,6 +42,12 @@ describe('expandKommuner', () => {
     expect(r2).toEqual(expect.arrayContaining(r1));
     expect(r2.length).toBeGreaterThanOrEqual(r1.length);
   });
+  it('reach 2 is all of Innlandet ("Hele Innlandet" in the design)', () => {
+    const r2 = expandKommuner('Lillehammer', 2);
+    expect(r2[0]).toBe('Lillehammer');
+    expect(r2).toHaveLength(INNLANDET_KOMMUNER.length);
+    expect(r2).toEqual(expect.arrayContaining([...INNLANDET_KOMMUNER]));
+  });
   it('returns [] when base is undefined', () => {
     expect(expandKommuner(undefined, 2)).toEqual([]);
   });

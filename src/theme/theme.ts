@@ -91,6 +91,11 @@ export const colors = {
   onInk12: 'rgba(255,255,255,0.12)',
   confettiGreen: '#63E08A',
   confettiLime: '#C6F43C',
+  // oppdrag home
+  reachRingOn: 'rgba(184,238,60,0.28)',
+  locButtonBg: 'rgba(255,255,255,0.85)',
+  onInk78: 'rgba(255,255,255,0.78)',
+  onInk14: 'rgba(255,255,255,0.14)',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */

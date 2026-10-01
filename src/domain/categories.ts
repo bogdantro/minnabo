@@ -1,3 +1,4 @@
+import type { CategoryId } from '@/theme/theme';
 import type { Category } from './types';
 
 /**
@@ -32,3 +33,27 @@ export const HOME_CATEGORIES: Category[] = [
   { id: 'c-transport-home', slug: 'transport', label: 'Transport', icon: 'truck' },
   categoryBySlug('montering'),
 ];
+
+/** Listing category slug → design category art id (`theme.categoryColors` / `theme.icons`). */
+const ART_BY_SLUG: Record<string, CategoryId> = {
+  hage: 'hage',
+  renhold: 'rengjoring',
+  flytting: 'flytting',
+  transport: 'transport',
+  montering: 'montering',
+  snomaking: 'snomaking',
+  maling: 'maling',
+  dyrepass: 'dyrepass',
+  datahjelp: 'data',
+  arrangement: 'arrangement',
+  annet: 'annet',
+};
+
+export function categoryArtId(slug: string): CategoryId {
+  return ART_BY_SLUG[slug] ?? 'annet';
+}
+
+/** Design category id → listing slug (inverse of `categoryArtId`). */
+export function slugForArtId(id: CategoryId): string {
+  return Object.keys(ART_BY_SLUG).find((s) => ART_BY_SLUG[s] === id) ?? 'annet';
+}

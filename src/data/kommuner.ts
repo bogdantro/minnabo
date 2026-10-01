@@ -83,23 +83,17 @@ export function resolveKommune(input: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Kommune allow-list for a reach level (Oppdrag › Rekkevidde):
+ * 0 = own kommune, 1 = own + direct neighbours, 2 = all of Innlandet.
+ */
 export function expandKommuner(
   base: string | undefined,
   reach: 0 | 1 | 2,
 ): string[] {
   if (!base) return [];
   if (reach === 0) return [base];
-  const known = KOMMUNE_NEIGHBOURS[base];
-  if (!known) {
-    return reach === 1
-      ? [base]
-      : [base, ...INNLANDET_KOMMUNER.filter((k) => k !== base)];
-  }
-  const out = new Set<string>([base, ...known]);
-  if (reach === 2) {
-    for (const n of known) {
-      for (const nn of KOMMUNE_NEIGHBOURS[n] ?? []) out.add(nn);
-    }
-  }
-  return [base, ...[...out].filter((k) => k !== base)];
+  if (reach === 2) return [base, ...INNLANDET_KOMMUNER.filter((k) => k !== base)];
+  const known = KOMMUNE_NEIGHBOURS[base] ?? [];
+  return [base, ...known.filter((k) => k !== base)];
 }
