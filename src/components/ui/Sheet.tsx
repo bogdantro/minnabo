@@ -9,6 +9,7 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { Easing } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, motion, radius, shadow, sizes, text } from '@/theme/theme';
 import { IconButton } from './IconButton';
@@ -27,6 +28,12 @@ export type SheetProps = {
   hideClose?: boolean;
   /** Tap on scrim / swipe down closes (default true). */
   dismissible?: boolean;
+  /** Fixed height as a fraction of the screen (e.g. 0.89 for Meny). Default: size to content. */
+  heightRatio?: number;
+  /** Sheet background: white (default) or the page grey (`.msheet`). */
+  tone?: 'white' | 'page';
+  /** Horizontal padding override (Meny uses 16). */
+  padding?: number;
   children: ReactNode;
   testID?: string;
 };
@@ -45,6 +52,9 @@ export function Sheet({
   scroll = false,
   hideClose = false,
   dismissible = true,
+  heightRatio,
+  tone = 'white',
+  padding,
   children,
   testID,
 }: SheetProps) {
@@ -78,7 +88,10 @@ export function Sheet({
         opacity={1}
         pressBehavior={dismissible ? 'close' : 'none'}
         style={[props.style, styles.scrim]}
-      />
+      >
+        {/* .scrim has backdrop-filter: blur(2px) */}
+        <BlurView intensity={6} tint="dark" style={StyleSheet.absoluteFill} />
+      </BottomSheetBackdrop>
     ),
     [dismissible],
   );
@@ -89,13 +102,14 @@ export function Sheet({
     <BottomSheetModal
       ref={ref}
       onDismiss={onClose}
-      enableDynamicSizing
+      enableDynamicSizing={!heightRatio}
+      snapPoints={heightRatio ? [height * heightRatio] : undefined}
       maxDynamicContentSize={height * 0.9}
       enablePanDownToClose={dismissible}
       backdropComponent={renderBackdrop}
       animationConfigs={animationConfigs}
       handleComponent={Grabber}
-      backgroundStyle={styles.bg}
+      backgroundStyle={[styles.bg, tone === 'page' && styles.bgPage]}
       style={shadow.sheet}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
@@ -104,7 +118,7 @@ export function Sheet({
     >
       <Body
         testID={testID}
-        style={styles.body}
+        style={[styles.body, padding != null && { paddingHorizontal: padding }]}
         contentContainerStyle={scroll ? { paddingBottom: 34 + insets.bottom } : undefined}
         showsVerticalScrollIndicator={false}
       >
@@ -138,6 +152,7 @@ function Grabber() {
 
 const styles = StyleSheet.create({
   scrim: { backgroundColor: colors.scrim },
+  bgPage: { backgroundColor: colors.bg },
   bg: { backgroundColor: colors.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet },
   body: { paddingHorizontal: 20 },
   grabWrap: { paddingTop: 10, paddingBottom: 16, alignItems: 'center' },

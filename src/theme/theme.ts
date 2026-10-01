@@ -96,6 +96,8 @@ export const colors = {
   locButtonBg: 'rgba(255,255,255,0.85)',
   onInk78: 'rgba(255,255,255,0.78)',
   onInk14: 'rgba(255,255,255,0.14)',
+  lavender: '#46379E',     // avatar d / Innboks + Personvern icon tiles
+  lavenderTint: '#E8E3FB',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */

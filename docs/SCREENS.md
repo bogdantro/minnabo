@@ -25,7 +25,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `LeggUt.dc.html` | `/legg-ut/trenger-jobb` | `src/screens/LeggUt/TaskRequestForm.tsx` | partial | `/legg-ut` is `LeggUt/IntroScreen.tsx`, an intro step before the form – the FAB must go straight into the wizard (rule 2). Form is not the 9-step wizard yet |
 | `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | partial | Today: Supabase **e-mail OTP**. Must become Vipps-only (rule 3) – needs backend (Vipps OIDC) |
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
-| `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` + `src/config/appMenu.ts` | exists | Opened from `BottomNav` inside `TabBar` |
+| `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. **Open:** "Tilgjengelig for småjobber" toggle needs a backend field (not `paused`/feriemodus). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag, Admin row for admins only |
 | `MineAvtaler.dc.html` | `/avtaler` | `src/screens/AgendaScreen.tsx` | exists | |
 | `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | exists | Menu label still says "Mine oppdrag og tjenester" |
 | `MottatteTilbud.dc.html` | `/tilbud` | `src/screens/MottatteTilbudScreen.tsx` | exists | |
@@ -119,7 +119,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | Design file | Screen | Must work |
 |---|---|---|
 | `Oppdrag.dc.html` | ✅ Oppdrag (home, default route) | "Hei, Mari" + h1. Location row → [S] GPS "Bruk posisjonen min" (spinner → found), kommune radio list, reach segmented (Min kommune / Nabokommuner / Innlandet) with animated rings → "Vis oppdrag" [T]. Search bar → Sok. Category chips filter the list. "Folk som trenger hjelp" 6 cards, save heart [T] + Angre, empty state "Ingen oppdrag i {kommune} akkurat nå. Prøv å utvide rekkevidden." "Se alle oppdrag" → SeAlle. "Oppdrag for meg" card → ForMeg. Payment note footer. **No "Folk som tilbyr hjelp" section.** |
-| `Meny.dc.html` | Meny sheet | Opens from tab bar over dimmed home. User header → Profil. Utforsk tiles, sections Mitt / Tillit og trygghet / Innstillinger (rows with badges), Logg ut [D] |
+| `Meny.dc.html` | ✅ Meny sheet | Opens from tab bar over dimmed home. User header → Profil. Utforsk tiles, sections Mitt / Tillit og trygghet / Innstillinger (rows with badges), Logg ut [D] |
 | `Sok.dc.html` | Søk | Live search, clear. Filtre [S]: categories (multi), kun verifiserte, distance slider, sort. Active filter chips removable. Recent + popular searches when empty. "Lagre søk" [T]. Empty state |
 | `SeAlle.dc.html` | Se alle | Sort menu (Nærmest / Nyeste / Pris), category chips, count, skeleton on reload |
 | `ForMeg.dc.html` | Oppdrag for meg | Card stack: "Ikke aktuelt" flies card left, save, "Se og gi tilbud" → Oppdragsdetaljer, Angre, counter, stack/list toggle, finished state |

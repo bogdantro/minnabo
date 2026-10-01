@@ -839,6 +839,53 @@ const nb = {
     apply: 'Vis oppdrag',
     showing: (reach: string, k: string) => `Viser ${reach.toLowerCase()} · ${k}`,
   },
+  meny: {
+    title: 'Meny',
+    close: 'Lukk meny',
+    jobs: (n: number) => `${n} ${n === 1 ? 'jobb' : 'jobber'}`,
+    seeProfile: 'Se profilen din',
+    explore: 'Utforsk',
+    mine: 'Mitt',
+    trust: 'Tillit og trygghet',
+    settings: 'Innstillinger',
+    tiles: {
+      oppdrag: { title: 'Oppdrag', sub: 'Finn og gi tilbud' },
+      fellesskap: { title: 'Fellesskap', sub: 'Nabolag og oppslag' },
+      innboks: { title: 'Innboks', sub: (n: number) => (n ? `${n} ${n === 1 ? 'ulest melding' : 'uleste meldinger'}` : 'Ingen uleste') },
+      // Design says "Oppdrag eller tilbud"; product rule 1 allows only oppdrag.
+      leggUt: { title: 'Legg ut', sub: 'Nytt oppdrag' },
+    },
+    profile: { title: 'Min profil', sub: 'Vurderinger, ferdigheter og område' },
+    agreements: { title: 'Mine avtaler', sub: (next?: string) => (next ? `Neste: ${next}` : 'Ingen kommende avtaler') },
+    myListings: {
+      title: 'Mine oppdrag',
+      sub: (active: number, paused: number) =>
+        `${active} aktive${paused ? ` · ${paused} pauset` : ''}`,
+    },
+    offers: { title: 'Mottatte tilbud', sub: (title?: string) => (title ? `På «${title}»` : 'Tilbud på oppdragene dine') },
+    saved: { title: 'Lagrede oppføringer og søk', sub: (l: number, s: number) => `${l} oppføringer · ${s} søk` },
+    notifications: { title: 'Varsler', sub: 'Tilbud, meldinger og avtaler' },
+    verify: { title: 'Vurderinger og verifisering' },
+    verifiedSub: (parts: string[]) => {
+      if (!parts.length) return 'Ikke verifisert ennå';
+      const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} og ${parts[parts.length - 1]}`;
+      return `${list.charAt(0).toUpperCase()}${list.slice(1)} bekreftet`;
+    },
+    safety: { title: 'Sikkerhet, rapportering og blokkering', sub: 'Trygge kontakter og råd' },
+    settingsRow: 'Innstillinger',
+    privacy: { title: 'Personvern', sub: 'Samtykker og dine data' },
+    terms: 'Vilkår',
+    notifPrefs: { title: 'Varslinger', sub: 'Velg hva du vil bli varslet om' },
+    business: { title: 'For bedrifter', sub: 'Borettslag, lag og foreninger' },
+    admin: { title: 'Adminpanel', sub: 'Moderering og rapporter', badge: 'Admin' },
+    logout: 'Logg ut',
+    logoutTitle: 'Logg ut av MinNabo?',
+    logoutBody: 'Du kan logge inn igjen når som helst. Utkast du ikke har publisert, lagres på denne telefonen.',
+    version: (v: string) => `MinNabo · versjon ${v} · Innlandet`,
+    noPayment: 'MinNabo håndterer ikke betaling.',
+    unread: (label: string, n: number) => `${label}, ${n} ${n === 1 ? 'ulest' : 'uleste'}`,
+    newOffers: (label: string, n: number) => `${label}, ${n} nye`,
+  },
   setup: {
     top: 'Oppsett · ',
     step: (n: number) => `Steg ${n} av 3`,
