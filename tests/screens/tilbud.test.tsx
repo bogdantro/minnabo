@@ -26,12 +26,24 @@ test('Mottatte tilbud: "Besvart" filters to answered offers and shows the empty 
   expect(screen.queryAllByText('Ny')).toHaveLength(0);
 });
 
-test('Sammenlign shows every proposal on the listing, cheapest first', async () => {
+test('Sammenlign shows a column per open offer with "Lavest pris" and a price range', async () => {
   await renderWithProviders(<SammenlignTilbudScreen listingId="l-male-gjerdet" />);
   await settle();
   expect(screen.getAllByText('Sammenlign tilbud').length).toBeGreaterThan(0);
   expect(screen.getByText(/1.900.kr/)).toBeTruthy();
-  expect(screen.getByText(/2.600.kr/)).toBeTruthy();
+  expect(screen.getAllByText(/2.600.kr/).length).toBeGreaterThan(0);
+  expect(screen.getByText('Lavest pris')).toBeTruthy();
+  expect(screen.getByText('Prisspenn')).toBeTruthy();
+});
+
+test('Sammenlign: picking a column enables "Gå videre med …"', async () => {
+  await renderWithProviders(<SammenlignTilbudScreen listingId="l-male-gjerdet" />);
+  await settle();
+  expect(screen.getByText('Trykk på et tilbud for å velge det')).toBeTruthy();
+  await fireEvent.press(screen.getAllByRole('radio')[0]);
+  expect(screen.getByText(/^Gå videre med /)).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Fjern valg'));
+  expect(screen.getByText('Trykk på et tilbud for å velge det')).toBeTruthy();
 });
 
 test('Godta needs the acknowledgement, then creates an agreement and shows the success screen', async () => {

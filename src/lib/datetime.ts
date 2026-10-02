@@ -51,3 +51,13 @@ export function shortDate(iso: string): string {
 export function daysAgo(iso: string, now: Date = new Date()): number {
   return Math.round((startOfDay(now).getTime() - startOfDay(new Date(iso)).getTime()) / 86_400_000);
 }
+
+/**
+ * Best-effort day from free text like "Lør 10. okt kl. 10:00" (proposal times are free text).
+ * Returns a sortable number (month * 100 + day), or null when no date is found.
+ */
+export function dayKey(textValue: string | undefined): number | null {
+  const m = /(\d{1,2})\.\s*(jan|feb|mar|apr|mai|jun|jul|aug|sep|okt|nov|des)/i.exec(textValue ?? '');
+  if (!m) return null;
+  return (MONTHS_SHORT.indexOf(m[2].toLowerCase()) + 1) * 100 + Number(m[1]);
+}

@@ -55,7 +55,9 @@ export const colors = {
   pulseCyan: 'rgba(25,184,238,0.45)',
   onInk75: 'rgba(255,255,255,0.75)',
   onInk08: 'rgba(255,255,255,0.08)', // Mottatte tilbud mini stats
-  footTint: '#FBFCFA',      // group card footer (Mottatte tilbud)
+  footTint: '#FBFCFA',
+  barMute: '#9AA3B5',      // Sammenlign price bars (not lowest)
+  bestTint: '#FFF2D9', bestText: '#8A5200', // "Best vurdert" marker      // group card footer (Mottatte tilbud)
   budgetBg: '#F2FBDF',     // Oppdragsdetaljer budget card
   mapBg: '#E7EEE2',        // approximate-area map
   mapWater: '#CFE6F3',
@@ -339,6 +341,7 @@ export const shadow = {
   whiteRing3: sh('0 0 0 3px rgba(255,255,255,.7)'), // pill on category art (ForMeg)
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
   sendOn: sh('0 10px 22px -10px rgba(8,101,158,.8)'), // composer send button
+  colOn: sh('0 0 0 4px rgba(184,238,60,.6), 0 2px 6px rgba(10,23,64,.05), 0 16px 36px -14px rgba(10,23,64,.22)'), // Sammenlign selected column
   okRing: sh('0 20px 40px -16px rgba(40,170,120,.7)'), // Gi tilbud sent check
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
