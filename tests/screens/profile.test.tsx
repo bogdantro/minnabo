@@ -84,7 +84,7 @@ test('reliability score is computed from completions and no-shows', () => {
 test('notifications list can be marked all read', async () => {
   await renderWithProviders(<NotificationsScreen />);
   await waitFor(() => expect(screen.getByText('Nytt tilbud fra Emma Larsen')).toBeTruthy());
-  fireEvent.press(screen.getByText('Merk alle som lest'));
+  fireEvent.press(screen.getByLabelText('Merk alle som lest'));
   await waitFor(() =>
     expect(profileRepository.unreadNotificationCount()).toBe(0),
   );

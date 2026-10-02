@@ -549,6 +549,22 @@ const nb = {
     title: 'Varsler',
     empty: 'Ingen varsler ennå.',
     markAllRead: 'Merk alle som lest',
+    unread: (n: number) => (n === 0 ? 'Alt er lest' : n === 1 ? 'ulest varsel' : 'uleste varsler'),
+    onlyUnread: 'Bare uleste',
+    filterLabel: 'Filtrer varsler',
+    filters: { all: 'Alle', offer: 'Tilbud', msg: 'Meldinger', deal: 'Avtaler', other: 'Annet' },
+    cats: { offer: 'Tilbud', msg: 'Melding', deal: 'Avtale', other: 'Annet' },
+    groups: { today: 'I dag', yday: 'I går', older: 'Tidligere' },
+    unreadPrefix: 'Ulest: ',
+    emptyTitle: 'Ingen varsler her ennå',
+    emptyAll: 'Når noen sender deg tilbud eller meldinger, dukker det opp her.',
+    emptyOnly: (filter: string | null) =>
+      `Du har lest alt${filter ? ` under ${filter}` : ''}. Nye tilbud, meldinger og avtaler dukker opp her.`,
+    showAll: 'Vis alle varsler',
+    prefsTitle: 'Velg hva du vil bli varslet om',
+    prefsSub: 'Push, e-post og stille timer',
+    noneUnread: 'Ingen uleste varsler',
+    allRead: 'Alle varsler er merket som lest',
   },
 
   saved: {

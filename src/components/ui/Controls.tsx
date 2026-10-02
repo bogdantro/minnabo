@@ -17,11 +17,15 @@ export type ToggleProps = {
   onValueChange: (v: boolean) => void;
   accessibilityLabel: string;
   disabled?: boolean;
+  /** sm = 44×26 (Varsler "Bare uleste"). */
+  size?: 'md' | 'sm';
   testID?: string;
 };
 
 /** `.tgl` – 52×32 switch; knob springs 20 px, track fades grey → green. */
-export function Toggle({ value, onValueChange, accessibilityLabel, disabled, testID }: ToggleProps) {
+export function Toggle({ value, onValueChange, accessibilityLabel, disabled, size = 'md', testID }: ToggleProps) {
+  const sm = size === 'sm';
+  const travel = sm ? 18 : 20;
   const p = useSharedValue(value ? 1 : 0);
   useEffect(() => {
     p.value = withSpring(value ? 1 : 0, motion.spring);
@@ -29,7 +33,7 @@ export function Toggle({ value, onValueChange, accessibilityLabel, disabled, tes
   const track = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(Math.min(Math.max(p.value, 0), 1), [0, 1], [colors.toggleOff, colors.toggleOn]),
   }));
-  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: p.value * 20 }] }));
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: p.value * travel }] }));
 
   return (
     <Pressable
@@ -42,8 +46,8 @@ export function Toggle({ value, onValueChange, accessibilityLabel, disabled, tes
       onPress={() => onValueChange(!value)}
       style={disabled ? styles.disabled : null}
     >
-      <Animated.View style={[styles.track, track]}>
-        <Animated.View style={[styles.knob, shadow.knob, knob]} />
+      <Animated.View style={[styles.track, sm && styles.trackSm, track]}>
+        <Animated.View style={[styles.knob, sm && styles.knobSm, shadow.knob, knob]} />
       </Animated.View>
     </Pressable>
   );
@@ -122,6 +126,8 @@ export function OptionCard({ selected, onPress, children, role = 'radio', access
 const styles = StyleSheet.create({
   disabled: { opacity: 0.38 },
   track: { width: sizes.toggleW, height: sizes.toggleH, borderRadius: sizes.toggleH / 2, padding: 3 },
+  trackSm: { width: 44, height: 26, borderRadius: 13 },
+  knobSm: { width: 20, height: 20, borderRadius: 10 },
   knob: {
     width: sizes.toggleKnob,
     height: sizes.toggleKnob,

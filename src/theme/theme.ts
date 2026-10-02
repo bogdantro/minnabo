@@ -49,6 +49,10 @@ export const colors = {
   progressTrack: '#E1E5EA',// wizard progress / steps
   rangeTrack: '#DDE1E7',
   grabber: '#D6DAE1',
+  starTint: '#FFF4D6',     // Varsler review icon
+  muteIcon: '#46506A',     // Varsler withdrawn icon / annet
+  unreadBg: '#F1F9FE',     // Varsler unread row
+  tagBg: '#F1F3F6',        // Varsler category tag
   barIdle: '#DADFE6',      // ForMeg counter bars
   barDone: '#B6BDCA',
   artDeco: 'rgba(255,255,255,0.35)', // decorative circles on big category art
@@ -314,6 +318,7 @@ export const shadow = {
   avatarRingSm: sh('0 0 0 1.5px #fff, 0 0 0 3px #19B8EE'),
   avatarRingLg: sh('0 0 0 3px #fff, 0 0 0 6px #19B8EE'),
   whiteRing2: sh('0 0 0 2px #fff'),
+  unreadDot: sh('0 0 0 4px rgba(25,184,238,.16)'), // Varsler .udot
   whiteRing3: sh('0 0 0 3px rgba(255,255,255,.7)'), // pill on category art (ForMeg)
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),

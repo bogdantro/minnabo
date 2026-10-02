@@ -34,3 +34,17 @@ export function postedAgo(iso: string, now: Date = new Date()): string {
   if (days <= 1) return 'i går';
   return `for ${days} dager siden`;
 }
+
+const DAYS_SHORT = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
+const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+
+/** "Fre 25. sep" */
+export function shortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${DAYS_SHORT[d.getDay()]} ${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]}`;
+}
+
+/** 0 = today, 1 = yesterday, 2+ = older (calendar days). */
+export function daysAgo(iso: string, now: Date = new Date()): number {
+  return Math.round((startOfDay(now).getTime() - startOfDay(new Date(iso)).getTime()) / 86_400_000);
+}
