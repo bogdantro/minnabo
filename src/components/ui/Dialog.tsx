@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { colors, motion, radius, shadow, text } from '@/theme/theme';
@@ -14,9 +14,11 @@ export type DialogProps = {
   icon?: IconName;
   tone?: 'danger' | 'neutral' | 'ok';
   cancelLabel?: string;
-  confirmLabel: string;
+  /** Custom action area (stacked buttons etc.) instead of Avbryt + confirm. */
+  actions?: ReactNode;
+  confirmLabel?: string;
   confirmVariant?: ButtonVariant;
-  onConfirm: () => void | Promise<void>;
+  onConfirm?: () => void | Promise<void>;
   loading?: boolean;
 };
 
@@ -35,7 +37,8 @@ export function Dialog({
   icon,
   tone = 'danger',
   cancelLabel = 'Avbryt',
-  confirmLabel,
+  actions,
+  confirmLabel = '',
   confirmVariant = 'danger',
   onConfirm,
   loading,
@@ -78,10 +81,20 @@ export function Dialog({
           ) : null}
           <Text style={[text.dialogTitle, styles.center_t]}>{title}</Text>
           {body ? <Text style={[text.stateBody, styles.center_t, styles.body]}>{body}</Text> : null}
-          <View style={styles.actions}>
-            <Button label={cancelLabel} variant="soft" onPress={onClose} style={styles.flex} />
-            <Button label={confirmLabel} variant={confirmVariant} onPress={onConfirm} loading={loading} style={styles.flex} />
-          </View>
+          {actions ? (
+            <View style={styles.stackActions}>{actions}</View>
+          ) : (
+            <View style={styles.actions}>
+              <Button label={cancelLabel} variant="soft" onPress={onClose} style={styles.flex} />
+              <Button
+                label={confirmLabel}
+                variant={confirmVariant}
+                onPress={() => onConfirm?.()}
+                loading={loading}
+                style={styles.flex}
+              />
+            </View>
+          )}
         </Animated.View>
       </View>
     </Modal>
@@ -110,5 +123,6 @@ const styles = StyleSheet.create({
   center_t: { textAlign: 'center' },
   body: { marginTop: 8 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 22, alignSelf: 'stretch' },
+  stackActions: { gap: 10, marginTop: 20, alignSelf: 'stretch' },
   flex: { flex: 1 },
 });

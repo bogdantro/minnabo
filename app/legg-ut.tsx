@@ -1,1 +1,1 @@
-export { LeggUtIntroScreen as default } from '@/screens/LeggUt/IntroScreen';
+export { LeggUtWizard as default } from '@/screens/LeggUt/LeggUtWizard';

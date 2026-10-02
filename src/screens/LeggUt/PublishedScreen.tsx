@@ -1,192 +1,155 @@
-import { View, Image, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { tokens } from '@/theme';
+import * as Clipboard from 'expo-clipboard';
 import nb from '@/i18n/nb';
-import { formatPrice, formatFromPrice } from '@/domain/price';
 import { draftStore } from '@/data/draftStore';
-import { shareListing } from '@/lib/share';
+import { useListing } from '@/api/queries';
 import { toast } from '@/lib/toast';
-import { useNotifyMatchingHelpers } from '@/api/queries';
-import { PageHeader } from '@/components/TopBar';
-import { AppText } from '@/components/ui/Text';
-import { Icon } from '@/components/ui/Icon';
-import { Button } from '@/components/ui/Button';
-import { StatusPill } from '@/components/ui/StatusPill';
-import { InfoBox } from '@/components/ui/InfoBox';
+import { colors, radius, screenPadding, text } from '@/theme/theme';
+import { listingPlace, listingPrice, listingSchedule } from '@/components/OppdragCard';
+import { categoryArtId } from '@/domain/categories';
+import {
+  Button,
+  Card,
+  Confetti,
+  DrawnCheck,
+  FadeUp,
+  Icon,
+  ListingCard,
+  Note,
+  Screen,
+  Sheet,
+  SubHeader,
+  type IconKey,
+} from '@/components/ui';
 
-const CONFETTI = [
-  { top: 8, left: 30, color: tokens.color.lime, rot: '20deg' },
-  { top: 0, left: 90, color: tokens.color.cyan, rot: '-15deg' },
-  { top: 30, left: 8, color: tokens.color.cyan, rot: '40deg' },
-  { top: 46, left: 120, color: tokens.color.lime, rot: '10deg' },
-  { top: 4, right: 24, color: tokens.color.lime, rot: '-30deg' },
-  { top: 40, right: 8, color: tokens.color.cyan, rot: '25deg' },
-];
+const linkFor = (id: string) => `https://minnabo.no/oppdrag/${id}`;
 
+/** Legg ut · Publisert (design/screens/Publisert.dc.html). `id = 'lokal'` = mock publish (nothing saved). */
 export function PublishedScreen({ listingId }: { listingId?: string }) {
   const router = useRouter();
-  const listing = draftStore.get();
-  const isTask = listing?.type !== 'SERVICE_OFFER';
-  const notify = useNotifyMatchingHelpers();
+  const local = listingId === 'lokal';
+  const remote = useListing(local ? '' : (listingId ?? ''));
+  const listing = local ? draftStore.get() : remote.data;
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const broadcast = () => {
-    if (!listingId) return;
-    notify.mutate(listingId, {
-      onSuccess: (n) => toast.success(nb.leggUt.broadcastDone(n)),
-      onError: () => toast.error(nb.toast.genericError),
-    });
-  };
-
-  const priceLabel = listing?.price
-    ? listing.priceMode === 'FROM'
-      ? formatFromPrice(listing.price)
-      : formatPrice(listing.price)
-    : nb.common.priceByAgreement;
-
-  const done = (path: string) => {
+  const home = () => {
     draftStore.clear();
-    router.replace(path);
+    router.replace('/');
   };
+  const link = listingId && !local ? linkFor(listingId) : 'https://minnabo.no';
+  const title = listing?.title ?? '';
+
+  const share: { icon: IconKey; label: string; run: () => Promise<unknown> | void; done: string }[] = [
+    { icon: 'copy', label: nb.published.copy, run: () => Clipboard.setStringAsync(link), done: nb.published.copied },
+    { icon: 'msg', label: nb.published.sms, run: () => Linking.openURL(`sms:?&body=${encodeURIComponent(`${title} ${link}`)}`), done: nb.published.openingSms },
+    { icon: 'mail', label: nb.published.mail, run: () => Linking.openURL(`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(link)}`), done: nb.published.openingMail },
+    { icon: 'more', label: nb.published.more, run: () => Share.share({ message: `${title} ${link}` }), done: nb.published.openingMore },
+  ];
+
+  const price = listing ? listingPrice(listing) : null;
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
-      <PageHeader showBack={false} />
-
-      <View style={styles.body}>
-        <View style={styles.hero}>
-          {CONFETTI.map((c, i) => (
-            <View
-              key={i}
-              style={[
-                styles.confetti,
-                { backgroundColor: c.color, transform: [{ rotate: c.rot }] },
-                'left' in c ? { left: c.left } : { right: (c as { right: number }).right },
-                { top: c.top },
-              ]}
-            />
-          ))}
-          <View style={styles.badge}>
-            <Icon name="check" size={34} color="white" />
-          </View>
-        </View>
-
-        <AppText variant="h1" weight="extrabold" align="center">
-          {isTask ? nb.leggUt.publishedTitleTask : nb.leggUt.publishedTitleOffer}
-        </AppText>
-        <AppText variant="body" color="navyMuted" align="center">
-          {isTask ? nb.leggUt.publishedBodyTask : nb.leggUt.publishedBodyOffer}
-        </AppText>
-
-        {listing ? (
-          <View style={styles.card}>
-            <View style={styles.cardTop}>
-              {listing.images[0]?.url ? (
-                <Image source={{ uri: listing.images[0].url }} style={styles.thumb} />
-              ) : (
-                <View style={[styles.thumb, styles.thumbFallback]}>
-                  <Icon name="image" size={20} color="navyMuted" />
-                </View>
-              )}
-              <View style={styles.cardInfo}>
-                <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
-                  {listing.title}
-                </AppText>
-                <StatusPill label={nb.leggUt.publishedStatus} tone="lime" />
-                <AppText variant="meta" weight="bold" color="lime">
-                  {priceLabel}
-                  {isTask && listing.priceMode === 'BUDGET' ? ` · ${nb.leggUt.priceModeBudget}` : ''}
-                </AppText>
-                <View style={styles.metaRow}>
-                  <Icon name="map-pin" size={12} color="cyan" />
-                  <AppText variant="meta" color="navyMuted">
-                    {listing.location.place}
-                  </AppText>
-                </View>
-                {listing.task?.scheduledText ? (
-                  <View style={styles.metaRow}>
-                    <Icon name="calendar" size={12} color="cyan" />
-                    <AppText variant="meta" color="navyMuted">
-                      {listing.task.scheduledText}
-                    </AppText>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-            <View style={styles.rule} />
-            <View style={styles.metaRow}>
-              <Icon name="bell" size={14} color="navy" />
-              <AppText variant="meta" color="navyMuted" style={styles.notify}>
-                {nb.leggUt.publishedNotify}
-              </AppText>
-            </View>
-          </View>
-        ) : null}
-
-        <View style={styles.actions}>
-          <Button
-            label={isTask ? nb.leggUt.seeListing : nb.leggUt.seeOffer}
-            onPress={() => done(listingId ? `/oppdrag/${listingId}` : '/')}
-          />
-          {isTask && listingId ? (
-            <Button
-              label={nb.leggUt.broadcast}
-              variant="secondary"
-              iconLeft="send"
-              loading={notify.isPending}
-              onPress={broadcast}
-            />
-          ) : null}
-          <Button
-            label={nb.leggUt.shareListing}
-            variant="secondary"
-            onPress={() => (listing ? shareListing(listingId ?? '', listing.title) : undefined)}
-          />
-          <AppText
-            variant="meta"
-            weight="bold"
-            color="cyan"
-            align="center"
-            onPress={() => done('/mine')}
-          >
-            {nb.leggUt.toMyListings}
-          </AppText>
-        </View>
-
-        <InfoBox icon="shield">{nb.leggUt.publishedReminder}</InfoBox>
+    <Screen
+      white
+      scroll
+      header={<SubHeader onBack={home} close />}
+      contentStyle={styles.content}
+    >
+      <Confetti count={7} />
+      <View style={styles.center}>
+        <DrawnCheck size={120} />
       </View>
-    </SafeAreaView>
+      <FadeUp delay={150} style={styles.headBlock}>
+        <Text style={[text.h1, styles.textCenter]} accessibilityRole="header">
+          {nb.published.title}
+        </Text>
+        <Text style={[text.body, styles.lead]}>
+          {nb.published.body(listing?.category.label ?? nb.published.yourCategory)}
+        </Text>
+      </FadeUp>
+      {listing && price ? (
+        <FadeUp delay={200}>
+          <ListingCard
+            title={listing.title}
+            category={categoryArtId(listing.category.slug)}
+            photoUri={listing.images[0]?.url}
+            place={listingPlace(listing)}
+            schedule={listingSchedule(listing)}
+            priceLabel={price.label}
+            priceValue={price.value}
+            extraBadge={{ label: nb.published.active }}
+            onPress={local ? undefined : () => router.push(`/oppdrag/${listingId}`)}
+          />
+        </FadeUp>
+      ) : null}
+      <FadeUp delay={250} style={styles.actions}>
+        <Button label={nb.published.share} icon="share" variant="ghost" onPress={() => setShareOpen(true)} />
+        <Button
+          label={nb.published.see}
+          variant="ink"
+          disabled={local}
+          onPress={() => router.replace(`/oppdrag/${listingId}`)}
+        />
+        <Button label={nb.published.home} variant="text" block={false} onPress={home} style={styles.selfCenter} />
+      </FadeUp>
+      <FadeUp delay={300}>
+        <Card flat style={styles.tip}>
+          <View style={styles.tipIcon}>
+            <Icon name="zap" size={16} color={colors.limeDeep} />
+          </View>
+          <View style={styles.tipText}>
+            <Text style={[text.label, { fontSize: 14.5 }]}>{nb.published.tipTitle}</Text>
+            <Text style={[text.meta, { color: colors.ink2 }]}>{nb.published.tip}</Text>
+          </View>
+        </Card>
+      </FadeUp>
+
+      <Sheet visible={shareOpen} onClose={() => setShareOpen(false)} title={nb.published.share}>
+        <View style={styles.shareRow}>
+          {share.map((s) => (
+            <Pressable
+              key={s.label}
+              accessibilityRole="button"
+              accessibilityLabel={s.label}
+              style={styles.shr}
+              onPress={async () => {
+                setShareOpen(false);
+                try {
+                  await s.run();
+                  toast.success(s.done);
+                } catch {
+                  toast.error(nb.published.shareFailed);
+                }
+              }}
+            >
+              <View style={styles.shrIcon}>
+                <Icon name={s.icon} size={22} />
+              </View>
+              <Text style={[text.chipSm, styles.textCenter, { fontSize: 12.5 }]}>{s.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Note style={styles.mt8}>{nb.published.noAddress}</Note>
+      </Sheet>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
-  body: { flex: 1, paddingHorizontal: tokens.space.xl, gap: tokens.space.md, alignItems: 'stretch' },
-  hero: { height: 100, alignItems: 'center', justifyContent: 'center', marginTop: tokens.space.md },
-  confetti: { position: 'absolute', width: 10, height: 6, borderRadius: 2 },
-  badge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: tokens.color.lime,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  card: {
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.card,
-    borderWidth: 1,
-    borderColor: tokens.color.line,
-    padding: tokens.space.md,
-    gap: tokens.space.sm,
-    ...tokens.shadow.card,
-  },
-  cardTop: { flexDirection: 'row', gap: tokens.space.md },
-  thumb: { width: 84, height: 84, borderRadius: tokens.radius.md, backgroundColor: tokens.color.line },
-  thumbFallback: { alignItems: 'center', justifyContent: 'center' },
-  cardInfo: { flex: 1, gap: 3, justifyContent: 'center' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  notify: { flex: 1 },
-  rule: { height: 1, backgroundColor: tokens.color.line },
-  actions: { gap: tokens.space.sm, marginTop: tokens.space.sm },
+  content: { paddingHorizontal: screenPadding, paddingTop: 18, gap: 22, paddingBottom: 30 },
+  center: { alignItems: 'center' },
+  selfCenter: { alignSelf: 'center' },
+  textCenter: { textAlign: 'center' },
+  headBlock: { gap: 8, alignItems: 'center' },
+  lead: { color: colors.mute, textAlign: 'center', maxWidth: 300 },
+  actions: { gap: 10 },
+  tip: { padding: 16, flexDirection: 'row', gap: 12, alignItems: 'flex-start', backgroundColor: colors.surface2, borderRadius: radius.card },
+  tipIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
+  tipText: { flex: 1, gap: 3 },
+  shareRow: { flexDirection: 'row', gap: 8, paddingTop: 6, paddingBottom: 10 },
+  shr: { flex: 1, alignItems: 'center', gap: 8 },
+  shrIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  mt8: { marginTop: 8 },
 });

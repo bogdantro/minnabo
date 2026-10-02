@@ -80,18 +80,19 @@ export function StepProgress({ step, total, stepName, showLabel = true }: StepPr
 
 export type PhotoAddTileProps = {
   onPress: () => void;
+  /** Square size; omit to fill the parent (grid cells). */
   size?: number;
   label?: string;
 };
 
 /** `.photo-add` – dashed "Legg til bilde" tile. */
-export function PhotoAddTile({ onPress, size = 72, label = 'Legg til' }: PhotoAddTileProps) {
+export function PhotoAddTile({ onPress, size, label = 'Legg til' }: PhotoAddTileProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Legg til bilde"
       onPress={onPress}
-      style={[styles.photo, { width: size, height: size }]}
+      style={[styles.photo, size ? { width: size, height: size } : styles.photoFill]}
     >
       <Icon name="camera" size={22} color={colors.mute} />
       <Text style={[text.chipSm, { color: colors.mute }]}>{label}</Text>
@@ -122,6 +123,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progFill: { height: '100%', borderRadius: sizes.progress / 2, backgroundColor: colors.lime },
+  photoFill: { width: '100%', height: '100%' },
   photo: {
     borderWidth: 2,
     borderStyle: 'dashed',

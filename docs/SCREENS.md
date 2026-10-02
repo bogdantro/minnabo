@@ -15,14 +15,14 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` | exists | |
 | `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | exists | Tab |
 | `ForMeg.dc.html` | `/oppdrag-for-meg` | `src/screens/LeadBoardScreen.tsx` | exists | |
-| `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | exists | |
+| `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | ✅ done | Under the mock login "Publiser" shows the flow but saves nothing |
 | `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | exists | |
 | `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | exists | Tab |
 | `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | exists | |
 | `Jobbdag.dc.html` | – | `src/components/JobWorkspaceSection.tsx` (inside Avtale) | partial | No own route; data via `useJobWorkspace` / `useUpdateJobWorkspace` |
 | `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
 | `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | exists | |
-| `LeggUt.dc.html` | `/legg-ut/trenger-jobb` | `src/screens/LeggUt/TaskRequestForm.tsx` | partial | `/legg-ut` is `LeggUt/IntroScreen.tsx`, an intro step before the form – the FAB must go straight into the wizard (rule 2). Form is not the 9-step wizard yet |
+| `LeggUt.dc.html` | `/legg-ut` | `src/screens/LeggUt/LeggUtWizard.tsx` | ✅ done | Opens directly (rule 2); draft saved locally ("Lagre utkast"). **API gap:** "Hvem kan gi tilbud", "Maks avstand" and the private estimate have no columns for oppdrag – shown in the summary, not saved |
 | `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | ✅ done (mock) | Vipps sheet is MOCKED (`src/auth/mockVipps.ts`, sample identities, nothing saved). Real Vipps OIDC still to do |
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
 | `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. **Open:** "Tilgjengelig for småjobber" toggle needs a backend field (not `paused`/feriemodus). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag, Admin row for admins only |
@@ -37,7 +37,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | exists | |
 | `Personvern.dc.html` | `/personvern` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs consent toggle + log, data export (`src/lib/dataExport.ts` exists), retention accordion |
 | `Profil.dc.html` | `/profil`, `/profil/[id]` | `src/screens/ProfileScreen.tsx` | exists | Own vs public via `profileId` param |
-| `Publisert.dc.html` | `/legg-ut/publisert` | `src/screens/LeggUt/PublishedScreen.tsx` | exists | |
+| `Publisert.dc.html` | `/legg-ut/publisert` | `src/screens/LeggUt/PublishedScreen.tsx` | ✅ done | Share sheet: copy link, SMS, e-post, system share |
 | `Rapporter.dc.html` | `/rapporter` | `src/screens/SafetyScreen.tsx` (with `targetType`) | partial | Shares a component with Sikkerhet; design is a separate 3-step flow |
 | `RedigerProfil.dc.html` | `/profil/rediger` | `src/screens/EditProfileScreen.tsx` | exists | |
 | `Sammenlign.dc.html` | `/tilbud/sammenlign/[listingId]` | `src/screens/SammenlignTilbudScreen.tsx` | exists | |
@@ -63,7 +63,6 @@ Existing routes with **no** design file:
 |---|---|---|
 | `/tilbydere` | `ListingListScreen` (`type="SERVICE_OFFER"`) | Service offers – remove (rule 1) |
 | `/oppdrag/[id]` for offers | `src/screens/ServiceOfferDetailScreen.tsx` | Service offers – remove (rule 1) |
-| `/legg-ut` | `src/screens/LeggUt/IntroScreen.tsx` | Intro step before the form – remove / point FAB at the wizard (rule 2) |
 | `/tilbud/ny` | `SendProposalScreen` (`mode="give"`) | Becomes the Gi tilbud sheet in Oppdragsdetaljer |
 | `/tilbud/be-om` | `SendProposalScreen` (`mode="request"`) | Only linked from `ServiceOfferDetailScreen` – goes with the service-offer flow (rule 1) |
 | `/blokkerte` | `src/screens/BlockedListScreen.tsx` | Folded into Sikkerhet in the design |
@@ -156,9 +155,9 @@ Youth permission rules (backend must enforce, UI only reflects):
 
 | Design file | Screen | Must work |
 |---|---|---|
-| `LeggUt.dc.html` | Veiviser, 9 steps | Kategori → Tittel (suggestions) → Beskrivelse + category questions + photos → Sted (GPS, privacy note) → Når → Pris (budget / Ønsker tilbud) → Utstyr og praktisk → Hvem kan gi tilbud → Bekreft (Endre per section). Progress bar, back, "Lagre utkast" [T], per-step validation with shake, slide transitions |
-| `Forhandsvisning.dc.html` | Forhåndsvisning | Kortet / Detaljsiden toggle, readiness checklist, Rediger, Publiser (spinner) → Publisert |
-| `Publisert.dc.html` | Publisert | Drawn check + confetti, live card, Del [S] (copy link [T]), Se oppføringen, Til forsiden |
+| `LeggUt.dc.html` | ✅ Veiviser, 9 steps | Kategori → Tittel (suggestions) → Beskrivelse + category questions + photos → Sted (GPS, privacy note) → Når → Pris (budget / Ønsker tilbud) → Utstyr og praktisk → Hvem kan gi tilbud → Bekreft (Endre per section). Progress bar, back, "Lagre utkast" [T], per-step validation with shake, slide transitions |
+| `Forhandsvisning.dc.html` | ✅ Forhåndsvisning | Kortet / Detaljsiden toggle, readiness checklist, Rediger, Publiser (spinner) → Publisert |
+| `Publisert.dc.html` | ✅ Publisert | Drawn check + confetti, live card, Del [S] (copy link [T]), Se oppføringen, Til forsiden |
 
 ## 7 · Profil
 

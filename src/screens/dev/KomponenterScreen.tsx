@@ -337,7 +337,7 @@ export function KomponenterScreen() {
           <View style={styles.row}>
             <CategoryArt category="hage" width={72} height={72} radius={16} iconSize={22} />
             <CategoryArt category="maling" width={72} height={72} radius={16} iconSize={22} />
-            <PhotoAddTile onPress={() => toast.info('Velg bilde')} />
+            <PhotoAddTile size={72} onPress={() => toast.info('Velg bilde')} />
           </View>
         </Field>
         <Text style={text.label}>OptionCard</Text>

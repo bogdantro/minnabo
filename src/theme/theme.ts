@@ -106,6 +106,19 @@ export const colors = {
   // youth account (Ungdomskonto / OppdragUng)
   onInk82: 'rgba(255,255,255,0.82)',
   infoBorder: '#B6DFF2',
+  // Legg ut wizard (LeggUt.dc.html)
+  wizardHeaderBg: 'rgba(243,245,241,0.84)',
+  suggestBorder: '#BFD6A0',
+  photoClose: 'rgba(10,23,64,0.72)',
+  mapGreen: '#E8F2E1',
+  mapGrid: 'rgba(10,23,64,0.045)',
+  mapLake: '#CFE8F6',
+  mapZoneBorder: 'rgba(110,180,10,0.55)',
+  dateErrBorder: '#E7A7A2',
+  todOnBg: '#F6FCEA',
+  offerInfoBorder: '#D3EE9C',
+  wizardRing: 'rgba(184,238,60,0.3)',
+  previewMap: '#EEF1EC',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */
@@ -297,6 +310,9 @@ export const shadow = {
   photoRing: sh('0 0 0 4px #fff, 0 0 0 6px #19B8EE, 0 18px 36px -14px rgba(10,23,64,.4)'),
   radarDot: sh('0 0 0 4px rgba(184,238,60,.3)'),
   stepCurrent: sh('0 0 0 5px rgba(10,23,64,.1)'),
+  stepBtn: sh('0 1px 3px rgba(10,23,64,.12)'),
+  errorOutline: sh('0 0 0 2px rgba(194,48,41,.35)'),
+  whiteRing4: sh('0 0 0 4px #fff'),
   okBadge: sh('0 0 0 10px #E3F5E8, 0 18px 36px -12px rgba(43,143,78,.6)'),
   loginLogo: sh('0 26px 50px -20px rgba(10,23,64,.35), 0 0 0 1px rgba(10,23,64,.04)'),
   phoneMock: sh('0 20px 34px -14px rgba(10,23,64,.5)'),
