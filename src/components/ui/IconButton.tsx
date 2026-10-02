@@ -16,6 +16,10 @@ export type IconButtonProps = {
   dot?: boolean;
   dotTestID?: string;
   iconSize?: number;
+  /** Override the icon colour (e.g. red heart when saved). */
+  iconColor?: string;
+  /** Solid icon (filled heart). */
+  iconFilled?: boolean;
   disabled?: boolean;
   testID?: string;
   style?: StyleProp<ViewStyle>;
@@ -30,6 +34,8 @@ export function IconButton({
   dot = false,
   dotTestID,
   iconSize = 20,
+  iconColor,
+  iconFilled,
   disabled,
   testID,
   style,
@@ -50,7 +56,7 @@ export function IconButton({
       ) : null}
       {/* Positioned wrapper so the icon paints above the absolute blur layer (web stacking). */}
       <View style={styles.iconLayer}>
-        <Icon name={icon} size={iconSize} color={fg} />
+        <Icon name={icon} size={iconSize} color={iconColor ?? fg} filled={iconFilled} />
       </View>
       {dot ? <View style={styles.dot} testID={dotTestID} /> : null}
     </PressableScale>

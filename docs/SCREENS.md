@@ -32,7 +32,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Nabolag.dc.html` | `/nabolag` | `src/screens/NeighbourhoodScreen.tsx` | exists | |
 | `Oppdrag.dc.html` | `/(tabs)/index` (home) | `src/screens/OppdragScreen.tsx` | ✅ done | Default route. Kommune list in the sheet has no "184 aktive" counts (no API data). "Hele Innlandet" = all kommuner (`expandKommuner` reach 2). "N nye" = open oppdrag in reach from the last 48 h |
 | `OppdragUng.dc.html` | `/ung` | `src/screens/youth/YouthAppScreen.tsx` | ✅ done (mock) | Real oppdrag; offers/chats are local only until youth roles exist on the backend. Youth users are redirected here from the tabs |
-| `Oppdragsdetaljer.dc.html` | `/oppdrag/[id]` | `src/screens/TaskDetailScreen.tsx` | exists | Route also renders `ServiceOfferDetailScreen` for `SERVICE_OFFER` (remove, rule 1). Gi tilbud is a sheet in the design; today it is `/tilbud/ny` → `SendProposalScreen` |
+| `Oppdragsdetaljer.dc.html` | `/oppdrag/[id]` | `src/screens/TaskDetailScreen.tsx` + `src/components/GiTilbudSheet.tsx` | ✅ done | Oppdrag only (ServiceOfferDetailScreen, `/tilbud/ny`, `/tilbud/be-om` removed). **API gaps:** no public offer count on a listing ("N naboer har gitt tilbud" + avatar stack hidden) and no response-time stat ("Svarer vanligvis innen …" hidden); no image captions. Map is a stylised approximate area, never a pin. |
 | `Oppsett.dc.html` | `/oppsett` | `src/screens/Onboarding/SetupScreen.tsx` | ✅ done | Signed-in users without `onboardedAt` are redirected here. "Fullt navn · Fra Vipps" field + name chips need Vipps data. Area chips: Lillehammer only (`KOMMUNE_AREAS`) |
 | `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | exists | |
 | `Personvern.dc.html` | `/personvern` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs consent toggle + log, data export (`src/lib/dataExport.ts` exists), retention accordion |
@@ -63,8 +63,8 @@ Existing routes with **no** design file:
 |---|---|---|
 | ~~`/tilbydere`~~ | removed | Service offers – removed (rule 1) |
 | `/oppdrag/[id]` for offers | `src/screens/ServiceOfferDetailScreen.tsx` | Service offers – remove (rule 1) |
-| `/tilbud/ny` | `SendProposalScreen` (`mode="give"`) | Becomes the Gi tilbud sheet in Oppdragsdetaljer |
-| `/tilbud/be-om` | `SendProposalScreen` (`mode="request"`) | Only linked from `ServiceOfferDetailScreen` – goes with the service-offer flow (rule 1) |
+| ~~`/tilbud/ny`~~ | removed | Replaced by the Gi tilbud sheet in Oppdragsdetaljer |
+| ~~`/tilbud/be-om`~~ | removed | Service-offer flow (rule 1) |
 | `/blokkerte` | `src/screens/BlockedListScreen.tsx` | Folded into Sikkerhet in the design |
 
 ---
@@ -128,7 +128,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 
 | Design file | Screen | Must work |
 |---|---|---|
-| `Oppdragsdetaljer.dc.html` | Oppdragsdetaljer | Gallery (prev/next, counter, dots), save, share. "Åpent oppdrag" pill, budget, info grid, **approximate area** map (circle, no pin), description, practical info, owner card → Profil, report link. Sticky: payment note + "Send melding" → StartSamtale + "Gi tilbud". Gi tilbud [S]: amount (quick chips), message + templates + counter, day & time chips, forbehold → validation → preview → send → success → Chat. Footer becomes "Tilbud sendt" |
+| `Oppdragsdetaljer.dc.html` | ✅ Oppdragsdetaljer | Gallery (prev/next, counter, dots), save, share. "Åpent oppdrag" pill, budget, info grid, **approximate area** map (circle, no pin), description, practical info, owner card → Profil, report link. Sticky: payment note + "Send melding" → StartSamtale + "Gi tilbud". Gi tilbud [S]: amount (quick chips), message + templates + counter, day & time chips, forbehold → validation → preview → send → success → Chat. Footer becomes "Tilbud sendt" |
 | `StartSamtale.dc.html` | Ny samtale | Pinned task card (Kari, Klippe plen). Opener chips fill composer. Send → ticks → typing → reply → "Fortsett i samtalen" → Chat |
 
 ## 4 · Tilbud og avtaler (poster side)

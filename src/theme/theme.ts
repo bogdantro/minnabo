@@ -49,6 +49,16 @@ export const colors = {
   progressTrack: '#E1E5EA',// wizard progress / steps
   rangeTrack: '#DDE1E7',
   grabber: '#D6DAE1',
+  budgetBg: '#F2FBDF',     // Oppdragsdetaljer budget card
+  mapBg: '#E7EEE2',        // approximate-area map
+  mapWater: '#CFE6F3',
+  mapPark: '#D4E8C4',
+  areaFill: 'rgba(184,238,60,0.28)',
+  areaBorder: '#8FD12A',
+  galleryCap: 'rgba(10,23,64,0.62)', // gallery caption chip
+  glassLight: 'rgba(255,255,255,0.85)', // gallery counter / save
+  previewBorder: '#D5E9A8', // Gi tilbud preview card
+  previewBg: '#F7FCEB',
   starTint: '#FFF4D6',     // Varsler review icon
   muteIcon: '#46506A',     // Varsler withdrawn icon / annet
   unreadBg: '#F1F9FE',     // Varsler unread row
@@ -321,6 +331,7 @@ export const shadow = {
   unreadDot: sh('0 0 0 4px rgba(25,184,238,.16)'), // Varsler .udot
   whiteRing3: sh('0 0 0 3px rgba(255,255,255,.7)'), // pill on category art (ForMeg)
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
+  okRing: sh('0 20px 40px -16px rgba(40,170,120,.7)'), // Gi tilbud sent check
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleBothOn: sh('0 0 0 4px rgba(99,224,138,.2), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
