@@ -47,7 +47,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `SlettKonto.dc.html` | `/slett-konto` | `src/screens/DeleteAccountScreen.tsx` | exists | Backend: `supabase/functions/delete-account` |
 | `Sok.dc.html` | `/sok` | `src/screens/SearchScreen.tsx` | ✅ done | Oppdrag only (offer type filter removed). Multi-category, verified, distance and sort filter client-side on the scoped result |
 | `StartSamtale.dc.html` | `/chat/start?listing=` | `src/screens/StartChatScreen.tsx` | ✅ done | Conversation is created on the first message (opening the screen saves nothing); an existing conversation for the oppdrag redirects to `/chat/[id]`. The prototype's scripted typing/reply is not faked. Hidden for lack of data: "Svarer vanligvis innen …". |
-| `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` | exists | |
+| `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` + `src/components/TilbudSheets.tsx` | ✅ done | Recipient and sender views come from the real roles (no demo toggle). DECLINED is final in the state machine, so a decline is held for the toast's Angre window before it is sent; chosen reasons go to the chat. "Be om endring" topics go in the revision message. No "seen" timestamp or offer expiry in the API → those timeline rows are left out. |
 | `Tilstander.dc.html` | – (reference) | `src/components/ui/ScreenState.tsx`, `FallbackScreen.tsx`, `OfflineBanner.tsx` | partial | No NoAccess / Success states yet |
 | `TryggeKontakter.dc.html` | `/trygge-kontakter` | `src/screens/TrustedContactsScreen.tsx` | exists | |
 | `Ungdomskonto.dc.html` | `/ungdomskonto` | `src/screens/Onboarding/YouthAccountScreen.tsx` | ✅ done | Reached from the Vipps sheet ("Under 18 år?") |
@@ -136,7 +136,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | Design file | Screen | Must work |
 |---|---|---|
 | `MottatteTilbud.dc.html` | ✅ Mottatte tilbud | Segmented Alle / Nye / Besvart, grouped by own oppdrag, status pills, "Sammenlign" → Sammenlign, rows → TilbudDetaljer |
-| `TilbudDetaljer.dc.html` | Tilbudsdetaljer | Godta → [S] agreement summary + required checkbox → success (confetti) → Avtale / Chat. Avslå → [S] reasons → status + [T] Angre. Be om endring → [S]. "Vis som avsender" demo → Trekk tilbudet. *(Add youth-account marker when offer is from a youth.)* |
+| `TilbudDetaljer.dc.html` | ✅ Tilbudsdetaljer | Godta → [S] agreement summary + required checkbox → success (confetti) → Avtale / Chat. Avslå → [S] reasons → status + [T] Angre. Be om endring → [S]. "Vis som avsender" demo → Trekk tilbudet. *(Add youth-account marker when offer is from a youth.)* |
 | `Sammenlign.dc.html` | Sammenlign | Columns, animated price bars, "Lavest pris" / "Best vurdert", sort, select column → "Gå videre med …" |
 | `Avtale.dc.html` | Avtalesammendrag | Frozen agreement, stamp + timestamp, countdown, parties, timeline, Legg i kalender [T], Chat, Jobbdag, Avlys [D] |
 | `MineAvtaler.dc.html` | Mine avtaler | Kommende / Fullført, week strip with dots, role pills ("Du hjelper" / "Du får hjelp"), empty day |

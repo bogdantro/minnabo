@@ -34,13 +34,21 @@ test('Sammenlign shows every proposal on the listing, cheapest first', async () 
   expect(screen.getByText(/2.600.kr/)).toBeTruthy();
 });
 
-test('accepting a proposal creates an agreement shown on the avtale screen', async () => {
+test('Godta needs the acknowledgement, then creates an agreement and shows the success screen', async () => {
   await renderWithProviders(<TilbudDetaljScreen proposalId="p-gjerde-martin" />);
   await settle();
+  expect(await screen.findByText('Tilbud fra Martin')).toBeTruthy();
   await fireEvent.press(screen.getByText('Godta tilbud'));
-  await waitFor(() =>
-    expect(chatRepository.getProposal('p-gjerde-martin')?.status).toBe('ACCEPTED'),
-  );
+  expect(screen.getByText('Dette blir avtalegrunnlaget')).toBeTruthy();
+
+  await fireEvent.press(screen.getByLabelText('Bekreft og godta'));
+  expect(screen.getByText('Kryss av for å bekrefte før du godtar.')).toBeTruthy();
+  expect(chatRepository.getProposal('p-gjerde-martin')?.status).toBe('SENT');
+
+  await fireEvent.press(screen.getByRole('checkbox'));
+  await fireEvent.press(screen.getByLabelText('Bekreft og godta'));
+  await waitFor(() => expect(chatRepository.getProposal('p-gjerde-martin')?.status).toBe('ACCEPTED'));
+  await waitFor(() => expect(screen.getByText('Avtale inngått med Martin!')).toBeTruthy());
   expect(chatRepository.getAgreement('p-gjerde-martin')).toBeDefined();
 
   await renderWithProviders(<AvtaleSammendragScreen proposalId="p-gjerde-martin" />);
@@ -48,14 +56,33 @@ test('accepting a proposal creates an agreement shown on the avtale screen', asy
   expect(screen.getByText('Dere har en avtale')).toBeTruthy();
 });
 
-test('requesting a revision moves the proposal to REVISION_PENDING', async () => {
+test('Be om endring needs a topic, then moves the proposal to REVISION_PENDING', async () => {
   await renderWithProviders(<TilbudDetaljScreen proposalId="p-gjerde-emma" />);
   await settle();
   await fireEvent.press(screen.getByText('Be om endring'));
-  await waitFor(() => expect(screen.getByText(/Hva vil du ha endret/)).toBeTruthy());
-  await fireEvent.changeText(screen.getByLabelText('Hva vil du ha endret?'), 'Lavere pris takk');
   await fireEvent.press(screen.getByText('Send forespørsel'));
-  await waitFor(() =>
-    expect(chatRepository.getProposal('p-gjerde-emma')?.status).toBe('REVISION_PENDING'),
-  );
+  expect(screen.getByText('Velg hva endringen gjelder.')).toBeTruthy();
+
+  await fireEvent.press(screen.getByText('Pris'));
+  await fireEvent.changeText(screen.getByLabelText('Melding til Emma'), 'Lavere pris takk');
+  await fireEvent.press(screen.getByText('Send forespørsel'));
+  await waitFor(() => expect(chatRepository.getProposal('p-gjerde-emma')?.status).toBe('REVISION_PENDING'));
+});
+
+test('Avslå is held for "Angre" and only then sent', async () => {
+  jest.useFakeTimers();
+  try {
+    await renderWithProviders(<TilbudDetaljScreen proposalId="p-gjerde-andreas" />);
+    await jest.advanceTimersByTimeAsync(400);
+    await fireEvent.press(screen.getByText('Avslå'));
+    await fireEvent.press(screen.getByText('Prisen passer ikke'));
+    await fireEvent.press(screen.getByText('Avslå tilbudet'));
+    expect(screen.getByText('Du har avslått dette tilbudet')).toBeTruthy();
+    expect(chatRepository.getProposal('p-gjerde-andreas')?.status).toBe('SENT');
+
+    await jest.advanceTimersByTimeAsync(6000);
+    await waitFor(() => expect(chatRepository.getProposal('p-gjerde-andreas')?.status).toBe('DECLINED'));
+  } finally {
+    jest.useRealTimers();
+  }
 });
