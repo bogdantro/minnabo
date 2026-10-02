@@ -49,6 +49,11 @@ export const colors = {
   progressTrack: '#E1E5EA',// wizard progress / steps
   rangeTrack: '#DDE1E7',
   grabber: '#D6DAE1',
+  headBg: 'rgba(243,245,241,0.9)', // StartSamtale / Chat blurred header
+  openerBorder: '#BFE3F4',  // StartSamtale opener chips
+  halo: 'rgba(184,238,60,0.18)', // avatar halo
+  pulseCyan: 'rgba(25,184,238,0.45)',
+  onInk75: 'rgba(255,255,255,0.75)',
   budgetBg: '#F2FBDF',     // Oppdragsdetaljer budget card
   mapBg: '#E7EEE2',        // approximate-area map
   mapWater: '#CFE6F3',
@@ -331,6 +336,7 @@ export const shadow = {
   unreadDot: sh('0 0 0 4px rgba(25,184,238,.16)'), // Varsler .udot
   whiteRing3: sh('0 0 0 3px rgba(255,255,255,.7)'), // pill on category art (ForMeg)
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
+  sendOn: sh('0 10px 22px -10px rgba(8,101,158,.8)'), // composer send button
   okRing: sh('0 20px 40px -16px rgba(40,170,120,.7)'), // Gi tilbud sent check
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),

@@ -46,7 +46,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Sikkerhet.dc.html` | `/sikkerhet` | `src/screens/SafetyScreen.tsx` | exists | Blocked list is a separate route today (`/blokkerte` → `BlockedListScreen`); design has it inline |
 | `SlettKonto.dc.html` | `/slett-konto` | `src/screens/DeleteAccountScreen.tsx` | exists | Backend: `supabase/functions/delete-account` |
 | `Sok.dc.html` | `/sok` | `src/screens/SearchScreen.tsx` | ✅ done | Oppdrag only (offer type filter removed). Multi-category, verified, distance and sort filter client-side on the scoped result |
-| `StartSamtale.dc.html` | `/chat/start?listing=` | `app/chat/start.tsx` (inline, no screen) | partial | Today only a spinner that creates the conversation and redirects to `/chat/[id]` |
+| `StartSamtale.dc.html` | `/chat/start?listing=` | `src/screens/StartChatScreen.tsx` | ✅ done | Conversation is created on the first message (opening the screen saves nothing); an existing conversation for the oppdrag redirects to `/chat/[id]`. The prototype's scripted typing/reply is not faked. Hidden for lack of data: "Svarer vanligvis innen …". |
 | `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` | exists | |
 | `Tilstander.dc.html` | – (reference) | `src/components/ui/ScreenState.tsx`, `FallbackScreen.tsx`, `OfflineBanner.tsx` | partial | No NoAccess / Success states yet |
 | `TryggeKontakter.dc.html` | `/trygge-kontakter` | `src/screens/TrustedContactsScreen.tsx` | exists | |
@@ -129,7 +129,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | Design file | Screen | Must work |
 |---|---|---|
 | `Oppdragsdetaljer.dc.html` | ✅ Oppdragsdetaljer | Gallery (prev/next, counter, dots), save, share. "Åpent oppdrag" pill, budget, info grid, **approximate area** map (circle, no pin), description, practical info, owner card → Profil, report link. Sticky: payment note + "Send melding" → StartSamtale + "Gi tilbud". Gi tilbud [S]: amount (quick chips), message + templates + counter, day & time chips, forbehold → validation → preview → send → success → Chat. Footer becomes "Tilbud sendt" |
-| `StartSamtale.dc.html` | Ny samtale | Pinned task card (Kari, Klippe plen). Opener chips fill composer. Send → ticks → typing → reply → "Fortsett i samtalen" → Chat |
+| `StartSamtale.dc.html` | ✅ Ny samtale | Pinned task card (Kari, Klippe plen). Opener chips fill composer. Send → ticks → typing → reply → "Fortsett i samtalen" → Chat |
 
 ## 4 · Tilbud og avtaler (poster side)
 
