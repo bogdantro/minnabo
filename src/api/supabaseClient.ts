@@ -410,6 +410,15 @@ export class SupabaseApiClient implements ApiClient {
     return { proposal, agreement };
   }
 
+  async cancelAgreement(proposalId: string, reason?: string): Promise<Proposal> {
+    const { data, error } = await supabase.rpc('cancel_agreement', {
+      p_proposal_id: proposalId,
+      p_reason: reason ?? null,
+    });
+    if (error) fail(error.message);
+    return toProposal(data as unknown as ProposalRow);
+  }
+
   async getAgreement(proposalId: string): Promise<AgreementSnapshot | null> {
     const { data, error } = await supabase
       .from('agreement_snapshots')

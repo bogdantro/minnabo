@@ -108,6 +108,21 @@ export function useProposalsForListing(listingId: string) {
   });
 }
 
+export function useCancelAgreement(proposalId: string, conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reason?: string) => apiClient.cancelAgreement(proposalId, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chatKeys.proposal(proposalId) });
+      qc.invalidateQueries({ queryKey: ['agreement', 'proposal', proposalId] });
+      qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
+      qc.invalidateQueries({ queryKey: ['proposals'] });
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+      qc.invalidateQueries({ queryKey: ['agenda'] });
+    },
+  });
+}
+
 export function useAgreementByProposal(proposalId: string) {
   return useQuery({
     queryKey: ['agreement', 'proposal', proposalId] as const,

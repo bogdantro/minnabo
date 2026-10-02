@@ -2,7 +2,7 @@ import { canTransition, type ProposalEvent, type ProposalStatus } from '@/domain
 
 /**
  * Parity guard: the plpgsql `proposal_next()` in
- * supabase/migrations/0003_rpc_realtime.sql must allow exactly the same
+ * supabase/migrations/0026_cancel_agreement.sql (latest version) must allow exactly the same
  * transitions as the TS state machine. This is a hand-maintained mirror of
  * that function — update BOTH when the rules change.
  */
@@ -20,8 +20,10 @@ function sqlProposalNext(
     if (event === 'ACCEPT' && actor === 'RECIPIENT') return 'ACCEPTED';
     if (event === 'REQUEST_REVISION' && actor === 'RECIPIENT') return 'REVISION_PENDING';
   }
-  if (from === 'ACCEPTED' && event === 'REQUEST_REVISION' && actor === 'RECIPIENT')
-    return 'REVISION_PENDING';
+  if (from === 'ACCEPTED') {
+    if (event === 'REQUEST_REVISION' && actor === 'RECIPIENT') return 'REVISION_PENDING';
+    if (event === 'CANCEL') return 'CANCELLED';
+  }
   if (from === 'REVISION_PENDING') {
     if (event === 'SUBMIT_REVISION' && actor === 'PROPOSER') return 'SENT';
     if (event === 'CONFIRM_REVISION' && actor === 'PROPOSER') return 'ACCEPTED';
@@ -38,6 +40,7 @@ const STATUSES: ProposalStatus[] = [
   'DECLINED',
   'ACCEPTED',
   'REVISION_PENDING',
+  'CANCELLED',
 ];
 const EVENTS: ProposalEvent[] = [
   'SEND',
@@ -47,6 +50,7 @@ const EVENTS: ProposalEvent[] = [
   'REQUEST_REVISION',
   'SUBMIT_REVISION',
   'CONFIRM_REVISION',
+  'CANCEL',
 ];
 const ACTORS: Actor[] = ['PROPOSER', 'RECIPIENT'];
 

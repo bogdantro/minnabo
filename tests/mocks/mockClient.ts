@@ -170,6 +170,11 @@ export class MockApiClient implements ApiClient {
     return chatRepository.respondToProposal(proposalId, event, actor);
   }
 
+  async cancelAgreement(proposalId: string, reason?: string): Promise<Proposal> {
+    await delay(150);
+    return chatRepository.cancelAgreement(proposalId, reason);
+  }
+
   async getAgreement(proposalId: string): Promise<AgreementSnapshot | null> {
     await delay(120);
     return chatRepository.getAgreement(proposalId) ?? null;

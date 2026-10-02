@@ -65,7 +65,7 @@ test('Godta needs the acknowledgement, then creates an agreement and shows the s
 
   await renderWithProviders(<AvtaleSammendragScreen proposalId="p-gjerde-martin" />);
   await settle();
-  expect(screen.getByText('Dere har en avtale')).toBeTruthy();
+  expect(screen.getByText('Avtalen er klar')).toBeTruthy();
 });
 
 test('Be om endring needs a topic, then moves the proposal to REVISION_PENDING', async () => {

@@ -53,6 +53,7 @@ const TONE: Record<ProposalStatus, PillTone> = {
   DECLINED: 'danger',
   WITHDRAWN: 'neutral',
   DRAFT: 'neutral',
+  CANCELLED: 'danger',
 };
 const kr = (n: number) => formatPrice({ amountMinor: n * 100, currency: 'NOK' });
 const stamp = (iso: string) => `${shortDate(iso).replace(/^\S+ /, '')} kl. ${formatTime(iso)}`;

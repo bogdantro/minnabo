@@ -39,6 +39,7 @@ const TONE: Record<ProposalStatus, PillTone> = {
   DECLINED: 'danger',
   WITHDRAWN: 'neutral',
   DRAFT: 'neutral',
+  CANCELLED: 'danger',
 };
 const DONE_STATUSES = ['COMPLETED', 'REVIEWED'];
 

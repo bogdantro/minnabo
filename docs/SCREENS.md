@@ -10,7 +10,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | Design file | Route (`app/…`) | Screen component | Status | Notes |
 |---|---|---|---|---|
 | `Admin.dc.html` | `/admin` (`admin.tsx`) | `src/screens/AdminScreen.tsx` | exists | Behind `featureFlags.adminPanel` (off). DB role is `user` \| `admin` |
-| `Avtale.dc.html` | `/avtale/[id]` | `src/screens/AvtaleSammendragScreen.tsx` | exists | Also hosts the job-day workspace today (see Jobbdag) |
+| `Avtale.dc.html` | `/avtale/[id]` | `src/screens/AvtaleSammendragScreen.tsx` | ✅ done | Avlys = new `cancel_agreement` RPC (migration 0026, ACCEPTED → CANCELLED, reopens the oppdrag). Legg i kalender = expo-calendar, shown on iOS/Android when the agreed time contains a date. Job-day tools moved to `/jobbdag/[id]`. |
 | `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | exists | Behind `featureFlags.businessRegistration` (off) |
 | `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` | exists | |
 | `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | ✅ done | Partner logos are placeholders until partners deliver them; no member-avatar stack (no member data) |
@@ -19,7 +19,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | exists | |
 | `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | exists | Tab |
 | `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | exists | |
-| `Jobbdag.dc.html` | – | `src/components/JobWorkspaceSection.tsx` (inside Avtale) | partial | No own route; data via `useJobWorkspace` / `useUpdateJobWorkspace` |
+| `Jobbdag.dc.html` | `/jobbdag/[id]` | `src/screens/JobbdagScreen.tsx` (provisional) | partial | Own route now; still the old job-day tools in the new layout – full Jobbdag.dc.html redesign pending |
 | `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
 | `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | exists | |
 | `LeggUt.dc.html` | `/legg-ut` | `src/screens/LeggUt/LeggUtWizard.tsx` | ✅ done | Opens directly (rule 2); draft saved locally ("Lagre utkast"). **API gap:** "Hvem kan gi tilbud", "Maks avstand" and the private estimate have no columns for oppdrag – shown in the summary, not saved |
@@ -138,7 +138,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `MottatteTilbud.dc.html` | ✅ Mottatte tilbud | Segmented Alle / Nye / Besvart, grouped by own oppdrag, status pills, "Sammenlign" → Sammenlign, rows → TilbudDetaljer |
 | `TilbudDetaljer.dc.html` | ✅ Tilbudsdetaljer | Godta → [S] agreement summary + required checkbox → success (confetti) → Avtale / Chat. Avslå → [S] reasons → status + [T] Angre. Be om endring → [S]. "Vis som avsender" demo → Trekk tilbudet. *(Add youth-account marker when offer is from a youth.)* |
 | `Sammenlign.dc.html` | ✅ Sammenlign | Columns, animated price bars, "Lavest pris" / "Best vurdert", sort, select column → "Gå videre med …" |
-| `Avtale.dc.html` | Avtalesammendrag | Frozen agreement, stamp + timestamp, countdown, parties, timeline, Legg i kalender [T], Chat, Jobbdag, Avlys [D] |
+| `Avtale.dc.html` | ✅ Avtalesammendrag | Frozen agreement, stamp + timestamp, countdown, parties, timeline, Legg i kalender [T], Chat, Jobbdag, Avlys [D] |
 | `MineAvtaler.dc.html` | Mine avtaler | Kommende / Fullført, week strip with dots, role pills ("Du hjelper" / "Du får hjelp"), empty day |
 
 ## 5 · Innboks, chat, job day

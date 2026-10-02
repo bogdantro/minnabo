@@ -16,7 +16,9 @@ export type ProposalStatus =
   | 'WITHDRAWN'
   | 'DECLINED'
   | 'ACCEPTED'
-  | 'REVISION_PENDING';
+  | 'REVISION_PENDING'
+  /** an accepted agreement that one of the parties called off */
+  | 'CANCELLED';
 
 export type ProposalEvent =
   | 'SEND'
@@ -25,11 +27,13 @@ export type ProposalEvent =
   | 'ACCEPT'
   | 'REQUEST_REVISION'
   | 'SUBMIT_REVISION'
-  | 'CONFIRM_REVISION';
+  | 'CONFIRM_REVISION'
+  | 'CANCEL';
 
 export type Actor = 'PROPOSER' | 'RECIPIENT';
 
-type Rule = { to: ProposalStatus; actor: Actor };
+/** `ANY` = either party may trigger the event. */
+type Rule = { to: ProposalStatus; actor: Actor | 'ANY' };
 
 const TABLE: Record<ProposalStatus, Partial<Record<ProposalEvent, Rule>>> = {
   DRAFT: {
@@ -43,6 +47,8 @@ const TABLE: Record<ProposalStatus, Partial<Record<ProposalEvent, Rule>>> = {
   },
   ACCEPTED: {
     REQUEST_REVISION: { to: 'REVISION_PENDING', actor: 'RECIPIENT' },
+    // either party can call off an agreement (Avlys avtalen)
+    CANCEL: { to: 'CANCELLED', actor: 'ANY' },
   },
   REVISION_PENDING: {
     // proposer sends new terms -> back to the recipient for acceptance
@@ -54,6 +60,7 @@ const TABLE: Record<ProposalStatus, Partial<Record<ProposalEvent, Rule>>> = {
   },
   WITHDRAWN: {},
   DECLINED: {},
+  CANCELLED: {},
 };
 
 export const canTransition = (
@@ -62,7 +69,7 @@ export const canTransition = (
   actor: Actor,
 ): boolean => {
   const rule = TABLE[from][event];
-  return !!rule && rule.actor === actor;
+  return !!rule && (rule.actor === 'ANY' || rule.actor === actor);
 };
 
 export const transition = (
@@ -71,11 +78,11 @@ export const transition = (
   actor: Actor,
 ): ProposalStatus => {
   const rule = TABLE[from][event];
-  if (!rule || rule.actor !== actor) {
+  if (!rule || (rule.actor !== 'ANY' && rule.actor !== actor)) {
     throw new Error('Ugyldig endring av tilbudet.');
   }
   return rule.to;
 };
 
 export const isTerminal = (status: ProposalStatus): boolean =>
-  status === 'WITHDRAWN' || status === 'DECLINED';
+  status === 'WITHDRAWN' || status === 'DECLINED' || status === 'CANCELLED';

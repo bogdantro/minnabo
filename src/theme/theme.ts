@@ -58,6 +58,15 @@ export const colors = {
   footTint: '#FBFCFA',
   barMute: '#9AA3B5',      // Sammenlign price bars (not lowest)
   bestTint: '#FFF2D9', bestText: '#8A5200', // "Best vurdert" marker      // group card footer (Mottatte tilbud)
+  stampOkBorder: 'rgba(43,143,78,0.5)',  // Avtale "AVTALT" stamp
+  stampOkText: 'rgba(29,110,58,0.72)',
+  stampOkBg: 'rgba(227,245,232,0.35)',
+  stampOffBorder: 'rgba(194,48,41,0.55)', // Avtale "AVLYST" stamp
+  stampOffText: 'rgba(194,48,41,0.8)',
+  stampOffBg: 'rgba(253,235,233,0.45)',
+  edgeOff: '#D9DDE4',       // cancelled agreement edge
+  warnDark: '#7A4800',      // "Endringer må avtales" note text
+  dangerDark: '#8E2A24',    // cancelled banner sub text
   budgetBg: '#F2FBDF',     // Oppdragsdetaljer budget card
   mapBg: '#E7EEE2',        // approximate-area map
   mapWater: '#CFE6F3',

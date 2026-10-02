@@ -123,6 +123,8 @@ export type AgreementRow = {
   description: string;
   caveats: string | null;
   agreed_at: string;
+  cancelled_at?: string | null;
+  cancel_reason?: string | null;
 };
 
 export type ReviewRow = {
@@ -304,6 +306,8 @@ export function toAgreement(row: AgreementRow): AgreementSnapshot {
     description: row.description,
     caveats: row.caveats ?? undefined,
     agreedAt: row.agreed_at,
+    cancelledAt: row.cancelled_at ?? undefined,
+    cancelReason: row.cancel_reason ?? undefined,
   };
 }
 

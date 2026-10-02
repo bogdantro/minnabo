@@ -1,4 +1,4 @@
-import { transition, canTransition } from '@/domain/proposalMachine';
+import { transition, canTransition, isTerminal } from '@/domain/proposalMachine';
 
 test('proposer sends a draft', () => {
   expect(transition('DRAFT', 'SEND', 'PROPOSER')).toBe('SENT');
@@ -20,4 +20,11 @@ test('revision round trip', () => {
 
 test('cannot withdraw after acceptance', () => {
   expect(canTransition('ACCEPTED', 'WITHDRAW', 'PROPOSER')).toBe(false);
+});
+
+test('either party can cancel an accepted agreement, and CANCELLED is final', () => {
+  expect(transition('ACCEPTED', 'CANCEL', 'PROPOSER')).toBe('CANCELLED');
+  expect(transition('ACCEPTED', 'CANCEL', 'RECIPIENT')).toBe('CANCELLED');
+  expect(canTransition('SENT', 'CANCEL', 'RECIPIENT')).toBe(false);
+  expect(isTerminal('CANCELLED')).toBe(true);
 });

@@ -222,6 +222,9 @@ export type AgreementSnapshot = {
   description: string;
   caveats?: string;
   agreedAt: string;
+  /** set when one of the parties called the agreement off */
+  cancelledAt?: string;
+  cancelReason?: string;
 };
 
 export type ChecklistItem = { id: string; text: string; done: boolean };
@@ -339,7 +342,8 @@ export type NotificationKind =
   | 'AGREED_TIME'
   | 'COMPLETION_REQUESTED'
   | 'REVIEW_RECEIVED'
-  | 'MODERATION';
+  | 'MODERATION'
+  | 'AGREEMENT_CANCELLED';
 
 export type AppNotification = {
   id: string;

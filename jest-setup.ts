@@ -240,6 +240,15 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+jest.mock('expo-calendar', () => ({
+  EntityTypes: { EVENT: 'event' },
+  requestCalendarPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  getDefaultCalendarAsync: jest.fn().mockResolvedValue({ id: 'cal-1' }),
+  getCalendarsAsync: jest.fn().mockResolvedValue([{ id: 'cal-1', allowsModifications: true, isPrimary: true }]),
+  createEventAsync: jest.fn().mockResolvedValue('evt-1'),
+  deleteEventAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),

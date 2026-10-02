@@ -341,6 +341,33 @@ export const chatRepository = {
     return agreements.find((a) => convProposalIds.has(a.proposalId));
   },
 
+  cancelAgreement(proposalId: string, reason?: string): Proposal {
+    const existing = chatRepository.getProposal(proposalId);
+    if (!existing) throw new Error('Fant ikke tilbudet.');
+    const actor = existing.fromProfileId === CURRENT_USER_ID ? 'PROPOSER' : 'RECIPIENT';
+    const updated: Proposal = { ...existing, status: transition(existing.status, 'CANCEL', actor) };
+    proposals = proposals.map((p) => (p.id === proposalId ? updated : p));
+    const why = reason?.trim() || undefined;
+    agreements = agreements.map((a) =>
+      a.proposalId === proposalId ? { ...a, cancelledAt: new Date().toISOString(), cancelReason: why } : a,
+    );
+    const text = `Avtalen er avlyst${why ? ` · ${why}` : ''}`;
+    messages[updated.conversationId] = [
+      ...(messages[updated.conversationId] ?? []),
+      {
+        id: nextId('m'),
+        conversationId: updated.conversationId,
+        authorProfileId: 'system',
+        text,
+        kind: 'SYSTEM',
+        createdAt: new Date().toISOString(),
+        delivery: 'READ',
+      },
+    ];
+    touchConversation(updated.conversationId, text);
+    return updated;
+  },
+
   getAgreement(proposalId: string): AgreementSnapshot | undefined {
     return agreements.find((a) => a.proposalId === proposalId);
   },

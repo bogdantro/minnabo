@@ -43,6 +43,12 @@
           "backgroundColor": "#FFFFFF"
         }
       ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "MinNabo trenger tilgang til kalenderen for å legge inn avtalte jobber."
+        }
+      ],
       "expo-image",
       [
         "expo-image-picker",

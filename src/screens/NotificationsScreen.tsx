@@ -81,6 +81,7 @@ const KIND: Record<NotificationKind, { cat: Cat; icon: IconKey; tone: Tone }> =
     COMPLETION_REQUESTED: { cat: "deal", icon: "hourglass", tone: TONES.warn },
     REVIEW_RECEIVED: { cat: "other", icon: "star", tone: TONES.star },
     MODERATION: { cat: "other", icon: "shield", tone: TONES.ok },
+    AGREEMENT_CANCELLED: { cat: "deal", icon: "ban", tone: TONES.danger },
   };
 const kindOf = (k: NotificationKind) =>
   KIND[k] ?? { cat: "other" as const, icon: "bell" as const, tone: TONES.cyan };

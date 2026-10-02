@@ -128,6 +128,8 @@ export interface ApiClient {
     actor: Actor,
   ): Promise<RespondToProposalResult>;
   getAgreement(proposalId: string): Promise<AgreementSnapshot | null>;
+  /** Either party calls off an accepted agreement (ACCEPTED → CANCELLED). */
+  cancelAgreement(proposalId: string, reason?: string): Promise<Proposal>;
   getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null>;
   listMyAgreements(): Promise<AgendaItem[]>;
   instantBook(listingId: string): Promise<{ proposalId: string }>;
