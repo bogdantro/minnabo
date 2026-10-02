@@ -24,6 +24,8 @@ export type SheetProps = {
   subtitle?: string;
   /** Use a scroll container (long lists). */
   scroll?: boolean;
+  /** Extra element left of the close button (e.g. "Nullstill"). */
+  headerAction?: ReactNode;
   /** Hide the close button (e.g. a flow that must be finished). */
   hideClose?: boolean;
   /** Tap on scrim / swipe down closes (default true). */
@@ -50,6 +52,7 @@ export function Sheet({
   titleSize = 'h3',
   subtitle,
   scroll = false,
+  headerAction,
   hideClose = false,
   dismissible = true,
   heightRatio,
@@ -130,6 +133,7 @@ export function Sheet({
               </Text>
               {subtitle ? <Text style={[text.meta, styles.sub]}>{subtitle}</Text> : null}
             </View>
+            {headerAction}
             {!hideClose ? (
               <IconButton icon="x" iconSize={18} accessibilityLabel="Lukk" onPress={() => ref.current?.dismiss()} />
             ) : null}

@@ -6,7 +6,7 @@ import { CategoryArt } from './CategoryArt';
 import { Icon, type IconName } from './Icon';
 import { Pill } from './Pill';
 import { PressableScale } from './PressableScale';
-import { Stars } from './Badges';
+import { Stars, VerifiedIcon } from './Badges';
 
 export type ListingCardProps = {
   title: string;
@@ -14,6 +14,8 @@ export type ListingCardProps = {
   photoUri?: string | null;
   ownerName?: string;
   ownerRating?: number | null;
+  /** Small green "Verifisert" mark after the owner (search results). */
+  verified?: boolean;
   /** Approximate area only, e.g. "Nordre Ål · 1,2 km". Never an address. */
   place?: string;
   /** e.g. "Lør 3. okt · ca. 2 t" */
@@ -86,6 +88,7 @@ export function ListingCard({
   photoUri,
   ownerName,
   ownerRating,
+  verified,
   place,
   schedule,
   priceLabel,
@@ -134,6 +137,12 @@ export function ListingCard({
                 {ownerName}
               </Text>
               {ownerRating != null ? <Stars rating={ownerRating} /> : null}
+              {verified ? (
+                <View style={styles.vmini}>
+                  <VerifiedIcon size={14} />
+                  <Text style={[text.verified, { fontSize: 12, color: colors.verified }]}>Verifisert</Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
           {place ? <Meta icon="pin">{place}</Meta> : null}
@@ -192,4 +201,5 @@ const styles = StyleSheet.create({
   },
   saveOn: { backgroundColor: colors.savedBg },
   saveAbs: { position: 'absolute', top: 10, right: 10 },
+  vmini: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 });

@@ -2,45 +2,41 @@ import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { SearchScreen } from '@/screens/SearchScreen';
 import { renderWithProviders } from '../testUtils';
 
+const PH = 'Søk etter plen, flytting, datahjelp …';
+
 test('shows an empty state for a query with no matches', async () => {
   await renderWithProviders(<SearchScreen />);
-  fireEvent.changeText(screen.getByPlaceholderText('Søk etter småjobber'), 'xyzzy');
-  await waitFor(() => expect(screen.getByText(/Fant ingen treff/)).toBeTruthy());
+  fireEvent.changeText(screen.getByPlaceholderText(PH), 'xyzzy');
+  await waitFor(() => expect(screen.getByText('Ingen treff på «xyzzy»')).toBeTruthy());
+  expect(screen.getByText('Legg ut et oppdrag')).toBeTruthy();
 });
 
-test('typing a query shows matches of both listing types', async () => {
+test('typing a query shows matching oppdrag only (no service offers)', async () => {
   await renderWithProviders(<SearchScreen />);
-  fireEvent.changeText(screen.getByPlaceholderText('Søk etter småjobber'), 'plen');
-  await waitFor(() => {
-    expect(screen.getByText('Klippe plen')).toBeTruthy();
-    expect(screen.getByText('Jeg kan klippe plenen din')).toBeTruthy();
-  });
+  fireEvent.changeText(screen.getByPlaceholderText(PH), 'plen');
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  expect(screen.queryByText('Jeg kan klippe plenen din')).toBeNull();
 });
 
 test('results are scoped to the user kommune (Lillehammer)', async () => {
   await renderWithProviders(<SearchScreen />);
-  fireEvent.changeText(screen.getByPlaceholderText('Søk etter småjobber'), 'rengjøring');
-  // "Fast eller enkeltvis rengjøring" is a Ringsaker offer — out of kommune
-  await waitFor(() => expect(screen.getByText(/Fant ingen treff/)).toBeTruthy());
-  expect(screen.queryByText('Fast eller enkeltvis rengjøring')).toBeNull();
+  fireEvent.changeText(screen.getByPlaceholderText(PH), 'vaskehjelp');
+  // "Vaskehjelp før visning" is in Øyer – outside the kommune
+  await waitFor(() => expect(screen.getByText(/Ingen treff på/)).toBeTruthy());
 });
 
-test('an initialCategory (from a homepage category tap) pre-filters straight to results', async () => {
+test('an initialCategory pre-filters and shows as an active filter chip', async () => {
   await renderWithProviders(<SearchScreen initialCategory="hage" />);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Hage' })).toBeTruthy());
-  expect(screen.getByRole('button', { name: 'Hage' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.getByLabelText('Fjern filter Hage')).toBeTruthy();
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
   expect(screen.queryByText('Hjelp med flytting')).toBeNull();
+  await fireEvent.press(screen.getByLabelText('Fjern filter Hage'));
+  await waitFor(() => expect(screen.getByText('Hjelp med flytting')).toBeTruthy());
 });
 
-test('the type toggle narrows results to offers', async () => {
-  await renderWithProviders(<SearchScreen initialQuery="plen" />);
+test('recent and popular searches show when the field is empty', async () => {
+  await renderWithProviders(<SearchScreen />);
+  expect(await screen.findByText('Populært i Lillehammer')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Plen'));
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
-
-  await fireEvent.press(screen.getByRole('button', { name: 'Tilbyr hjelp' }));
-
-  await waitFor(() => {
-    expect(screen.getByText('Jeg kan klippe plenen din')).toBeTruthy();
-    expect(screen.queryByText('Klippe plen')).toBeNull();
-  });
 });

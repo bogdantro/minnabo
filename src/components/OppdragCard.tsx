@@ -38,6 +38,8 @@ export type OppdragCardProps = {
   listing: Listing;
   onPress?: () => void;
   statusBadge?: ListingCardProps['statusBadge'];
+  /** Show "Verifisert" when the owner has a verification (Søk). */
+  showVerified?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -46,7 +48,7 @@ export type OppdragCardProps = {
  * An oppdrag as a `.lcard`: real listing data, save heart with
  * "Lagret i Lagrede · Angre" toast. Tapping opens Oppdragsdetaljer.
  */
-export function OppdragCard({ listing, onPress, statusBadge, style, testID }: OppdragCardProps) {
+export function OppdragCard({ listing, onPress, statusBadge, showVerified, style, testID }: OppdragCardProps) {
   const [saved, toggle] = useIsSaved(listing.id);
   const price = listingPrice(listing);
 
@@ -68,6 +70,7 @@ export function OppdragCard({ listing, onPress, statusBadge, style, testID }: Op
       photoUri={listing.images[0]?.url}
       ownerName={listing.owner.displayName}
       ownerRating={listing.owner.rating?.count ? listing.owner.rating.average : null}
+      verified={showVerified && listing.owner.verifications.some((v) => v.verified)}
       place={listingPlace(listing)}
       schedule={listingSchedule(listing)}
       priceLabel={price.label}

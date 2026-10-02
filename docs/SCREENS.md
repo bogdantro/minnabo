@@ -45,7 +45,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `SeAlle.dc.html` | `/oppdrag-liste` | `src/screens/ListingListScreen.tsx` (`type="TASK_REQUEST"`) | exists | |
 | `Sikkerhet.dc.html` | `/sikkerhet` | `src/screens/SafetyScreen.tsx` | exists | Blocked list is a separate route today (`/blokkerte` → `BlockedListScreen`); design has it inline |
 | `SlettKonto.dc.html` | `/slett-konto` | `src/screens/DeleteAccountScreen.tsx` | exists | Backend: `supabase/functions/delete-account` |
-| `Sok.dc.html` | `/sok` | `src/screens/SearchScreen.tsx` | exists | Has a Trenger/Tilbyr type filter (`SERVICE_OFFER`) – remove (rule 1) |
+| `Sok.dc.html` | `/sok` | `src/screens/SearchScreen.tsx` | ✅ done | Oppdrag only (offer type filter removed). Multi-category, verified, distance and sort filter client-side on the scoped result |
 | `StartSamtale.dc.html` | `/chat/start?listing=` | `app/chat/start.tsx` (inline, no screen) | partial | Today only a spinner that creates the conversation and redirects to `/chat/[id]` |
 | `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` | exists | |
 | `Tilstander.dc.html` | – (reference) | `src/components/ui/ScreenState.tsx`, `FallbackScreen.tsx`, `OfflineBanner.tsx` | partial | No NoAccess / Success states yet |
@@ -119,7 +119,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 |---|---|---|
 | `Oppdrag.dc.html` | ✅ Oppdrag (home, default route) | "Hei, Mari" + h1. Location row → [S] GPS "Bruk posisjonen min" (spinner → found), kommune radio list, reach segmented (Min kommune / Nabokommuner / Innlandet) with animated rings → "Vis oppdrag" [T]. Search bar → Sok. Category chips filter the list. "Folk som trenger hjelp" 6 cards, save heart [T] + Angre, empty state "Ingen oppdrag i {kommune} akkurat nå. Prøv å utvide rekkevidden." "Se alle oppdrag" → SeAlle. "Oppdrag for meg" card → ForMeg. Payment note footer. **No "Folk som tilbyr hjelp" section.** |
 | `Meny.dc.html` | ✅ Meny sheet | Opens from tab bar over dimmed home. User header → Profil. Utforsk tiles, sections Mitt / Tillit og trygghet / Innstillinger (rows with badges), Logg ut [D] |
-| `Sok.dc.html` | Søk | Live search, clear. Filtre [S]: categories (multi), kun verifiserte, distance slider, sort. Active filter chips removable. Recent + popular searches when empty. "Lagre søk" [T]. Empty state |
+| `Sok.dc.html` | ✅ Søk | Live search, clear. Filtre [S]: categories (multi), kun verifiserte, distance slider, sort. Active filter chips removable. Recent + popular searches when empty. "Lagre søk" [T]. Empty state |
 | `SeAlle.dc.html` | Se alle | Sort menu (Nærmest / Nyeste / Pris), category chips, count, skeleton on reload |
 | `ForMeg.dc.html` | Oppdrag for meg | Card stack: "Ikke aktuelt" flies card left, save, "Se og gi tilbud" → Oppdragsdetaljer, Angre, counter, stack/list toggle, finished state |
 | `Varsler.dc.html` | Varsler | Filter chips with counts, grouped I dag / I går / Tidligere, unread tint + dot, every row deep-links, "Merk alle som lest" [T], empty state |
