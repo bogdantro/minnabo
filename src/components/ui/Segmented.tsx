@@ -11,11 +11,13 @@ export type SegmentedProps<T extends string> = {
   value: T;
   onChange: (v: T) => void;
   accessibilityLabel?: string;
+  /** badge = red count bubble (default); inline = "Alle 6" with a faded number (Mottatte tilbud). */
+  countStyle?: 'badge' | 'inline';
   style?: StyleProp<ViewStyle>;
 };
 
 /** `.seg` – grey pill track; active item white with a small shadow. */
-export function Segmented<T extends string>({ options, value, onChange, accessibilityLabel, style }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange, accessibilityLabel, countStyle = 'badge', style }: SegmentedProps<T>) {
   return (
     <View style={[styles.seg, style]} accessibilityRole="tablist" accessibilityLabel={accessibilityLabel}>
       {options.map((o) => {
@@ -31,8 +33,9 @@ export function Segmented<T extends string>({ options, value, onChange, accessib
           >
             <Text style={[text.segment, { color: on ? colors.ink : colors.ink2 }]} numberOfLines={1}>
               {o.label}
+              {countStyle === 'inline' && o.count != null ? <Text style={styles.inlineCount}>{` ${o.count}`}</Text> : null}
             </Text>
-            {o.count ? <CountBadge count={o.count} style={styles.segCount} /> : null}
+            {countStyle === 'badge' && o.count ? <CountBadge count={o.count} style={styles.segCount} /> : null}
           </Pressable>
         );
       })}
@@ -87,6 +90,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, inset = true, st
 }
 
 const styles = StyleSheet.create({
+  inlineCount: { opacity: 0.6 },
   seg: {
     flexDirection: 'row',
     backgroundColor: colors.track,

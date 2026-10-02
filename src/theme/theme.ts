@@ -54,6 +54,8 @@ export const colors = {
   halo: 'rgba(184,238,60,0.18)', // avatar halo
   pulseCyan: 'rgba(25,184,238,0.45)',
   onInk75: 'rgba(255,255,255,0.75)',
+  onInk08: 'rgba(255,255,255,0.08)', // Mottatte tilbud mini stats
+  footTint: '#FBFCFA',      // group card footer (Mottatte tilbud)
   budgetBg: '#F2FBDF',     // Oppdragsdetaljer budget card
   mapBg: '#E7EEE2',        // approximate-area map
   mapWater: '#CFE6F3',

@@ -8,12 +8,22 @@ import { renderWithProviders } from '../testUtils';
 
 const settle = () => new Promise((r) => setTimeout(r, 400));
 
-test('Mottatte tilbud groups proposals by listing and marks the cheapest', async () => {
+test('Mottatte tilbud groups proposals by oppdrag with a summary and status pills', async () => {
   await renderWithProviders(<MottatteTilbudScreen />);
   await settle();
   expect(screen.getAllByText('Mottatte tilbud').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Male gjerdet').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('Lavest pris').length).toBeGreaterThan(0);
+  expect(screen.getByText('totalt')).toBeTruthy();
+  expect(screen.getAllByText('Ny').length).toBeGreaterThan(0);
+  expect(screen.getByText('Sammenlign')).toBeTruthy();
+  expect(screen.getByText(/MinNabo håndterer ikke betaling/)).toBeTruthy();
+});
+
+test('Mottatte tilbud: "Besvart" filters to answered offers and shows the empty state', async () => {
+  await renderWithProviders(<MottatteTilbudScreen />);
+  await settle();
+  await fireEvent.press(screen.getByRole('tab', { name: /^Besvart/ }));
+  expect(screen.queryAllByText('Ny')).toHaveLength(0);
 });
 
 test('Sammenlign shows every proposal on the listing, cheapest first', async () => {

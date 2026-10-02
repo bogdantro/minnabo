@@ -446,6 +446,38 @@ const nb = {
     own: 'Dette er ditt oppdrag.',
     receivedOffers: 'Se mottatte tilbud',
   },
+  mottatte: {
+    title: 'Mottatte tilbud',
+    info: 'Slik fungerer tilbud',
+    sinceYesterday: 'Nytt siden i går',
+    headline: (n: number, m: number) =>
+      n === 0
+        ? 'Ingen nye tilbud'
+        : `${n} ${n === 1 ? 'nytt tilbud' : 'nye tilbud'} på ${m} ${m === 1 ? 'oppføring' : 'oppføringer'}`,
+    total: 'totalt',
+    pendingChange: 'venter på endring',
+    agreed: 'avtale inngått',
+    filterLabel: 'Filtrer tilbud',
+    segs: { alle: 'Alle', nye: 'Nye', besvart: 'Besvart' },
+    needHelp: 'Trenger hjelp',
+    done: 'Fullført',
+    groupMeta: (n: number) => `${n} tilbud`,
+    status: { SENT: 'Ny', REVISION_PENDING: 'Endring forespurt', ACCEPTED: 'Godtatt', DECLINED: 'Avslått', WITHDRAWN: 'Trukket', DRAFT: 'Utkast' },
+    sent: (date: string, time: string) => `Sendt ${date} kl. ${time}`,
+    compare: 'Sammenlign',
+    budget: 'Ditt budsjett ca.',
+    emptyNew: 'Ingen nye tilbud',
+    emptyAnswered: 'Ingen besvarte tilbud ennå',
+    emptyAll: 'Ingen tilbud ennå',
+    emptySub: 'Vi sier fra med en gang noen sender deg et tilbud.',
+    showAll: 'Vis alle tilbud',
+    steps: [
+      { t: 'Sammenlign i ro og mak', d: 'Se pris, tidspunkt, vurderinger og forbehold side om side.' },
+      { t: 'Godta, avslå eller be om endring', d: 'Når du godtar ett tilbud, får de andre beskjed automatisk.' },
+      { t: 'Avtal detaljene i chatten', d: 'Adressen deler du først når dere har en avtale.' },
+    ],
+    gotIt: 'Skjønner',
+  },
   startChat: {
     title: 'Ny samtale',
     safety: 'Sikkerhetstips',
