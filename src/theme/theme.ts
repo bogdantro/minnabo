@@ -98,6 +98,14 @@ export const colors = {
   onInk14: 'rgba(255,255,255,0.14)',
   lavender: '#46379E',     // avatar d / Innboks + Personvern icon tiles
   lavenderTint: '#E8E3FB',
+  // Vipps login sheet (LoggInn.dc.html)
+  vippsTint: '#FFF1EB',
+  vippsDeep: '#B53A0F',
+  vippsRing: 'rgba(255,91,36,0.14)',
+  vippsTrack: 'rgba(255,91,36,0.16)',
+  // youth account (Ungdomskonto / OppdragUng)
+  onInk82: 'rgba(255,255,255,0.82)',
+  infoBorder: '#B6DFF2',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */
@@ -289,6 +297,11 @@ export const shadow = {
   photoRing: sh('0 0 0 4px #fff, 0 0 0 6px #19B8EE, 0 18px 36px -14px rgba(10,23,64,.4)'),
   radarDot: sh('0 0 0 4px rgba(184,238,60,.3)'),
   stepCurrent: sh('0 0 0 5px rgba(10,23,64,.1)'),
+  okBadge: sh('0 0 0 10px #E3F5E8, 0 18px 36px -12px rgba(43,143,78,.6)'),
+  loginLogo: sh('0 26px 50px -20px rgba(10,23,64,.35), 0 0 0 1px rgba(10,23,64,.04)'),
+  phoneMock: sh('0 20px 34px -14px rgba(10,23,64,.5)'),
+  youthAvatar: sh('0 0 0 3px #0A1740, 0 0 0 5px #B8EE3C'),
+  limeRing10: sh('0 0 0 10px #EDF8D6'),
   logoTile: sh('0 30px 60px -20px rgba(10,23,64,.35)'),
   none: { boxShadow: 'none' } as ViewStyle,
 } as const;

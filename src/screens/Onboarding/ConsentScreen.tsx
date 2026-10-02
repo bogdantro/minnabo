@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useSession } from '@/auth/session';
+import { useVippsIdentity, type VippsIdentity } from '@/auth/mockVipps';
 import { colors, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Avatar,
@@ -40,14 +42,6 @@ const CONSENTS: ConsentDef[] = [
   { id: 'tips', required: false },
 ];
 const REQUIRED = CONSENTS.filter((c) => c.required).map((c) => c.id);
-
-/**
- * Identity from Vipps (name, masked phone, birth year). Login is still e-mail
- * based, so there is none yet: the card and the "Bekreftet via Vipps" badge
- * stay hidden until Vipps login provides it.
- */
-type VippsIdentity = { name: string; initials: string; phoneMasked: string; birthYear: number };
-const vippsIdentity: VippsIdentity | null = null;
 
 const ease = Easing.bezier(...motion.ease);
 const clock = () =>
@@ -101,6 +95,9 @@ function Chevron({ open }: { open: boolean }) {
 export function ConsentScreen() {
   const router = useRouter();
   const me = useCurrentUser();
+  const { session } = useSession();
+  // Identity from Vipps (mock login for now): name, masked phone, birth year.
+  const vippsIdentity = useVippsIdentity();
   const [on, setOn] = useState<Record<ConsentId, boolean>>({
     terms: false,
     privacy: false,
@@ -142,7 +139,8 @@ export function ConsentScreen() {
     if (!ready) return;
     setBusy(true);
     try {
-      const { data } = await supabase.auth.getUser();
+      // Mock Vipps login has no account yet – nothing to store, just continue.
+      const { data } = session ? await supabase.auth.getUser() : { data: { user: null } };
       if (data.user) {
         const row = { profile_id: data.user.id, terms: on.terms, privacy: on.privacy, age: on.age };
         let { error } = await supabase.from('consent_records').insert({ ...row, tips: on.tips });

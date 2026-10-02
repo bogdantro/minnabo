@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useSession } from '@/auth/session';
 import { useProfile } from '@/api/queries';
+import { useVippsIdentity } from '@/auth/mockVipps';
 
 export type CurrentUser = {
   /** empty string while the session is still loading */
@@ -13,6 +14,8 @@ export type CurrentUser = {
   onboardedAt?: string;
   isAdmin: boolean;
   isLoading: boolean;
+  /** under-18 youth account (from the Vipps age) */
+  isYouth: boolean;
 };
 
 /**
@@ -23,17 +26,19 @@ export type CurrentUser = {
 export function useCurrentUser(): CurrentUser {
   const { userId, status } = useSession();
   const { data, isLoading } = useProfile(userId ?? '');
+  const vipps = useVippsIdentity();
 
   return useMemo(
     () => ({
       id: userId ?? '',
-      displayName: data?.displayName ?? '',
-      initials: data?.initials ?? 'N',
+      displayName: data?.displayName || vipps?.name || '',
+      initials: data?.initials || vipps?.initials || 'N',
       avatarUrl: data?.avatarUrl,
       place: data?.location.place,
       municipality: data?.location.municipality,
       onboardedAt: data?.onboardedAt,
       isAdmin: data?.role === 'admin',
+      isYouth: !!vipps?.youth,
       isLoading: status === 'loading' || (!!userId && isLoading),
     }),
     [
@@ -47,6 +52,7 @@ export function useCurrentUser(): CurrentUser {
       data?.location.municipality,
       data?.onboardedAt,
       data?.role,
+      vipps,
     ],
   );
 }

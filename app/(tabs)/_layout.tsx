@@ -16,6 +16,10 @@ export default function TabsLayout() {
   if (status === 'anon') {
     return <Redirect href="/velkommen" />;
   }
+  // Youth accounts (under 18) only get the youth app – never the adult tabs.
+  if (me.isYouth) {
+    return <Redirect href="/ung" />;
+  }
   // Signed in but onboarding not finished yet.
   if (!me.isLoading && me.id && !me.onboardedAt) {
     return <Redirect href="/oppsett" />;

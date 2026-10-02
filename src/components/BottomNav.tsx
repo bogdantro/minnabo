@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -23,7 +23,8 @@ const RIGHT: Slot[] = [{ target: 'innboks', label: nb.tabs.innboks, icon: 'msg' 
 /** Total height the floating bar covers, for screens that pad their scroll content. */
 export const NAV_OCCUPIED = sizes.navHeight + sizes.navBottom;
 
-function NavItem({
+/** One tab in the floating bar: icon in a 48×32 pill + label (). */
+export function NavItem({
   label,
   icon,
   active,
@@ -84,6 +85,24 @@ function PostButton({ onPress }: { onPress: () => void }) {
   );
 }
 
+/** The floating, blurred `.nav` frame. Children are the tab items. */
+export function NavFrame({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      accessibilityRole="tablist"
+      accessibilityLabel="Hovedmeny"
+      style={[styles.nav, shadow.nav, { bottom: sizes.navBottom + insets.bottom }]}
+    >
+      <View style={styles.bg} pointerEvents="none">
+        <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, styles.bgTint]} />
+      </View>
+      {children}
+    </View>
+  );
+}
+
 /**
  * `.nav` – floating tab bar: Oppdrag · Fellesskap · (Legg ut) · Innboks · Meny.
  * Rendered by the router-driven `TabBar` and by `StaticBottomNav`.
@@ -97,7 +116,6 @@ export function BottomNav({
   onNavigate: (target: NavTarget) => void;
   onLeggUt: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
   const unreadInbox = useUnreadConversationCount();
 
@@ -114,20 +132,12 @@ export function BottomNav({
 
   return (
     <>
-      <View
-        accessibilityRole="tablist"
-        accessibilityLabel="Hovedmeny"
-        style={[styles.nav, shadow.nav, { bottom: sizes.navBottom + insets.bottom }]}
-      >
-        <View style={styles.bg} pointerEvents="none">
-          <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, styles.bgTint]} />
-        </View>
+      <NavFrame>
         {LEFT.map(slot)}
         <PostButton onPress={onLeggUt} />
         {RIGHT.map(slot)}
         <NavItem label={nb.tabs.meny} icon="menu" active={false} onPress={() => setMenuOpen(true)} />
-      </View>
+      </NavFrame>
 
       <MenySheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
     </>

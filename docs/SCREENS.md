@@ -23,7 +23,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
 | `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | exists | |
 | `LeggUt.dc.html` | `/legg-ut/trenger-jobb` | `src/screens/LeggUt/TaskRequestForm.tsx` | partial | `/legg-ut` is `LeggUt/IntroScreen.tsx`, an intro step before the form – the FAB must go straight into the wizard (rule 2). Form is not the 9-step wizard yet |
-| `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | partial | Today: Supabase **e-mail OTP**. Must become Vipps-only (rule 3) – needs backend (Vipps OIDC) |
+| `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | ✅ done (mock) | Vipps sheet is MOCKED (`src/auth/mockVipps.ts`, sample identities, nothing saved). Real Vipps OIDC still to do |
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
 | `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. **Open:** "Tilgjengelig for småjobber" toggle needs a backend field (not `paused`/feriemodus). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag, Admin row for admins only |
 | `MineAvtaler.dc.html` | `/avtaler` | `src/screens/AgendaScreen.tsx` | exists | |
@@ -31,7 +31,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `MottatteTilbud.dc.html` | `/tilbud` | `src/screens/MottatteTilbudScreen.tsx` | exists | |
 | `Nabolag.dc.html` | `/nabolag` | `src/screens/NeighbourhoodScreen.tsx` | exists | |
 | `Oppdrag.dc.html` | `/(tabs)/index` (home) | `src/screens/OppdragScreen.tsx` | ✅ done | Default route. Kommune list in the sheet has no "184 aktive" counts (no API data). "Hele Innlandet" = all kommuner (`expandKommuner` reach 2). "N nye" = open oppdrag in reach from the last 48 h |
-| `OppdragUng.dc.html` | – | – | **missing** | Youth shell (4 tabs, no Legg ut). No youth role in backend yet (`profiles.role` is `user` \| `admin`) |
+| `OppdragUng.dc.html` | `/ung` | `src/screens/youth/YouthAppScreen.tsx` | ✅ done (mock) | Real oppdrag; offers/chats are local only until youth roles exist on the backend. Youth users are redirected here from the tabs |
 | `Oppdragsdetaljer.dc.html` | `/oppdrag/[id]` | `src/screens/TaskDetailScreen.tsx` | exists | Route also renders `ServiceOfferDetailScreen` for `SERVICE_OFFER` (remove, rule 1). Gi tilbud is a sheet in the design; today it is `/tilbud/ny` → `SendProposalScreen` |
 | `Oppsett.dc.html` | `/oppsett` | `src/screens/Onboarding/SetupScreen.tsx` | ✅ done | Signed-in users without `onboardedAt` are redirected here. "Fullt navn · Fra Vipps" field + name chips need Vipps data. Area chips: Lillehammer only (`KOMMUNE_AREAS`) |
 | `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | exists | |
@@ -50,7 +50,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` | exists | |
 | `Tilstander.dc.html` | – (reference) | `src/components/ui/ScreenState.tsx`, `FallbackScreen.tsx`, `OfflineBanner.tsx` | partial | No NoAccess / Success states yet |
 | `TryggeKontakter.dc.html` | `/trygge-kontakter` | `src/screens/TrustedContactsScreen.tsx` | exists | |
-| `Ungdomskonto.dc.html` | – | – | **missing** | Needs age from Vipps + youth role/permissions on backend |
+| `Ungdomskonto.dc.html` | `/ungdomskonto` | `src/screens/Onboarding/YouthAccountScreen.tsx` | ✅ done | Reached from the Vipps sheet ("Under 18 år?") |
 | `Varsler.dc.html` | `/varsler` | `src/screens/NotificationsScreen.tsx` | exists | |
 | `Varslinger.dc.html` | `/varslinger` | `src/screens/NotificationPrefsScreen.tsx` | exists | |
 | `Verifisering.dc.html` | `/verifisering` | `src/screens/VerifiseringssenterScreen.tsx` | exists | |
@@ -96,7 +96,7 @@ Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
 | Design file | Screen | Must work |
 |---|---|---|
 | `Main.dc.html` | ✅ Velkommen | Centred logo at top (no "Logg inn" button). 3 slides auto-advance every 4.2 s, dots tappable, text animates in per slide. "Kom i gang" → LoggInn |
-| `LoggInn.dc.html` | Logg inn | **Vipps only** – no phone, e-mail or BankID. "Fortsett med Vipps" → sheet: Åpner Vipps (spinner) → Bekreft i Vipps-appen (pulse) → Identitet bekreftet (drawn check, name / fødselsår / telefon) → Samtykke. Under 18 → Ungdomskonto. Note: "Vipps brukes kun til innlogging – aldri til betaling." |
+| `LoggInn.dc.html` | ✅ Logg inn (mock Vipps) | **Vipps only** – no phone, e-mail or BankID. "Fortsett med Vipps" → sheet: Åpner Vipps (spinner) → Bekreft i Vipps-appen (pulse) → Identitet bekreftet (drawn check, name / fødselsår / telefon) → Samtykke. Under 18 → Ungdomskonto. Note: "Vipps brukes kun til innlogging – aldri til betaling." |
 | `Samtykke.dc.html` | ✅ Samtykker | Verified identity card. Required checkboxes (vilkår, personvern, alder bekreftet) + optional tips. "Godta alle". Continue disabled until required done. Expandable explanations. Consents stored with timestamp |
 | `Oppsett.dc.html` | ✅ Oppsett | 3-step wizard with progress: navn (prefilled from Vipps, photo optional) → formål (3 option cards) → kommune (GPS detect with radar animation, or searchable list, optional område). Celebration with confetti → Oppdrag |
 
@@ -104,8 +104,8 @@ Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
 
 | Design file | Screen | Must work |
 |---|---|---|
-| `Ungdomskonto.dc.html` | Opprett ungdomskonto | Shown when Vipps age < 18. "Dette kan du" / "Låst til du fyller 18" lists, info that posters see it's a youth account, 3 required checkboxes → OppdragUng |
-| `OppdragUng.dc.html` | Youth app shell | 4 tabs only: Oppdrag · Mine tilbud (badge = pending) · Innboks · Profil. **No Legg ut button.** Task card → [S] detail → Gi tilbud form (amount, day, message, validation) → sending → success. Card shows "Tilbud sendt" afterwards. Mine tilbud: statuses (Sendt / Venter / Godtatt / Trukket), withdraw pending. Innboks: only conversations created by an offer. Profil: locked rows → [S] "… er ikke tilgjengelig" |
+| `Ungdomskonto.dc.html` | ✅ Opprett ungdomskonto | Shown when Vipps age < 18. "Dette kan du" / "Låst til du fyller 18" lists, info that posters see it's a youth account, 3 required checkboxes → OppdragUng |
+| `OppdragUng.dc.html` | ✅ Youth app shell (offers mocked) | 4 tabs only: Oppdrag · Mine tilbud (badge = pending) · Innboks · Profil. **No Legg ut button.** Task card → [S] detail → Gi tilbud form (amount, day, message, validation) → sending → success. Card shows "Tilbud sendt" afterwards. Mine tilbud: statuses (Sendt / Venter / Godtatt / Trukket), withdraw pending. Innboks: only conversations created by an offer. Profil: locked rows → [S] "… er ikke tilgjengelig" |
 
 Youth permission rules (backend must enforce, UI only reflects):
 - ALLOWED: browse oppdrag, give tilbud, withdraw own tilbud, chat inside a conversation created by their tilbud, receive reviews, view profile, safety/report/block, privacy, log out

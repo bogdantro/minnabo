@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedProps,
@@ -19,13 +19,21 @@ export type DrawnCheckProps = {
   size?: number;
   /** Replay key – change it to draw again. */
   playKey?: number;
+  /** Circle colour (default lime). */
+  bg?: string;
+  /** Tick colour (default ink). */
+  tickColor?: string;
+  /** Ring/shadow around the circle (default lime-tint 12 px ring). */
+  ring?: ViewStyle;
+  /** Tick size in px (default 47 % of the circle). */
+  tickSize?: number;
 };
 
 /**
  * Lime circle with a 10–12 px lime-tint ring; the ink tick draws itself
  * (strokeDashoffset 60 → 0 over 600 ms after 250 ms). Circle scales in with a spring.
  */
-export function DrawnCheck({ size = 120, playKey = 0 }: DrawnCheckProps) {
+export function DrawnCheck({ size = 120, playKey = 0, bg, tickColor = colors.ink, ring = shadow.drawnCheck, tickSize }: DrawnCheckProps) {
   const offset = useSharedValue(60);
   const scale = useSharedValue(0.6);
   const opacity = useSharedValue(0);
@@ -44,7 +52,7 @@ export function DrawnCheck({ size = 120, playKey = 0 }: DrawnCheckProps) {
 
   const circle = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ scale: scale.value }] }));
   const pathProps = useAnimatedProps(() => ({ strokeDashoffset: offset.value }));
-  const icon = Math.round(size * 0.47);
+  const icon = tickSize ?? Math.round(size * 0.47);
 
   return (
     <Animated.View
@@ -53,14 +61,15 @@ export function DrawnCheck({ size = 120, playKey = 0 }: DrawnCheckProps) {
       style={[
         styles.circle,
         { width: size, height: size, borderRadius: size / 2 },
-        shadow.drawnCheck,
+        ring,
+        bg ? { backgroundColor: bg } : null,
         circle,
       ]}
     >
       <Svg width={icon} height={icon} viewBox="0 0 24 24" fill="none">
         <AnimatedPath
           d="M5 12.5 10 17.5 19.5 7"
-          stroke={colors.ink}
+          stroke={tickColor}
           strokeWidth={2.6}
           strokeLinecap="round"
           strokeLinejoin="round"

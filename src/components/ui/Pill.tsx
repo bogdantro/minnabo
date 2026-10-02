@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius, sizes, text } from '@/theme/theme';
 import { Icon, type IconName } from './Icon';
@@ -14,6 +15,8 @@ export type PillProps = {
   /** Override the dot colour (e.g. lime dot on the dark "Nytt tilbud" pill). */
   dotColor?: string;
   icon?: IconName;
+  /** Custom leading element (e.g. a brand mark). */
+  leading?: ReactNode;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -32,7 +35,7 @@ const TONES: Record<PillTone, { bg: string; fg: string; border?: string; dot: st
 };
 
 /** `.pill` – 26 px (lg 32) status label. See docs/COMPONENTS.md › Pills. */
-export function Pill({ label, tone = 'neutral', size = 'md', dot, dotColor, icon, style, testID }: PillProps) {
+export function Pill({ label, tone = 'neutral', size = 'md', dot, dotColor, icon, leading, style, testID }: PillProps) {
   const t = TONES[tone];
   const lg = size === 'lg';
   const sm = size === 'sm';
@@ -55,6 +58,7 @@ export function Pill({ label, tone = 'neutral', size = 'md', dot, dotColor, icon
           ]}
         />
       ) : null}
+      {leading}
       {icon ? <Icon name={icon} size={14} color={t.fg} /> : null}
       <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[lg ? text.pillLg : text.pill, sm && styles.smText, { color: t.fg }]}>
         {label}

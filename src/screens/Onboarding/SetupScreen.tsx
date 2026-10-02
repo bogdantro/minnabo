@@ -18,9 +18,11 @@ import nb from '@/i18n/nb';
 import type { Purpose } from '@/domain/types';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/auth/session';
+import { useVippsIdentity } from '@/auth/mockVipps';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { profileKeys } from '@/api/queries';
 import { detectKommune } from '@/lib/geo';
+import * as ImagePicker from 'expo-image-picker';
 import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
@@ -60,11 +62,6 @@ const logo = require('../../../assets/logo-icon.png');
 type Step = 1 | 2 | 3 | 4;
 type Photo = { path: string; url: string } | null;
 
-/**
- * Full name from Vipps. Login is still e-mail based, so there is none yet:
- * the locked "Fullt navn · Fra Vipps" field stays hidden until Vipps login.
- */
-const vippsName: string | null = null;
 
 const ROLES: { id: Purpose; icon: IconKey; tileBg: string; tileFg: string }[] = [
   { id: 'NEED_HELP', icon: 'clip', tileBg: colors.limeTint, tileFg: colors.limeDeep },
@@ -159,6 +156,8 @@ export function SetupScreen() {
   const { userId } = useSession();
   const me = useCurrentUser();
   const queryClient = useQueryClient();
+  // Full name from Vipps (mock login for now) – shown locked as "Fra Vipps".
+  const vippsName = useVippsIdentity()?.name ?? null;
 
   const [step, setStep] = useState<Step>(1);
   const [dir, setDir] = useState<'forward' | 'back'>('forward');
@@ -181,7 +180,7 @@ export function SetupScreen() {
   if (!nameTouched && !display && me.displayName) setDisplay(me.displayName);
 
   const name = display.trim();
-  const suggestions = useMemo(() => nameSuggestions(vippsName ?? me.displayName ?? ''), [me.displayName]);
+  const suggestions = useMemo(() => nameSuggestions(vippsName ?? me.displayName ?? ''), [vippsName, me.displayName]);
   const kommuner = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return INNLANDET_KOMMUNER.filter((k) => !needle || k.toLowerCase().includes(needle));
@@ -195,6 +194,8 @@ export function SetupScreen() {
   const toastAbove = (msg: string, icon: IconKey) => toast.success(msg, { icon, bottom: 130 });
 
   const save = async () => {
+    // Mock Vipps login: there is no account to save to yet – just continue.
+    if (!userId) return true;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -205,7 +206,7 @@ export function SetupScreen() {
           purpose: role,
           municipality: kommune,
           place: area.trim() || kommune,
-          ...(photo ? { avatar_path: photo.path } : null),
+          ...(photo?.path ? { avatar_path: photo.path } : null),
           onboarded_at: new Date().toISOString(),
         })
         .eq('id', userId ?? '');
@@ -229,6 +230,7 @@ export function SetupScreen() {
     if (step === 2 && !role) return fail(nb.setup.errRole);
     if (step === 3) {
       if (!kommune) return fail(nb.setup.errKommune);
+      // Real accounts save here; under the mock Vipps login save() is a no-op.
       if (!(await save())) return;
     }
     setErr(null);
@@ -264,12 +266,22 @@ export function SetupScreen() {
     }
   };
 
+  /** Mock login: pick and show the photo locally, nothing is uploaded. */
+  const pickLocal = async (source: 'camera' | 'library') => {
+    const r =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ quality: 0.9 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+    return r.canceled ? null : { path: '', publicUrl: r.assets[0].uri };
+  };
+
   const choosePhoto = async (source: 'camera' | 'library') => {
-    if (!userId) return;
     setPhotoOpen(false);
     setPhotoBusy(true);
     try {
-      const res = await pickAndUpload({ bucket: 'avatars', folder: userId, source });
+      const res = userId
+        ? await pickAndUpload({ bucket: 'avatars', folder: userId, source })
+        : await pickLocal(source);
       if (res) {
         setPhoto({ path: res.path, url: res.publicUrl });
         toastAbove(nb.setup.toastPhotoAdded, 'camera');

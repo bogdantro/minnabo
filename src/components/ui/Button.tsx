@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius, shadow, sizes, text } from '@/theme/theme';
 import { Icon, type IconName } from './Icon';
@@ -31,6 +31,8 @@ export type ButtonProps = {
   block?: boolean;
   /** Leading icon. */
   icon?: IconName;
+  /** Custom leading element (e.g. the Vipps mark) instead of an icon. */
+  leading?: ReactNode;
   iconRight?: IconName;
   /** @deprecated use `icon` */
   iconLeft?: IconName;
@@ -71,6 +73,7 @@ export function Button({
   size = 'md',
   block = true,
   icon,
+  leading,
   iconRight,
   iconLeft,
   disabled = false,
@@ -136,6 +139,8 @@ export function Button({
           color={look.fg}
           trackColor={onDark ? colors.spinnerTrackLight : colors.spinnerTrackDark}
         />
+      ) : leading ? (
+        leading
       ) : lead ? (
         <Icon name={lead} size={s.icon} color={look.fg} />
       ) : null}

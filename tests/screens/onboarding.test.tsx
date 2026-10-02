@@ -2,37 +2,52 @@ import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { ConsentScreen } from '@/screens/Onboarding/ConsentScreen';
 import { SetupScreen } from '@/screens/Onboarding/SetupScreen';
 import { LoginScreen } from '@/screens/Onboarding/LoginScreen';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { MOCK_YOUTH, mockVipps } from '@/auth/mockVipps';
+import { YouthAccountScreen } from '@/screens/Onboarding/YouthAccountScreen';
 import nb from '@/i18n/nb';
 import { renderWithProviders } from '../testUtils';
 
-test('login sends an email OTP then verifies the 6-digit code', async () => {
-  await renderWithProviders(<LoginScreen />);
-
-  await fireEvent.changeText(screen.getByLabelText('E-postadresse'), 'ola@example.com');
-  await fireEvent.press(screen.getByText('Send kode'));
-  await waitFor(() =>
-    expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'ola@example.com' }),
-    ),
-  );
-
-  await waitFor(() => expect(screen.getByLabelText('Engangskode')).toBeTruthy());
-  await fireEvent.changeText(screen.getByLabelText('Engangskode'), '123456');
-  await fireEvent.press(screen.getByText('Bekreft'));
-  await waitFor(() =>
-    expect(supabase.auth.verifyOtp).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'ola@example.com', token: '123456', type: 'email' }),
-    ),
-  );
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockVipps.signOut();
 });
 
-test('login rejects an invalid email before sending', async () => {
+test('Vipps login: sheet goes Åpner → Bekreft → Identitet bekreftet, then on to Samtykke', async () => {
   await renderWithProviders(<LoginScreen />);
-  await fireEvent.changeText(screen.getByLabelText('E-postadresse'), 'not-an-email');
-  await fireEvent.press(screen.getByText('Send kode'));
-  await waitFor(() => expect(screen.getByText(/gyldig e-postadresse/i)).toBeTruthy());
-  expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
+  expect(screen.getByText('Logg inn eller opprett konto')).toBeTruthy();
+  expect(screen.getAllByText('Vipps brukes kun til innlogging – aldri til betaling.').length).toBeGreaterThan(0);
+
+  await fireEvent.press(screen.getByText('Fortsett med Vipps'));
+  expect(screen.getByText('Åpner Vipps …')).toBeTruthy();
+  await waitFor(() => expect(screen.getByText('Bekreft i Vipps-appen')).toBeTruthy(), { timeout: 4000 });
+  await waitFor(() => expect(screen.getByText('Identitet bekreftet')).toBeTruthy(), { timeout: 4000 });
+  expect(screen.getByText('Mari Haugen · født 1991')).toBeTruthy();
+
+  await fireEvent.press(screen.getByText('Fortsett'));
+  expect(router.replace).toHaveBeenCalledWith('/samtykker');
+  expect(mockVipps.get()?.youth).toBe(false);
+});
+
+test('Vipps login: under 18 goes to Ungdomskonto', async () => {
+  await renderWithProviders(<LoginScreen />);
+  await fireEvent.press(screen.getByText('Fortsett med Vipps'));
+  await waitFor(() => expect(screen.getByText('Identitet bekreftet')).toBeTruthy(), { timeout: 6000 });
+  await fireEvent.press(screen.getByText('Under 18 år? Se ungdomskonto'));
+  expect(router.replace).toHaveBeenCalledWith('/ungdomskonto');
+  expect(mockVipps.get()?.youth).toBe(true);
+});
+
+test('Ungdomskonto unlocks only after all three boxes are ticked', async () => {
+  mockVipps.signIn(MOCK_YOUTH);
+  await renderWithProviders(<YouthAccountScreen />);
+  expect(screen.getByText('Hei, Emil!')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Opprett ungdomskonto'));
+  expect(router.replace).not.toHaveBeenCalledWith('/ung');
+  for (const l of nb.youth.checks) await fireEvent.press(screen.getByLabelText(l));
+  await fireEvent.press(screen.getByText('Opprett ungdomskonto'));
+  expect(router.replace).toHaveBeenCalledWith('/ung');
 });
 
 test('consent screen blocks until the required boxes are checked, then records consent', async () => {

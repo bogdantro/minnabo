@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { mockVipps, useVippsIdentity } from './mockVipps';
 
 export type SessionStatus = 'loading' | 'authed' | 'anon';
 
@@ -13,10 +14,12 @@ export type SessionState = {
 /**
  * The Supabase auth session, kept live via `onAuthStateChange`.
  * `status` is 'loading' until the first `getSession()` resolves.
+ * A mock Vipps login (see `mockVipps.ts`) also counts as signed in.
  */
 export function useSession(): SessionState {
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<SessionStatus>('loading');
+  const vipps = useVippsIdentity();
 
   useEffect(() => {
     let active = true;
@@ -36,12 +39,17 @@ export function useSession(): SessionState {
   }, []);
 
   return useMemo(
-    () => ({ session, userId: session?.user?.id ?? null, status }),
-    [session, status],
+    () => ({
+      session,
+      userId: session?.user?.id ?? null,
+      status: vipps && status !== 'authed' ? 'authed' : status,
+    }),
+    [session, status, vipps],
   );
 }
 
 /** Sign out everywhere. */
 export async function signOut(): Promise<void> {
+  mockVipps.signOut();
   await supabase.auth.signOut();
 }
