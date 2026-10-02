@@ -31,6 +31,14 @@ export const dismissedLeads = {
     persist();
     emit();
   },
+  /** Undo a dismissal ("Angre" / "Start på nytt"). */
+  restore(ids: string[]) {
+    const next = new Set(cache);
+    ids.forEach((id) => next.delete(id));
+    cache = next;
+    persist();
+    emit();
+  },
   _reset() {
     cache = new Set();
     hydrated = false;
@@ -52,5 +60,6 @@ export function useDismissedLeads() {
   return {
     dismissed: ids,
     dismiss: useCallback((id: string) => dismissedLeads.dismiss(id), []),
+    restore: useCallback((ids: string[]) => dismissedLeads.restore(ids), []),
   };
 }

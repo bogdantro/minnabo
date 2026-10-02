@@ -20,6 +20,8 @@ export type ListingCardProps = {
   place?: string;
   /** e.g. "Lør 3. okt · ca. 2 t" */
   schedule?: string;
+  /** Icon for the schedule row (default clock; ForMeg uses sparkle for the "why" line). */
+  scheduleIcon?: IconName;
   /** "Budsjett" or empty. */
   priceLabel?: string;
   /** "400 kr" or "Ønsker tilbud". */
@@ -91,6 +93,7 @@ export function ListingCard({
   verified,
   place,
   schedule,
+  scheduleIcon = 'clock',
   priceLabel,
   priceValue,
   extraBadge,
@@ -146,7 +149,7 @@ export function ListingCard({
             </View>
           ) : null}
           {place ? <Meta icon="pin">{place}</Meta> : null}
-          {schedule ? <Meta icon="clock">{schedule}</Meta> : null}
+          {schedule ? <Meta icon={scheduleIcon}>{schedule}</Meta> : null}
           <View style={styles.price}>
             {priceLabel ? <Text style={text.priceLabel}>{priceLabel}</Text> : null}
             <Text style={text.price} numberOfLines={1}>

@@ -14,7 +14,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | exists | Behind `featureFlags.businessRegistration` (off) |
 | `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` | exists | |
 | `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | ✅ done | Partner logos are placeholders until partners deliver them; no member-avatar stack (no member data) |
-| `ForMeg.dc.html` | `/oppdrag-for-meg` | `src/screens/LeadBoardScreen.tsx` | exists | |
+| `ForMeg.dc.html` | `/oppdrag-for-meg` | `src/screens/ForMegScreen.tsx` | ✅ done | Matching uses the profile's categories (`categorySlugs`) – **API gap:** the Supabase profile has no skills column, so live users get distance/newest ranking only. "N nye forslag i dag" = posted in the last 24 h (hidden when 0). Hidden suggestions are stored on the device. |
 | `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | ✅ done | Under the mock login "Publiser" shows the flow but saves nothing |
 | `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | exists | |
 | `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | exists | Tab |
@@ -121,7 +121,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Meny.dc.html` | ✅ Meny sheet | Opens from tab bar over dimmed home. User header → Profil. Utforsk tiles, sections Mitt / Tillit og trygghet / Innstillinger (rows with badges), Logg ut [D] |
 | `Sok.dc.html` | ✅ Søk | Live search, clear. Filtre [S]: categories (multi), kun verifiserte, distance slider, sort. Active filter chips removable. Recent + popular searches when empty. "Lagre søk" [T]. Empty state |
 | `SeAlle.dc.html` | ✅ Se alle | Sort menu (Nærmest / Nyeste / Pris), category chips, count, skeleton on reload |
-| `ForMeg.dc.html` | Oppdrag for meg | Card stack: "Ikke aktuelt" flies card left, save, "Se og gi tilbud" → Oppdragsdetaljer, Angre, counter, stack/list toggle, finished state |
+| `ForMeg.dc.html` | ✅ Oppdrag for meg | Card stack: "Ikke aktuelt" flies card left, save, "Se og gi tilbud" → Oppdragsdetaljer, Angre, counter, stack/list toggle, finished state |
 | `Varsler.dc.html` | Varsler | Filter chips with counts, grouped I dag / I går / Tidligere, unread tint + dot, every row deep-links, "Merk alle som lest" [T], empty state |
 
 ## 3 · Oppdrag detail & contact

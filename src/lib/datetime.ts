@@ -22,3 +22,15 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   if (days < 7) return WEEKDAYS[d.getDay()];
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+/** "for 20 min siden", "for 3 t siden", "i går", "for 4 dager siden" (posted time on cards). */
+export function postedAgo(iso: string, now: Date = new Date()): string {
+  const min = Math.max(0, Math.round((now.getTime() - Date.parse(iso)) / 60_000));
+  if (min < 1) return 'akkurat nå';
+  if (min < 60) return `for ${min} min siden`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `for ${h} t siden`;
+  const days = Math.round((startOfDay(now).getTime() - startOfDay(new Date(iso)).getTime()) / 86_400_000);
+  if (days <= 1) return 'i går';
+  return `for ${days} dager siden`;
+}

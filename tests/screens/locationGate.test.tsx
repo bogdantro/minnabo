@@ -10,15 +10,16 @@ jest.mock('@/lib/locationScope', () => ({
     municipalities: [],
     reach: 0,
     setReach: () => undefined,
+    setKommune: () => undefined,
     ready: true,
   }),
 }));
 
-import { LeadBoardScreen } from '@/screens/LeadBoardScreen';
+import { SeeAllScreen } from '@/screens/SeeAllScreen';
 import { renderWithProviders } from '../testUtils';
 
 test('a kommune-less profile falls open to tasks from every kommune', async () => {
-  await renderWithProviders(<LeadBoardScreen />);
+  await renderWithProviders(<SeeAllScreen />);
 
   // a Lillehammer task
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy(), {

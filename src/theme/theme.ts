@@ -49,6 +49,11 @@ export const colors = {
   progressTrack: '#E1E5EA',// wizard progress / steps
   rangeTrack: '#DDE1E7',
   grabber: '#D6DAE1',
+  barIdle: '#DADFE6',      // ForMeg counter bars
+  barDone: '#B6BDCA',
+  artDeco: 'rgba(255,255,255,0.35)', // decorative circles on big category art
+  skillBg: 'rgba(255,255,255,0.8)',  // ForMeg skill chips
+  stackBorder: 'rgba(10,23,64,0.05)', // ForMeg card border
   dashed: '#C9CFD9',       // photo-add / dash-card border, dots
   placeholder: '#8F97AA',
   verified: '#1B8F4E',
@@ -289,6 +294,7 @@ const sh = (css: string): ViewStyle => ({ boxShadow: css });
 export const shadow = {
   card: sh('0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),   // --sh
   medium: sh('0 2px 6px rgba(10,23,64,.05), 0 16px 36px -14px rgba(10,23,64,.22)'), // --sh-m
+  stackFront: sh('0 2px 6px rgba(10,23,64,.05), 0 30px 60px -24px rgba(10,23,64,.35)'), // ForMeg .fcard
   large: sh('0 24px 60px -16px rgba(10,23,64,.34)'),                                // --sh-l (dialog, toast)
   nav: sh('0 18px 44px -14px rgba(10,23,64,.32), 0 0 0 1px rgba(10,23,64,.05)'),
   fab: sh('0 14px 26px -10px rgba(20,160,140,.75), 0 0 0 5px #fff'),
@@ -308,6 +314,7 @@ export const shadow = {
   avatarRingSm: sh('0 0 0 1.5px #fff, 0 0 0 3px #19B8EE'),
   avatarRingLg: sh('0 0 0 3px #fff, 0 0 0 6px #19B8EE'),
   whiteRing2: sh('0 0 0 2px #fff'),
+  whiteRing3: sh('0 0 0 3px rgba(255,255,255,.7)'), // pill on category art (ForMeg)
   drawnCheck: sh('0 0 0 12px #EDF8D6'),
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),

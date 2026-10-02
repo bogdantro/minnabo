@@ -1,5 +1,5 @@
-import { LeadBoardScreen } from '@/screens/LeadBoardScreen';
+import { ForMegScreen } from '@/screens/ForMegScreen';
 
 export default function Route() {
-  return <LeadBoardScreen />;
+  return <ForMegScreen />;
 }
