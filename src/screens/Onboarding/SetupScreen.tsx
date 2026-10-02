@@ -27,6 +27,7 @@ import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
 import { INNLANDET_KOMMUNER, KOMMUNE_AREAS } from '@/data/kommuner';
+import { locationScope } from '@/lib/locationScope';
 import { colors, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import {
@@ -194,8 +195,11 @@ export function SetupScreen() {
   const toastAbove = (msg: string, icon: IconKey) => toast.success(msg, { icon, bottom: 130 });
 
   const save = async () => {
-    // Mock Vipps login: there is no account to save to yet – just continue.
-    if (!userId) return true;
+    // Mock Vipps login: there is no account to save to yet – keep the kommune locally and continue.
+    if (!userId) {
+      if (kommune) locationScope.setLocalKommune(kommune);
+      return true;
+    }
     setSaving(true);
     try {
       const { error } = await supabase

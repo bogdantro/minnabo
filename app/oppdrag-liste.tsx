@@ -1,5 +1,7 @@
-import { ListingListScreen } from '@/screens/ListingListScreen';
+import { useLocalSearchParams } from 'expo-router';
+import { SeeAllScreen } from '@/screens/SeeAllScreen';
 
 export default function Route() {
-  return <ListingListScreen type="TASK_REQUEST" />;
+  const { category } = useLocalSearchParams<{ category?: string }>();
+  return <SeeAllScreen initialCategory={category} />;
 }

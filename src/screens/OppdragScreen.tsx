@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
-import { useListings, useUpdateProfile } from '@/api/queries';
+import { useListings } from '@/api/queries';
 import { useLocationScope, type Reach } from '@/lib/locationScope';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useDismissedLeads } from '@/lib/dismissedLeads';
@@ -36,8 +36,7 @@ const NEW_WINDOW_MS = 48 * 60 * 60 * 1000;
 /** Oppdrag – home and default route (design/screens/Oppdrag.dc.html). */
 export function OppdragScreen() {
   const me = useCurrentUser();
-  const { municipality, municipalities, reach, setReach, ready } = useLocationScope();
-  const update = useUpdateProfile();
+  const { municipality, municipalities, reach, setReach, setKommune, ready } = useLocationScope();
   const { dismissed } = useDismissedLeads();
   const [cat, setCat] = useState<CategoryId | null>(null);
   const [locOpen, setLocOpen] = useState(false);
@@ -62,7 +61,7 @@ export function OppdragScreen() {
 
   const applyLocation = (k: string, r: Reach) => {
     setLocOpen(false);
-    if (k !== municipality) update.mutate({ municipality: k, place: k });
+    setKommune(k);
     setReach(r);
     toast.success(nb.oppdrag.showing(nb.oppdrag.reach[r].name, k), { icon: 'pin' });
   };

@@ -40,6 +40,8 @@ export type OppdragCardProps = {
   statusBadge?: ListingCardProps['statusBadge'];
   /** Show "Verifisert" when the owner has a verification (Søk). */
   showVerified?: boolean;
+  /** Show the "Ny" pill (Se alle: posted in the last day). */
+  isNew?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -48,7 +50,7 @@ export type OppdragCardProps = {
  * An oppdrag as a `.lcard`: real listing data, save heart with
  * "Lagret i Lagrede · Angre" toast. Tapping opens Oppdragsdetaljer.
  */
-export function OppdragCard({ listing, onPress, statusBadge, showVerified, style, testID }: OppdragCardProps) {
+export function OppdragCard({ listing, onPress, statusBadge, showVerified, isNew, style, testID }: OppdragCardProps) {
   const [saved, toggle] = useIsSaved(listing.id);
   const price = listingPrice(listing);
 
@@ -75,7 +77,7 @@ export function OppdragCard({ listing, onPress, statusBadge, showVerified, style
       schedule={listingSchedule(listing)}
       priceLabel={price.label}
       priceValue={price.value}
-      extraBadge={extraBadge(listing)}
+      extraBadge={extraBadge(listing) ?? (isNew ? { label: nb.seAlle.isNew } : undefined)}
       statusBadge={statusBadge}
       saved={saved}
       onToggleSave={onToggleSave}

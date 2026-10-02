@@ -55,3 +55,23 @@ it('getReach / setReach on the singleton stay in sync', async () => {
   locationScope._reset();
   expect(locationScope.getReach()).toBe(0);
 });
+
+it('without a backend user (mock Vipps login) it is ready and uses a local kommune', async () => {
+  const session = jest.requireActual<typeof import('@/auth/session')>('@/auth/session');
+  const spy = jest
+    .spyOn(session, 'useSession')
+    .mockReturnValue({ userId: null, status: 'authed' } as ReturnType<typeof session.useSession>);
+  try {
+    const { result } = await renderHook(() => useLocationScope(), { wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.municipality).toBeUndefined();
+
+    await act(async () => {
+      result.current.setKommune('Øyer');
+    });
+    await waitFor(() => expect(result.current.municipality).toBe('Øyer'));
+    expect(await AsyncStorage.getItem('minnabo.locationScope.kommune')).toBe('Øyer');
+  } finally {
+    spy.mockRestore();
+  }
+});

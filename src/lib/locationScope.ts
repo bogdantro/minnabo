@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '@/auth/session';
-import { useProfile } from '@/api/queries';
+import { useProfile, useUpdateProfile } from '@/api/queries';
 import { expandKommuner } from '@/data/kommuner';
 
 /**
@@ -11,13 +11,18 @@ import { expandKommuner } from '@/data/kommuner';
  * with the profile kommune by `useLocationScope()` into a municipality
  * allow-list. Kommune is MinNabo's location unit — no distance/coordinates.
  *
+ * Without a backend session (the mock Vipps login) the kommune lives here too,
+ * so location-scoped screens still work before anything is saved.
+ *
  * Mirrors the singleton + listener + hook pattern of `src/lib/neighbourhood.ts`.
  */
 const KEY = 'minnabo.locationScope.reach';
+const KOMMUNE_KEY = 'minnabo.locationScope.kommune';
 
 export type Reach = 0 | 1 | 2;
 
 let reach: Reach = 0;
+let localKommune: string | undefined;
 let hydrated = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -32,6 +37,7 @@ async function hydrate() {
   hydrated = true;
   try {
     reach = coerce(await AsyncStorage.getItem(KEY));
+    localKommune = (await AsyncStorage.getItem(KOMMUNE_KEY)) || undefined;
   } catch {
     reach = 0;
   }
@@ -45,8 +51,15 @@ export const locationScope = {
     AsyncStorage.setItem(KEY, String(r)).catch(() => undefined);
     emit();
   },
+  /** Kommune for a session with no backend user (mock login). */
+  setLocalKommune(k: string) {
+    localKommune = k;
+    AsyncStorage.setItem(KOMMUNE_KEY, k).catch(() => undefined);
+    emit();
+  },
   _reset() {
     reach = 0;
+    localKommune = undefined;
     hydrated = false;
     emit();
   },
@@ -57,15 +70,22 @@ export function useLocationScope(): {
   municipalities: string[];
   reach: Reach;
   setReach: (r: Reach) => void;
+  /** Change kommune: saved on the profile, or locally without a backend user. */
+  setKommune: (k: string) => void;
   ready: boolean;
 } {
   const { userId } = useSession();
   const { data: profile, isLoading } = useProfile(userId ?? '');
+  const update = useUpdateProfile();
   const [r, setR] = useState<Reach>(reach);
+  const [local, setLocal] = useState(localKommune);
 
   useEffect(() => {
     void hydrate();
-    const sync = () => setR(reach);
+    const sync = () => {
+      setR(reach);
+      setLocal(localKommune);
+    };
     listeners.add(sync);
     sync();
     return () => {
@@ -73,7 +93,7 @@ export function useLocationScope(): {
     };
   }, []);
 
-  const municipality = profile?.location.municipality || undefined;
+  const municipality = (userId ? profile?.location.municipality : local) || undefined;
   const municipalities = useMemo(
     () => expandKommuner(municipality, r),
     [municipality, r],
@@ -83,6 +103,11 @@ export function useLocationScope(): {
     municipalities,
     reach: r,
     setReach: locationScope.setReach,
-    ready: !!userId && !isLoading,
+    setKommune: (k) => {
+      if (k === municipality) return;
+      if (userId) update.mutate({ municipality: k, place: k });
+      else locationScope.setLocalKommune(k);
+    },
+    ready: !userId || !isLoading,
   };
 }
