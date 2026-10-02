@@ -119,6 +119,12 @@ export const colors = {
   offerInfoBorder: '#D3EE9C',
   wizardRing: 'rgba(184,238,60,0.3)',
   previewMap: '#EEF1EC',
+  // Fellesskap
+  heroBlobLime: 'rgba(184,238,60,0.35)',
+  heroBlobCyan: 'rgba(25,184,238,0.18)',
+  heroDash: 'rgba(10,23,64,0.16)',
+  logoDash: '#BFC6D2',
+  comingBg: 'rgba(255,255,255,0.5)',
 } as const;
 
 /** Category art tiles (stand-in for listing photos). bg + icon colour. */
@@ -310,6 +316,7 @@ export const shadow = {
   photoRing: sh('0 0 0 4px #fff, 0 0 0 6px #19B8EE, 0 18px 36px -14px rgba(10,23,64,.4)'),
   radarDot: sh('0 0 0 4px rgba(184,238,60,.3)'),
   stepCurrent: sh('0 0 0 5px rgba(10,23,64,.1)'),
+  heroCore: sh('0 24px 44px -18px rgba(10,23,64,.4)'),
   stepBtn: sh('0 1px 3px rgba(10,23,64,.12)'),
   errorOutline: sh('0 0 0 2px rgba(194,48,41,.35)'),
   whiteRing4: sh('0 0 0 4px #fff'),

@@ -13,7 +13,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Avtale.dc.html` | `/avtale/[id]` | `src/screens/AvtaleSammendragScreen.tsx` | exists | Also hosts the job-day workspace today (see Jobbdag) |
 | `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | exists | Behind `featureFlags.businessRegistration` (off) |
 | `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` | exists | |
-| `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | exists | Tab |
+| `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | ✅ done | Partner logos are placeholders until partners deliver them; no member-avatar stack (no member data) |
 | `ForMeg.dc.html` | `/oppdrag-for-meg` | `src/screens/LeadBoardScreen.tsx` | exists | |
 | `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | ✅ done | Under the mock login "Publiser" shows the flow but saves nothing |
 | `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | exists | |
@@ -182,7 +182,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 
 | Design file | Screen | Must work |
 |---|---|---|
-| `Fellesskap.dc.html` | Fellesskap (tab) | Hero, Nabolag + Oppslagstavle cards, partner note, max 2 main partners, quiet supporter carousel (no autoplay), donations with "Overført", Røde Kors "Kommer" (feature flag) |
+| `Fellesskap.dc.html` | ✅ Fellesskap (tab) | Hero, Nabolag + Oppslagstavle cards, partner note, max 2 main partners, quiet supporter carousel (no autoplay), donations with "Overført", Røde Kors "Kommer" (feature flag) |
 | `Nabolag.dc.html` | Nabolag | Bli med / Forlat with count ±1 [T], tabs Oppdrag / Oppslag scoped to kommune |
 | `Oppslagstavle.dc.html` | Oppslagstavle | Kind filter chips, post cards, compose [S] with validation → post animates in |
 

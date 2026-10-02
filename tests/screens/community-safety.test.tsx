@@ -17,8 +17,9 @@ test('Fellesskap shows partners, documented donations and no Røde Kors content'
   await renderWithProviders(<FellesskapScreen />);
   expect(screen.getByText('Sammen gjør vi en forskjell')).toBeTruthy();
   expect(screen.getByText('Hovedpartnere')).toBeTruthy();
-  expect(screen.getByText('Dokumenterte bidrag')).toBeTruthy();
-  expect(screen.getByText(/skriftlig godkjenning/)).toBeTruthy();
+  expect(screen.getByText('Donasjoner')).toBeTruthy();
+  // Røde Kors only as 'Kommer' until written approval (feature flag off).
+  expect(screen.getByText('Samarbeid med Røde Kors er under avklaring.')).toBeTruthy();
 });
 
 test('Fellesskap shows MAIN partners always but hides out-of-kommune LOCAL partners', async () => {
@@ -27,7 +28,7 @@ test('Fellesskap shows MAIN partners always but hides out-of-kommune LOCAL partn
   // demo user is in Lillehammer; every LOCAL partner sits in another kommune
   await waitFor(() => expect(screen.queryByText('Mjøsa Elektro')).toBeNull());
   expect(
-    await screen.findByText(/Ingen lokale samarbeidspartnere i Lillehammer/),
+    await screen.findByText(/Ingen lokale støttespillere i Lillehammer/),
   ).toBeTruthy();
 });
 
