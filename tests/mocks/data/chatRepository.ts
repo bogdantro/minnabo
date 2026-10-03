@@ -381,6 +381,8 @@ export const chatRepository = {
     price: AgreementSnapshot['price'];
     scheduledText?: string;
     agreedAt: string;
+    role: 'HELPER' | 'CLIENT';
+    cancelled: boolean;
   }[] {
     return agreements
       .map((a) => {
@@ -404,6 +406,8 @@ export const chatRepository = {
           price: a.price,
           scheduledText: a.scheduledText,
           agreedAt: a.agreedAt,
+          role: proposal.fromProfileId === CURRENT_USER_ID ? ('HELPER' as const) : ('CLIENT' as const),
+          cancelled: proposal.status === 'CANCELLED' || !!a.cancelledAt,
         };
       })
       .filter((x): x is NonNullable<typeof x> => x != null)

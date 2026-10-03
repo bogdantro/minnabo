@@ -67,6 +67,9 @@ export const colors = {
   edgeOff: '#D9DDE4',       // cancelled agreement edge
   warnDark: '#7A4800',      // "Endringer må avtales" note text
   dangerDark: '#8E2A24',    // cancelled banner sub text
+  todayBg: '#F8FDEB',      // Mine avtaler week strip: today
+  todayBorder: '#9BDD2C',
+  dashedCardBg: 'rgba(255,255,255,0.6)',
   budgetBg: '#F2FBDF',     // Oppdragsdetaljer budget card
   mapBg: '#E7EEE2',        // approximate-area map
   mapWater: '#CFE6F3',

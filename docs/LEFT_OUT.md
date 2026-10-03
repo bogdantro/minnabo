@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Avtalesammendrag, commit `d1497de`).
+Last updated: 2026-10-03 (after Mine avtaler).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -60,6 +60,9 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Sammenlign | "Varighet" cell | Offers have no duration field | `proposals.duration_text` (+ field in Gi tilbud) |
 | Sammenlign, Avtale | Date sort / countdown / calendar read the date from free text | Proposal time is free text ("Lør 10. okt kl. 10:00") | `proposals.scheduled_at timestamptz` – then "Fredag ettermiddag"-style offers also get a countdown |
 | Avtalesammendrag | "Om 11 dager" countdown + "Legg i kalender" hidden when the time has no date | Same as above | Same as above |
+| Mine avtaler | Agreements without a real date ("Lørdag kl. 10:00") get no dot in the week strip, no time and sit under "Uten dato"; "Legg alle i kalenderen" skips them | Free-text time (see `scheduled_at` above) | `proposals.scheduled_at timestamptz` |
+| Mine avtaler | Duration in the time column comes from the oppdrag, not the offer | Offers have no duration | `proposals.duration_text` (see Sammenlign) |
+| Mine avtaler | "Legg alle i kalenderen" button | Only on iOS/Android (no device calendar on web) | OK as is |
 | Avtalesammendrag | "Legg i kalender" only on iOS/Android | Web has no device calendar | OK as is (or offer an .ics download on web) |
 | Youth app | Offers/chats from `/ung` stay on the device | Needs youth roles | A4 |
 
@@ -70,7 +73,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Screen | State | Notes |
 |--------|-------|-------|
 | Jobbdag | partial | Own route `/jobbdag/[id]` with the old tools (på vei/framme, safe trip, workspace, no-show, "Marker som fullført"). Full Jobbdag.dc.html design (timer, sjekkliste, materialer, bilder) not built yet |
-| Mine avtaler, Innboks, Chat, Fullføring, Vurdering | to do | Next in order |
+| Innboks, Chat, Fullføring, Vurdering | to do | Next in order |
 | Profil, Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |

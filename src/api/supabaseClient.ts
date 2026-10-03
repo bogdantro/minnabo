@@ -444,14 +444,15 @@ export class SupabaseApiClient implements ApiClient {
     const { data, error } = await supabase
       .from('agreement_snapshots')
       .select(
-        '*, proposals!inner(from_profile_id, to_profile_id), listings!inner(title), completion_confirmations(by_profile_id)',
+        '*, proposals!inner(from_profile_id, to_profile_id, status), listings!inner(title), completion_confirmations(by_profile_id), reviews(from_profile_id, rating)',
       )
       .or(`from_profile_id.eq.${me},to_profile_id.eq.${me}`, { foreignTable: 'proposals' });
     if (error) fail(error.message);
     type Row = AgreementRow & {
-      proposals: { from_profile_id: string; to_profile_id: string };
+      proposals: { from_profile_id: string; to_profile_id: string; status: string };
       listings: { title: string };
       completion_confirmations: { by_profile_id: string }[];
+      reviews: { from_profile_id: string; rating: number }[];
     };
     return (data as unknown as Row[])
       .map((r) => {
@@ -468,6 +469,9 @@ export class SupabaseApiClient implements ApiClient {
           scheduledText: a.scheduledText,
           agreedAt: a.agreedAt,
           fullyCompleted: (r.completion_confirmations ?? []).length >= 2,
+          role: r.proposals.from_profile_id === me ? ('HELPER' as const) : ('CLIENT' as const),
+          cancelled: r.proposals.status === 'CANCELLED' || !!a.cancelledAt,
+          myRating: (r.reviews ?? []).find((x) => x.from_profile_id === me)?.rating,
         };
       })
       .sort((x, y) => Date.parse(y.agreedAt) - Date.parse(x.agreedAt));

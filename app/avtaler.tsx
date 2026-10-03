@@ -1,5 +1,5 @@
-import { AgendaScreen } from '@/screens/AgendaScreen';
+import { MineAvtalerScreen } from '@/screens/MineAvtalerScreen';
 
 export default function Route() {
-  return <AgendaScreen />;
+  return <MineAvtalerScreen />;
 }

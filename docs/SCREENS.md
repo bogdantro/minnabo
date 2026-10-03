@@ -26,7 +26,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | ✅ done (mock) | Vipps sheet is MOCKED (`src/auth/mockVipps.ts`, sample identities, nothing saved). Real Vipps OIDC still to do |
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
 | `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. **Open:** "Tilgjengelig for småjobber" toggle needs a backend field (not `paused`/feriemodus). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag, Admin row for admins only |
-| `MineAvtaler.dc.html` | `/avtaler` | `src/screens/AgendaScreen.tsx` | exists | |
+| `MineAvtaler.dc.html` | `/avtaler` | `src/screens/MineAvtalerScreen.tsx` | ✅ done | Role (Du hjelper / Du får hjelp), cancelled and my rating added to the agenda item. Agreements whose time has no date go under "Uten dato". Cancelled ones show under Fullført as "Avlyst". |
 | `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | exists | Menu label still says "Mine oppdrag og tjenester" |
 | `MottatteTilbud.dc.html` | `/tilbud` | `src/screens/MottatteTilbudScreen.tsx` | ✅ done | "Ny" = SENT; Besvart = every other status. Row date is always "Sendt …" (the API has no accepted/declined timestamp). Offers on removed or non-oppdrag listings are hidden. |
 | `Nabolag.dc.html` | `/nabolag` | `src/screens/NeighbourhoodScreen.tsx` | exists | |
@@ -139,7 +139,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `TilbudDetaljer.dc.html` | ✅ Tilbudsdetaljer | Godta → [S] agreement summary + required checkbox → success (confetti) → Avtale / Chat. Avslå → [S] reasons → status + [T] Angre. Be om endring → [S]. "Vis som avsender" demo → Trekk tilbudet. *(Add youth-account marker when offer is from a youth.)* |
 | `Sammenlign.dc.html` | ✅ Sammenlign | Columns, animated price bars, "Lavest pris" / "Best vurdert", sort, select column → "Gå videre med …" |
 | `Avtale.dc.html` | ✅ Avtalesammendrag | Frozen agreement, stamp + timestamp, countdown, parties, timeline, Legg i kalender [T], Chat, Jobbdag, Avlys [D] |
-| `MineAvtaler.dc.html` | Mine avtaler | Kommende / Fullført, week strip with dots, role pills ("Du hjelper" / "Du får hjelp"), empty day |
+| `MineAvtaler.dc.html` | ✅ Mine avtaler | Kommende / Fullført, week strip with dots, role pills ("Du hjelper" / "Du får hjelp"), empty day |
 
 ## 5 · Innboks, chat, job day
 

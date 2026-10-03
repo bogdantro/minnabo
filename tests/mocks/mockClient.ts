@@ -190,6 +190,9 @@ export class MockApiClient implements ApiClient {
     return chatRepository.listMyAgreements().map((a) => ({
       ...a,
       fullyCompleted: profileRepository.isFullyCompleted(a.proposalId),
+      myRating: profileRepository
+        .reviewsWrittenBy(chatRepository.currentUserId)
+        .find((r) => r.agreementProposalId === a.proposalId)?.rating,
     }));
   }
 

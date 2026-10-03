@@ -253,6 +253,11 @@ export type AgendaItem = {
   scheduledText?: string;
   agreedAt: string;
   fullyCompleted: boolean;
+  /** HELPER = I sent the accepted offer ("Du hjelper"); CLIENT = it's my oppdrag ("Du får hjelp") */
+  role: 'HELPER' | 'CLIENT';
+  cancelled: boolean;
+  /** the rating I gave the other party, if I've reviewed */
+  myRating?: number;
 };
 
 // ---------------------------------------------------------------------------

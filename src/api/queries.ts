@@ -118,7 +118,7 @@ export function useCancelAgreement(proposalId: string, conversationId: string) {
       qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
       qc.invalidateQueries({ queryKey: ['proposals'] });
       qc.invalidateQueries({ queryKey: ['conversations'] });
-      qc.invalidateQueries({ queryKey: ['agenda'] });
+      qc.invalidateQueries({ queryKey: ['my-agreements'] });
     },
   });
 }
