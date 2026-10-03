@@ -12,11 +12,9 @@ import Animated, {
 import nb from '@/i18n/nb';
 import type { NoticeKind, Partner } from '@/domain/types';
 import { formatPrice, nok } from '@/domain/price';
-import { useDonations, useNoticeboard, usePartners } from '@/api/queries';
+import { useDonations, useNeighbourhoodInfo, useNoticeboard, usePartners } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
-import { useNeighbourhood } from '@/lib/neighbourhood';
-import { neighbourCountFor } from '@/lib/socialProof';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { colors, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -122,7 +120,6 @@ function LogoPlaceholder({ size = 68 }: { size?: number }) {
 export function FellesskapScreen() {
   const me = useCurrentUser();
   const { municipality, municipalities, ready } = useLocationScope();
-  const { group } = useNeighbourhood();
   const partners = usePartners().data ?? [];
   const donations = useDonations().data ?? [];
   const postsData = useNoticeboard().data;
@@ -152,8 +149,10 @@ export function FellesskapScreen() {
   );
   const newPosts = scopedPosts.filter((p) => Date.parse(p.createdAt) >= openedAt - NEW_WINDOW_MS).length;
   const kinds = [...new Set(scopedPosts.map((p) => p.kind))].slice(0, 2);
-  const area = group ?? me.place ?? municipality ?? '';
-  const members = area ? Math.max(6, Math.round(neighbourCountFor(area) / 3)) : 0;
+  const kommune = me.municipality || municipality || '';
+  const area = me.place || kommune;
+  const { data: hood } = useNeighbourhoodInfo(kommune, area);
+  const members = hood?.memberCount ?? 0;
   const shownDonations = donAll ? donations : donations.slice(0, 3);
 
   return (

@@ -5,27 +5,33 @@ import { renderWithProviders } from '../testUtils';
 
 beforeEach(() => noticeboardStore._reset());
 
-test('the noticeboard lists seeded posts and filters by kind', async () => {
+test('the noticeboard lists posts in my kommune and filters by kind', async () => {
   await renderWithProviders(<NoticeboardScreen />);
   await waitFor(() => expect(screen.getByText('Gis bort: barnesykkel 16"')).toBeTruthy());
+  expect(screen.getByText('Oppslag fra naboene')).toBeTruthy();
+  // Gjøvik's tool-lending post is outside the Lillehammer demo user's kommune.
+  expect(screen.queryByText('Låner ut: slagbormaskin og stige')).toBeNull();
 
-  // Gjøvik's "Låner ut: slagbormaskin og stige" is now scoped out for the
-  // Lillehammer demo user, so filter to another kind that has a Lillehammer post.
-  await fireEvent.press(screen.getByRole('button', { name: 'Mistet / funnet' }));
+  await fireEvent.press(screen.getByRole('button', { name: /^Mistet og funnet, \d+$/ }));
   expect(await screen.findByText('Funnet: nøkkelknippe ved Søndre park')).toBeTruthy();
-  await waitFor(() =>
-    expect(screen.queryByText('Gis bort: barnesykkel 16"')).toBeNull(),
-  );
+  await waitFor(() => expect(screen.queryByText('Gis bort: barnesykkel 16"')).toBeNull());
 });
 
-test('publishing a post adds it to the store', async () => {
+test('compose validates type, title and text before publishing', async () => {
   await renderWithProviders(<NoticeboardScreen />);
   const before = noticeboardStore.list().length;
 
-  await fireEvent.press(screen.getByText('Nytt oppslag'));
-  await fireEvent.changeText(await screen.findByLabelText('Overskrift'), 'Gis bort: pallekarmer');
-  await fireEvent.changeText(screen.getByLabelText('Beskrivelse'), 'Fire stykker, hentes snarest.');
+  await fireEvent.press((await screen.findAllByLabelText('Nytt oppslag'))[0]);
+  await fireEvent.press(await screen.findByText('Publiser oppslag'));
+  expect(screen.getByText('Velg hva slags oppslag det er')).toBeTruthy();
+  expect(screen.getByText('Skriv en tittel på minst 4 tegn')).toBeTruthy();
+  expect(screen.getByText('Skriv litt mer, minst 10 tegn')).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('radio', { name: 'Gis bort' }));
+  await fireEvent.changeText(screen.getByLabelText('Tittel'), 'Gis bort: pallekarmer');
+  await fireEvent.changeText(screen.getByLabelText('Tekst'), 'Fire stykker, hentes snarest.');
   await fireEvent.press(screen.getByText('Publiser oppslag'));
 
   await waitFor(() => expect(noticeboardStore.list().length).toBe(before + 1));
+  expect(noticeboardStore.list()[0]).toMatchObject({ kind: 'GIVEAWAY', municipality: 'Lillehammer' });
 });

@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Lagrede + price-input fix).
+Last updated: 2026-10-03 (after Nabolag + Oppslagstavle).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -12,7 +12,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | # | Prio | Action | Why |
 |---|------|--------|-----|
 | A1 | ✅ | ~~Restore the Supabase project~~ – **done by you (2026-10-03)**: `profiles` exists, the app saves with a real Supabase session. Still to do: verify the **`avatars` bucket** upload with the storage policies you prepared (folder = Supabase user id). | Onboarding photo and Rediger profil photo/portfolio upload depend on it. |
-| A2 | 🔴 | **Push the pending migrations**: `npm run db:push` (after A1). Pending: `0024_consent_tips.sql`, `0025_seed_main_partners.sql` (yours), `0026_cancel_agreement.sql`. | 0024 = optional tips consent on Samtykke. 0026 = "Avlys avtalen" (cancel agreement RPC). Without them those actions fail on the live backend. |
+| A2 | 🔴 | **Push the pending migrations**: `npm run db:push` (A1 is done). Pending: `0024_consent_tips.sql`, `0025_seed_main_partners.sql` (yours), `0026_cancel_agreement.sql`, `0027_neighbourhood_groups.sql` (Nabolag membership), `0028_noticeboard_images.sql` (photo on oppslag). | 0024 = optional tips consent on Samtykke. 0026 = "Avlys avtalen" (cancel agreement RPC). Without them those actions fail on the live backend. |
 | A3 | 🔴 | **Real Vipps login (OIDC)**. Today the Vipps sheet is a mock (`src/auth/mockVipps.ts`) with sample identities. Needs a Vipps Login merchant agreement, client id/secret, and a Supabase auth hook / edge function. | Rule 3: Vipps is the only login. Name, birth year and phone on Samtykke / Oppsett also come from Vipps. |
 | A4 | 🔴 | **Youth roles on the backend** (under-18). Add a role/claim from the Vipps birth date and RLS rules: youth can only browse oppdrag, give/withdraw tilbud, chat in their own offer conversations, view profile, safety/privacy. | Rule 5 says enforce on the backend. The youth app (`/ung`) works, but its offers/chats are local only until this exists. |
 | A5 | 🟠 | **Commit your own changes** that I keep out of my commits: `app.json` (EAS/owner/infoPlist), `package.json` version bumps + `package-lock.json`, `app/(tabs)/_layout.tsx` (SKIP_LOGIN), partner-logo edits (`mappers.ts`, `supabaseClient.ts`, `types.ts`, `FellesskapScreen.tsx`, `seedCommunity.ts`), migration 0025, the **SetupScreen anonymous-auth fix** (`src/screens/Onboarding/SetupScreen.tsx` – remove the two `console.log` lines and the `console.error` before release), and delete the temp file `app.json.BLV1_…`. | `package-lock.json` now also contains the `expo-calendar` install, so it must be committed together with your version bumps. |
@@ -23,6 +23,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | A10 | 🟡 | `design/compare/knapper-app.png` does not exist (asked about in the Komponenter task). Add it if you want that comparison redone. | Komponenter was compared against `design/screenshots/Komponenter.png` instead. |
 | A11 | 🟠 | **Anonymous Supabase auth is a dev stand-in** (added by you in Oppsett). Enable "Anonymous sign-ins" only for development, and replace it with the Vipps OIDC session (A3) before launch – the profile id model (auth.uid() = profiles.id) stays the same. Anonymous users are never cleaned up automatically. | Otherwise anyone can create accounts without Vipps (rule 3). |
 | A12 | 🟡 | **Test the price fields on a phone** after the fix (Legg ut step 6, Gi tilbud, youth tilbud). I could only reproduce on web, so I fixed the native causes I could find: big-number clipping on Android, keyboard covering the field (iOS screens + all sheets), and the first tap on a quick-amount chip only closing the keyboard. If something is still off, send a screenshot. | The bug was reported on device. |
+| A13 | 🟡 | **Decide: replies and saving on Oppslagstavle.** The design has "Svar" (opens a chat with the poster), "Lagre" and "N svar" on every oppslag. Chats are tied to an oppdrag in the database (`conversations.listing_id` is required), so this needs either chats on oppslag (`conversations.notice_id`) or a simple reply thread, plus a `saved_notices` table. Say which and I'll build it. | Hidden for now – the board works without them. |
 
 ---
 
@@ -108,6 +109,11 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Lagrede | "Nye treff" counts oppdrag posted since the search was **saved**, not since you last opened it | No last-seen time per saved search | `saved_searches.last_seen_at` (set when "Kjør søk" is pressed) |
 | Lagrede | "Kjør søk" only carries the text and category into Søk (not kommune / verified / sort) | `/sok` only reads `q` and `category` | Let `/sok` accept the full saved filter |
 | Lagrede | Extra "Hjelpere (n)" segment (only when you follow someone) – not in the design | Following ("Følg") still exists on Profil and this is the only list of them | Decide: keep, or drop following |
+| Nabolag | The group is your **own area** ("<sted> nabolag" in your kommune), not a group you pick or name. Borettslag-style named groups are gone | The design shows one area group; the old free-text group was stored on the phone only | Decide if you also want named groups (borettslag) later |
+| Nabolag | The fake member number (a hash of the place name) is gone – the count is now real and starts at 0 until people join | Needs 0027 (A2) | – |
+| Nabolag | Cover art avatars and the member stack show the latest members; there is no "who is online" | – | OK as is |
+| Oppslagstavle | Image tile only when a photo was added (the design shows coloured category tiles as stand-ins for photos) | Prototype stand-ins | OK as is |
+| Oppslagstavle | "Svar", "Lagre" and "N svar" | See A13 | A13 |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -117,7 +123,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Screen | State | Notes |
 |--------|-------|-------|
 | Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
-| Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
+| Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
 ---

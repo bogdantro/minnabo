@@ -49,6 +49,8 @@ export const noticeboardStore = {
     body: string;
     place: string;
     municipality: string;
+    /** storage path in `listing-images` */
+    imagePath?: string;
   }): NoticeboardPost {
     const post: NoticeboardPost = {
       id: `n-${Date.now()}-${seq++}`,
@@ -59,6 +61,7 @@ export const noticeboardStore = {
       municipality: input.municipality.trim(),
       authorProfileId: profileRepository.currentUserId,
       createdAt: new Date().toISOString(),
+      imageUrl: input.imagePath,
     };
     posts = [post, ...posts];
     return post;

@@ -30,12 +30,14 @@ import { safetyStore } from '@mocks/data/safetyStore';
 import { endorsementsStore } from '@mocks/data/endorsementsStore';
 import { followStore } from '@mocks/data/followStore';
 import { noticeboardStore } from '@mocks/data/noticeboardStore';
+import { neighbourhoodStore } from '@mocks/data/neighbourhoodStore';
 import { jobWorkspaceStore } from '@mocks/data/jobWorkspaceStore';
 import { partners, documentedDonations } from '@mocks/data/seedCommunity';
 import type {
   ApiClient,
   ListConversationsParams,
   ListListingsParams,
+  NeighbourhoodInfo,
   ReviseProposalPatch,
   RespondToProposalResult,
   SavedSearchRecord,
@@ -354,6 +356,8 @@ export class MockApiClient implements ApiClient {
     body: string;
     place: string;
     municipality: string;
+    /** storage path in `listing-images` */
+    imagePath?: string;
   }): Promise<NoticeboardPost> {
     await delay(150);
     return noticeboardStore.create(input);
@@ -362,6 +366,25 @@ export class MockApiClient implements ApiClient {
   async deleteNoticeboardPost(id: string): Promise<void> {
     await delay(80);
     noticeboardStore.remove(id);
+  }
+
+  // --- nabolag ---
+
+  async getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
+    await delay(80);
+    return neighbourhoodStore.info(municipality, place, profileRepository.currentUserId);
+  }
+
+  async joinNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
+    await delay(120);
+    neighbourhoodStore.join(municipality, place, profileRepository.currentUserId);
+    return neighbourhoodStore.info(municipality, place, profileRepository.currentUserId);
+  }
+
+  async leaveNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
+    await delay(120);
+    neighbourhoodStore.leave(municipality, place, profileRepository.currentUserId);
+    return neighbourhoodStore.info(municipality, place, profileRepository.currentUserId);
   }
 
   // --- saved listings & searches ---

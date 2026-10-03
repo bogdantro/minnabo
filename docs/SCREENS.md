@@ -29,12 +29,12 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `MineAvtaler.dc.html` | `/avtaler` | `src/screens/MineAvtalerScreen.tsx` | ✅ done | Role (Du hjelper / Du får hjelp), cancelled and my rating added to the agenda item. Agreements whose time has no date go under "Uten dato". Cancelled ones show under Fullført as "Avlyst". |
 | `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | ✅ done | Oppdrag only (no Alle/Oppdrag/Tjenester tabs, no "Tilbyr hjelp"). New `setListingStatus` API: Pause = PAUSED, Arkiver = ARCHIVED, Aktiver = PUBLISHED/RECEIVING_OFFERS, Slett = soft delete (REMOVED – chats and offers stay). Public lists hide PAUSED/ARCHIVED. |
 | `MottatteTilbud.dc.html` | `/tilbud` | `src/screens/MottatteTilbudScreen.tsx` | ✅ done | "Ny" = SENT; Besvart = every other status. Row date is always "Sendt …" (the API has no accepted/declined timestamp). Offers on removed or non-oppdrag listings are hidden. |
-| `Nabolag.dc.html` | `/nabolag` | `src/screens/NeighbourhoodScreen.tsx` | exists | |
+| `Nabolag.dc.html` | `/nabolag` | `src/screens/NeighbourhoodScreen.tsx` | ✅ done | One group per area ("<sted> nabolag") in your kommune. Real membership via `0027_neighbourhood_groups.sql` RPCs (count, avatars, join/leave). Fellesskap's Nabolag card shows the same count. |
 | `Oppdrag.dc.html` | `/(tabs)/index` (home) | `src/screens/OppdragScreen.tsx` | ✅ done | Default route. Kommune list in the sheet has no "184 aktive" counts (no API data). "Hele Innlandet" = all kommuner (`expandKommuner` reach 2). "N nye" = open oppdrag in reach from the last 48 h |
 | `OppdragUng.dc.html` | `/ung` | `src/screens/youth/YouthAppScreen.tsx` | ✅ done (mock) | Real oppdrag; offers/chats are local only until youth roles exist on the backend. Youth users are redirected here from the tabs |
 | `Oppdragsdetaljer.dc.html` | `/oppdrag/[id]` | `src/screens/TaskDetailScreen.tsx` + `src/components/GiTilbudSheet.tsx` | ✅ done | Oppdrag only (ServiceOfferDetailScreen, `/tilbud/ny`, `/tilbud/be-om` removed). **API gaps:** no public offer count on a listing ("N naboer har gitt tilbud" + avatar stack hidden) and no response-time stat ("Svarer vanligvis innen …" hidden); no image captions. Map is a stylised approximate area, never a pin. |
 | `Oppsett.dc.html` | `/oppsett` | `src/screens/Onboarding/SetupScreen.tsx` | ✅ done | Signed-in users without `onboardedAt` are redirected here. "Fullt navn · Fra Vipps" field + name chips need Vipps data. Area chips: Lillehammer only (`KOMMUNE_AREAS`) |
-| `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | exists | |
+| `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | ✅ done | Kind chips with counts, cards, compose sheet (type/title/text validation, optional photo via `0028_noticeboard_images.sql`), fresh post highlight. "Svar" / "Lagre" hidden (see LEFT_OUT). |
 | `Personvern.dc.html` | `/personvern` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs consent toggle + log, data export (`src/lib/dataExport.ts` exists), retention accordion |
 | `Profil.dc.html` | `/profil`, `/profil/[id]` | `src/screens/ProfileScreen.tsx` | ✅ done | Own vs public via `profileId` param. Own: "Slik ser andre deg" preview. Someone else's: Ta kontakt (only when you already share a conversation) + Følg, flag icon → Rapporter. Endorse = "Anbefal" on the Anbefalt av naboer rows. |
 | `Publisert.dc.html` | `/legg-ut/publisert` | `src/screens/LeggUt/PublishedScreen.tsx` | ✅ done | Share sheet: copy link, SMS, e-post, system share |
@@ -183,8 +183,8 @@ Youth permission rules (backend must enforce, UI only reflects):
 | Design file | Screen | Must work |
 |---|---|---|
 | `Fellesskap.dc.html` | ✅ Fellesskap (tab) | Hero, Nabolag + Oppslagstavle cards, partner note, max 2 main partners, quiet supporter carousel (no autoplay), donations with "Overført", Røde Kors "Kommer" (feature flag) |
-| `Nabolag.dc.html` | Nabolag | Bli med / Forlat with count ±1 [T], tabs Oppdrag / Oppslag scoped to kommune |
-| `Oppslagstavle.dc.html` | Oppslagstavle | Kind filter chips, post cards, compose [S] with validation → post animates in |
+| `Nabolag.dc.html` | ✅ Nabolag | Bli med / Forlat with count ±1 [T], tabs Oppdrag / Oppslag scoped to kommune |
+| `Oppslagstavle.dc.html` | ✅ Oppslagstavle | Kind filter chips, post cards, compose [S] with validation → post animates in |
 
 ## 10 · Innstillinger, bedrift, admin
 

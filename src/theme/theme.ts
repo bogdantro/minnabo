@@ -86,6 +86,11 @@ export const colors = {
   starOff: '#D8DCE3',        // empty review star
   dotIdle: '#C9CFD8',        // portfolio viewer dots
   lockChipText: '#B23A0E',   // Rediger profil "Fra Vipps" chip (bg vippsIdBg)
+  coverBg: '#E3F2D0',        // Nabolag cover art
+  coverHillLime: 'rgba(155,221,44,0.35)',
+  coverHillCyan: 'rgba(25,184,238,0.22)',
+  coverRing: 'rgba(10,23,64,0.18)',
+  coverDot: 'rgba(30,134,244,0.6)',
   bigOkRing: 'rgba(143,210,42,0.35)', // Fullføring check outline
   okBannerBorder: '#BFE5C9', // chat "Avtale inngått" banner
   okBannerText: '#2E5A3A',

@@ -358,6 +358,7 @@ export type NoticeRow = {
   place: string;
   municipality: string;
   created_at: string;
+  image_path?: string | null;
 };
 
 export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
@@ -372,6 +373,7 @@ export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
     // `.select('*')` returns no `municipality` until then.
     municipality: row.municipality ?? '',
     createdAt: row.created_at,
+    imageUrl: publicUrl('listing-images', row.image_path ?? null),
   };
 }
 

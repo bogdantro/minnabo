@@ -88,6 +88,8 @@ export type NoticeboardPost = {
   place: string;
   municipality: string;
   createdAt: string;
+  /** optional photo (Oppslagstavle) */
+  imageUrl?: string;
 };
 
 /** A sponsor shown on Fellesskap. Deals and payment are handled outside the app. */

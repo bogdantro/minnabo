@@ -26,6 +26,7 @@ import type {
   ApiClient,
   ListConversationsParams,
   ListListingsParams,
+  NeighbourhoodInfo,
   ReviseProposalPatch,
   RespondToProposalResult,
   SavedSearchRecord,
@@ -733,6 +734,8 @@ export class SupabaseApiClient implements ApiClient {
     body: string;
     place: string;
     municipality: string;
+    /** storage path in `listing-images` */
+    imagePath?: string;
   }): Promise<NoticeboardPost> {
     const me = await myId();
     const { data, error } = await supabase
@@ -744,6 +747,7 @@ export class SupabaseApiClient implements ApiClient {
         body: input.body,
         place: input.place,
         municipality: input.municipality,
+        ...(input.imagePath ? { image_path: input.imagePath } : {}),
       })
       .select('*')
       .single();
@@ -754,6 +758,40 @@ export class SupabaseApiClient implements ApiClient {
   async deleteNoticeboardPost(id: string): Promise<void> {
     const { error } = await supabase.from('noticeboard_posts').delete().eq('id', id);
     if (error) fail(error.message);
+  }
+
+  // --- nabolag ---
+
+  async getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
+    const { data, error } = await supabase.rpc('neighbourhood_info', { p_municipality: municipality, p_place: place });
+    if (error) fail(error.message);
+    type Row = { id: string; name: string; created_at: string; member_count: number; is_member: boolean; member_ids: string[] | null };
+    const row = ((data ?? []) as Row[])[0];
+    return {
+      id: row?.id ?? null,
+      name: row?.name ?? `${place} nabolag`,
+      place,
+      municipality,
+      createdAt: row?.created_at,
+      memberCount: row?.member_count ?? 0,
+      isMember: !!row?.is_member,
+      memberIds: row?.member_ids ?? [],
+    };
+  }
+
+  async joinNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
+    const { error } = await supabase.rpc('join_neighbourhood', { p_municipality: municipality, p_place: place });
+    if (error) fail(error.message);
+    return this.getNeighbourhood(municipality, place);
+  }
+
+  async leaveNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
+    const current = await this.getNeighbourhood(municipality, place);
+    if (current.id) {
+      const { error } = await supabase.rpc('leave_neighbourhood', { p_id: current.id });
+      if (error) fail(error.message);
+    }
+    return this.getNeighbourhood(municipality, place);
   }
 
   // --- saved listings & searches ---

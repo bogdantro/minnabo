@@ -33,6 +33,19 @@ export type SavedSearchRecord = {
   createdAt: string;
 };
 
+/** Nabolag: the group for one area (sted) in a kommune. `id` is null until someone joins. */
+export type NeighbourhoodInfo = {
+  id: string | null;
+  name: string;
+  place: string;
+  municipality: string;
+  createdAt?: string;
+  memberCount: number;
+  isMember: boolean;
+  /** latest members first, max 5 */
+  memberIds: string[];
+};
+
 export type SubmitReportInput = {
   targetType: ReportTargetType;
   targetId: string;
@@ -181,12 +194,19 @@ export interface ApiClient {
     body: string;
     place: string;
     municipality: string;
+    /** storage path in `listing-images` */
+    imagePath?: string;
   }): Promise<NoticeboardPost>;
   deleteNoticeboardPost(id: string): Promise<void>;
 
   // community
   listPartners(): Promise<Partner[]>;
   listDonations(): Promise<Donation[]>;
+
+  // nabolag
+  getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
+  joinNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
+  leaveNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
 
   // saved listings & searches
   listSavedListingIds(): Promise<string[]>;

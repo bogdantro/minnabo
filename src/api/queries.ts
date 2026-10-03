@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
+import type { NeighbourhoodInfo } from './ApiClient';
 import { apiClient } from './client';
 
 export const listingKeys = {
@@ -525,6 +526,46 @@ export function usePartners() {
 
 export function useDonations() {
   return useQuery({ queryKey: communityKeys.donations, queryFn: () => apiClient.listDonations() });
+}
+
+export const neighbourhoodKeys = {
+  info: (municipality: string, place: string) => ['neighbourhood', municipality, place] as const,
+};
+
+/** Nabolag for one area. Disabled until the area is known. */
+export function useNeighbourhoodInfo(municipality?: string | null, place?: string | null) {
+  return useQuery({
+    queryKey: neighbourhoodKeys.info(municipality ?? '', place ?? ''),
+    queryFn: () => apiClient.getNeighbourhood(municipality ?? '', place ?? ''),
+    enabled: !!municipality && !!place,
+  });
+}
+
+/** Bli med / Forlat – optimistic count ±1, reconciled with the server. */
+export function useToggleNeighbourhood(municipality: string, place: string, myId: string) {
+  const qc = useQueryClient();
+  const key = neighbourhoodKeys.info(municipality, place);
+  return useMutation({
+    mutationFn: (join: boolean) =>
+      join ? apiClient.joinNeighbourhood(municipality, place) : apiClient.leaveNeighbourhood(municipality, place),
+    onMutate: async (join) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<NeighbourhoodInfo>(key);
+      if (prev) {
+        qc.setQueryData<NeighbourhoodInfo>(key, {
+          ...prev,
+          isMember: join,
+          memberCount: Math.max(0, prev.memberCount + (join ? 1 : -1)),
+          memberIds: join ? [myId, ...prev.memberIds.filter((id) => id !== myId)] : prev.memberIds.filter((id) => id !== myId),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _join, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+    },
+    onSuccess: (data) => qc.setQueryData(key, data),
+  });
 }
 
 export const noticeboardKeys = {

@@ -41,6 +41,14 @@ export function postedAgo(iso: string, now: Date = new Date(), long = false): st
 const DAYS_SHORT = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 
+const MONTHS_LONG = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+
+/** "mars 2023" */
+export function monthYear(iso: string): string {
+  const d = new Date(iso);
+  return `${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 /** "14. sep" */
 export function dayMonth(iso: string): string {
   const d = new Date(iso);
