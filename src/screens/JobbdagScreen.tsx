@@ -26,7 +26,7 @@ import { toast } from '@/lib/toast';
 import { pickAndUpload } from '@/lib/uploads';
 import { colors, fonts, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
-import { SafeTripCard } from '@/components/SafeTripCard';
+import { TryggTurCard } from '@/components/TryggTurCard';
 import { BeforeAfter } from '@/components/BeforeAfter';
 import {
   AmountInput,
@@ -404,7 +404,14 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
               <Button label={nb.avtale.sms} icon="msg" variant="ghost" size="sm" block={false} onPress={() => Linking.openURL(`sms:${phone}`)} style={styles.grow} />
             </View>
           ) : null}
-          <SafeTripCard proposalId={proposalId} label={other?.displayName ?? nb.avtale.parties} />
+          <TryggTurCard
+            context={{
+              proposalId,
+              title: listing?.title ?? '',
+              who: other?.displayName,
+              place: listing ? listing.location.place || listing.location.municipality : undefined,
+            }}
+          />
           <Button label={nb.avtale.reportNoShow} variant="text" loading={noShow.isPending} onPress={reportNoShow} />
         </FadeUp>
         <View style={styles.bottom} />

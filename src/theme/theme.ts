@@ -92,6 +92,9 @@ export const colors = {
   coverRing: 'rgba(10,23,64,0.18)',
   coverDot: 'rgba(30,134,244,0.6)',
   strike: '#C3C9D4',          // done checklist line-through
+  chipBorderSoft: 'rgba(10,23,64,0.12)', // Trygg tur time chips
+  onInk86: 'rgba(255,255,255,0.86)',     // Trygg tur live details
+  sosText: '#8E1F19',          // Sikkerhet "Er du i akutt fare?"
   bigOkRing: 'rgba(143,210,42,0.35)', // Fullføring check outline
   okBannerBorder: '#BFE5C9', // chat "Avtale inngått" banner
   okBannerText: '#2E5A3A',

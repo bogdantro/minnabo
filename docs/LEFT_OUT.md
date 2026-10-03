@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Verifisering).
+Last updated: 2026-10-03 (after Sikkerhet).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -70,7 +70,6 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Jobbdag | "Hvem ordner det?" (Mari kjøper / Jonas tar med / legger ut) and the per-person split under the sum | Materials only have label + amount | `materials.payer` (`CLIENT`/`HELPER`/`HELPER_OUTLAY`) |
 | Jobbdag | Photo pair titles ("Langsiden mot veien") and Før/Etter times; "Underveis" as its own phase | Photos only have BEFORE/AFTER; pairs are made by order | `job_photos.caption`, `pair_id`, phase `DURING` |
 | Jobbdag | Estimate bar only shows when the oppdrag has a duration with hours/day in it | Estimate is parsed from free text | `listings.estimated_minutes` |
-| Jobbdag | "Trygg tur" card still uses the old styling | It belongs to the Trygge kontakter redesign | Restyled with that screen |
 | Vurdering | "Vil du anbefale …?" Ja/Nei has no field – "Ja" is saved as the "Anbefales" tag, "Nei" is not stored | No `recommends` column on reviews | `reviews.recommends boolean` |
 | Vurdering | "Jonas har nå 33 vurderinger" count in the success row | Would need a refetch of the profile's review count | Shown without the count; OK as is |
 | Fullføring | "Tid brukt", "Oppgaver", "Bilder" show "–" / 0 when nobody used the job-day tools | They come from the Jobbdag workspace | OK as is – fills in once Jobbdag is used |
@@ -118,6 +117,9 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Verifisering | "Du kan svare offentlig på en vurdering du har fått." is left out of "Slik fungerer vurderinger" | There is no reply-to-review feature | `reviews.reply` (see Profil) – then add the line back |
 | Verifisering | Phone row says "Hentet fra Vipps da du logget inn" – true once real Vipps login exists; with the mock login the phone is not from Vipps | A3 | A3 |
 | Verifisering | BankID row (old "Kommer snart") removed | Rule 3 – Vipps only | ✅ |
+| Sikkerhet / Jobbdag | **Trygg tur sends nothing by itself**: Start / Forleng / Stopp open the phone's SMS app with the message pre-filled to your trygge kontakter; you press send. The trip and contacts are stored on the phone only | No SMS service on the backend | An SMS provider (e.g. Twilio / Link Mobility) + an edge function, and `safe_trips` + `trusted_contacts` tables |
+| Sikkerhet / Jobbdag | "Stopper du ikke innen fristen, får kontaktene dine en påminnelse" – the reminder to contacts is not sent (only the overdue state shows in the app) | Needs a server-side timer | Scheduled job on `safe_trips.due_at` that texts the contacts |
+| Sikkerhet | Blocked rows say "Blokkert" without date or "via rapport" | Blocks have no timestamp/source in the API | Return `blocks.created_at` and whether it came from a report |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -126,7 +128,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
@@ -138,5 +140,6 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 |-----|----------|
 | "Avlys avtalen" had no backend | `0026_cancel_agreement.sql` + `cancelAgreement` API (`d1497de`) – still needs A2 |
 | "Legg i kalender" had no library | `expo-calendar` installed (approved 2026-10-03) – needs A5/A6 |
+| Trygg tur card had old styling (Jobbdag) | New `TryggTurCard` in the Sikkerhet design, used on Sikkerhet and Jobbdag |
 | Price input UI on device (reported 2026-10-03) | Android font padding removed from the big amount, "kr" centred, inputs inside sheets use the sheet's keyboard-aware input, iOS screens adjust for the keyboard, taps on chips work while the keyboard is open – please confirm on a phone (A12) |
 | Lists stuck on skeletons under the mock login | `locationScope` keeps the kommune locally without a backend user (`b7f045f`) |

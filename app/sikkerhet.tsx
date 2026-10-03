@@ -1,7 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
-import { SafetyScreen } from '@/screens/SafetyScreen';
+import { SikkerhetScreen } from '@/screens/SikkerhetScreen';
 
 export default function Route() {
-  const { profil } = useLocalSearchParams<{ profil?: string }>();
-  return <SafetyScreen targetProfileId={typeof profil === 'string' ? profil : undefined} />;
+  return <SikkerhetScreen />;
 }

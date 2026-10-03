@@ -43,7 +43,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Sammenlign.dc.html` | `/tilbud/sammenlign/[listingId]` | `src/screens/SammenlignTilbudScreen.tsx` | ✅ done | Open + accepted offers only. **API gaps:** no per-offer duration and no reply-time stat → "Varighet" and "Svartid" cells left out. "Dato" sort parses the free-text time ("Lør 10. okt"); unparseable times go last. |
 | `Samtykke.dc.html` | `/samtykker` | `src/screens/Onboarding/ConsentScreen.tsx` | ✅ done | Vipps identity card + "Bekreftet via Vipps" hidden until Vipps login. Optional tips consent needs migration `0024_consent_tips.sql` pushed |
 | `SeAlle.dc.html` | `/oppdrag-liste` (`?category=`) | `src/screens/SeeAllScreen.tsx` | ✅ done | Oppdrag only; `/tilbydere` + ListingListScreen removed (rule 1). Price sort uses the listing budget; "Ønsker tilbud" sorts last. |
-| `Sikkerhet.dc.html` | `/sikkerhet` | `src/screens/SafetyScreen.tsx` | exists | Blocked list is a separate route today (`/blokkerte` → `BlockedListScreen`); design has it inline |
+| `Sikkerhet.dc.html` | `/sikkerhet` | `src/screens/SikkerhetScreen.tsx` | ✅ done | New screen (SafetyScreen stays for `/rapporter` until Rapporter). Trygg tur = shared `TryggTurCard` (also on Jobbdag) – SMS via the phone's SMS app. Blocked list inline with confirm. `/blokkerte` still exists for Innstillinger. |
 | `SlettKonto.dc.html` | `/slett-konto` | `src/screens/DeleteAccountScreen.tsx` | exists | Backend: `supabase/functions/delete-account` |
 | `Sok.dc.html` | `/sok` | `src/screens/SearchScreen.tsx` | ✅ done | Oppdrag only (offer type filter removed). Multi-category, verified, distance and sort filter client-side on the scoped result |
 | `StartSamtale.dc.html` | `/chat/start?listing=` | `src/screens/StartChatScreen.tsx` | ✅ done | Conversation is created on the first message (opening the screen saves nothing); an existing conversation for the oppdrag redirects to `/chat/[id]`. The prototype's scripted typing/reply is not faked. Hidden for lack of data: "Svarer vanligvis innen …". |
@@ -173,7 +173,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | Design file | Screen | Must work |
 |---|---|---|
 | `Verifisering.dc.html` | ✅ Verifisering | "Fullt verifisert med Vipps", 3-step bar (Vipps-ID, Telefon, E-post – all from Vipps), expandable "Hva ble sjekket?", bedrift link, review rules, profile checklist |
-| `Sikkerhet.dc.html` | Sikkerhet | Rapporter → Rapporter, blocked users (Opphev [D]), trygge kontakter → TryggeKontakter, Trygg tur start/stop with pulse, tips accordion |
+| `Sikkerhet.dc.html` | ✅ Sikkerhet | Rapporter → Rapporter, blocked users (Opphev [D]), trygge kontakter → TryggeKontakter, Trygg tur start/stop with pulse, tips accordion |
 | `Rapporter.dc.html` | Rapporter | 3 steps: what → reason → details (+ screenshot, block toggle) → success with status timeline |
 | `TryggeKontakter.dc.html` | Trygge kontakter | List, remove [D], add [S] with phone validation and relation chips → [T] |
 | `Personvern.dc.html` | Personvern | Tips toggle writes a new timestamped consent-log row, data export progress → done, retention accordion, Vilkår, Slett konto |

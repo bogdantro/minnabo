@@ -13,6 +13,9 @@ export type SafeTrip = {
   dueAt: string;
   /** names of the contacts who'd be alerted */
   contactNames: string[];
+  /** Sikkerhet card details: job + approximate area */
+  job?: string;
+  place?: string;
 };
 
 let current: SafeTrip | null = null;
@@ -44,6 +47,13 @@ export const safeTrip = {
     persist();
     emit();
   },
+  /** push the expected end time */
+  extend(dueAt: string) {
+    if (!current) return;
+    current = { ...current, dueAt };
+    persist();
+    emit();
+  },
   /** the person checked back in safely */
   checkIn() {
     current = null;
@@ -61,10 +71,11 @@ export function useSafeTrip(): {
   trip: SafeTrip | null;
   overdue: boolean;
   start: (trip: SafeTrip) => void;
+  extend: (dueAt: string) => void;
   checkIn: () => void;
 } {
   const [trip, setTrip] = useState(current);
-  const [, tick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     void hydrate();
@@ -79,14 +90,15 @@ export function useSafeTrip(): {
   // Re-render once a minute so `overdue` and any countdown stay current.
   useEffect(() => {
     if (!trip) return;
-    const id = setInterval(() => tick((n) => n + 1), 30_000);
+    const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, [trip]);
 
   return {
     trip,
-    overdue: !!trip && Date.now() > Date.parse(trip.dueAt),
+    overdue: !!trip && now > Date.parse(trip.dueAt),
     start: safeTrip.start,
+    extend: safeTrip.extend,
     checkIn: safeTrip.checkIn,
   };
 }
