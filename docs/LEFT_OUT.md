@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Innboks).
+Last updated: 2026-10-03 (after Chat).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -60,6 +60,12 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Sammenlign | "Varighet" cell | Offers have no duration field | `proposals.duration_text` (+ field in Gi tilbud) |
 | Sammenlign, Avtale | Date sort / countdown / calendar read the date from free text | Proposal time is free text ("Lør 10. okt kl. 10:00") | `proposals.scheduled_at timestamptz` – then "Fredag ettermiddag"-style offers also get a countdown |
 | Avtalesammendrag | "Om 11 dager" countdown + "Legg i kalender" hidden when the time has no date | Same as above | Same as above |
+| Chat | "Slå av varsler" (mute) is stored on the device only – push notifications still arrive | No mute field on the backend | `conversation_participants.muted boolean` + respect it in the push sender |
+| Chat | Time proposals are text messages with a "📅 Tidsforslag:" marker; the "Passer" answer is also a text message | No structured message type for time proposals | Add message kind `TIME` (+ answer state) so the card and the agreed time are data, not text |
+| Chat | Duration fact ("ca. 5 t") on the inline offer card | Offers have no duration | `proposals.duration_text` (see Sammenlign) |
+| Chat | Image captions ("Sett fra plenen") and file-name chip on photos | Image messages have no caption/file name | `messages.caption` |
+| Chat | "Svarer vanligvis …" / response time | See Oppdragsdetaljer | `profiles.median_reply_minutes` |
+| Chat | Block/unblock uses the existing block list; the blocked person isn't hidden from oppdrag lists yet | Lists don't filter blocked profiles | Filter blocked owners in `listListings` (RLS or query) |
 | Innboks | Unread count per conversation ("2" in the bubble) – shows a dot instead; subline counts conversations, not messages | The API only knows read/unread per conversation | Return `unread_count` (messages after `last_read_at`) from the conversations query |
 | Innboks | Status tag "Endring forespurt" | `statusTag` only has NEW_OFFER / OFFER_ACCEPTED | Add REVISION_PENDING to the conversation status tag |
 | Innboks | "Du: …" prefix on my own last message | Preview has no author | Return the last message's author with the preview |
@@ -76,7 +82,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Screen | State | Notes |
 |--------|-------|-------|
 | Jobbdag | partial | Own route `/jobbdag/[id]` with the old tools (på vei/framme, safe trip, workspace, no-show, "Marker som fullført"). Full Jobbdag.dc.html design (timer, sjekkliste, materialer, bilder) not built yet |
-| Chat, Fullføring, Vurdering | to do | Next in order |
+| Fullføring, Vurdering | to do | Next in order (then Jobbdag full design) |
 | Profil, Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |

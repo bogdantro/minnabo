@@ -196,6 +196,22 @@ export const chatRepository = {
     return msg;
   },
 
+  /** Test helper: a message arriving from the other participant. */
+  _receive(conversationId: string, text: string, authorProfileId: string): Message {
+    const msg: Message = {
+      id: nextId('m'),
+      conversationId,
+      authorProfileId,
+      text,
+      kind: 'TEXT',
+      createdAt: new Date().toISOString(),
+      delivery: 'READ',
+    };
+    messages[conversationId] = [...(messages[conversationId] ?? []), msg];
+    touchConversation(conversationId, text);
+    return msg;
+  },
+
   sendAttachment(conversationId: string, attachmentUrl: string): Message {
     const msg: Message = {
       id: nextId('m'),

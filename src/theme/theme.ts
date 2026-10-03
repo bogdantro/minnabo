@@ -68,6 +68,13 @@ export const colors = {
   warnDark: '#7A4800',      // "Endringer må avtales" note text
   dangerDark: '#8E2A24',    // cancelled banner sub text
   unreadConvBorder: '#D5EFA0', // Innboks unread card ring
+  onlineDot: '#2FBF62',    // chat header "Aktiv nå"
+  okBorder: '#8FD3A6',     // accepted time card / offer
+  okBannerBorder: '#BFE5C9', // chat "Avtale inngått" banner
+  okBannerText: '#2E5A3A',
+  dateChipBg: 'rgba(10,23,64,0.06)', // chat day chip
+  reactSel: 'rgba(25,184,238,0.35)', // selected bubble ring
+  readTick: '#B8EE3C',     // read ticks on dark bubbles
   todayBg: '#F8FDEB',      // Mine avtaler week strip: today
   todayBorder: '#9BDD2C',
   dashedCardBg: 'rgba(255,255,255,0.6)',
@@ -356,6 +363,8 @@ export const shadow = {
   sendOn: sh('0 10px 22px -10px rgba(8,101,158,.8)'), // composer send button
   colOn: sh('0 0 0 4px rgba(184,238,60,.6), 0 2px 6px rgba(10,23,64,.05), 0 16px 36px -14px rgba(10,23,64,.22)'), // Sammenlign selected column
   unreadConv: sh('0 0 0 1.5px #D5EFA0, 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'), // Innboks unread card
+  okBanner: sh('0 12px 26px -16px rgba(43,143,78,.6)'), // chat agreement banner
+  reactSel: sh('0 0 0 3px rgba(25,184,238,.35)'), // selected bubble
   okRing: sh('0 20px 40px -16px rgba(40,170,120,.7)'), // Gi tilbud sent check
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),

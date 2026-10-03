@@ -145,6 +145,9 @@ export type OfferCardProps = {
   onDecline?: () => void;
   onUndoDecline?: () => void;
   onOpenAgreement?: () => void;
+  /** Override the declined header (e.g. withdrawn: "Trukket" / "Tilbudet gjelder ikke lenger"). */
+  declinedTitle?: string;
+  declinedSub?: string;
 };
 
 /** Inline offer card in chat (Chat.dc.html `.offer`): pending → accepted (locked) / declined. */
@@ -163,6 +166,8 @@ export function OfferCard({
   onDecline,
   onUndoDecline,
   onOpenAgreement,
+  declinedTitle,
+  declinedSub,
 }: OfferCardProps) {
   const acc = state === 'accepted';
   const dec = state === 'declined';
@@ -180,9 +185,9 @@ export function OfferCard({
         </View>
         <View style={styles.ohl}>
           <Text style={[text.offerTitle, acc && { color: colors.okText }]}>
-            {acc ? 'Tilbud godtatt' : dec ? 'Avslått' : 'Tilbud'}
+            {acc ? 'Tilbud godtatt' : dec ? (declinedTitle ?? 'Avslått') : 'Tilbud'}
           </Text>
-          <Text style={text.small}>{acc ? acceptedAt : dec ? 'Du avslo dette tilbudet' : fromLine}</Text>
+          <Text style={text.small}>{acc ? acceptedAt : dec ? (declinedSub ?? 'Du avslo dette tilbudet') : fromLine}</Text>
         </View>
         {acc ? (
           <Pill label="Låst" tone="ok" icon="lock" />
