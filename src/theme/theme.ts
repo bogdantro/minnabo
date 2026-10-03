@@ -367,6 +367,8 @@ export const shadow = {
   okBanner: sh('0 12px 26px -16px rgba(43,143,78,.6)'), // chat agreement banner
   reactSel: sh('0 0 0 3px rgba(25,184,238,.35)'), // selected bubble
   bigOk: sh('0 26px 50px -18px rgba(60,160,60,.65)'), // Fullføring big check
+  starOn: sh('0 10px 22px -12px rgba(240,165,0,.8)'), // Vurdering selected star
+  starBadge: sh('0 26px 50px -18px rgba(240,165,0,.7)'), // Vurdering done badge
   okRing: sh('0 20px 40px -16px rgba(40,170,120,.7)'), // Gi tilbud sent check
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),

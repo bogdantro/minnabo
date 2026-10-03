@@ -55,7 +55,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Varslinger.dc.html` | `/varslinger` | `src/screens/NotificationPrefsScreen.tsx` | exists | |
 | `Verifisering.dc.html` | `/verifisering` | `src/screens/VerifiseringssenterScreen.tsx` | exists | |
 | `Vilkar.dc.html` | `/vilkar` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs TOC chips, progress bar, "Kort fortalt" boxes |
-| `Vurdering.dc.html` | `/vurder/[id]` | `src/screens/ReviewScreen.tsx` | exists | |
+| `Vurdering.dc.html` | `/vurder/[id]` | `src/screens/ReviewScreen.tsx` | ✅ done | Question adapts to role ("få hjelp av" / "hjelpe"). "Anbefale? Ja" is saved as the "Anbefales" tag (no recommend field). Send disabled if already reviewed. |
 
 Existing routes with **no** design file:
 
@@ -149,7 +149,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Chat.dc.html` | ✅ Chat | Header menu [S] (profil, oppføring, mute, rapporter, blokker [D]). Pinned listing (collapsible) + pinned message. Inline OfferCard: Godta [D] → accepted state + system message + banner → Avtale / Jobbdag; Avslå + Angre. Tap bubble → reactions. Quick replies. Attach [S] (Bilde, Kamera, Foreslå tid; Send tilbud only for the helper). Foreslå tid [S] → time card with Passer / Foreslå annen. Send → Sendt → Levert → Lest, typing, reply |
 | `Jobbdag.dc.html` | Jobbdag | Live timer start/pause/stop. Tabs Sjekkliste (toggle, progress ring, add) / Materialer (kr, who pays, sum, add [S]) / Bilder (before/after with drag slider). "Marker som ferdig" → Fullforing |
 | `Fullforing.dc.html` | ✅ Fullføring | Two-party confirm, animation + confetti, → Vurdering; "Noe er ikke i orden?" [S] |
-| `Vurdering.dc.html` | Vurdering | 5 stars with labels, tags multi-select, comment counter, recommend Ja/Nei, submit disabled until stars, success + preview |
+| `Vurdering.dc.html` | ✅ Vurdering | 5 stars with labels, tags multi-select, comment counter, recommend Ja/Nei, submit disabled until stars, success + preview |
 
 ## 6 · Legg ut (opened by the FAB — straight into the wizard, no type choice)
 

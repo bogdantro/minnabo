@@ -112,16 +112,25 @@ test('"Noe er ikke i orden?" offers chat and report', async () => {
   expect(screen.getByText(/kan ikke holde igjen penger/)).toBeTruthy();
 });
 
-test('submitting a review records it against the counterpart with tags', async () => {
+test('submitting a review needs stars, records tags and "Anbefaler", then shows the preview', async () => {
   await renderWithProviders(<ReviewScreen proposalId="p-emma-klippe" />);
-  await waitFor(() => expect(screen.getByText('Hvordan gikk det?')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('Hvordan var det å få hjelp av Emma?')).toBeTruthy());
+  expect(screen.getByText('Velg antall stjerner for å sende')).toBeTruthy();
+
+  await fireEvent.press(screen.getByLabelText('5 stjerner – Fantastisk!'));
+  expect(screen.getByText('Fantastisk!')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Punktlig'));
+  await fireEvent.press(screen.getByRole('tab', { name: 'Ja' }));
   await fireEvent.press(screen.getByText('Send vurdering'));
+
   await waitFor(() =>
     expect(profileRepository.hasReviewed('p-emma-klippe', profileRepository.currentUserId)).toBe(true),
   );
   const mine = profileRepository
     .reviewsWrittenBy(profileRepository.currentUserId)
     .find((r) => r.agreementProposalId === 'p-emma-klippe');
-  expect(mine?.tags).toContain('Punktlig');
+  expect(mine?.rating).toBe(5);
+  expect(mine?.tags).toEqual(expect.arrayContaining(['Punktlig', 'Anbefales']));
+  expect(await screen.findByText('Takk for vurderingen!')).toBeTruthy();
+  expect(screen.getByText('Anbefaler')).toBeTruthy();
 });
