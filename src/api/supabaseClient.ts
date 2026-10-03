@@ -7,6 +7,7 @@ import type {
   CompletionConfirmation,
   Conversation,
   Listing,
+  ListingStatus,
   ListingType,
   Message,
   Proposal,
@@ -91,7 +92,8 @@ export class SupabaseApiClient implements ApiClient {
 
   async listListings(params: ListListingsParams = {}): Promise<Listing[]> {
     const { filter, sort } = params;
-    let q = supabase.from('listings').select(LISTING_SELECT).neq('status', 'REMOVED');
+    // Paused / archived / removed listings are only visible to their owner (Mine oppføringer).
+    let q = supabase.from('listings').select(LISTING_SELECT).not('status', 'in', '(REMOVED,PAUSED,ARCHIVED)');
 
     if (filter?.type) q = q.eq('type', filter.type);
     if (filter?.categorySlug && filter.categorySlug !== 'alle') {
@@ -197,11 +199,17 @@ export class SupabaseApiClient implements ApiClient {
 
   async listMyListings(type?: ListingType): Promise<Listing[]> {
     const me = await myId();
-    let q = supabase.from('listings').select(LISTING_SELECT).eq('owner_id', me);
+    let q = supabase.from('listings').select(LISTING_SELECT).eq('owner_id', me).neq('status', 'REMOVED');
     if (type) q = q.eq('type', type);
     const { data, error } = await q.order('created_at', { ascending: false });
     if (error) fail(error.message);
     return (data as unknown as ListingRow[]).map(toListing);
+  }
+
+  async setListingStatus(listingId: string, status: ListingStatus): Promise<void> {
+    const me = await myId();
+    const { error } = await supabase.from('listings').update({ status }).eq('id', listingId).eq('owner_id', me);
+    if (error) fail(error.message);
   }
 
   // --- conversations & messages ----------------------------------------

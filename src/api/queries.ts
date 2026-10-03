@@ -5,7 +5,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query';
-import type { ListingFilter, ListingSort, Message } from '@/domain/types';
+import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { apiClient } from './client';
 
@@ -430,6 +430,25 @@ export function useMyListings(type?: 'TASK_REQUEST' | 'SERVICE_OFFER') {
   return useQuery({
     queryKey: profileKeys.myListings(type),
     queryFn: () => apiClient.listMyListings(type),
+  });
+}
+
+/** Mine oppføringer: pause / activate / archive / soft delete. Optimistic on the owner's list. */
+export function useSetListingStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ListingStatus }) => apiClient.setListingStatus(id, status),
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ['myListings'] });
+      qc.setQueriesData<Listing[]>({ queryKey: ['myListings'] }, (old) =>
+        old?.flatMap((l) => (l.id !== id ? [l] : status === 'REMOVED' ? [] : [{ ...l, status }])),
+      );
+    },
+    onSettled: (_d, _e, { id }) => {
+      qc.invalidateQueries({ queryKey: ['myListings'] });
+      qc.invalidateQueries({ queryKey: listingKeys.all });
+      qc.invalidateQueries({ queryKey: listingKeys.detail(id) });
+    },
   });
 }
 

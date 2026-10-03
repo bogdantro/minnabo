@@ -27,7 +27,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
 | `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. **Open:** "Tilgjengelig for småjobber" toggle needs a backend field (not `paused`/feriemodus). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag, Admin row for admins only |
 | `MineAvtaler.dc.html` | `/avtaler` | `src/screens/MineAvtalerScreen.tsx` | ✅ done | Role (Du hjelper / Du får hjelp), cancelled and my rating added to the agenda item. Agreements whose time has no date go under "Uten dato". Cancelled ones show under Fullført as "Avlyst". |
-| `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | exists | Menu label still says "Mine oppdrag og tjenester" |
+| `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | ✅ done | Oppdrag only (no Alle/Oppdrag/Tjenester tabs, no "Tilbyr hjelp"). New `setListingStatus` API: Pause = PAUSED, Arkiver = ARCHIVED, Aktiver = PUBLISHED/RECEIVING_OFFERS, Slett = soft delete (REMOVED – chats and offers stay). Public lists hide PAUSED/ARCHIVED. |
 | `MottatteTilbud.dc.html` | `/tilbud` | `src/screens/MottatteTilbudScreen.tsx` | ✅ done | "Ny" = SENT; Besvart = every other status. Row date is always "Sendt …" (the API has no accepted/declined timestamp). Offers on removed or non-oppdrag listings are hidden. |
 | `Nabolag.dc.html` | `/nabolag` | `src/screens/NeighbourhoodScreen.tsx` | exists | |
 | `Oppdrag.dc.html` | `/(tabs)/index` (home) | `src/screens/OppdragScreen.tsx` | ✅ done | Default route. Kommune list in the sheet has no "184 aktive" counts (no API data). "Hele Innlandet" = all kommuner (`expandKommuner` reach 2). "N nye" = open oppdrag in reach from the last 48 h |
@@ -165,7 +165,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 |---|---|---|
 | `Profil.dc.html` | ✅ Min profil | Own / public view toggle, feriemodus toggle + banner, tabs Om / Vurderinger / Portefølje, verification sheets, reliability bars, endorsements |
 | `RedigerProfil.dc.html` | ✅ Rediger profil | Photo [S], name locked "Fra Vipps", fields, private home notes, portfolio manager, save enabled only when dirty → [T] |
-| `MineOppforinger.dc.html` | Mine oppdrag | Status chips Aktive / Pauset / Arkivert, more [S] (Rediger, Pause/Aktiver, Arkiver, Slett [D]) with animated moves + Angre |
+| `MineOppforinger.dc.html` | ✅ Mine oppdrag | Status chips Aktive / Pauset / Arkivert, more [S] (Rediger, Pause/Aktiver, Arkiver, Slett [D]) with animated moves + Angre |
 | `Lagrede.dc.html` | Lagrede | Oppføringer (unsave collapses + Angre) / Søk (filters summary, new hits badge, alert toggle, Kjør søk, delete) |
 
 ## 8 · Tillit og trygghet

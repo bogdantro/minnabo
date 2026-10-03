@@ -6,6 +6,7 @@ import type {
   CompletionConfirmation,
   Conversation,
   Listing,
+  ListingStatus,
   ListingType,
   Message,
   Proposal,
@@ -75,6 +76,13 @@ export class MockApiClient implements ApiClient {
   async listMyListings(type?: ListingType): Promise<Listing[]> {
     await delay(150);
     return profileRepository.myListings(type);
+  }
+
+  async setListingStatus(listingId: string, status: ListingStatus): Promise<void> {
+    await delay(150);
+    const l = repositories.listings.get(listingId);
+    if (!l || l.owner.id !== profileRepository.currentUserId) throw new Error('Fant ikke oppføringen.');
+    repositories.listings.setStatus(listingId, status);
   }
 
   async notifyMatchingHelpers(listingId: string): Promise<number> {

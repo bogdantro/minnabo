@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Rediger profil).
+Last updated: 2026-10-03 (after Mine oppføringer).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -32,6 +32,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Type-choice screen before Legg ut, IntroScreen, old TaskRequestForm | Rule 2 – Legg ut opens the wizard | ✅ removed |
 | Phone / e-mail / OTP / BankID login | Rule 3 – Vipps only | ✅ removed from the UI (see A3 for real Vipps) |
 | Scripted "typing…" + automatic reply in StartSamtale, "Vis som avsender (demo)" toggle in Tilbudsdetaljer | Prototype-only behaviour | Not built – real replies arrive in the chat; sender view follows your real role |
+| Mine oppføringer: tabs Alle / Oppdrag / Tjenester, the "Tilbyr hjelp" pill, and "…og det du tilbyr naboene" in the subtitle (now "Det du trenger hjelp med.") | Rule 1 – oppdrag only | ✅ not built |
 | Exact address / map pin | Rule 6 – approximate location | Oppdragsdetaljer shows a stylised area circle only |
 
 ---
@@ -97,6 +98,10 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Rediger profil | "Fullt navn" shows the Vipps name only when the Vipps identity is available (mock login today); otherwise it falls back to the display name | There is no separate full-name field on the profile | A3 (real Vipps) + `profiles.full_name` filled from Vipps |
 | Rediger profil | Portfolio tiles have no caption ("Terrasse", "Hagebed") | Portfolio is a list of image URLs | Same as the Profil portfolio item (`portfolio_items.title`) |
 | Rediger profil | Photos picked for the avatar/portfolio are uploaded immediately; if you press "Forkast" the uploaded file stays in Storage | Storage upload happens before save | Optional: a cleanup job for unreferenced files in `avatars/` and `listing-images/` |
+| Mine oppføringer | **"Rediger" in the ⋯ sheet is missing** – there is no way to edit a published oppdrag | No `updateListing` API and the Legg ut wizard has no edit mode | `updateListing(id, patch)` (+ task_details) and a wizard "edit" mode prefilled from the listing. Tell me if you want this built. |
+| Mine oppføringer | "visninger denne uka" mini stat, "48 visninger" and "2 lagret" per card | No view or save counters | `listing_views` (or a `view_count`) and a saved count per listing |
+| Mine oppføringer | Archived card subline "Fullført 2. sep med Erik Moen" and "Du ga 5 stjerner"; "Se avtalen" opens Mine avtaler, not the exact avtale | The owner list doesn't include the agreement / review | Return the accepted proposal id, counterpart and my rating with `listMyListings` |
+| Mine oppføringer | "Slett" is a soft delete (status REMOVED): offers and chats stay in the database, the oppdrag disappears for everyone | Hard delete would cascade-delete the chats, which the design says are kept | OK as is |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -105,7 +110,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 

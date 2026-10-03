@@ -140,9 +140,7 @@ export const profileRepository = {
   },
 
   myListings(type?: Listing['type']): Listing[] {
-    return repositories.listings
-      .list()
-      .filter((l) => l.owner.id === CURRENT_USER_ID && (!type || l.type === type));
+    return repositories.listings.ownedBy(CURRENT_USER_ID).filter((l) => !type || l.type === type);
   },
 
   completionsFor(agreementProposalId: string): CompletionConfirmation[] {

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Listing, ListingFilter, ListingSort } from '@/domain/types';
+import type { Listing, ListingFilter, ListingSort, ListingStatus } from '@/domain/types';
 import { listings as seedListings } from './seed';
 import { safetyStore } from './safetyStore';
 import { profileRepository } from './profileRepository';
@@ -7,8 +7,12 @@ import { profileRepository } from './profileRepository';
 const USER_ADDED_KEY = 'minnabo.listings.userAdded';
 
 let userAdded: Listing[] = [];
+/** status changes from Mine oppføringer (pause / archive / soft delete) */
+let statusOverrides: Record<string, ListingStatus> = {};
+const HIDDEN: ListingStatus[] = ['REMOVED', 'PAUSED', 'ARCHIVED'];
 
-const all = (): Listing[] => [...userAdded, ...seedListings];
+const all = (): Listing[] =>
+  [...userAdded, ...seedListings].map((l) => (statusOverrides[l.id] ? { ...l, status: statusOverrides[l.id] } : l));
 
 const matchesFilter = (listing: Listing, filter?: ListingFilter): boolean => {
   if (!filter) return true;
@@ -76,6 +80,7 @@ export const repositories = {
         all().filter(
           (l) =>
             matchesFilter(l, filter) &&
+            !HIDDEN.includes(l.status) &&
             !safetyStore.isBlocked(l.owner.id) &&
             !profileRepository.getProfile(l.owner.id)?.paused,
         ),
@@ -84,6 +89,13 @@ export const repositories = {
     },
     get(id: string): Listing | undefined {
       return all().find((l) => l.id === id);
+    },
+    /** Everything owned by a profile, incl. paused/archived (not soft-deleted). */
+    ownedBy(profileId: string): Listing[] {
+      return all().filter((l) => l.owner.id === profileId && l.status !== 'REMOVED');
+    },
+    setStatus(id: string, status: ListingStatus): void {
+      statusOverrides = { ...statusOverrides, [id]: status };
     },
     add(listing: Listing): void {
       userAdded = [listing, ...userAdded];
@@ -106,6 +118,7 @@ export const repositories = {
     },
     _reset(): void {
       userAdded = [];
+      statusOverrides = {};
     },
   },
 };

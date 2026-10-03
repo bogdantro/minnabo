@@ -8,6 +8,7 @@ import type {
   Listing,
   ListingFilter,
   ListingSort,
+  ListingStatus,
   ListingType,
   Message,
   Proposal,
@@ -104,6 +105,8 @@ export interface ApiClient {
   getListing(id: string): Promise<Listing>;
   createListing(listing: Listing): Promise<Listing>;
   listMyListings(type?: ListingType): Promise<Listing[]>;
+  /** Mine oppføringer: pause / activate / archive, and soft delete (REMOVED keeps chats and offers). Owner only. */
+  setListingStatus(listingId: string, status: ListingStatus): Promise<void>;
   /** Notify nearby helpers whose offers match this task; returns how many. */
   notifyMatchingHelpers(listingId: string): Promise<number>;
 
