@@ -110,6 +110,8 @@ export interface ApiClient {
   listConversations(params?: ListConversationsParams): Promise<Conversation[]>;
   getConversation(id: string): Promise<Conversation>;
   startConversationForListing(listingId: string): Promise<Conversation>;
+  /** Innboks "Merk alle som lest". */
+  markConversationsRead(conversationIds: string[]): Promise<void>;
   listMessages(conversationId: string): Promise<Message[]>;
   sendMessage(conversationId: string, text: string): Promise<Message>;
   sendAttachment(conversationId: string, attachmentUrl: string): Promise<Message>;

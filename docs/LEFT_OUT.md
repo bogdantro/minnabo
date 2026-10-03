@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Mine avtaler).
+Last updated: 2026-10-03 (after Innboks).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -60,6 +60,9 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Sammenlign | "Varighet" cell | Offers have no duration field | `proposals.duration_text` (+ field in Gi tilbud) |
 | Sammenlign, Avtale | Date sort / countdown / calendar read the date from free text | Proposal time is free text ("Lør 10. okt kl. 10:00") | `proposals.scheduled_at timestamptz` – then "Fredag ettermiddag"-style offers also get a countdown |
 | Avtalesammendrag | "Om 11 dager" countdown + "Legg i kalender" hidden when the time has no date | Same as above | Same as above |
+| Innboks | Unread count per conversation ("2" in the bubble) – shows a dot instead; subline counts conversations, not messages | The API only knows read/unread per conversation | Return `unread_count` (messages after `last_read_at`) from the conversations query |
+| Innboks | Status tag "Endring forespurt" | `statusTag` only has NEW_OFFER / OFFER_ACCEPTED | Add REVISION_PENDING to the conversation status tag |
+| Innboks | "Du: …" prefix on my own last message | Preview has no author | Return the last message's author with the preview |
 | Mine avtaler | Agreements without a real date ("Lørdag kl. 10:00") get no dot in the week strip, no time and sit under "Uten dato"; "Legg alle i kalenderen" skips them | Free-text time (see `scheduled_at` above) | `proposals.scheduled_at timestamptz` |
 | Mine avtaler | Duration in the time column comes from the oppdrag, not the offer | Offers have no duration | `proposals.duration_text` (see Sammenlign) |
 | Mine avtaler | "Legg alle i kalenderen" button | Only on iOS/Android (no device calendar on web) | OK as is |
@@ -73,7 +76,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Screen | State | Notes |
 |--------|-------|-------|
 | Jobbdag | partial | Own route `/jobbdag/[id]` with the old tools (på vei/framme, safe trip, workspace, no-show, "Marker som fullført"). Full Jobbdag.dc.html design (timer, sjekkliste, materialer, bilder) not built yet |
-| Innboks, Chat, Fullføring, Vurdering | to do | Next in order |
+| Chat, Fullføring, Vurdering | to do | Next in order |
 | Profil, Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |

@@ -104,6 +104,11 @@ export class MockApiClient implements ApiClient {
     return conv;
   }
 
+  async markConversationsRead(conversationIds: string[]): Promise<void> {
+    await delay(100);
+    conversationIds.forEach((id) => chatRepository.markRead(id));
+  }
+
   async startConversationForListing(listingId: string): Promise<Conversation> {
     await delay(150);
     return chatRepository.findOrCreateConversationForListing(listingId);

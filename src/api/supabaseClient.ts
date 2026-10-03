@@ -227,6 +227,14 @@ export class SupabaseApiClient implements ApiClient {
     return convs;
   }
 
+  async markConversationsRead(conversationIds: string[]): Promise<void> {
+    const results = await Promise.all(
+      conversationIds.map((id) => supabase.rpc('mark_conversation_read', { p_conversation_id: id })),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) fail(failed.error.message);
+  }
+
   async getConversation(id: string): Promise<Conversation> {
     const me = await myId();
     const { data, error } = await supabase

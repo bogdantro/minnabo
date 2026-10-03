@@ -59,6 +59,14 @@ export function useConversations(unreadOnly?: boolean, query?: string) {
   });
 }
 
+export function useMarkConversationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => apiClient.markConversationsRead(ids),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+  });
+}
+
 /** Count of conversations with unread messages — drives the Innboks tab badge. */
 export function useUnreadConversationCount(): number {
   const { data } = useQuery({
