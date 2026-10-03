@@ -2,7 +2,8 @@
  * Device location → kommune. Coarse, one-shot, foreground only. The raw
  * coordinate never leaves this module — callers get a kommune name.
  */
-import { resolveKommune } from '@/data/kommuner';
+import { Platform } from 'react-native';
+import { nearestKommune, resolveKommune } from '@/data/kommuner';
 
 export type DetectResult =
   | { municipality: string; place?: string }
@@ -25,19 +26,21 @@ export async function detectKommune(): Promise<DetectResult> {
     const pos = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Low,
     });
-    const hits = await Location.reverseGeocodeAsync({
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-    });
-    const hit = hits[0];
-    if (!hit) return { error: 'unavailable' };
+    const { latitude, longitude } = pos.coords;
 
-    const kommuneName = hit.subregion || hit.city || hit.region || '';
-    const municipality = resolveKommune(kommuneName);
-    if (!municipality) return { error: 'unavailable' };
-
-    const place = hit.city || hit.district || hit.subregion || undefined;
-    return { municipality, place };
+    // Native reverse geocoding (iOS/Android). Not available on web since SDK 49,
+    // and it can fail offline – then fall back to the nearest kommune centre.
+    if (Platform.OS !== 'web') {
+      try {
+        const hit = (await Location.reverseGeocodeAsync({ latitude, longitude }))[0];
+        const municipality = hit ? resolveKommune(hit.subregion || hit.city || hit.region || '') : undefined;
+        if (municipality) return { municipality, place: hit?.city || hit?.district || undefined };
+      } catch {
+        /* fall through to the offline lookup */
+      }
+    }
+    const nearest = nearestKommune(latitude, longitude);
+    return nearest ? { municipality: nearest } : { error: 'unavailable' };
   } catch {
     return { error: 'unavailable' };
   }

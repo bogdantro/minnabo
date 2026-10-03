@@ -111,3 +111,31 @@ export function expandKommuner(
   const known = KOMMUNE_NEIGHBOURS[base] ?? [];
   return [base, ...known.filter((k) => k !== base)];
 }
+
+/** Approximate kommune centres (administrasjonssenter) for the offline location lookup. */
+const KOMMUNE_CENTRES: Record<string, [number, number]> = {
+  Lillehammer: [61.115, 10.466], Øyer: [61.264, 10.413], Gausdal: [61.25, 10.15], Ringsaker: [60.881, 10.94],
+  Hamar: [60.795, 11.068], Stange: [60.717, 11.191], Gjøvik: [60.795, 10.692], 'Østre Toten': [60.676, 10.813],
+  'Vestre Toten': [60.726, 10.613], 'Nordre Land': [60.836, 10.077], 'Søndre Land': [60.7, 10.355],
+  'Nord-Aurdal': [60.986, 9.233], Elverum: [60.881, 11.564], Åmot: [61.135, 11.371], Trysil: [61.315, 12.264],
+  Kongsvinger: [60.191, 11.998], 'Sør-Odal': [60.256, 11.683], 'Nord-Odal': [60.39, 11.565], Eidskog: [59.981, 12.12],
+  Grue: [60.462, 12.06], Åsnes: [60.613, 12.016], Sel: [61.773, 9.54], 'Nord-Fron': [61.596, 9.751],
+  'Sør-Fron': [61.552, 9.92], Ringebu: [61.53, 10.14], Tynset: [62.275, 10.778], Tolga: [62.41, 10.993],
+};
+
+/** Nearest served kommune to a coordinate, or undefined when further than ~60 km from all of them. */
+export function nearestKommune(lat: number, lon: number): string | undefined {
+  const rad = Math.PI / 180;
+  let best: string | undefined;
+  let bestKm = Infinity;
+  for (const [name, [la, lo]] of Object.entries(KOMMUNE_CENTRES)) {
+    const x = (lo - lon) * rad * Math.cos(((la + lat) / 2) * rad);
+    const y = (la - lat) * rad;
+    const km = Math.sqrt(x * x + y * y) * 6371;
+    if (km < bestKm) {
+      bestKm = km;
+      best = name;
+    }
+  }
+  return bestKm <= 60 ? best : undefined;
+}

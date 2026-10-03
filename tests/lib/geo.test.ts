@@ -30,7 +30,19 @@ it('returns {error:unavailable} when the fix throws', async () => {
   await expect(detectKommune()).resolves.toEqual({ error: 'unavailable' });
 });
 
-it('returns {error:unavailable} when the kommune cannot be resolved', async () => {
+it('falls back to the nearest kommune centre when reverse geocoding gives nothing useful', async () => {
   L.reverseGeocodeAsync.mockResolvedValue([{ subregion: 'Nowhere', city: 'Nowhere' }] as never);
+  await expect(detectKommune()).resolves.toEqual({ municipality: 'Lillehammer' });
+});
+
+it('falls back to the nearest kommune centre when reverse geocoding throws (web)', async () => {
+  L.reverseGeocodeAsync.mockRejectedValue(new Error('Geocoding API removed'));
+  L.getCurrentPositionAsync.mockResolvedValue({ coords: { latitude: 60.8, longitude: 11.07 } } as never);
+  await expect(detectKommune()).resolves.toEqual({ municipality: 'Hamar' });
+});
+
+it('returns {error:unavailable} far outside the kommuner we serve', async () => {
+  L.reverseGeocodeAsync.mockResolvedValue([] as never);
+  L.getCurrentPositionAsync.mockResolvedValue({ coords: { latitude: 59.91, longitude: 10.75 } } as never); // Oslo
   await expect(detectKommune()).resolves.toEqual({ error: 'unavailable' });
 });
