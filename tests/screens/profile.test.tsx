@@ -36,22 +36,38 @@ test('"Slik ser andre deg" hides private details and editing', async () => {
   expect(screen.getByText('Ta kontakt')).toBeTruthy();
 });
 
-test('edit profile hydrates with the current values', async () => {
+test('edit profile hydrates with the current values; save is enabled only when dirty', async () => {
   await renderWithProviders(<EditProfileScreen />);
-  await waitFor(() => expect(screen.getByDisplayValue('Marius B.')).toBeTruthy());
+  await waitFor(() => expect(screen.getByLabelText('Visningsnavn').props.value).toBe('Marius B.'));
+  expect(screen.getByText('Fra Vipps')).toBeTruthy();
+  expect(screen.getByText('Alt er lagret')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Lagre endringer' })).toBeDisabled();
+
+  await fireEvent.changeText(screen.getByLabelText('Presentasjon'), 'Hjelper gjerne med hagen.');
+  expect(screen.getByText('Ulagrede endringer')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Søre Ål' }));
+  expect(screen.getByText('Søre Ål, Lillehammer')).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Lagre endringer' }));
+  await waitFor(() => expect(screen.getByText('Alt er lagret')).toBeTruthy());
+  const me = profileRepository.getProfile(profileRepository.currentUserId);
+  expect(me?.presentation).toBe('Hjelper gjerne med hagen.');
+  expect(me?.location.place).toBe('Søre Ål');
 });
 
-test('edit profile blocks saving a blank name', async () => {
+test('edit profile blocks saving a blank display name', async () => {
   const meId = profileRepository.currentUserId;
   const before = profileRepository.getProfile(meId)?.displayName;
   await renderWithProviders(<EditProfileScreen />);
-  await waitFor(() => expect(screen.getByDisplayValue('Marius B.')).toBeTruthy());
+  await waitFor(() => expect(screen.getByLabelText('Visningsnavn').props.value).toBe('Marius B.'));
 
-  await fireEvent.changeText(screen.getByDisplayValue('Marius B.'), '   ');
-  await fireEvent.press(screen.getByText('Lagre'));
-
-  await waitFor(() => expect(screen.getByText('Skriv inn navnet ditt.')).toBeTruthy());
+  await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), '   ');
+  expect(screen.getByText('Skriv inn et visningsnavn')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Lagre endringer' })).toBeDisabled();
   expect(profileRepository.getProfile(meId)?.displayName).toBe(before);
+
+  await fireEvent.press(screen.getByText('Forkast'));
+  expect(screen.getByLabelText('Visningsnavn').props.value).toBe('Marius B.');
 });
 
 test('pausing the profile shows the paused banner and hides own listings', async () => {

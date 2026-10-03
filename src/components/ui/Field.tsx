@@ -36,6 +36,8 @@ export type FieldProps = {
   label?: string;
   /** Small grey text right of the label ("12/500", "Valgfritt"). */
   hint?: string;
+  /** Custom element right of the label (e.g. a "Fra Vipps" lock chip); replaces `hint`. */
+  labelRight?: ReactNode;
   /** Help line under the input. */
   help?: string;
   error?: string | null;
@@ -46,13 +48,13 @@ export type FieldProps = {
 };
 
 /** `.field` – label row + control + help / error, gap 8. */
-export function Field({ label, hint, help, error, shakeKey, children, style }: FieldProps) {
+export function Field({ label, hint, labelRight, help, error, shakeKey, children, style }: FieldProps) {
   return (
     <View style={[styles.field, style]}>
       {label ? (
         <View style={styles.labelRow}>
           <Text style={text.label}>{label}</Text>
-          {hint ? <Text style={text.hint}>{hint}</Text> : null}
+          {labelRight ?? (hint ? <Text style={text.hint}>{hint}</Text> : null)}
         </View>
       ) : null}
       {children}

@@ -85,6 +85,7 @@ export const colors = {
   vippsIdFg: '#C2410C',
   starOff: '#D8DCE3',        // empty review star
   dotIdle: '#C9CFD8',        // portfolio viewer dots
+  lockChipText: '#B23A0E',   // Rediger profil "Fra Vipps" chip (bg vippsIdBg)
   bigOkRing: 'rgba(143,210,42,0.35)', // Fullføring check outline
   okBannerBorder: '#BFE5C9', // chat "Avtale inngått" banner
   okBannerText: '#2E5A3A',

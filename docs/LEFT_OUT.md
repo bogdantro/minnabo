@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Profil).
+Last updated: 2026-10-03 (after Rediger profil).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -94,6 +94,9 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Profil | Private card: "E-post" row hidden | Profile has no e-mail field | Return the masked e-mail for the own profile |
 | Profil | Review cards: "Svar fra …" (owner reply) hidden | Reviews can't be replied to | `reviews.reply text`, `replied_at` + an API to reply |
 | Profil | Portfolio tiles are single photos: no Før/Etter pairs, no titles/place under the tiles, no Før/Etter switch in the viewer | `portfolio` is a list of image URLs | `portfolio_items (before_url, after_url, title, place, caption, done_at)` |
+| Rediger profil | "Fullt navn" shows the Vipps name only when the Vipps identity is available (mock login today); otherwise it falls back to the display name | There is no separate full-name field on the profile | A3 (real Vipps) + `profiles.full_name` filled from Vipps |
+| Rediger profil | Portfolio tiles have no caption ("Terrasse", "Hagebed") | Portfolio is a list of image URLs | Same as the Profil portfolio item (`portfolio_items.title`) |
+| Rediger profil | Photos picked for the avatar/portfolio are uploaded immediately; if you press "Forkast" the uploaded file stays in Storage | Storage upload happens before save | Optional: a cleanup job for unreferenced files in `avatars/` and `listing-images/` |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -102,7 +105,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 

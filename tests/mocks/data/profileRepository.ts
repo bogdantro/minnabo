@@ -63,12 +63,12 @@ export const profileRepository = {
   updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'homeNotes' | 'portfolio'>> & {
     place?: string;
     municipality?: string;
-    avatarPath?: string;
+    avatarPath?: string | null;
     maxDistanceKm?: number;
   }): PublicProfile {
     if (patch.displayName !== undefined) editableProfile.displayName = patch.displayName;
     if (patch.presentation !== undefined) editableProfile.presentation = patch.presentation;
-    if (patch.avatarPath !== undefined) editableProfile.avatarUrl = patch.avatarPath;
+    if (patch.avatarPath !== undefined) editableProfile.avatarUrl = patch.avatarPath ?? undefined;
     if (patch.maxDistanceKm !== undefined) editableProfile.maxDistanceKm = patch.maxDistanceKm;
     if (patch.paused !== undefined) editableProfile.paused = patch.paused;
     if (patch.homeNotes !== undefined) editableProfile.homeNotes = patch.homeNotes || undefined;

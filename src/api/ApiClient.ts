@@ -70,7 +70,8 @@ export type UpdateProfilePatch = {
   presentation?: string;
   place?: string;
   municipality?: string;
-  avatarPath?: string;
+  /** null removes the photo */
+  avatarPath?: string | null;
   maxDistanceKm?: number;
   paused?: boolean;
   homeNotes?: string;

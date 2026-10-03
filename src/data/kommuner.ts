@@ -19,6 +19,20 @@ export const KOMMUNE_AREAS: Partial<Record<string, readonly string[]>> = {
   Lillehammer: ['Nordre Ål', 'Søre Ål', 'Sentrum', 'Stampesletta', 'Fåberg', 'Vingrom', 'Kanten'],
 };
 
+/** Område chips on Rediger profil (design/screens/RedigerProfil.dc.html). "Hele kommunen" = place is the kommune itself. */
+export const WHOLE_KOMMUNE = 'Hele kommunen';
+const PROFILE_AREAS: Partial<Record<string, readonly string[]>> = {
+  Lillehammer: ['Nordre Ål', 'Søre Ål', 'Sentrum', 'Stampesletta', 'Fåberg', 'Vingrom', 'Kanten', 'Jørstadmoen'],
+  Øyer: ['Tingberg', 'Hafjell', WHOLE_KOMMUNE],
+  Gausdal: ['Follebu', 'Segalstad bru', WHOLE_KOMMUNE],
+  Ringsaker: ['Brumunddal', 'Moelv', WHOLE_KOMMUNE],
+  Hamar: ['Sentrum', 'Ridabu', WHOLE_KOMMUNE],
+  Gjøvik: ['Sentrum', 'Biri', WHOLE_KOMMUNE],
+};
+export function profileAreas(kommune: string): readonly string[] {
+  return PROFILE_AREAS[kommune] ?? [WHOLE_KOMMUNE];
+}
+
 /** poststed / tettsted / by → kommune, where the names differ. */
 const PLACE_TO_KOMMUNE: Record<string, string> = {
   'Brumunddal': 'Ringsaker',

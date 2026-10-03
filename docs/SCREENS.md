@@ -39,7 +39,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Profil.dc.html` | `/profil`, `/profil/[id]` | `src/screens/ProfileScreen.tsx` | ✅ done | Own vs public via `profileId` param. Own: "Slik ser andre deg" preview. Someone else's: Ta kontakt (only when you already share a conversation) + Følg, flag icon → Rapporter. Endorse = "Anbefal" on the Anbefalt av naboer rows. |
 | `Publisert.dc.html` | `/legg-ut/publisert` | `src/screens/LeggUt/PublishedScreen.tsx` | ✅ done | Share sheet: copy link, SMS, e-post, system share |
 | `Rapporter.dc.html` | `/rapporter` | `src/screens/SafetyScreen.tsx` (with `targetType`) | partial | Shares a component with Sikkerhet; design is a separate 3-step flow |
-| `RedigerProfil.dc.html` | `/profil/rediger` | `src/screens/EditProfileScreen.tsx` | exists | |
+| `RedigerProfil.dc.html` | `/profil/rediger` | `src/screens/EditProfileScreen.tsx` | ✅ done | Name from Vipps (locked) + editable visningsnavn; kommune sheet + area chips save `municipality`/`place`; photo/portfolio upload right away but are only applied on "Lagre endringer". |
 | `Sammenlign.dc.html` | `/tilbud/sammenlign/[listingId]` | `src/screens/SammenlignTilbudScreen.tsx` | ✅ done | Open + accepted offers only. **API gaps:** no per-offer duration and no reply-time stat → "Varighet" and "Svartid" cells left out. "Dato" sort parses the free-text time ("Lør 10. okt"); unparseable times go last. |
 | `Samtykke.dc.html` | `/samtykker` | `src/screens/Onboarding/ConsentScreen.tsx` | ✅ done | Vipps identity card + "Bekreftet via Vipps" hidden until Vipps login. Optional tips consent needs migration `0024_consent_tips.sql` pushed |
 | `SeAlle.dc.html` | `/oppdrag-liste` (`?category=`) | `src/screens/SeeAllScreen.tsx` | ✅ done | Oppdrag only; `/tilbydere` + ListingListScreen removed (rule 1). Price sort uses the listing budget; "Ønsker tilbud" sorts last. |
@@ -164,7 +164,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | Design file | Screen | Must work |
 |---|---|---|
 | `Profil.dc.html` | ✅ Min profil | Own / public view toggle, feriemodus toggle + banner, tabs Om / Vurderinger / Portefølje, verification sheets, reliability bars, endorsements |
-| `RedigerProfil.dc.html` | Rediger profil | Photo [S], name locked "Fra Vipps", fields, private home notes, portfolio manager, save enabled only when dirty → [T] |
+| `RedigerProfil.dc.html` | ✅ Rediger profil | Photo [S], name locked "Fra Vipps", fields, private home notes, portfolio manager, save enabled only when dirty → [T] |
 | `MineOppforinger.dc.html` | Mine oppdrag | Status chips Aktive / Pauset / Arkivert, more [S] (Rediger, Pause/Aktiver, Arkiver, Slett [D]) with animated moves + Angre |
 | `Lagrede.dc.html` | Lagrede | Oppføringer (unsave collapses + Angre) / Søk (filters summary, new hits badge, alert toggle, Kjør søk, delete) |
 
