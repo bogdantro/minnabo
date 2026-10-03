@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { ENV } from '@/lib/env';
 import { mockVipps, useVippsIdentity } from './mockVipps';
 
 export type SessionStatus = 'loading' | 'authed' | 'anon';
@@ -41,8 +42,9 @@ export function useSession(): SessionState {
   return useMemo(
     () => ({
       session,
-      userId: session?.user?.id ?? null,
-      status: vipps && status !== 'authed' ? 'authed' : status,
+      // Demo mode (EXPO_PUBLIC_USE_MOCKS=true): signed in as the demo user Marius B.
+      userId: ENV.useMocks ? 'u-mb' : (session?.user?.id ?? null),
+      status: ENV.useMocks ? 'authed' : vipps && status !== 'authed' ? 'authed' : status,
     }),
     [session, status, vipps],
   );

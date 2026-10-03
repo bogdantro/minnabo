@@ -13,4 +13,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const ENV = { supabaseUrl, supabaseAnonKey } as const;
+/**
+ * `EXPO_PUBLIC_USE_MOCKS=true` → the app runs on the in-memory demo data
+ * (tests/mocks) as the demo user Marius B., without touching Supabase.
+ * Development only: ignored in release builds.
+ */
+const useMocks = __DEV__ && process.env.EXPO_PUBLIC_USE_MOCKS === 'true';
+
+export const ENV = { supabaseUrl, supabaseAnonKey, useMocks } as const;

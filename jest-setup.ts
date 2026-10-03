@@ -22,7 +22,7 @@ jest.mock('@/api/client', () => {
 
 // These mocks keep any accidental import of the supabase client harmless.
 jest.mock('@/lib/env', () => ({
-  ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key' },
+  ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key', useMocks: false },
 }));
 
 // The seeded "current user" — tests run as this profile (see src/data/seed.ts).
