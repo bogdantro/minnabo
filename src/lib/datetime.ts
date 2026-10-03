@@ -43,6 +43,12 @@ const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 's
 
 const MONTHS_LONG = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 
+/** "12. mars 2024" */
+export function longDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()}. ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 /** "mars 2023" */
 export function monthYear(iso: string): string {
   const d = new Date(iso);

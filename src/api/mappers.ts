@@ -45,7 +45,7 @@ export type ProfileRow = {
   phone?: string | null;
   reliability_completed?: number | null;
   reliability_no_shows?: number | null;
-  verifications?: { kind: string; verified: boolean; explanation: string }[] | null;
+  verifications?: { kind: string; verified: boolean; explanation: string; verified_at?: string | null }[] | null;
   profile_ratings?: RatingsRow;
 };
 
@@ -207,6 +207,7 @@ export function toProfile(row: ProfileRow): PublicProfile {
         kind: v.kind as Verification['kind'],
         verified: v.verified,
         explanation: v.explanation,
+        verifiedAt: v.verified_at ?? undefined,
       }),
     ),
     rating: toRating(row.profile_ratings ?? null),

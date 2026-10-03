@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Nabolag + Oppslagstavle).
+Last updated: 2026-10-03 (after Verifisering).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -93,7 +93,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Profil | "Medlem siden mars 2024" shows only the year ("Medlem siden 2026") and place shows the kommune/sted only | `memberSince` is a year string | Return `created_at` (month + year) |
 | Profil | Pålitelighet: only "Møter opp" is shown; "Presis" and "Fullfører" bars are hidden. Footer says "Basert på N fullførte avtaler." (not "siste 12 måneder") | Reliability only has completed + no-shows + score | `reliability.on_time_pct`, `completion_pct`, and a 12-month window |
 | Profil | Anbefalt av naboer: the avatar stack of who recommended is hidden. The note "Bare naboer som har hatt en fullført avtale med … kan anbefale" is shown, but the backend lets anyone endorse | Endorsements return only skill + count | Return endorser ids (first 3) and **enforce in `toggle_endorsement` that the caller has a completed agreement with the person** |
-| Profil | Verification sheet: no "Bekreftet 12. mars 2024" date; Telefon/E-post/Bedrift show the backend's `explanation` text as the single "Dette ble sjekket" line | Verifications have no date or check list | `verifications.verified_at` (+ optional check lines) |
+| Profil | Verification sheet: Telefon/E-post/Bedrift show the backend's `explanation` text as the single "Dette ble sjekket" line (the date is now shown from `verified_at`) | Verifications have no list of checks | Optional: check lines per verification |
 | Profil | Vipps-ID chip and "Verifisert med Vipps" are shown for every profile | Login is Vipps only (rule 3) – correct once A3 is live | A3 |
 | Profil | Private card: "E-post" row hidden | Profile has no e-mail field | Return the masked e-mail for the own profile |
 | Profil | Review cards: "Svar fra …" (owner reply) hidden | Reviews can't be replied to | `reviews.reply text`, `replied_at` + an API to reply |
@@ -114,6 +114,10 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Nabolag | Cover art avatars and the member stack show the latest members; there is no "who is online" | – | OK as is |
 | Oppslagstavle | Image tile only when a photo was added (the design shows coloured category tiles as stand-ins for photos) | Prototype stand-ins | OK as is |
 | Oppslagstavle | "Svar", "Lagre" and "N svar" | See A13 | A13 |
+| Verifisering | E-post row shows "Fra Vipps-profilen din" instead of the masked address | Profile has no e-mail field | Return the masked e-mail for the own profile (same as Profil) |
+| Verifisering | "Du kan svare offentlig på en vurdering du har fått." is left out of "Slik fungerer vurderinger" | There is no reply-to-review feature | `reviews.reply` (see Profil) – then add the line back |
+| Verifisering | Phone row says "Hentet fra Vipps da du logget inn" – true once real Vipps login exists; with the mock login the phone is not from Vipps | A3 | A3 |
+| Verifisering | BankID row (old "Kommer snart") removed | Rule 3 – Vipps only | ✅ |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -122,7 +126,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 

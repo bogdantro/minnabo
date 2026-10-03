@@ -37,6 +37,8 @@ export type Verification = {
   verified: boolean;
   /** what was actually checked — shown to the user (spec §16) */
   explanation: string;
+  /** ISO timestamp when it was confirmed */
+  verifiedAt?: string;
 };
 
 export type Rating = { average: number; count: number };

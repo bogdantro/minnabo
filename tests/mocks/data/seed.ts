@@ -11,6 +11,7 @@ const phoneVerified = (): Verification => ({
   kind: 'PHONE',
   verified: true,
   explanation: 'Telefonnummeret er bekreftet med engangskode.',
+  verifiedAt: '2026-01-15T09:00:00Z',
 });
 
 const businessVerified = (): Verification => ({
@@ -51,7 +52,7 @@ export const profiles: Record<string, PublicProfile> = {
     location: lillehammer,
     verifications: [
       phoneVerified(),
-      { kind: 'EMAIL', verified: true, explanation: 'E-postadressen er bekreftet.' },
+      { kind: 'EMAIL', verified: true, explanation: 'E-postadressen er bekreftet.', verifiedAt: '2026-01-15T09:00:00Z' },
     ],
     isBusiness: false,
     rating: { average: 4.8, count: 6 },

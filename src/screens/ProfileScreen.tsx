@@ -18,6 +18,7 @@ import {
 } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { longDate } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
@@ -148,6 +149,12 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
     }
     const v = profile.verifications.find((x) => x.kind === k);
     return v?.explanation ? [v.explanation] : [];
+  };
+
+  // Vipps-ID is confirmed at onboarding; the others carry their own verified_at.
+  const verifDate = (k: VerifKind): string | undefined => {
+    const at = k === 'VIPPS' ? profile.onboardedAt : profile.verifications.find((x) => x.kind === k)?.verifiedAt;
+    return at ? longDate(at) : undefined;
   };
 
   const categories = (profile.categorySlugs ?? []).map((slug) => categoryArtId(slug));
@@ -516,6 +523,7 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
       <VerifSheet
         kind={verif}
         checked={checkedFor(verif ?? 'VIPPS')}
+        date={verifDate(verif ?? 'VIPPS')}
         onClose={() => setVerif(null)}
         onReadMore={() => {
           setVerif(null);

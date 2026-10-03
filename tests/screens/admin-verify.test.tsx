@@ -8,18 +8,24 @@ import { renderWithProviders } from '../testUtils';
 
 const settle = () => new Promise((r) => setTimeout(r, 400));
 
-test('verification center lets an unverified method be verified', async () => {
-  // start from a profile without email verification
+test('Verifisering shows Vipps + verified methods, what was checked and the trust checklist', async () => {
   profileRepository._reset();
-  const before = profileRepository.getProfile(profileRepository.currentUserId)!.verifications.find((v) => v.kind === 'EMAIL');
-  // seed mb already has EMAIL verified, so verify BUSINESS-adjacent path via PHONE re-check is trivial;
-  // instead assert the screen renders the rows and the trust score
   await renderWithProviders(<VerifiseringssenterScreen />);
-  await settle();
-  expect(screen.getByText('Telefonnummer')).toBeTruthy();
-  expect(screen.getByText('BankID')).toBeTruthy();
-  expect(screen.getByText('Bedrift')).toBeTruthy();
-  void before;
+  expect(await screen.findByText('Du er verifisert')).toBeTruthy();
+  // seed: Marius has phone + e-mail verified → fully verified
+  expect(screen.getByText('Fullt verifisert med Vipps')).toBeTruthy();
+  expect(screen.getByText('Hva ble sjekket?')).toBeTruthy(); // Vipps row open by default
+  expect(screen.getByText('Navn hentet fra Vipps: Marius B.')).toBeTruthy();
+  expect(screen.queryByText('BankID')).toBeNull(); // rule 3: Vipps only
+
+  await fireEvent.press(screen.getByLabelText('Telefon, Bekreftet'));
+  expect(await screen.findByText('Bekreftet 15. januar 2026')).toBeTruthy();
+
+  await fireEvent.press(screen.getByLabelText('Bedrift, Ikke aktuelt'));
+  expect(await screen.findByText('Registrer bedrift')).toBeTruthy();
+
+  // checklist is computed from the real profile (photo + presentation + categories done)
+  expect(screen.getByText('3 av 6 fullført')).toBeTruthy();
 });
 
 test('business registration validates the org number', async () => {

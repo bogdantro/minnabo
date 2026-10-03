@@ -53,8 +53,9 @@ export const profileRepository = {
     if (existing) {
       existing.verified = true;
       existing.explanation = explanation;
+      existing.verifiedAt = new Date().toISOString();
     } else {
-      editableProfile.verifications.push({ kind, verified: true, explanation });
+      editableProfile.verifications.push({ kind, verified: true, explanation, verifiedAt: new Date().toISOString() });
     }
     if (kind === 'BUSINESS') editableProfile.isBusiness = true;
     return clone(editableProfile);

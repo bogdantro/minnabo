@@ -16,11 +16,14 @@ export const VERIF_ART: Record<VerifKind, { icon: IconName; bg: string; fg: stri
 export function VerifSheet({
   kind,
   checked,
+  date,
   onClose,
   onReadMore,
 }: {
   kind: VerifKind | null;
   checked: string[];
+  /** e.g. "12. mars 2024" */
+  date?: string;
   onClose: () => void;
   onReadMore: () => void;
 }) {
@@ -38,7 +41,7 @@ export function VerifSheet({
             <Text style={text.h3}>{copy.title}</Text>
             <View style={styles.vbadge}>
               <Icon name="check" size={14} color={colors.verified} />
-              <Text style={[text.verified, { color: colors.verified }]}>{nb.profile.verified}</Text>
+              <Text style={[text.verified, { color: colors.verified }]}>{date ? nb.verificationCenter.lines.confirmedOn(date) : nb.profile.verified}</Text>
             </View>
           </View>
         </View>
