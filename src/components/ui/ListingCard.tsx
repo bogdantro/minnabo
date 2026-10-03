@@ -34,6 +34,8 @@ export type ListingCardProps = {
   saved?: boolean;
   /** Omit to hide the heart. */
   onToggleSave?: () => void;
+  /** Heart label override, e.g. "Fjern Bære sofa fra lagrede" (Lagrede). */
+  saveLabel?: string;
   onPress?: () => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
@@ -42,7 +44,7 @@ export type ListingCardProps = {
 const AnimatedView = Animated.View;
 
 /** `.save` – 38 circle heart. Pops (1 → 1.4 → 1) when it becomes saved. */
-export function SaveButton({ saved, onPress, style }: { saved: boolean; onPress: () => void; style?: StyleProp<ViewStyle> }) {
+export function SaveButton({ saved, onPress, label, style }: { saved: boolean; onPress: () => void; label?: string; style?: StyleProp<ViewStyle> }) {
   const scale = useSharedValue(1);
   const prev = useRef(saved);
   useEffect(() => {
@@ -59,7 +61,7 @@ export function SaveButton({ saved, onPress, style }: { saved: boolean; onPress:
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={saved ? 'Fjern fra lagrede' : 'Lagre'}
+      accessibilityLabel={label ?? (saved ? 'Fjern fra lagrede' : 'Lagre')}
       accessibilityState={{ selected: saved }}
       hitSlop={3}
       onPress={onPress}
@@ -101,6 +103,7 @@ export function ListingCard({
   online,
   saved = false,
   onToggleSave,
+  saveLabel,
   onPress,
   testID,
   style,
@@ -158,7 +161,7 @@ export function ListingCard({
           </View>
         </View>
       </PressableScale>
-      {onToggleSave ? <SaveButton saved={saved} onPress={onToggleSave} style={styles.saveAbs} /> : null}
+      {onToggleSave ? <SaveButton saved={saved} onPress={onToggleSave} label={saveLabel} style={styles.saveAbs} /> : null}
     </View>
   );
 }

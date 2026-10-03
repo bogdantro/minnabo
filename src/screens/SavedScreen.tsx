@@ -1,209 +1,347 @@
-import { useState } from 'react';
-import { FlatList, View, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, type ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQueries } from '@tanstack/react-query';
-import { tokens, hitSlop } from '@/theme';
-import nb from '@/i18n/nb';
+import Animated, { LinearTransition, ZoomOut } from 'react-native-reanimated';
+import type { Listing } from '@/domain/types';
+import type { SavedSearchRecord } from '@/api/ApiClient';
+import { apiClient } from '@/api/client';
 import {
   listingKeys,
-  profileKeys,
+  useAddSavedSearch,
+  useFollowedProfileIds,
+  useProfile,
   useRemoveSavedSearch,
   useSavedListingIds,
   useSavedSearches,
-  useFollowedProfileIds,
+  useToggleSavedListing,
 } from '@/api/queries';
-import { apiClient } from '@/api/client';
-import type { SavedSearchRecord } from '@/api/ApiClient';
-import { categoryBySlug } from '@/domain/categories';
+import { categoryArtId, categoryBySlug } from '@/domain/categories';
+import nb from '@/i18n/nb';
+import { dayMonth } from '@/lib/datetime';
+import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
-import { PageHeader } from '@/components/TopBar';
-import { ScreenTitle } from '@/components/ui/ScreenTitle';
-import { FilterTabs } from '@/components/FilterTabs';
-import { ScreenState } from '@/components/ui/ScreenState';
-import { AppText } from '@/components/ui/Text';
-import { Icon } from '@/components/ui/Icon';
-import { StatusPill } from '@/components/ui/StatusPill';
-import { ListingRowCard } from '@/components/ListingRowCard';
-import { Avatar } from '@/components/ui/Avatar';
+import { toast } from '@/lib/toast';
+import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
+import { listingPlace, listingPrice, listingSchedule } from '@/components/OppdragCard';
+import {
+  Avatar,
+  Button,
+  FadeUp,
+  Icon,
+  IconButton,
+  ListGroup,
+  ListingCard,
+  ListingListSkeleton,
+  ListRow,
+  Note,
+  PAYMENT_NOTE,
+  Screen,
+  Segmented,
+  SubHeader,
+  type IconName,
+} from '@/components/ui';
 
-type Tab = 'listings' | 'searches' | 'helpers';
+type Tab = 'list' | 'search' | 'helpers';
 
+/** Lagrede (design/screens/Lagrede.dc.html). */
 export function SavedScreen() {
-  const [tab, setTab] = useState<Tab>('listings');
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>('list');
 
-  const { data: savedIds = [] } = useSavedListingIds();
+  const { data: savedIds = [], isLoading: idsLoading } = useSavedListingIds();
   const { data: searches = [] } = useSavedSearches();
   const { data: followedIds = [] } = useFollowedProfileIds();
+  const toggleSaved = useToggleSavedListing();
 
   const listingQueries = useQueries({
     queries: savedIds.map((id) => ({
       queryKey: listingKeys.detail(id),
       queryFn: () => apiClient.getListing(id),
+      retry: false,
     })),
   });
-  const listings = listingQueries
-    .map((q) => q.data)
-    .filter((l): l is NonNullable<typeof l> => !!l);
+  const listings = listingQueries.map((q) => q.data).filter((l): l is Listing => !!l);
+  const loading = idsLoading || listingQueries.some((q) => q.isLoading);
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  const unsave = (l: Listing) => {
+    haptics.light();
+    toggleSaved.mutate(l.id);
+    toast.success(nb.saved.unsaved, {
+      icon: 'heart',
+      action: { label: nb.saved.undo, onPress: () => toggleSaved.mutate(l.id) },
+    });
+  };
+
+  const tabs = [
+    { value: 'list' as const, label: nb.saved.listingsTab(listings.length) },
+    { value: 'search' as const, label: nb.saved.searchesTab(searches.length) },
+    // Followed helpers aren't in the design, but following still exists on Profil – keep the list reachable.
+    ...(followedIds.length ? [{ value: 'helpers' as const, label: nb.saved.helpersTab(followedIds.length) }] : []),
+  ];
 
   return (
-    <SafeAreaView style={styles.wrap} edges={['bottom']}>
-      <PageHeader title={nb.saved.title} />
-      <View style={styles.header}>
-        <ScreenTitle>{nb.saved.title}</ScreenTitle>
-        <FilterTabs<Tab>
-          options={[
-            { value: 'listings', label: nb.saved.listingsTab },
-            { value: 'searches', label: nb.saved.searchesTab },
-            { value: 'helpers', label: nb.saved.helpersTab },
-          ]}
-          value={tab}
-          onChange={setTab}
+    <Screen
+      scroll
+      spacer="none"
+      header={
+        <SubHeader
+          title={nb.saved.title}
+          onBack={back}
+          right={<IconButton icon="search" iconSize={18} accessibilityLabel={nb.saved.searchLabel} onPress={() => safePush('/sok')} />}
         />
-      </View>
-
-      {tab === 'helpers' ? (
-        followedIds.length === 0 ? (
-          <ScreenState status="empty" emptyText={nb.saved.emptyHelpers} />
-        ) : (
-          <FlatList
-            data={followedIds}
-            keyExtractor={(id) => id}
-            contentContainerStyle={styles.list}
-            renderItem={({ item }) => <FollowedHelperCard profileId={item} />}
-          />
-        )
-      ) : tab === 'listings' ? (
-        listings.length === 0 ? (
-          <ScreenState status="empty" emptyText={nb.saved.emptyListings} />
-        ) : (
-          <FlatList
-            data={listings}
-            keyExtractor={(l) => l.id}
-            contentContainerStyle={styles.list}
-            renderItem={({ item }) => (
-              <ListingRowCard listing={item} onPress={() => safePush(`/oppdrag/${item.id}`)} />
-            )}
-          />
-        )
-      ) : searches.length === 0 ? (
-        <ScreenState status="empty" emptyText={nb.saved.emptySearches} />
-      ) : (
-        <FlatList
-          data={searches}
-          keyExtractor={(s) => s.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => <SavedSearchCard search={item} />}
-        />
-      )}
-    </SafeAreaView>
-  );
-}
-
-function FollowedHelperCard({ profileId }: { profileId: string }) {
-  const { data: profile } = useQueries({
-    queries: [{ queryKey: profileKeys.profile(profileId), queryFn: () => apiClient.getProfile(profileId) }],
-  })[0];
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={profile?.displayName ?? profileId}
-      onPress={() => safePush(`/profil/${profileId}`)}
-      style={styles.card}
+      }
     >
-      <View style={styles.cardTitle}>
-        <Avatar uri={profile?.avatarUrl} initials={profile?.initials ?? '?'} size={40} ring={false} />
-        <View style={{ flex: 1 }}>
-          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
-            {profile?.displayName ?? '…'}
-          </AppText>
-          {profile?.location.place ? (
-            <AppText variant="meta" color="navyMuted">
-              {profile.location.place}
-            </AppText>
+      <FadeUp style={[styles.px, styles.pt8]}>
+        <Text style={text.h1} accessibilityRole="header">
+          {nb.saved.title}
+        </Text>
+        <Text style={[text.meta, styles.mt8]}>{nb.saved.sub}</Text>
+      </FadeUp>
+
+      <FadeUp delay={80} style={[styles.px, styles.mt18]}>
+        <Segmented accessibilityLabel={nb.saved.segLabel} value={tab} onChange={setTab} options={tabs} />
+      </FadeUp>
+
+      {tab === 'list' ? (
+        <View style={[styles.px, styles.stack12, styles.mt22]}>
+          {loading && !listings.length ? (
+            <ListingListSkeleton />
+          ) : listings.length ? (
+            listings.map((l) => {
+              const price = listingPrice(l);
+              return (
+                <Animated.View key={l.id} exiting={ZoomOut.duration(300)} layout={LinearTransition.duration(300)}>
+                  <ListingCard
+                    title={l.title}
+                    category={categoryArtId(l.category.slug)}
+                    photoUri={l.images[0]?.url}
+                    ownerName={l.owner.displayName}
+                    ownerRating={l.owner.rating?.count ? l.owner.rating.average : null}
+                    place={listingPlace(l)}
+                    schedule={listingSchedule(l)}
+                    priceLabel={price.label}
+                    priceValue={price.value}
+                    saved
+                    onToggleSave={() => unsave(l)}
+                    saveLabel={nb.saved.unsaveAria(l.title)}
+                    onPress={() => safePush(`/oppdrag/${l.id}`)}
+                  />
+                </Animated.View>
+              );
+            })
+          ) : (
+            <EmptyCard
+              icon="heart"
+              bg={colors.savedBg}
+              fg={colors.heart}
+              title={nb.saved.emptyListTitle}
+              body={nb.saved.emptyListText}
+              cta={<Button label={nb.saved.explore} variant="ink" size="sm" iconRight="arrow" block={false} onPress={() => safePush('/')} />}
+            />
+          )}
+          <Note style={[styles.center, styles.mt8]}>{PAYMENT_NOTE}</Note>
+        </View>
+      ) : tab === 'search' ? (
+        <View style={[styles.px, styles.stack12, styles.mt18]}>
+          {searches.map((s) => (
+            <Animated.View key={s.id} exiting={ZoomOut.duration(300)} layout={LinearTransition.duration(300)}>
+              <SearchCard search={s} />
+            </Animated.View>
+          ))}
+          {searches.length === 0 ? (
+            <EmptyCard
+              icon="bookmark"
+              bg={colors.cyanTint}
+              fg={colors.cyanDeep}
+              title={nb.saved.emptySearchTitle}
+              body={nb.saved.emptySearchText}
+              cta={<Button label={nb.saved.goSearch} variant="ink" size="sm" icon="search" block={false} onPress={() => safePush('/sok')} />}
+            />
           ) : null}
         </View>
-        <Icon name="chevron-right" size={16} color="navyMuted" />
-      </View>
-    </Pressable>
+      ) : (
+        <View style={[styles.px, styles.mt18]}>
+          {followedIds.length ? (
+            <ListGroup style={shadow.card}>
+              {followedIds.map((id) => (
+                <FollowedRow key={id} profileId={id} />
+              ))}
+            </ListGroup>
+          ) : (
+            <Text style={text.meta}>{nb.saved.emptyHelpers}</Text>
+          )}
+        </View>
+      )}
+
+      <View style={styles.bottom} />
+    </Screen>
   );
 }
 
-function summarize(search: SavedSearchRecord): string[] {
-  const parts: string[] = [];
-  if (search.filter.type === 'TASK_REQUEST') parts.push(nb.search.typeTask);
-  else if (search.filter.type === 'SERVICE_OFFER') parts.push(nb.search.typeOffer);
-  if (search.filter.categorySlug) parts.push(categoryBySlug(search.filter.categorySlug).label);
-  if (search.filter.maxDistanceKm) parts.push(`≤ ${search.filter.maxDistanceKm} km`);
-  if (search.filter.verifiedOnly) parts.push(nb.search.filterVerified);
-  return parts;
+function FollowedRow({ profileId }: { profileId: string }) {
+  const { data: p } = useProfile(profileId);
+  return (
+    <ListRow
+      title={p?.displayName ?? '…'}
+      subtitle={p?.location.place}
+      leading={<Avatar uri={p?.avatarUrl} initials={p?.initials ?? '?'} seed={profileId} size={40} ring={false} />}
+      chevron
+      onPress={() => safePush(`/profil/${profileId}`)}
+    />
+  );
 }
 
-function SavedSearchCard({ search }: { search: SavedSearchRecord }) {
+function filterChips(s: SavedSearchRecord): { icon: IconName; label: string }[] {
+  const out: { icon: IconName; label: string }[] = [];
+  const f = s.filter;
+  if (f.categorySlug && f.categorySlug !== 'alle') {
+    out.push({ icon: categoryArtId(f.categorySlug), label: categoryBySlug(f.categorySlug).label });
+  }
+  const m = f.municipalities ?? [];
+  if (m.length === 1) out.push({ icon: 'pin', label: m[0] });
+  else if (m.length > 1) out.push({ icon: 'pin', label: nb.saved.neighbours(m[0]) });
+  if (f.verifiedOnly) out.push({ icon: 'shield', label: nb.saved.verifiedOnly });
+  if (s.sort === 'NEWEST') out.push({ icon: 'clock', label: nb.saved.newest });
+  if (s.sort === 'PRICE') out.push({ icon: 'tag', label: nb.saved.cheapest });
+  return out;
+}
+
+function SearchCard({ search: s }: { search: SavedSearchRecord }) {
   const remove = useRemoveSavedSearch();
-  const tags = summarize(search);
+  const add = useAddSavedSearch();
+  // "Nye treff" = matches posted after the search was saved.
+  const [{ data: hits }] = useQueries({
+    queries: [{ queryKey: listingKeys.list(s.filter, s.sort), queryFn: () => apiClient.listListings({ filter: s.filter, sort: s.sort }) }],
+  });
+  const fresh = (hits ?? []).filter((l) => l.createdAt > s.createdAt).length;
+  const q = s.filter.query?.trim() || s.name;
+  const chips = filterChips(s);
+  const meta = [s.name !== q ? s.name : null, nb.saved.savedOn(dayMonth(s.createdAt))].filter(Boolean).join(' · ');
+
+  const del = () => {
+    haptics.light();
+    remove.mutate(s.id);
+    toast.success(nb.saved.deleted(q), {
+      icon: 'trash',
+      action: { label: nb.saved.undo, onPress: () => add.mutate({ name: s.name, filter: s.filter, sort: s.sort }) },
+    });
+  };
+  const run = () => {
+    const params = new URLSearchParams();
+    if (s.filter.query) params.set('q', s.filter.query);
+    if (s.filter.categorySlug && s.filter.categorySlug !== 'alle') params.set('category', s.filter.categorySlug);
+    const qs = params.toString();
+    safePush(qs ? `/sok?${qs}` : '/sok');
+  };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${search.name} — ${nb.savedSearch.run}`}
-      onPress={() => safePush(`/sok?q=${encodeURIComponent(search.filter.query ?? '')}`)}
-      style={styles.card}
-    >
-      <View style={styles.cardHead}>
-        <View style={styles.cardTitle}>
-          <Icon name="bookmark" size={16} color="cyan" />
-          <AppText variant="cardTitle" weight="bold" numberOfLines={1}>
-            {search.name}
-          </AppText>
+    <FadeUp style={[styles.ss, shadow.card]}>
+      <View style={styles.ssTop}>
+        <View style={styles.ssIcon}>
+          <Icon name="search" size={18} color={colors.ink} />
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={nb.savedSearch.remove}
-          hitSlop={hitSlop}
-          onPress={() => remove.mutate(search.id)}
-        >
-          <Icon name="trash-2" size={16} color="navyMuted" />
-        </Pressable>
+        <View style={styles.ssBody}>
+          <Text style={styles.q}>{`«${q}»`}</Text>
+          {fresh > 0 ? (
+            <View style={styles.newb}>
+              <View style={styles.newDot} />
+              <Text style={styles.newText}>{nb.saved.newHits(fresh)}</Text>
+            </View>
+          ) : (
+            <Text style={[text.meta, styles.f125]}>{nb.saved.noNewHits}</Text>
+          )}
+        </View>
       </View>
-
-      {search.filter.query ? (
-        <AppText variant="meta" color="navyMuted">
-          «{search.filter.query}»
-        </AppText>
-      ) : null}
-
-      {tags.length > 0 ? (
-        <View style={styles.tags}>
-          {tags.map((t) => (
-            <StatusPill key={t} label={t} tone="neutral" soft />
+      {chips.length ? (
+        <View style={styles.fl}>
+          {chips.map((c) => (
+            <View key={c.label} style={styles.flChip}>
+              <Icon name={c.icon} size={14} color={colors.ink2} />
+              <Text style={styles.flText}>{c.label}</Text>
+            </View>
           ))}
         </View>
       ) : null}
-
-      <View style={styles.cardFoot}>
-        <AppText variant="meta" weight="bold" color="cyan">
-          {nb.savedSearch.run}
-        </AppText>
-        <Icon name="chevron-right" size={16} color="cyan" />
+      <View style={styles.ssFoot}>
+        <Text style={[text.meta, styles.f125, styles.flex]}>{meta}</Text>
+        <IconButton icon="trash" variant="ghost" iconSize={18} iconColor={colors.danger} accessibilityLabel={nb.saved.deleteAria(q)} onPress={del} />
+        <Button label={nb.saved.runSearch} variant="ink" size="sm" iconRight="arrow" block={false} onPress={run} />
       </View>
-    </Pressable>
+    </FadeUp>
+  );
+}
+
+function EmptyCard({ icon, bg, fg, title, body, cta }: { icon: IconName; bg: string; fg: string; title: string; body: string; cta: ReactNode }) {
+  return (
+    <FadeUp style={styles.empty}>
+      <View style={[styles.emptyIcon, { backgroundColor: bg }]}>
+        <Icon name={icon} size={24} color={fg} />
+      </View>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={[text.meta, styles.emptyText]}>{body}</Text>
+      <View style={styles.mt6}>{cta}</View>
+    </FadeUp>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: tokens.color.bg },
-  header: { paddingHorizontal: tokens.space.xl, paddingBottom: tokens.space.md, gap: tokens.space.md },
-  list: { paddingHorizontal: tokens.space.xl, paddingBottom: tokens.space.xxxl, gap: tokens.space.lg },
-  card: {
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.card,
-    borderWidth: 1,
-    borderColor: tokens.color.line,
-    padding: tokens.space.md,
-    gap: tokens.space.sm,
-    ...tokens.shadow.card,
+  flex: { flex: 1, minWidth: 0 },
+  px: { paddingHorizontal: screenPadding },
+  pt8: { paddingTop: 8 },
+  mt6: { marginTop: 6 },
+  mt8: { marginTop: 8 },
+  mt18: { marginTop: 18 },
+  mt22: { marginTop: 22 },
+  f125: { fontSize: 12.5 },
+  stack12: { gap: 12 },
+  center: { justifyContent: 'center' },
+  bottom: { height: 60 },
+  ss: { backgroundColor: colors.surface, borderRadius: 26, padding: 16, gap: 12 },
+  ssTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  ssIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  ssBody: { flex: 1, minWidth: 0, gap: 6 },
+  q: { fontFamily: fonts.display, fontSize: 18, lineHeight: 21.6, letterSpacing: -0.36, color: colors.ink },
+  newb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    height: 24,
+    paddingHorizontal: 9,
+    borderRadius: radius.pill,
+    backgroundColor: colors.lime,
   },
-  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: tokens.space.md },
-  cardTitle: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flex: 1 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs },
-  cardFoot: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: tokens.space.xs },
+  newDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.ink },
+  newText: { fontFamily: fonts.bodyHeavy, fontSize: 11.5, color: colors.ink },
+  fl: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  flChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: radius.s,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.line2,
+  },
+  flText: { fontFamily: fonts.bodySemi, fontSize: 12.5, color: colors.ink2 },
+  ssFoot: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 4, borderTopWidth: 1, borderTopColor: colors.line2 },
+  empty: {
+    paddingVertical: 30,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.dashed,
+    borderRadius: 20,
+    backgroundColor: colors.dashedCardBg,
+  },
+  emptyIcon: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
+  emptyTitle: { fontFamily: fonts.display, fontSize: 17, lineHeight: 21, color: colors.ink, textAlign: 'center' },
+  emptyText: { maxWidth: 250, textAlign: 'center' },
 });

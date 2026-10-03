@@ -21,7 +21,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | exists | |
 | `Jobbdag.dc.html` | `/jobbdag/[id]` | `src/screens/JobbdagScreen.tsx` | ✅ done | Timer on the workspace (start/pause; "Stopp" = pause + local stopped state). Before/after slider pairs Før[i] with Etter[i]; unpaired photos show under Underveis. Kept the existing job-day tools (på vei/framme, ring/SMS, trygg tur, no-show) in a "Trygghet og kontakt" section below the tabs. |
 | `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
-| `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | exists | |
+| `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | ✅ done | Oppføringer (unsave collapses + Angre) / Søk (filter chips, "nye treff" since saved, Kjør søk, delete + Angre). Alert bell hidden (no backend). Extra "Hjelpere" segment only when you follow someone. |
 | `LeggUt.dc.html` | `/legg-ut` | `src/screens/LeggUt/LeggUtWizard.tsx` | ✅ done | Opens directly (rule 2); draft saved locally ("Lagre utkast"). **API gap:** "Hvem kan gi tilbud", "Maks avstand" and the private estimate have no columns for oppdrag – shown in the summary, not saved |
 | `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | ✅ done (mock) | Vipps sheet is MOCKED (`src/auth/mockVipps.ts`, sample identities, nothing saved). Real Vipps OIDC still to do |
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
@@ -166,7 +166,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Profil.dc.html` | ✅ Min profil | Own / public view toggle, feriemodus toggle + banner, tabs Om / Vurderinger / Portefølje, verification sheets, reliability bars, endorsements |
 | `RedigerProfil.dc.html` | ✅ Rediger profil | Photo [S], name locked "Fra Vipps", fields, private home notes, portfolio manager, save enabled only when dirty → [T] |
 | `MineOppforinger.dc.html` | ✅ Mine oppdrag | Status chips Aktive / Pauset / Arkivert, more [S] (Rediger, Pause/Aktiver, Arkiver, Slett [D]) with animated moves + Angre |
-| `Lagrede.dc.html` | Lagrede | Oppføringer (unsave collapses + Angre) / Søk (filters summary, new hits badge, alert toggle, Kjør søk, delete) |
+| `Lagrede.dc.html` | ✅ Lagrede | Oppføringer (unsave collapses + Angre) / Søk (filters summary, new hits badge, alert toggle, Kjør søk, delete) |
 
 ## 8 · Tillit og trygghet
 

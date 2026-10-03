@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Mine oppføringer).
+Last updated: 2026-10-03 (after Lagrede + price-input fix).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -11,16 +11,18 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | # | Prio | Action | Why |
 |---|------|--------|-----|
-| A1 | 🔴 | **Restore the Supabase project** (`hvxuzvhzsaocsnwznsai`). Its address no longer resolves in DNS – most likely a paused/deleted free-tier project. Check the Supabase dashboard and restore it. | Every live screen shows "Noe gikk galt" until it is back. All visual checks so far were done against the in-memory mock data. |
+| A1 | ✅ | ~~Restore the Supabase project~~ – **done by you (2026-10-03)**: `profiles` exists, the app saves with a real Supabase session. Still to do: verify the **`avatars` bucket** upload with the storage policies you prepared (folder = Supabase user id). | Onboarding photo and Rediger profil photo/portfolio upload depend on it. |
 | A2 | 🔴 | **Push the pending migrations**: `npm run db:push` (after A1). Pending: `0024_consent_tips.sql`, `0025_seed_main_partners.sql` (yours), `0026_cancel_agreement.sql`. | 0024 = optional tips consent on Samtykke. 0026 = "Avlys avtalen" (cancel agreement RPC). Without them those actions fail on the live backend. |
 | A3 | 🔴 | **Real Vipps login (OIDC)**. Today the Vipps sheet is a mock (`src/auth/mockVipps.ts`) with sample identities. Needs a Vipps Login merchant agreement, client id/secret, and a Supabase auth hook / edge function. | Rule 3: Vipps is the only login. Name, birth year and phone on Samtykke / Oppsett also come from Vipps. |
 | A4 | 🔴 | **Youth roles on the backend** (under-18). Add a role/claim from the Vipps birth date and RLS rules: youth can only browse oppdrag, give/withdraw tilbud, chat in their own offer conversations, view profile, safety/privacy. | Rule 5 says enforce on the backend. The youth app (`/ung`) works, but its offers/chats are local only until this exists. |
-| A5 | 🟠 | **Commit your own changes** that I keep out of my commits: `app.json` (EAS/owner/infoPlist), `package.json` version bumps + `package-lock.json`, `app/(tabs)/_layout.tsx` (SKIP_LOGIN), partner-logo edits (`mappers.ts`, `supabaseClient.ts`, `types.ts`, `FellesskapScreen.tsx`, `seedCommunity.ts`), migration 0025, and delete the temp file `app.json.BLV1_…`. | `package-lock.json` now also contains the `expo-calendar` install, so it must be committed together with your version bumps. |
+| A5 | 🟠 | **Commit your own changes** that I keep out of my commits: `app.json` (EAS/owner/infoPlist), `package.json` version bumps + `package-lock.json`, `app/(tabs)/_layout.tsx` (SKIP_LOGIN), partner-logo edits (`mappers.ts`, `supabaseClient.ts`, `types.ts`, `FellesskapScreen.tsx`, `seedCommunity.ts`), migration 0025, the **SetupScreen anonymous-auth fix** (`src/screens/Onboarding/SetupScreen.tsx` – remove the two `console.log` lines and the `console.error` before release), and delete the temp file `app.json.BLV1_…`. | `package-lock.json` now also contains the `expo-calendar` install, so it must be committed together with your version bumps. |
 | A6 | 🟠 | **Make a new app build** (EAS) once A5 is in. | `expo-calendar` adds a native module + the calendar permission text; Expo Go/old builds can't use "Legg i kalender". |
 | A7 | 🟠 | **Decide the backend fields** in section 3 (skills, availability, offer count, response time, …). Tell me which to add and I'll write the migrations. | Each one un-hides a part of the design. |
 | A8 | 🟡 | **Partner logos**: get logo files from the partners and set `logo_path`. | Fellesskap shows dashed placeholders until then. |
 | A9 | 🟡 | `EXPO_PUBLIC_USE_MOCKS=true` in `.env` is **not read by the app** any more (the app always uses Supabase). Decide: remove the line, or let me bring the switch back so you can run on mock data while Supabase is down. | Avoids confusion; the variable looks like it does something. |
 | A10 | 🟡 | `design/compare/knapper-app.png` does not exist (asked about in the Komponenter task). Add it if you want that comparison redone. | Komponenter was compared against `design/screenshots/Komponenter.png` instead. |
+| A11 | 🟠 | **Anonymous Supabase auth is a dev stand-in** (added by you in Oppsett). Enable "Anonymous sign-ins" only for development, and replace it with the Vipps OIDC session (A3) before launch – the profile id model (auth.uid() = profiles.id) stays the same. Anonymous users are never cleaned up automatically. | Otherwise anyone can create accounts without Vipps (rule 3). |
+| A12 | 🟡 | **Test the price fields on a phone** after the fix (Legg ut step 6, Gi tilbud, youth tilbud). I could only reproduce on web, so I fixed the native causes I could find: big-number clipping on Android, keyboard covering the field (iOS screens + all sheets), and the first tap on a quick-amount chip only closing the keyboard. If something is still off, send a screenshot. | The bug was reported on device. |
 
 ---
 
@@ -102,6 +104,10 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Mine oppføringer | "visninger denne uka" mini stat, "48 visninger" and "2 lagret" per card | No view or save counters | `listing_views` (or a `view_count`) and a saved count per listing |
 | Mine oppføringer | Archived card subline "Fullført 2. sep med Erik Moen" and "Du ga 5 stjerner"; "Se avtalen" opens Mine avtaler, not the exact avtale | The owner list doesn't include the agreement / review | Return the accepted proposal id, counterpart and my rating with `listMyListings` |
 | Mine oppføringer | "Slett" is a soft delete (status REMOVED): offers and chats stay in the database, the oppdrag disappears for everyone | Hard delete would cascade-delete the chats, which the design says are kept | OK as is |
+| Lagrede | Alert bell per saved search, "Slå på varsel …" note, "· varsel på" and "sist kjørt …" | Saved searches have no alert flag, no last-run time and nothing sends alerts | `saved_searches.alert boolean`, `last_run_at`, and a job that pushes new hits |
+| Lagrede | "Nye treff" counts oppdrag posted since the search was **saved**, not since you last opened it | No last-seen time per saved search | `saved_searches.last_seen_at` (set when "Kjør søk" is pressed) |
+| Lagrede | "Kjør søk" only carries the text and category into Søk (not kommune / verified / sort) | `/sok` only reads `q` and `category` | Let `/sok` accept the full saved filter |
+| Lagrede | Extra "Hjelpere (n)" segment (only when you follow someone) – not in the design | Following ("Følg") still exists on Profil and this is the only list of them | Decide: keep, or drop following |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -110,7 +116,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
@@ -122,4 +128,5 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 |-----|----------|
 | "Avlys avtalen" had no backend | `0026_cancel_agreement.sql` + `cancelAgreement` API (`d1497de`) – still needs A2 |
 | "Legg i kalender" had no library | `expo-calendar` installed (approved 2026-10-03) – needs A5/A6 |
+| Price input UI on device (reported 2026-10-03) | Android font padding removed from the big amount, "kr" centred, inputs inside sheets use the sheet's keyboard-aware input, iOS screens adjust for the keyboard, taps on chips work while the keyboard is open – please confirm on a phone (A12) |
 | Lists stuck on skeletons under the mock login | `locationScope` keeps the kommune locally without a backend user (`b7f045f`) |
