@@ -178,7 +178,7 @@ export function MyListingsScreen() {
             </View>
             <Text style={styles.emptyTitle}>{empty.title}</Text>
             <Text style={[text.meta, styles.emptyText]}>{empty.text}</Text>
-            <Button label={nb.mine.newListing} variant="ink" size="sm" icon="plus" block={false} onPress={() => safePush('/legg-ut')} style={styles.mt6} />
+            <Button label={nb.mine.newListing} variant="ink" size="sm" icon="plus" block={false} align="center" onPress={() => safePush('/legg-ut')} style={styles.mt6} />
           </FadeUp>
         ) : (
           shown.map((l) => (

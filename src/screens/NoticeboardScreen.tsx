@@ -140,7 +140,7 @@ export function NoticeboardScreen() {
               </View>
               <Text style={styles.emptyTitle}>{nb.noticeboard.emptyTitle}</Text>
               {kommune ? <Text style={text.meta}>{nb.noticeboard.emptyText(kommune)}</Text> : null}
-              <Button label={nb.noticeboard.write} variant="ghost" size="sm" block={false} onPress={() => setCompose(true)} />
+              <Button label={nb.noticeboard.write} variant="ghost" size="sm" block={false} align="center" onPress={() => setCompose(true)} />
             </FadeUp>
           )}
           {kommune ? (

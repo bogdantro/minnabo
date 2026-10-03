@@ -162,15 +162,24 @@ export function OppdragScreen() {
             <ErrorState onRetry={() => void jobs.refetch()} retrying={jobs.isFetching} />
           </View>
         ) : shown.length === 0 ? (
-          <ScaleIn style={styles.empty}>
-            <View style={styles.emptyIcon}>
-              <Icon name="clip" size={22} color={colors.limeDeep} />
+          <ScaleIn style={[styles.empty, shadow.card]}>
+            <View style={[styles.emptyIcon, !municipality && styles.emptyIconPin]}>
+              <Icon name={municipality ? 'clip' : 'pin'} size={26} color={municipality ? colors.limeDeep : colors.cyanDeep} />
             </View>
-            <Text style={[text.bodySemi, styles.center, { fontFamily: text.label.fontFamily }]}>
-              {nb.oppdrag.empty(municipality ?? nb.oppdrag.pickKommune.toLowerCase())}
+            <Text style={styles.emptyTitle}>{municipality ? nb.oppdrag.empty(municipality) : nb.oppdrag.noKommuneTitle}</Text>
+            <Text style={[text.meta, styles.center, styles.emptyBody]}>
+              {!municipality ? nb.oppdrag.noKommuneBody : reach < 2 ? nb.oppdrag.emptyHint : nb.oppdrag.emptyHintWide}
             </Text>
-            <Text style={[text.meta, styles.center]}>{nb.oppdrag.emptyHint}</Text>
-            <Button label={nb.oppdrag.widen} variant="ghost" size="sm" block={false} onPress={() => setLocOpen(true)} />
+            {!municipality ? (
+              <Button label={nb.oppdrag.pickKommune} icon="pin" variant="ink" size="sm" block={false} align="center" onPress={() => setLocOpen(true)} style={styles.emptyCta} />
+            ) : (
+              <View style={styles.emptyBtns}>
+                {reach < 2 ? (
+                  <Button label={nb.oppdrag.widen} icon="locate" variant="ink" size="sm" block={false} onPress={() => setLocOpen(true)} />
+                ) : null}
+                <Button label={nb.oppdrag.emptyPost} icon="plus" variant={reach < 2 ? 'ghost' : 'ink'} size="sm" block={false} onPress={() => safePush('/legg-ut')} />
+              </View>
+            )}
           </ScaleIn>
         ) : (
           shown.map((l, i) => (
@@ -293,22 +302,27 @@ const styles = StyleSheet.create({
   bleed: { marginHorizontal: -screenPadding },
   errorBox: { height: 360 },
   empty: {
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.dashed,
-    borderRadius: radius.option,
-    padding: 22,
+    borderRadius: radius.listingCard,
+    backgroundColor: colors.surface,
+    paddingVertical: 28,
+    paddingHorizontal: 22,
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   emptyIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.limeTint,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 6,
   },
+  emptyIconPin: { backgroundColor: colors.cyanTint },
+  emptyTitle: { ...text.h3, fontSize: 18, lineHeight: 22, textAlign: 'center' },
+  emptyBody: { maxWidth: 270 },
+  emptyCta: { marginTop: 8 },
+  emptyBtns: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 8 },
   seeAll: { marginTop: 2 },
   lead: {
     flexDirection: 'row',

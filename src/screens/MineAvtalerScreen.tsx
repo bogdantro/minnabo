@@ -267,7 +267,7 @@ export function MineAvtalerScreen() {
             ) : !day && upcoming.length === 0 ? (
               <ScaleIn style={styles.mt20}>
                 <EmptyCard icon="cal" title={nb.agenda.emptyUp} sub={nb.agenda.emptyUpSub}>
-                  <Button label={nb.agenda.findJob} size="sm" block={false} onPress={() => router.replace('/')} />
+                  <Button label={nb.agenda.findJob} size="sm" block={false} align="center" onPress={() => router.replace('/')} />
                 </EmptyCard>
               </ScaleIn>
             ) : null}

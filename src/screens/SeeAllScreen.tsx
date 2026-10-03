@@ -174,9 +174,9 @@ export function SeeAllScreen({ initialCategory }: { initialCategory?: string }) 
               </Text>
               <Text style={[text.meta, { textAlign: 'center' }]}>{nb.seAlle.emptyBody}</Text>
               {cat ? (
-                <Button label={nb.seAlle.showAllCats} variant="ghost" size="sm" block={false} onPress={() => setCat(null)} />
+                <Button label={nb.seAlle.showAllCats} variant="ghost" size="sm" block={false} align="center" onPress={() => setCat(null)} />
               ) : (
-                <Button label={nb.oppdrag.widen} variant="ghost" size="sm" block={false} onPress={() => setLocOpen(true)} />
+                <Button label={nb.oppdrag.widen} variant="ghost" size="sm" block={false} align="center" onPress={() => setLocOpen(true)} />
               )}
             </ScaleIn>
           ) : (

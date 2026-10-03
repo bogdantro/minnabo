@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { marginTop: 6, textAlign: "center" },
   emptySub: { maxWidth: 260 },
-  emptyBtn: { marginTop: 6 },
+  emptyBtn: { marginTop: 6, alignSelf: "center" },
   prefs: { marginTop: 22, paddingHorizontal: screenPadding },
   bottom: { height: 60 },
 });

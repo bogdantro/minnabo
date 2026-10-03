@@ -310,7 +310,7 @@ export function SearchScreen({ initialQuery = '', initialCategory }: { initialQu
             <Text style={[text.h3, styles.center]}>{term ? nb.sok.emptyQ(term) : nb.sok.emptyFilters}</Text>
             <Text style={[text.meta, styles.center, { maxWidth: 280 }]}>{nb.sok.emptyBody}</Text>
             {active.length ? (
-              <Button label={nb.sok.removeAll} icon="refresh" variant="ink" size="sm" block={false} onPress={() => set(NO_FILTERS)} />
+              <Button label={nb.sok.removeAll} icon="refresh" variant="ink" size="sm" block={false} align="center" onPress={() => set(NO_FILTERS)} />
             ) : null}
             <Text style={[text.eyebrow, styles.mt12]}>{nb.sok.tryInstead}</Text>
             <View style={[styles.wrap, { justifyContent: 'center' }]}>

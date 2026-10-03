@@ -207,7 +207,7 @@ export function InnboksScreen() {
               </View>
               <Text style={[text.label, styles.f155, styles.center]}>{nb.inbox.noHits(q.trim())}</Text>
               <Text style={[text.meta, styles.center]}>{nb.inbox.noHitsSub}</Text>
-              <Button label={nb.inbox.clearSearch} variant="ghost" size="sm" block={false} onPress={() => setQ('')} />
+              <Button label={nb.inbox.clearSearch} variant="ghost" size="sm" block={false} align="center" onPress={() => setQ('')} />
             </ScaleIn>
           ) : filter === 'uleste' ? (
             <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
@@ -216,7 +216,7 @@ export function InnboksScreen() {
               </View>
               <Text style={styles.caughtTitle}>{nb.inbox.caughtUp}</Text>
               <Text style={[text.meta, styles.center]}>{nb.inbox.caughtUpSub}</Text>
-              <Button label={nb.inbox.showAll} variant="ghost" size="sm" block={false} onPress={() => setFilter('alle')} style={styles.mt4} />
+              <Button label={nb.inbox.showAll} variant="ghost" size="sm" block={false} align="center" onPress={() => setFilter('alle')} style={styles.mt4} />
             </ScaleIn>
           ) : (
             <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
@@ -225,7 +225,7 @@ export function InnboksScreen() {
               </View>
               <Text style={styles.caughtTitle}>{nb.inbox.emptyTitle}</Text>
               <Text style={[text.meta, styles.center]}>{nb.inbox.emptySub}</Text>
-              <Button label={nb.inbox.findJob} size="sm" block={false} onPress={() => router.replace('/')} style={styles.mt4} />
+              <Button label={nb.inbox.findJob} size="sm" block={false} align="center" onPress={() => router.replace('/')} style={styles.mt4} />
             </ScaleIn>
           )
         ) : null}

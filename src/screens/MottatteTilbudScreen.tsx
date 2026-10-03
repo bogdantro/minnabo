@@ -161,7 +161,7 @@ export function MottatteTilbudScreen() {
                 </Text>
                 <Text style={[text.meta, styles.center]}>{nb.mottatte.emptySub}</Text>
                 {seg !== 'alle' ? (
-                  <Button label={nb.mottatte.showAll} variant="ghost" size="sm" block={false} onPress={() => setSeg('alle')} />
+                  <Button label={nb.mottatte.showAll} variant="ghost" size="sm" block={false} align="center" onPress={() => setSeg('alle')} />
                 ) : null}
               </ScaleIn>
             ) : null}

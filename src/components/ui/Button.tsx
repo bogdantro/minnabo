@@ -29,6 +29,8 @@ export type ButtonProps = {
   size?: ButtonSize;
   /** Full width (`.btn-block`). Defaults to true: most buttons sit in footers and forms. */
   block?: boolean;
+  /** Inline buttons only: `center` for centred cards (empty states). Default `start`. */
+  align?: 'start' | 'center';
   /** Leading icon. */
   icon?: IconName;
   /** Custom leading element (e.g. the Vipps mark) instead of an icon. */
@@ -72,6 +74,7 @@ export function Button({
   variant = 'lime',
   size = 'md',
   block = true,
+  align = 'start',
   icon,
   leading,
   iconRight,
@@ -127,7 +130,7 @@ export function Button({
           backgroundColor: look.bg,
         },
         look.border ? { borderWidth: 1.5, borderColor: look.border } : null,
-        block ? styles.block : styles.inline,
+        block ? styles.block : align === 'center' ? styles.inlineCenter : styles.inline,
         !disabled && look.shadow ? look.shadow : null,
         disabled ? styles.disabled : null,
         style,
@@ -170,6 +173,7 @@ const styles = StyleSheet.create({
   },
   block: { alignSelf: 'stretch' },
   inline: { alignSelf: 'flex-start' },
+  inlineCenter: { alignSelf: 'center' },
   disabled: { opacity: 0.38, ...shadow.none },
   textVariant: {
     textDecorationLine: 'underline',

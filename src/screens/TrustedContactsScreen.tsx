@@ -87,7 +87,7 @@ export function TrustedContactsScreen() {
                 <Icon name="users" size={22} color={colors.limeDeep} />
               </View>
               <Text style={styles.emptyTitle}>{nb.trustedContacts.emptyTitle}</Text>
-              <Button label={nb.trustedContacts.emptyAdd} variant="ink" size="sm" block={false} onPress={() => setOpen(true)} />
+              <Button label={nb.trustedContacts.emptyAdd} variant="ink" size="sm" block={false} align="center" onPress={() => setOpen(true)} />
             </FadeUp>
           ) : null}
           {full ? <Text style={text.meta}>{nb.trustedContacts.full}</Text> : null}
