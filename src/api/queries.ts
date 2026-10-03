@@ -1,5 +1,6 @@
 import {
   useQuery,
+  useQueries,
   useMutation,
   useQueryClient,
   keepPreviousData,
@@ -37,6 +38,19 @@ export function useListing(id: string) {
     queryKey: listingKeys.detail(id),
     queryFn: () => apiClient.getListing(id),
     enabled: !!id,
+  });
+}
+
+/** Several listings at once (Profil: reviewer role and job per review). Missing ones resolve to undefined. */
+export function useListingsByIds(ids: string[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: listingKeys.detail(id),
+      queryFn: () => apiClient.getListing(id),
+      enabled: !!id,
+      retry: false,
+    })),
+    combine: (results) => Object.fromEntries(ids.map((id, i) => [id, results[i]?.data])),
   });
 }
 

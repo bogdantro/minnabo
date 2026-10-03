@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } fro
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { colors, fonts, motion, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { CountBadge } from './Badges';
+import { Icon, type IconName } from './Icon';
 
-export type SegmentOption<T extends string> = { value: T; label: string; count?: number };
+export type SegmentOption<T extends string> = { value: T; label: string; count?: number; icon?: IconName };
 
 export type SegmentedProps<T extends string> = {
   options: SegmentOption<T>[];
@@ -31,6 +32,7 @@ export function Segmented<T extends string>({ options, value, onChange, accessib
             onPress={() => onChange(o.value)}
             style={[styles.segItem, on && styles.segOn, on && shadow.segment]}
           >
+            {o.icon ? <Icon name={o.icon} size={16} color={on ? colors.ink : colors.ink2} /> : null}
             <Text style={[text.segment, { color: on ? colors.ink : colors.ink2 }]} numberOfLines={1}>
               {o.label}
               {countStyle === 'inline' && o.count != null ? <Text style={styles.inlineCount}>{` ${o.count}`}</Text> : null}

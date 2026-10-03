@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Jobbdag).
+Last updated: 2026-10-03 (after Profil).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -84,6 +84,17 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Mine avtaler | "Legg alle i kalenderen" button | Only on iOS/Android (no device calendar on web) | OK as is |
 | Avtalesammendrag | "Legg i kalender" only on iOS/Android | Web has no device calendar | OK as is (or offer an .ics download on web) |
 | Youth app | Offers/chats from `/ung` stay on the device | Needs youth roles | A4 |
+| Profil | "Svarer vanligvis innen" stat tile (3rd tile) | No response-time data | `profiles.median_reply_minutes` (same as Chat) |
+| Profil | Presentation pills: languages, "Har bil", availability ("Kvelder etter kl. 17") | Profile has no such fields | `profiles.languages text[]`, `has_car boolean`, `availability_text` |
+| Profil | "Medlem siden mars 2024" shows only the year ("Medlem siden 2026") and place shows the kommune/sted only | `memberSince` is a year string | Return `created_at` (month + year) |
+| Profil | Pålitelighet: only "Møter opp" is shown; "Presis" and "Fullfører" bars are hidden. Footer says "Basert på N fullførte avtaler." (not "siste 12 måneder") | Reliability only has completed + no-shows + score | `reliability.on_time_pct`, `completion_pct`, and a 12-month window |
+| Profil | Anbefalt av naboer: the avatar stack of who recommended is hidden. The note "Bare naboer som har hatt en fullført avtale med … kan anbefale" is shown, but the backend lets anyone endorse | Endorsements return only skill + count | Return endorser ids (first 3) and **enforce in `toggle_endorsement` that the caller has a completed agreement with the person** |
+| Profil | Verification sheet: no "Bekreftet 12. mars 2024" date; Telefon/E-post/Bedrift show the backend's `explanation` text as the single "Dette ble sjekket" line | Verifications have no date or check list | `verifications.verified_at` (+ optional check lines) |
+| Profil | Vipps-ID chip and "Verifisert med Vipps" are shown for every profile | Login is Vipps only (rule 3) – correct once A3 is live | A3 |
+| Profil | Private card: "E-post" row hidden | Profile has no e-mail field | Return the masked e-mail for the own profile |
+| Profil | Review cards: "Svar fra …" (owner reply) hidden | Reviews can't be replied to | `reviews.reply text`, `replied_at` + an API to reply |
+| Profil | Portfolio tiles are single photos: no Før/Etter pairs, no titles/place under the tiles, no Før/Etter switch in the viewer | `portfolio` is a list of image URLs | `portfolio_items (before_url, after_url, title, place, caption, done_at)` |
+| Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
 
@@ -91,7 +102,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Profil, Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 

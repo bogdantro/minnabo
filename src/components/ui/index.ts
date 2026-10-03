@@ -48,6 +48,7 @@ export type { ToggleProps, CheckboxProps, OptionCardProps } from './Controls';
 export { Segmented, Tabs } from './Segmented';
 export type { SegmentOption, SegmentedProps, TabsProps } from './Segmented';
 export { RangeSlider } from './RangeSlider';
+export { GrowBar } from './Bar';
 export { DayChips, StepProgress, PhotoAddTile } from './Wizard';
 export type { DayChip } from './Wizard';
 

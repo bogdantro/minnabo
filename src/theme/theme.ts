@@ -79,6 +79,12 @@ export const colors = {
   liveGreen: '#4FA81C',      // Jobbdag "I gang" dot
   stopBg: 'rgba(242,84,45,0.16)', stopBorder: 'rgba(242,84,45,0.35)', stopText: '#FFB39F',
   afterTag: 'rgba(59,115,0,0.78)',
+  vacBorder: '#F5DDAE',      // Profil feriemodus banner
+  vacText: '#7A4700',
+  vippsIdBg: '#FFE6DC',      // Profil "Vipps-ID" verification chip
+  vippsIdFg: '#C2410C',
+  starOff: '#D8DCE3',        // empty review star
+  dotIdle: '#C9CFD8',        // portfolio viewer dots
   bigOkRing: 'rgba(143,210,42,0.35)', // Fullføring check outline
   okBannerBorder: '#BFE5C9', // chat "Avtale inngått" banner
   okBannerText: '#2E5A3A',

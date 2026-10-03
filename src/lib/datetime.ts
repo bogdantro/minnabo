@@ -41,6 +41,12 @@ export function postedAgo(iso: string, now: Date = new Date(), long = false): st
 const DAYS_SHORT = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 
+/** "12. sep 2026" */
+export function dayMonthYear(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 /** "Fre 25. sep" */
 export function shortDate(iso: string): string {
   const d = new Date(iso);

@@ -11,8 +11,29 @@ test('own profile shows presentation, verifications and reviews', async () => {
   await renderWithProviders(<ProfileScreen />);
   await waitFor(() => expect(screen.getByText('Marius B.')).toBeTruthy());
   expect(screen.getByText('Rediger profil')).toBeTruthy();
-  expect(screen.getByText('Telefon verifisert')).toBeTruthy();
-  expect(screen.getByText(/Ryddig og punktlig/)).toBeTruthy();
+  expect(screen.getByText('Verifisert med Vipps')).toBeTruthy();
+  expect(screen.getByText('Privat – bare for deg')).toBeTruthy();
+
+  // verification chip opens "Dette ble sjekket"
+  await fireEvent.press(screen.getByLabelText('Telefonnummer – bekreftet. Se hva som ble sjekket'));
+  expect(await screen.findByText('Dette ble sjekket')).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('tab', { name: 'Vurderinger (2)' }));
+  expect(await screen.findByText(/Ryddig og punktlig/)).toBeTruthy();
+  expect(screen.getByText('Det naboer trekker fram')).toBeTruthy();
+  await fireEvent.press(screen.getByText('5 stjerner'));
+  expect(screen.getByText(/Viser 1 av 2/)).toBeTruthy();
+});
+
+test('"Slik ser andre deg" hides private details and editing', async () => {
+  await renderWithProviders(<ProfileScreen />);
+  await waitFor(() => expect(screen.getByText('Marius B.')).toBeTruthy());
+  await fireEvent.press(screen.getByRole('tab', { name: 'Slik ser andre deg' }));
+  expect(screen.getByText('Forhåndsvisning. Private detaljer og innstillinger er skjult.')).toBeTruthy();
+  expect(screen.queryByText('Rediger profil')).toBeNull();
+  expect(screen.queryByText('Privat – bare for deg')).toBeNull();
+  expect(screen.queryByLabelText('Feriemodus')).toBeNull();
+  expect(screen.getByText('Ta kontakt')).toBeTruthy();
 });
 
 test('edit profile hydrates with the current values', async () => {
@@ -42,9 +63,9 @@ test('pausing the profile shows the paused banner and hides own listings', async
   await renderWithProviders(<ProfileScreen />);
   await waitFor(() => expect(screen.getByText('Marius B.')).toBeTruthy());
 
-  await fireEvent.press(screen.getByText('Sett profilen på pause'));
+  await fireEvent.press(screen.getByLabelText('Feriemodus'));
 
-  await waitFor(() => expect(screen.getByText('Profilen din er på pause')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('Feriemodus er på – oppføringene dine er skjult')).toBeTruthy());
   expect(
     repositories.listings.list().filter((l: { owner: { id: string } }) => l.owner.id === meId),
   ).toHaveLength(0);
@@ -55,13 +76,17 @@ test('endorsing a skill on another profile increments the count', async () => {
   await waitFor(() => expect(screen.getByText('Emma Larsen')).toBeTruthy());
 
   // Hagearbeid is seeded with 3 endorsements, none from the current user.
-  await fireEvent.press(screen.getByText('Hagearbeid · 3'));
-  await waitFor(() => expect(screen.getByText('Hagearbeid · 4')).toBeTruthy());
+  expect(screen.getByText('3 naboer anbefaler')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Anbefal Hagearbeid'));
+  await waitFor(() => expect(screen.getByText('4 naboer anbefaler')).toBeTruthy());
 });
 
 test('a helper profile shows their portfolio gallery', async () => {
   await renderWithProviders(<ProfileScreen profileId="u-andreas" />);
   await waitFor(() => expect(screen.getByText('Portefølje')).toBeTruthy());
+  await fireEvent.press(screen.getByRole('tab', { name: 'Portefølje' }));
+  await fireEvent.press(screen.getByLabelText('Åpne bilde 2'));
+  expect(await screen.findByText('Bilde 2 av 2')).toBeTruthy();
 });
 
 test('following a helper from their profile adds them to the follow list', async () => {
