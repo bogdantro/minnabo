@@ -19,7 +19,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | ✅ done | Two-party state from real confirmations (none / other / mine / both). Stats from the job workspace (timer, checklist, photos). "Gi vurdering" hidden once I've reviewed. |
 | `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | ✅ done | Tab. Live client-side search on name/oppdrag/message. "Merk alle som lest" uses the existing `mark_conversation_read` RPC per conversation, held for Angre. Unread bubble shows a dot (no per-conversation count in the API). |
 | `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | exists | |
-| `Jobbdag.dc.html` | `/jobbdag/[id]` | `src/screens/JobbdagScreen.tsx` (provisional) | partial | Own route now; still the old job-day tools in the new layout – full Jobbdag.dc.html redesign pending |
+| `Jobbdag.dc.html` | `/jobbdag/[id]` | `src/screens/JobbdagScreen.tsx` | ✅ done | Timer on the workspace (start/pause; "Stopp" = pause + local stopped state). Before/after slider pairs Før[i] with Etter[i]; unpaired photos show under Underveis. Kept the existing job-day tools (på vei/framme, ring/SMS, trygg tur, no-show) in a "Trygghet og kontakt" section below the tabs. |
 | `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
 | `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | exists | |
 | `LeggUt.dc.html` | `/legg-ut` | `src/screens/LeggUt/LeggUtWizard.tsx` | ✅ done | Opens directly (rule 2); draft saved locally ("Lagre utkast"). **API gap:** "Hvem kan gi tilbud", "Maks avstand" and the private estimate have no columns for oppdrag – shown in the summary, not saved |
@@ -147,7 +147,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 |---|---|---|
 | `Innboks.dc.html` | ✅ Innboks (tab) | Search filters live, Alle / Uleste, status tags, unread counts, "Merk alle som lest", empty state |
 | `Chat.dc.html` | ✅ Chat | Header menu [S] (profil, oppføring, mute, rapporter, blokker [D]). Pinned listing (collapsible) + pinned message. Inline OfferCard: Godta [D] → accepted state + system message + banner → Avtale / Jobbdag; Avslå + Angre. Tap bubble → reactions. Quick replies. Attach [S] (Bilde, Kamera, Foreslå tid; Send tilbud only for the helper). Foreslå tid [S] → time card with Passer / Foreslå annen. Send → Sendt → Levert → Lest, typing, reply |
-| `Jobbdag.dc.html` | Jobbdag | Live timer start/pause/stop. Tabs Sjekkliste (toggle, progress ring, add) / Materialer (kr, who pays, sum, add [S]) / Bilder (before/after with drag slider). "Marker som ferdig" → Fullforing |
+| `Jobbdag.dc.html` | ✅ Jobbdag | Live timer start/pause/stop. Tabs Sjekkliste (toggle, progress ring, add) / Materialer (kr, who pays, sum, add [S]) / Bilder (before/after with drag slider). "Marker som ferdig" → Fullforing |
 | `Fullforing.dc.html` | ✅ Fullføring | Two-party confirm, animation + confetti, → Vurdering; "Noe er ikke i orden?" [S] |
 | `Vurdering.dc.html` | ✅ Vurdering | 5 stars with labels, tags multi-select, comment counter, recommend Ja/Nei, submit disabled until stars, success + preview |
 

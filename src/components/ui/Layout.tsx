@@ -118,16 +118,19 @@ export type SubHeaderProps = {
   close?: boolean;
   /** Right slot (44 wide), e.g. an IconButton "Flere valg". */
   right?: ReactNode;
+  /** Width of both side slots (default 44; Jobbdag uses 96 for the live pill). */
+  sideWidth?: number;
   /** Put the header over content (transparent), e.g. on photo galleries. */
   style?: StyleProp<ViewStyle>;
 };
 
 /** `.subbar` – 44 / title / 44 grid; back IconButton labelled "Tilbake". */
-export function SubHeader({ title, onBack, close = false, right, style }: SubHeaderProps) {
+export function SubHeader({ title, onBack, close = false, right, sideWidth, style }: SubHeaderProps) {
+  const side = sideWidth ? [styles.side, { width: sideWidth }] : styles.side;
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.subbar, { paddingTop: insets.top + safeTopExtra }, style]}>
-      <View style={styles.side}>
+      <View style={side}>
         {onBack ? (
           <IconButton icon={close ? 'x' : 'back'} accessibilityLabel={close ? 'Lukk' : 'Tilbake'} onPress={onBack} />
         ) : null}
@@ -135,7 +138,7 @@ export function SubHeader({ title, onBack, close = false, right, style }: SubHea
       <Text style={[text.subbarTitle, styles.title]} numberOfLines={1} accessibilityRole="header">
         {title}
       </Text>
-      <View style={styles.side}>{right}</View>
+      <View style={[side, sideWidth ? styles.sideEnd : null]}>{right}</View>
     </View>
   );
 }
@@ -181,6 +184,7 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   side: { width: sizes.iconButton, height: sizes.iconButton },
+  sideEnd: { alignItems: 'flex-end', justifyContent: 'center' },
   title: { flex: 1, textAlign: 'center' },
   foot: {
     position: 'absolute',

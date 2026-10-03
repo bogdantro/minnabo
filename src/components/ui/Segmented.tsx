@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { colors, motion, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
+import { colors, fonts, motion, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { CountBadge } from './Badges';
 
 export type SegmentOption<T extends string> = { value: T; label: string; count?: number };
@@ -60,11 +60,13 @@ export type TabsProps<T extends string> = {
   onChange: (v: T) => void;
   /** Apply the 20 px gutter (default true). */
   inset?: boolean;
+  /** `.tc` count chip per tab ("3/5"); ink when active. */
+  badges?: Partial<Record<T, string>>;
   style?: StyleProp<ViewStyle>;
 };
 
 /** `.tabs` – underline tabs; the active bar grows in over 300 ms. */
-export function Tabs<T extends string>({ tabs, value, onChange, inset = true, style }: TabsProps<T>) {
+export function Tabs<T extends string>({ tabs, value, onChange, inset = true, badges, style }: TabsProps<T>) {
   return (
     <View style={[styles.tabs, inset && styles.tabsInset, style]} accessibilityRole="tablist">
       {tabs.map((t) => {
@@ -77,10 +79,17 @@ export function Tabs<T extends string>({ tabs, value, onChange, inset = true, st
             onPress={() => onChange(t.value)}
             style={styles.tab}
           >
-            <Text style={[text.tab, { color: on ? colors.ink : colors.mute }]}>
-              {t.label}
-              {t.count != null ? ` ${t.count}` : ''}
-            </Text>
+            <View style={styles.tabRow}>
+              <Text style={[text.tab, { color: on ? colors.ink : colors.mute }]}>
+                {t.label}
+                {t.count != null ? ` ${t.count}` : ''}
+              </Text>
+              {badges?.[t.value] != null ? (
+                <View style={[styles.tc, on && styles.tcOn]}>
+                  <Text style={[styles.tcText, on && styles.tcTextOn]}>{badges[t.value]}</Text>
+                </View>
+              ) : null}
+            </View>
             <Underline active={on} />
           </Pressable>
         );
@@ -91,6 +100,11 @@ export function Tabs<T extends string>({ tabs, value, onChange, inset = true, st
 
 const styles = StyleSheet.create({
   inlineCount: { opacity: 0.6 },
+  tabRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tc: { minWidth: 22, height: 20, paddingHorizontal: 6, borderRadius: 10, backgroundColor: colors.track, alignItems: 'center', justifyContent: 'center' },
+  tcOn: { backgroundColor: colors.ink },
+  tcText: { fontFamily: fonts.bodyHeavy, fontSize: 11, color: colors.ink2 },
+  tcTextOn: { color: colors.white },
   seg: {
     flexDirection: 'row',
     backgroundColor: colors.track,

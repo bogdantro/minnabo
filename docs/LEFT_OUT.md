@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Vurdering).
+Last updated: 2026-10-03 (after Jobbdag).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -60,6 +60,13 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Sammenlign | "Varighet" cell | Offers have no duration field | `proposals.duration_text` (+ field in Gi tilbud) |
 | Sammenlign, Avtale | Date sort / countdown / calendar read the date from free text | Proposal time is free text ("Lør 10. okt kl. 10:00") | `proposals.scheduled_at timestamptz` – then "Fredag ettermiddag"-style offers also get a countdown |
 | Avtalesammendrag | "Om 11 dager" countdown + "Legg i kalender" hidden when the time has no date | Same as above | Same as above |
+| Jobbdag | "Pauser" total and the day's first "Startet kl." – shows "Denne økten" and the current session start instead | The timer only stores accumulated time + current start | `job_workspaces.first_started_at`, `paused_ms` |
+| Jobbdag | "Stopp" is not saved (after reopening, a stopped timer shows as Pause) | No stopped state on the workspace | `job_workspaces.timer_stopped_at` |
+| Jobbdag | Who does a task ("Mari" / "Jonas" on each row) | Checklist items have no owner | `checklist_items.assignee_id` |
+| Jobbdag | "Hvem ordner det?" (Mari kjøper / Jonas tar med / legger ut) and the per-person split under the sum | Materials only have label + amount | `materials.payer` (`CLIENT`/`HELPER`/`HELPER_OUTLAY`) |
+| Jobbdag | Photo pair titles ("Langsiden mot veien") and Før/Etter times; "Underveis" as its own phase | Photos only have BEFORE/AFTER; pairs are made by order | `job_photos.caption`, `pair_id`, phase `DURING` |
+| Jobbdag | Estimate bar only shows when the oppdrag has a duration with hours/day in it | Estimate is parsed from free text | `listings.estimated_minutes` |
+| Jobbdag | "Trygg tur" card still uses the old styling | It belongs to the Trygge kontakter redesign | Restyled with that screen |
 | Vurdering | "Vil du anbefale …?" Ja/Nei has no field – "Ja" is saved as the "Anbefales" tag, "Nei" is not stored | No `recommends` column on reviews | `reviews.recommends boolean` |
 | Vurdering | "Jonas har nå 33 vurderinger" count in the success row | Would need a refetch of the profile's review count | Shown without the count; OK as is |
 | Fullføring | "Tid brukt", "Oppgaver", "Bilder" show "–" / 0 when nobody used the job-day tools | They come from the Jobbdag workspace | OK as is – fills in once Jobbdag is used |
@@ -84,8 +91,6 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Jobbdag | partial | Own route `/jobbdag/[id]` with the old tools (på vei/framme, safe trip, workspace, no-show, "Marker som fullført"). Full Jobbdag.dc.html design (timer, sjekkliste, materialer, bilder) not built yet |
-| Jobbdag (full design) | partial | Next |
 | Profil, Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |

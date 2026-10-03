@@ -70,6 +70,15 @@ export const colors = {
   unreadConvBorder: '#D5EFA0', // Innboks unread card ring
   onlineDot: '#2FBF62',    // chat header "Aktiv nå"
   okBorder: '#8FD3A6',     // accepted time card / offer
+  onInk62: 'rgba(255,255,255,0.62)', // Jobbdag hero labels
+  onInk55: 'rgba(255,255,255,0.55)',
+  onInk07: 'rgba(255,255,255,0.07)',
+  onInk10: 'rgba(255,255,255,0.1)',
+  onInk16b: 'rgba(255,255,255,0.16)',
+  limeHalf: 'rgba(184,238,60,0.5)',
+  liveGreen: '#4FA81C',      // Jobbdag "I gang" dot
+  stopBg: 'rgba(242,84,45,0.16)', stopBorder: 'rgba(242,84,45,0.35)', stopText: '#FFB39F',
+  afterTag: 'rgba(59,115,0,0.78)',
   bigOkRing: 'rgba(143,210,42,0.35)', // Fullføring check outline
   okBannerBorder: '#BFE5C9', // chat "Avtale inngått" banner
   okBannerText: '#2E5A3A',
@@ -369,6 +378,7 @@ export const shadow = {
   bigOk: sh('0 26px 50px -18px rgba(60,160,60,.65)'), // Fullføring big check
   starOn: sh('0 10px 22px -12px rgba(240,165,0,.8)'), // Vurdering selected star
   starBadge: sh('0 26px 50px -18px rgba(240,165,0,.7)'), // Vurdering done badge
+  hero: sh('0 26px 50px -24px rgba(10,23,64,.7)'), // Jobbdag timer card
   okRing: sh('0 20px 40px -16px rgba(40,170,120,.7)'), // Gi tilbud sent check
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
