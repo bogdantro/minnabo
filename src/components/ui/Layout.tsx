@@ -57,6 +57,8 @@ export function Screen({
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          // iOS: keep the focused field (e.g. the price) above the keyboard.
+          automaticallyAdjustKeyboardInsets
           {...scrollProps}
           contentContainerStyle={[contentStyle, { paddingBottom: bottom }]}
         >

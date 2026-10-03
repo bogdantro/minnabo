@@ -10,6 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import { BottomSheetTextInput, useBottomSheetInternal } from '@gorhom/bottom-sheet';
 import { colors, fonts, radius, shadow, sizes, text } from '@/theme/theme';
 import { Icon, type IconName } from './Icon';
 
@@ -78,6 +79,9 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   ref,
 ) {
   const [focused, setFocused] = useState(false);
+  // Inside a bottom sheet the input must register with the sheet, or the keyboard covers it.
+  const inSheet = useBottomSheetInternal(true) != null;
+  const NativeInput = (inSheet ? BottomSheetTextInput : TextInput) as typeof TextInput;
   return (
     <View style={[styles.inwrap, containerStyle]}>
       {icon ? (
@@ -85,7 +89,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           <Icon name={icon} size={18} color={colors.mute} />
         </View>
       ) : null}
-      <TextInput
+      <NativeInput
         ref={ref}
         multiline={multiline}
         placeholderTextColor={colors.placeholder}
@@ -110,9 +114,9 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
         {...rest}
       />
       {suffix ? (
-        <Text style={styles.suffix} pointerEvents="none">
-          {suffix}
-        </Text>
+        <View style={styles.suffixWrap} pointerEvents="none">
+          <Text style={styles.suffix}>{suffix}</Text>
+        </View>
       ) : null}
     </View>
   );
@@ -199,15 +203,18 @@ const styles = StyleSheet.create({
   focus: { borderColor: colors.cyan2, ...shadow.focus },
   error: { borderColor: colors.danger, ...shadow.error },
   pre: { position: 'absolute', left: 16, zIndex: 1 },
+  suffixWrap: { position: 'absolute', top: 0, bottom: 0, right: sizes.amountSuffixRight, justifyContent: 'center' },
   suffix: {
-    position: 'absolute',
-    right: sizes.amountSuffixRight,
     fontFamily: fonts.bodyBold,
     fontSize: 16,
     color: colors.mute,
   },
   amount: {
     height: sizes.amountInput,
+    // Android adds font padding above/below big text, which clipped and pushed the 34 px number down.
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
     fontFamily: text.amount.fontFamily,
     fontSize: text.amount.fontSize,
     letterSpacing: text.amount.letterSpacing,

@@ -124,6 +124,7 @@ export function Sheet({
         style={[styles.body, padding != null && { paddingHorizontal: padding }]}
         contentContainerStyle={scroll ? { paddingBottom: 34 + insets.bottom } : undefined}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {title ? (
           <View style={styles.head}>

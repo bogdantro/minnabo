@@ -3,7 +3,7 @@
  * modal is presented, so tests see sheets open and close like on device.
  */
 import { forwardRef, useImperativeHandle, useState, type ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TextInput, View } from 'react-native';
 
 type ModalProps = { children?: ReactNode; onDismiss?: () => void };
 
@@ -29,3 +29,6 @@ export const BottomSheetView = View;
 export const BottomSheetScrollView = ScrollView;
 export const BottomSheetBackdrop = () => null;
 export const useBottomSheetTimingConfigs = () => ({});
+export const BottomSheetTextInput = TextInput;
+/** Real hook returns the sheet context; outside a sheet (unsafe) it is null. */
+export const useBottomSheetInternal = () => null;
