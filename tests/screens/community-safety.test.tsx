@@ -1,6 +1,6 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { FellesskapScreen } from '@/screens/FellesskapScreen';
-import { SafetyScreen } from '@/screens/SafetyScreen';
+import { RapporterScreen } from '@/screens/RapporterScreen';
 import { BlockedListScreen } from '@/screens/BlockedListScreen';
 import { TrustedContactsScreen } from '@/screens/TrustedContactsScreen';
 import { safetyStore } from '@mocks/data/safetyStore';
@@ -60,10 +60,38 @@ test('a trusted contact can be added and is listed', async () => {
   expect(trustedContacts.list()).toHaveLength(1);
 });
 
-test('a report is recorded with the chosen reason', async () => {
-  await renderWithProviders(<SafetyScreen targetType="USER" targetId="u-emma" />);
-  await fireEvent.press(screen.getByText('Spam'));
+test('Rapporter: 3 steps, then a case number; svindel pre-selects "Blokker også"', async () => {
+  await renderWithProviders(<RapporterScreen profileId="u-emma" />);
+  expect(await screen.findByText('Hva vil du rapportere?')).toBeTruthy();
+  expect(await screen.findByText('Emma Larsen')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Neste'));
+
+  expect(screen.getByText('Hva er galt?')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('radio', { name: 'Svindel eller krav om forhåndsbetaling' }));
+  await fireEvent.press(screen.getByText('Neste'));
+
+  expect(screen.getByText('Fortell litt mer')).toBeTruthy();
+  expect(screen.getByLabelText('Blokker også brukeren').props.accessibilityState).toMatchObject({ checked: true });
   await fireEvent.press(screen.getByText('Send rapport'));
-  await waitFor(() => expect(screen.getByText(/Rapporten er sendt/)).toBeTruthy());
-  expect(safetyStore.listReports()[0].reason).toBe('Spam');
+
+  expect(await screen.findByText('Takk – vi ser på saken')).toBeTruthy();
+  expect(screen.getByText(/^Saksnr\. MN-/)).toBeTruthy();
+  expect(safetyStore.listReports()[0]).toMatchObject({ targetType: 'USER', targetId: 'u-emma', reason: 'Svindel eller krav om forhåndsbetaling' });
+  await waitFor(() => expect(safetyStore.isBlocked('u-emma')).toBe(true));
+});
+
+test('Rapporter: "Annet" and general reports need details', async () => {
+  const before = safetyStore.listReports().length;
+  await renderWithProviders(<RapporterScreen />);
+  expect(await screen.findByText(/Rapporten gjelder ikke én bestemt/)).toBeTruthy();
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByRole('radio', { name: 'Annet' }));
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Send rapport'));
+  expect(screen.getByText('Beskriv kort hva som skjedde')).toBeTruthy();
+  expect(safetyStore.listReports()).toHaveLength(before);
+
+  await fireEvent.changeText(screen.getByLabelText('Detaljer'), 'Noen deler falske oppdrag i nabolaget.');
+  await fireEvent.press(screen.getByText('Send rapport'));
+  expect(await screen.findByText('Takk – vi ser på saken')).toBeTruthy();
 });

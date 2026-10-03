@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Sikkerhet).
+Last updated: 2026-10-03 (after Rapporter).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -120,6 +120,10 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Sikkerhet / Jobbdag | **Trygg tur sends nothing by itself**: Start / Forleng / Stopp open the phone's SMS app with the message pre-filled to your trygge kontakter; you press send. The trip and contacts are stored on the phone only | No SMS service on the backend | An SMS provider (e.g. Twilio / Link Mobility) + an edge function, and `safe_trips` + `trusted_contacts` tables |
 | Sikkerhet / Jobbdag | "Stopper du ikke innen fristen, får kontaktene dine en påminnelse" – the reminder to contacts is not sent (only the overdue state shows in the app) | Needs a server-side timer | Scheduled job on `safe_trips.due_at` that texts the contacts |
 | Sikkerhet | Blocked rows say "Blokkert" without date or "via rapport" | Blocks have no timestamp/source in the API | Return `blocks.created_at` and whether it came from a report |
+| Rapporter | "Skjermbilde" attachment | Reports have no attachment field | `reports.attachment_path` (+ upload to a private bucket only admins can read) |
+| Rapporter | "Du får varsel i appen når saken er avgjort" / "Du får beskjed om utfallet" – changed to "Vi går gjennom rapporten så snart vi kan" / "Saken lukkes når den er behandlet" | No notification is sent when an admin resolves a report | Notification kind `REPORT_RESOLVED` from `resolve_report` – then restore the design copy |
+| Rapporter | Tilbud and Vurdering cannot be reported from where they are shown yet (only users, oppdrag and messages have a "Rapporter" entry) | Tilbudsdetaljer / review cards link to the user instead | Add `?tilbud=` / `?vurdering=` entries (API already supports PROPOSAL / REVIEW) |
+| Rapporter | Case number is made from the report id (e.g. "MN-863468"), not a running number | No case-number column | Optional `reports.case_no serial` |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -128,7 +132,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 

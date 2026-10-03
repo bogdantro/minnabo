@@ -38,7 +38,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Personvern.dc.html` | `/personvern` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs consent toggle + log, data export (`src/lib/dataExport.ts` exists), retention accordion |
 | `Profil.dc.html` | `/profil`, `/profil/[id]` | `src/screens/ProfileScreen.tsx` | ✅ done | Own vs public via `profileId` param. Own: "Slik ser andre deg" preview. Someone else's: Ta kontakt (only when you already share a conversation) + Følg, flag icon → Rapporter. Endorse = "Anbefal" on the Anbefalt av naboer rows. |
 | `Publisert.dc.html` | `/legg-ut/publisert` | `src/screens/LeggUt/PublishedScreen.tsx` | ✅ done | Share sheet: copy link, SMS, e-post, system share |
-| `Rapporter.dc.html` | `/rapporter` | `src/screens/SafetyScreen.tsx` (with `targetType`) | partial | Shares a component with Sikkerhet; design is a separate 3-step flow |
+| `Rapporter.dc.html` | `/rapporter` | `src/screens/RapporterScreen.tsx` | ✅ done | `?profil=` / `?listing=` / `?melding=` set the context card and type chips; without them it is a general report (details required). Block toggle (auto-on for svindel/trakassering) blocks after sending. Old SafetyScreen removed. |
 | `RedigerProfil.dc.html` | `/profil/rediger` | `src/screens/EditProfileScreen.tsx` | ✅ done | Name from Vipps (locked) + editable visningsnavn; kommune sheet + area chips save `municipality`/`place`; photo/portfolio upload right away but are only applied on "Lagre endringer". |
 | `Sammenlign.dc.html` | `/tilbud/sammenlign/[listingId]` | `src/screens/SammenlignTilbudScreen.tsx` | ✅ done | Open + accepted offers only. **API gaps:** no per-offer duration and no reply-time stat → "Varighet" and "Svartid" cells left out. "Dato" sort parses the free-text time ("Lør 10. okt"); unparseable times go last. |
 | `Samtykke.dc.html` | `/samtykker` | `src/screens/Onboarding/ConsentScreen.tsx` | ✅ done | Vipps identity card + "Bekreftet via Vipps" hidden until Vipps login. Optional tips consent needs migration `0024_consent_tips.sql` pushed |
@@ -174,7 +174,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 |---|---|---|
 | `Verifisering.dc.html` | ✅ Verifisering | "Fullt verifisert med Vipps", 3-step bar (Vipps-ID, Telefon, E-post – all from Vipps), expandable "Hva ble sjekket?", bedrift link, review rules, profile checklist |
 | `Sikkerhet.dc.html` | ✅ Sikkerhet | Rapporter → Rapporter, blocked users (Opphev [D]), trygge kontakter → TryggeKontakter, Trygg tur start/stop with pulse, tips accordion |
-| `Rapporter.dc.html` | Rapporter | 3 steps: what → reason → details (+ screenshot, block toggle) → success with status timeline |
+| `Rapporter.dc.html` | ✅ Rapporter | 3 steps: what → reason → details (+ screenshot, block toggle) → success with status timeline |
 | `TryggeKontakter.dc.html` | Trygge kontakter | List, remove [D], add [S] with phone validation and relation chips → [T] |
 | `Personvern.dc.html` | Personvern | Tips toggle writes a new timestamped consent-log row, data export progress → done, retention accordion, Vilkår, Slett konto |
 

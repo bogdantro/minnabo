@@ -1,18 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
-import { SafetyScreen } from '@/screens/SafetyScreen';
+import { RapporterScreen } from '@/screens/RapporterScreen';
 
 export default function Route() {
-  const { profil, listing, melding } = useLocalSearchParams<{
-    profil?: string;
-    listing?: string;
-    melding?: string;
-  }>();
-  const targetType = listing ? 'LISTING' : melding ? 'MESSAGE' : 'USER';
+  const { profil, listing, melding } = useLocalSearchParams<{ profil?: string; listing?: string; melding?: string }>();
   return (
-    <SafetyScreen
-      targetType={targetType}
-      targetProfileId={typeof profil === 'string' ? profil : undefined}
-      targetId={typeof listing === 'string' ? listing : typeof melding === 'string' ? melding : undefined}
+    <RapporterScreen
+      profileId={typeof profil === 'string' ? profil : undefined}
+      listingId={typeof listing === 'string' ? listing : undefined}
+      messageId={typeof melding === 'string' ? melding : undefined}
     />
   );
 }
