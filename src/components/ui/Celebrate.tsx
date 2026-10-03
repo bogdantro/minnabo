@@ -27,13 +27,15 @@ export type DrawnCheckProps = {
   ring?: ViewStyle;
   /** Tick size in px (default 47 % of the circle). */
   tickSize?: number;
+  /** Corner radius; default = round. Fullføring uses a rounded square (36). */
+  radius?: number;
 };
 
 /**
  * Lime circle with a 10–12 px lime-tint ring; the ink tick draws itself
  * (strokeDashoffset 60 → 0 over 600 ms after 250 ms). Circle scales in with a spring.
  */
-export function DrawnCheck({ size = 120, playKey = 0, bg, tickColor = colors.ink, ring = shadow.drawnCheck, tickSize }: DrawnCheckProps) {
+export function DrawnCheck({ size = 120, playKey = 0, bg, tickColor = colors.ink, ring = shadow.drawnCheck, tickSize, radius }: DrawnCheckProps) {
   const offset = useSharedValue(60);
   const scale = useSharedValue(0.6);
   const opacity = useSharedValue(0);
@@ -60,7 +62,7 @@ export function DrawnCheck({ size = 120, playKey = 0, bg, tickColor = colors.ink
       importantForAccessibility="no-hide-descendants"
       style={[
         styles.circle,
-        { width: size, height: size, borderRadius: size / 2 },
+        { width: size, height: size, borderRadius: radius ?? size / 2 },
         ring,
         bg ? { backgroundColor: bg } : null,
         circle,

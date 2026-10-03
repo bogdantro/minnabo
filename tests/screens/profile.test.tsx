@@ -90,18 +90,26 @@ test('notifications list can be marked all read', async () => {
   );
 });
 
-test('completion needs both parties before the review CTA appears', async () => {
-  await renderWithProviders(<CompletionScreen proposalId="p-test-1" />);
-  await waitFor(() => expect(screen.getByText('Bekreft fullført')).toBeTruthy());
+test('the counterpart has confirmed; confirming completes the job and offers the review', async () => {
+  // seed: Martin has already confirmed p-martin-flytting
+  await renderWithProviders(<CompletionScreen proposalId="p-martin-flytting" />);
+  await waitFor(() => expect(screen.getByText('Jeg bekrefter at jobben er utført')).toBeTruthy());
+  expect(screen.getByText('Venter på deg')).toBeTruthy();
+  expect(screen.getByText(/Martin har markert jobben som ferdig/)).toBeTruthy();
+  expect(screen.queryByText('Gi vurdering')).toBeNull();
 
-  fireEvent.press(screen.getByText('Bekreft fullført'));
-  await waitFor(() => expect(screen.getByText(/Venter på at den andre/)).toBeTruthy());
-  expect(screen.queryByText('Gi en vurdering')).toBeNull();
+  await fireEvent.press(screen.getByText('Jeg bekrefter at jobben er utført'));
+  await waitFor(() => expect(screen.getByText('Jobben er fullført!')).toBeTruthy());
+  expect(screen.getByText('Gi vurdering')).toBeTruthy();
+});
 
-  // the other party confirms
-  profileRepository.confirmCompletion('p-test-1', 'u-emma');
-  await renderWithProviders(<CompletionScreen proposalId="p-test-1" />);
-  await waitFor(() => expect(screen.getAllByText('Gi en vurdering').length).toBeGreaterThan(0));
+test('"Noe er ikke i orden?" offers chat and report', async () => {
+  await renderWithProviders(<CompletionScreen proposalId="p-martin-flytting" />);
+  await waitFor(() => expect(screen.getByText('Noe er ikke i orden?')).toBeTruthy());
+  await fireEvent.press(screen.getByText('Noe er ikke i orden?'));
+  expect(screen.getByText('Ta det opp i chatten')).toBeTruthy();
+  expect(screen.getByText('Rapporter et problem')).toBeTruthy();
+  expect(screen.getByText(/kan ikke holde igjen penger/)).toBeTruthy();
 });
 
 test('submitting a review records it against the counterpart with tags', async () => {

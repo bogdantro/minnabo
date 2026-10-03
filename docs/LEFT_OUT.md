@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Chat).
+Last updated: 2026-10-03 (after Fullføring).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -60,6 +60,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Sammenlign | "Varighet" cell | Offers have no duration field | `proposals.duration_text` (+ field in Gi tilbud) |
 | Sammenlign, Avtale | Date sort / countdown / calendar read the date from free text | Proposal time is free text ("Lør 10. okt kl. 10:00") | `proposals.scheduled_at timestamptz` – then "Fredag ettermiddag"-style offers also get a countdown |
 | Avtalesammendrag | "Om 11 dager" countdown + "Legg i kalender" hidden when the time has no date | Same as above | Same as above |
+| Fullføring | "Tid brukt", "Oppgaver", "Bilder" show "–" / 0 when nobody used the job-day tools | They come from the Jobbdag workspace | OK as is – fills in once Jobbdag is used |
 | Chat | "Slå av varsler" (mute) is stored on the device only – push notifications still arrive | No mute field on the backend | `conversation_participants.muted boolean` + respect it in the push sender |
 | Chat | Time proposals are text messages with a "📅 Tidsforslag:" marker; the "Passer" answer is also a text message | No structured message type for time proposals | Add message kind `TIME` (+ answer state) so the card and the agreed time are data, not text |
 | Chat | Duration fact ("ca. 5 t") on the inline offer card | Offers have no duration | `proposals.duration_text` (see Sammenlign) |
@@ -82,7 +83,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Screen | State | Notes |
 |--------|-------|-------|
 | Jobbdag | partial | Own route `/jobbdag/[id]` with the old tools (på vei/framme, safe trip, workspace, no-show, "Marker som fullført"). Full Jobbdag.dc.html design (timer, sjekkliste, materialer, bilder) not built yet |
-| Fullføring, Vurdering | to do | Next in order (then Jobbdag full design) |
+| Vurdering | to do | Next in order (then Jobbdag full design) |
 | Profil, Rediger profil, Mine oppføringer, Lagrede, Verifisering, Sikkerhet, Rapporter, Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
 | Nabolag, Oppslagstavle, Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |

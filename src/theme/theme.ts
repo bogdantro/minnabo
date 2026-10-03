@@ -70,6 +70,7 @@ export const colors = {
   unreadConvBorder: '#D5EFA0', // Innboks unread card ring
   onlineDot: '#2FBF62',    // chat header "Aktiv nå"
   okBorder: '#8FD3A6',     // accepted time card / offer
+  bigOkRing: 'rgba(143,210,42,0.35)', // Fullføring check outline
   okBannerBorder: '#BFE5C9', // chat "Avtale inngått" banner
   okBannerText: '#2E5A3A',
   dateChipBg: 'rgba(10,23,64,0.06)', // chat day chip
@@ -365,6 +366,7 @@ export const shadow = {
   unreadConv: sh('0 0 0 1.5px #D5EFA0, 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'), // Innboks unread card
   okBanner: sh('0 12px 26px -16px rgba(43,143,78,.6)'), // chat agreement banner
   reactSel: sh('0 0 0 3px rgba(25,184,238,.35)'), // selected bubble
+  bigOk: sh('0 26px 50px -18px rgba(60,160,60,.65)'), // Fullføring big check
   okRing: sh('0 20px 40px -16px rgba(40,170,120,.7)'), // Gi tilbud sent check
   roleNeedOn: sh('0 0 0 4px rgba(184,238,60,.3), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),
   roleOfferOn: sh('0 0 0 4px rgba(25,184,238,.18), 0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)'),

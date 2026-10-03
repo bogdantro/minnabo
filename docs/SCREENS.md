@@ -16,7 +16,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | ✅ done | Partner logos are placeholders until partners deliver them; no member-avatar stack (no member data) |
 | `ForMeg.dc.html` | `/oppdrag-for-meg` | `src/screens/ForMegScreen.tsx` | ✅ done | Matching uses the profile's categories (`categorySlugs`) – **API gap:** the Supabase profile has no skills column, so live users get distance/newest ranking only. "N nye forslag i dag" = posted in the last 24 h (hidden when 0). Hidden suggestions are stored on the device. |
 | `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | ✅ done | Under the mock login "Publiser" shows the flow but saves nothing |
-| `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | exists | |
+| `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | ✅ done | Two-party state from real confirmations (none / other / mine / both). Stats from the job workspace (timer, checklist, photos). "Gi vurdering" hidden once I've reviewed. |
 | `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | ✅ done | Tab. Live client-side search on name/oppdrag/message. "Merk alle som lest" uses the existing `mark_conversation_read` RPC per conversation, held for Angre. Unread bubble shows a dot (no per-conversation count in the API). |
 | `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | exists | |
 | `Jobbdag.dc.html` | `/jobbdag/[id]` | `src/screens/JobbdagScreen.tsx` (provisional) | partial | Own route now; still the old job-day tools in the new layout – full Jobbdag.dc.html redesign pending |
@@ -148,7 +148,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Innboks.dc.html` | ✅ Innboks (tab) | Search filters live, Alle / Uleste, status tags, unread counts, "Merk alle som lest", empty state |
 | `Chat.dc.html` | ✅ Chat | Header menu [S] (profil, oppføring, mute, rapporter, blokker [D]). Pinned listing (collapsible) + pinned message. Inline OfferCard: Godta [D] → accepted state + system message + banner → Avtale / Jobbdag; Avslå + Angre. Tap bubble → reactions. Quick replies. Attach [S] (Bilde, Kamera, Foreslå tid; Send tilbud only for the helper). Foreslå tid [S] → time card with Passer / Foreslå annen. Send → Sendt → Levert → Lest, typing, reply |
 | `Jobbdag.dc.html` | Jobbdag | Live timer start/pause/stop. Tabs Sjekkliste (toggle, progress ring, add) / Materialer (kr, who pays, sum, add [S]) / Bilder (before/after with drag slider). "Marker som ferdig" → Fullforing |
-| `Fullforing.dc.html` | Fullføring | Two-party confirm, animation + confetti, → Vurdering; "Noe er ikke i orden?" [S] |
+| `Fullforing.dc.html` | ✅ Fullføring | Two-party confirm, animation + confetti, → Vurdering; "Noe er ikke i orden?" [S] |
 | `Vurdering.dc.html` | Vurdering | 5 stars with labels, tags multi-select, comment counter, recommend Ja/Nei, submit disabled until stars, success + preview |
 
 ## 6 · Legg ut (opened by the FAB — straight into the wizard, no type choice)
