@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Rapporter).
+Last updated: 2026-10-03 (after Trygge kontakter).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -132,7 +132,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Trygge kontakter, Personvern | to do | Personvern/Rapporter only partly match today |
+| Personvern | to do | Personvern/Rapporter only partly match today |
 | Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 

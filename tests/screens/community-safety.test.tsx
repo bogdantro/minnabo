@@ -49,15 +49,28 @@ test('the blocked list shows blocked users and can unblock them', async () => {
   await waitFor(() => expect(screen.getByText('Du har ikke blokkert noen.')).toBeTruthy());
 });
 
-test('a trusted contact can be added and is listed', async () => {
+test('a trusted contact needs a name and 8 digits, then is listed with its relation', async () => {
   await renderWithProviders(<TrustedContactsScreen />);
+  expect(screen.getByText('Ingen trygge kontakter ennå')).toBeTruthy();
 
-  await fireEvent.changeText(screen.getByLabelText('Navn'), 'Mamma');
-  await fireEvent.changeText(screen.getByLabelText('Telefonnummer'), '90012345');
-  await fireEvent.press(screen.getByText('Lagre kontakt'));
+  await fireEvent.press(screen.getByText('Legg til kontakt'));
+  await fireEvent.changeText(await screen.findByLabelText('Navn'), 'Ola Haugen');
+  await fireEvent.changeText(screen.getByLabelText('Mobilnummer'), '9241');
+  await fireEvent.press(screen.getByRole('button', { name: 'Legg til' }));
+  expect(screen.getByText('Skriv inn 8 siffer')).toBeTruthy();
 
-  await waitFor(() => expect(screen.getByText('Mamma')).toBeTruthy());
-  expect(trustedContacts.list()).toHaveLength(1);
+  await fireEvent.changeText(screen.getByLabelText('Mobilnummer'), '92411380');
+  await fireEvent.press(screen.getByText('Venn'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Legg til' }));
+
+  await waitFor(() => expect(trustedContacts.list()).toHaveLength(1));
+  expect(trustedContacts.list()[0]).toMatchObject({ name: 'Ola Haugen', phone: '+47 924 11 380', relation: 'Venn' });
+  expect(await screen.findByText('Venn · +47 924 11 380')).toBeTruthy();
+
+  await fireEvent.press(screen.getByLabelText('Fjern Ola Haugen'));
+  expect(await screen.findByText('Fjerne Ola?')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Fjern'));
+  await waitFor(() => expect(trustedContacts.list()).toHaveLength(0));
 });
 
 test('Rapporter: 3 steps, then a case number; svindel pre-selects "Blokker også"', async () => {

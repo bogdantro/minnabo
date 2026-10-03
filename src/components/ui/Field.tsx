@@ -70,12 +70,14 @@ export type InputProps = TextInputProps & {
   icon?: IconName;
   /** Trailing text, e.g. "kr". */
   suffix?: string;
+  /** Leading text, e.g. "+47". */
+  prefix?: string;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
 /** `.input` – 56 px field; cyan focus ring, red error ring. Multiline = 112 min height. */
 export const Input = forwardRef<TextInput, InputProps>(function Input(
-  { error = false, icon, suffix, multiline, containerStyle, style, onFocus, onBlur, ...rest },
+  { error = false, icon, suffix, prefix, multiline, containerStyle, style, onFocus, onBlur, ...rest },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
@@ -84,6 +86,11 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   const NativeInput = (inSheet ? BottomSheetTextInput : TextInput) as typeof TextInput;
   return (
     <View style={[styles.inwrap, containerStyle]}>
+      {prefix ? (
+        <View style={styles.pre} pointerEvents="none">
+          <Text style={styles.prefix}>{prefix}</Text>
+        </View>
+      ) : null}
       {icon ? (
         <View style={styles.pre} pointerEvents="none">
           <Icon name={icon} size={18} color={colors.mute} />
@@ -105,7 +112,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
         style={[
           styles.input,
           multiline ? styles.multiline : null,
-          icon ? { paddingLeft: 46 } : null,
+          icon || prefix ? { paddingLeft: prefix ? 58 : 46 } : null,
           suffix ? { paddingRight: 60 } : null,
           focused ? styles.focus : null,
           error ? styles.error : null,
@@ -203,6 +210,7 @@ const styles = StyleSheet.create({
   focus: { borderColor: colors.cyan2, ...shadow.focus },
   error: { borderColor: colors.danger, ...shadow.error },
   pre: { position: 'absolute', left: 16, zIndex: 1 },
+  prefix: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.mute },
   suffixWrap: { position: 'absolute', top: 0, bottom: 0, right: sizes.amountSuffixRight, justifyContent: 'center' },
   suffix: {
     fontFamily: fonts.bodyBold,

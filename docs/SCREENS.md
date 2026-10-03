@@ -49,7 +49,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `StartSamtale.dc.html` | `/chat/start?listing=` | `src/screens/StartChatScreen.tsx` | ✅ done | Conversation is created on the first message (opening the screen saves nothing); an existing conversation for the oppdrag redirects to `/chat/[id]`. The prototype's scripted typing/reply is not faked. Hidden for lack of data: "Svarer vanligvis innen …". |
 | `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` + `src/components/TilbudSheets.tsx` | ✅ done | Recipient and sender views come from the real roles (no demo toggle). DECLINED is final in the state machine, so a decline is held for the toast's Angre window before it is sent; chosen reasons go to the chat. "Be om endring" topics go in the revision message. No "seen" timestamp or offer expiry in the API → those timeline rows are left out. |
 | `Tilstander.dc.html` | – (reference) | `src/components/ui/ScreenState.tsx`, `FallbackScreen.tsx`, `OfflineBanner.tsx` | partial | No NoAccess / Success states yet |
-| `TryggeKontakter.dc.html` | `/trygge-kontakter` | `src/screens/TrustedContactsScreen.tsx` | exists | |
+| `TryggeKontakter.dc.html` | `/trygge-kontakter` | `src/screens/TrustedContactsScreen.tsx` | ✅ done | Hero, list with relation, add sheet (+47, 8-digit validation, relation chips), remove confirm. Stored on the phone (max 5). |
 | `Ungdomskonto.dc.html` | `/ungdomskonto` | `src/screens/Onboarding/YouthAccountScreen.tsx` | ✅ done | Reached from the Vipps sheet ("Under 18 år?") |
 | `Varsler.dc.html` | `/varsler` | `src/screens/NotificationsScreen.tsx` | ✅ done | Category per notification kind (Tilbud/Melding/Avtale/Annet). Rows deep-link via the notification `route`. |
 | `Varslinger.dc.html` | `/varslinger` | `src/screens/NotificationPrefsScreen.tsx` | exists | |
@@ -175,7 +175,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Verifisering.dc.html` | ✅ Verifisering | "Fullt verifisert med Vipps", 3-step bar (Vipps-ID, Telefon, E-post – all from Vipps), expandable "Hva ble sjekket?", bedrift link, review rules, profile checklist |
 | `Sikkerhet.dc.html` | ✅ Sikkerhet | Rapporter → Rapporter, blocked users (Opphev [D]), trygge kontakter → TryggeKontakter, Trygg tur start/stop with pulse, tips accordion |
 | `Rapporter.dc.html` | ✅ Rapporter | 3 steps: what → reason → details (+ screenshot, block toggle) → success with status timeline |
-| `TryggeKontakter.dc.html` | Trygge kontakter | List, remove [D], add [S] with phone validation and relation chips → [T] |
+| `TryggeKontakter.dc.html` | ✅ Trygge kontakter | List, remove [D], add [S] with phone validation and relation chips → [T] |
 | `Personvern.dc.html` | Personvern | Tips toggle writes a new timestamped consent-log row, data export progress → done, retention accordion, Vilkår, Slett konto |
 
 ## 9 · Fellesskap

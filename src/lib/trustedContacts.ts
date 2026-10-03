@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEY = 'minnabo.trustedContacts.v1';
 const MAX = 5;
 
-export type TrustedContact = { id: string; name: string; phone: string };
+export type TrustedContact = { id: string; name: string; phone: string; relation?: string };
 
 let cache: TrustedContact[] = [];
 let hydrated = false;
@@ -29,11 +29,11 @@ function persist() {
 
 export const trustedContacts = {
   list: () => [...cache],
-  add(name: string, phone: string) {
+  add(name: string, phone: string, relation?: string) {
     const n = name.trim();
     const p = phone.trim();
     if (!n || !p || cache.length >= MAX) return;
-    cache = [...cache, { id: `tc-${Date.now()}`, name: n, phone: p }];
+    cache = [...cache, { id: `tc-${Date.now()}`, name: n, phone: p, ...(relation ? { relation } : {}) }];
     persist();
     emit();
   },
@@ -51,7 +51,7 @@ export const trustedContacts = {
 
 export function useTrustedContacts(): {
   contacts: TrustedContact[];
-  add: (name: string, phone: string) => void;
+  add: (name: string, phone: string, relation?: string) => void;
   remove: (id: string) => void;
   full: boolean;
 } {
@@ -67,7 +67,7 @@ export function useTrustedContacts(): {
   }, []);
   return {
     contacts,
-    add: useCallback((name: string, phone: string) => trustedContacts.add(name, phone), []),
+    add: useCallback((name: string, phone: string, relation?: string) => trustedContacts.add(name, phone, relation), []),
     remove: useCallback((id: string) => trustedContacts.remove(id), []),
     full: contacts.length >= MAX,
   };
