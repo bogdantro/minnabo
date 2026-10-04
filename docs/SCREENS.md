@@ -44,7 +44,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Samtykke.dc.html` | `/samtykker` | `src/screens/Onboarding/ConsentScreen.tsx` | ✅ done | Vipps identity card + "Bekreftet via Vipps" hidden until Vipps login. Optional tips consent needs migration `0024_consent_tips.sql` pushed |
 | `SeAlle.dc.html` | `/oppdrag-liste` (`?category=`) | `src/screens/SeeAllScreen.tsx` | ✅ done | Oppdrag only; `/tilbydere` + ListingListScreen removed (rule 1). Price sort uses the listing budget; "Ønsker tilbud" sorts last. |
 | `Sikkerhet.dc.html` | `/sikkerhet` | `src/screens/SikkerhetScreen.tsx` | ✅ done | New screen (SafetyScreen stays for `/rapporter` until Rapporter). Trygg tur = shared `TryggTurCard` (also on Jobbdag) – SMS via the phone's SMS app. Blocked list inline with confirm. `/blokkerte` still exists for Innstillinger. |
-| `SlettKonto.dc.html` | `/slett-konto` | `src/screens/DeleteAccountScreen.tsx` | exists | Backend: `supabase/functions/delete-account` |
+| `SlettKonto.dc.html` | `/slett-konto` | `src/screens/DeleteAccountScreen.tsx` | ✅ done | 3 steps (what is deleted with real listings/reviews → active agreements, skipped when none → type SLETT) → goodbye. `delete_my_account` RPC (0031) anonymises + cleans up, edge function `delete-account` soft-deletes the login (deployed). |
 | `Sok.dc.html` | `/sok` | `src/screens/SearchScreen.tsx` | ✅ done | Oppdrag only (offer type filter removed). Multi-category, verified, distance and sort filter client-side on the scoped result |
 | `StartSamtale.dc.html` | `/chat/start?listing=` | `src/screens/StartChatScreen.tsx` | ✅ done | Conversation is created on the first message (opening the screen saves nothing); an existing conversation for the oppdrag redirects to `/chat/[id]`. The prototype's scripted typing/reply is not faked. Hidden for lack of data: "Svarer vanligvis innen …". |
 | `TilbudDetaljer.dc.html` | `/tilbud/[id]` | `src/screens/TilbudDetaljScreen.tsx` + `src/components/TilbudSheets.tsx` | ✅ done | Recipient and sender views come from the real roles (no demo toggle). DECLINED is final in the state machine, so a decline is held for the toast's Angre window before it is sent; chosen reasons go to the chat. "Be om endring" topics go in the revision message. No "seen" timestamp or offer expiry in the API → those timeline rows are left out. |
@@ -193,7 +193,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Innstillinger.dc.html` | ✅ Innstillinger | Account (Vipps), location, notification toggles, feriemodus, text size, dev mode + flags, Logg ut [D], Slett konto |
 | `Varslinger.dc.html` | ✅ Varslinger | Master toggle, per-category Push / E-post, quiet hours |
 | `Vilkar.dc.html` | ✅ Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
-| `SlettKonto.dc.html` | Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
+| `SlettKonto.dc.html` | ✅ Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
 | `Bedrift.dc.html` | Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
 | `Admin.dc.html` | Adminpanel | KPIs, tabs: reports queue actions, verifications, users (suspend), listings (hide), partners (max 2 enforced), weekly stats bars. Admin role only |
 

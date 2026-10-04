@@ -373,6 +373,13 @@ export class MockApiClient implements ApiClient {
     noticeboardStore.remove(id);
   }
 
+  // --- konto ---
+
+  async deleteMyAccount(reason?: string): Promise<void> {
+    await delay(300);
+    profileRepository.deleteAccount(reason);
+  }
+
   // --- innstillinger ---
 
   async getMySettings(): Promise<MySettings> {

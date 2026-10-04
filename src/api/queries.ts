@@ -528,6 +528,11 @@ export function useDonations() {
   return useQuery({ queryKey: communityKeys.donations, queryFn: () => apiClient.listDonations() });
 }
 
+/** Slett konto – anonymise, clean up and close the login. */
+export function useDeleteMyAccount() {
+  return useMutation({ mutationFn: (reason?: string) => apiClient.deleteMyAccount(reason) });
+}
+
 export const settingsKeys = { mine: ['my-settings'] as const };
 
 export function useMySettings() {

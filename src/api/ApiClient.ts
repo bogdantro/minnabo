@@ -249,6 +249,10 @@ export interface ApiClient {
   listPartners(): Promise<Partner[]>;
   listDonations(): Promise<Donation[]>;
 
+  // konto
+  /** Slett konto: anonymise + clean up (RPC), then close the login (edge function). */
+  deleteMyAccount(reason?: string): Promise<void>;
+
   // innstillinger
   getMySettings(): Promise<MySettings>;
   updateNotificationPrefs(prefs: NotificationPrefs): Promise<MySettings>;

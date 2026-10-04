@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { reportError } from '@/lib/reporting';
 import type {
   AgendaItem,
   AgreementSnapshot,
@@ -762,6 +763,16 @@ export class SupabaseApiClient implements ApiClient {
   async deleteNoticeboardPost(id: string): Promise<void> {
     const { error } = await supabase.from('noticeboard_posts').delete().eq('id', id);
     if (error) fail(error.message);
+  }
+
+  // --- konto ---
+
+  async deleteMyAccount(reason?: string): Promise<void> {
+    const { error } = await supabase.rpc('delete_my_account', { p_reason: reason ?? null });
+    if (error) fail(error.message);
+    // Closes the login (soft delete). The data is already gone even if this fails.
+    const { error: fnErr } = await supabase.functions.invoke('delete-account');
+    if (fnErr) reportError(fnErr, { where: 'deleteMyAccount.function' });
   }
 
   // --- innstillinger ---

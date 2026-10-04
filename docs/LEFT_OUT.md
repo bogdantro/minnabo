@@ -130,6 +130,8 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Innstillinger | "Vilkår for bruk · Versjon [x.x]" shows "Les vilkårene for MinNabo" | No terms version | Same as Personvern (`terms_version`) |
 | Vilkår | **Final legal text** – the design's working copy is used. Values to confirm in `src/content/terms.ts`: version (1.0), valid-from date, minimum age (15), notice days (30), contact e-mail (empty → sentence hidden). The "[Endelig juridisk tekst …]" markers show only in dev builds | Needs a lawyer | Send the text to a lawyer, then update `terms.ts` |
 | Vilkår | Download icon shares the terms as text instead of a PDF | No PDF library | Optional: host a PDF and link to it |
+| Slett konto | "Vi har sendt en bekreftelse til e-posten din" left out | No e-mail sending | E-mail provider + edge function |
+| Slett konto | Deletion is anonymise + soft-delete (the profile row stays as «Slettet bruker» so other people's chats keep their messages); reasons are stored anonymously in `account_deletions` | Intentional – see design copy «Andre ser "Slettet bruker"» | Decide how long to keep anonymised rows (Personvern retention) |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -138,7 +140,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Slett konto, Bedrift, Admin | to do | |
+| Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
 ---

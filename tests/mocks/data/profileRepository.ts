@@ -61,6 +61,19 @@ export const profileRepository = {
     return clone(editableProfile);
   },
 
+  /** Slett konto (mock): anonymise like delete_my_account() does. */
+  deletedReasons: [] as (string | undefined)[],
+  deleteAccount(reason?: string): void {
+    this.deletedReasons.push(reason);
+    editableProfile.displayName = 'Slettet bruker';
+    editableProfile.initials = '?';
+    editableProfile.avatarUrl = undefined;
+    editableProfile.presentation = undefined;
+    editableProfile.homeNotes = undefined;
+    editableProfile.portfolio = [];
+    editableProfile.paused = true;
+  },
+
   updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'homeNotes' | 'portfolio'>> & {
     place?: string;
     municipality?: string;

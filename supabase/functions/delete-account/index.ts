@@ -1,6 +1,8 @@
-// Supabase Edge Function: permanently delete the calling user's account.
-// The DB has ON DELETE CASCADE from auth.users, so removing the auth user
-// removes their profile and everything owned by it.
+// Supabase Edge Function: close the calling user's account.
+// The app first calls the `delete_my_account` RPC (0031), which anonymises the
+// profile and removes private data. Here the auth user is SOFT-deleted: the login
+// stops working, but the profile row stays so other people's chats keep showing
+// «Slettet bruker» instead of losing their messages (a hard delete cascades).
 //
 // Deploy: npx supabase functions deploy delete-account
 // deno-lint-ignore-file no-explicit-any
@@ -27,7 +29,7 @@ Deno.serve(async (req: Request) => {
     const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
     if (userErr || !userData.user) return json({ error: 'Ugyldig økt.' }, 401, cors);
 
-    const { error: delErr } = await admin.auth.admin.deleteUser(userData.user.id);
+    const { error: delErr } = await admin.auth.admin.deleteUser(userData.user.id, true);
     if (delErr) return json({ error: delErr.message }, 500, cors);
 
     return json({ ok: true }, 200, cors);
