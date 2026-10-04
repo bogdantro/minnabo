@@ -9,7 +9,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 
 | Design file | Route (`app/…`) | Screen component | Status | Notes |
 |---|---|---|---|---|
-| `Admin.dc.html` | `/admin` (`admin.tsx`) | `src/screens/AdminScreen.tsx` | exists | Behind `featureFlags.adminPanel` (off). DB role is `user` \| `admin` |
+| `Admin.dc.html` | `/admin` (`admin.tsx`) | `src/screens/AdminScreen.tsx` | ✅ done | Admin role only – every action is an admin-only RPC (`0032_admin.sql`). KPIs, report queue (Avvis / Fjern innhold / Advar bruker + Angre), business approval with a live Enhetsregisteret check, user search + suspend, flagged oppdrag hide/show, partner slots (max 2) + carousel, weekly stats |
 | `Avtale.dc.html` | `/avtale/[id]` | `src/screens/AvtaleSammendragScreen.tsx` | ✅ done | Avlys = new `cancel_agreement` RPC (migration 0026, ACCEPTED → CANCELLED, reopens the oppdrag). Legg i kalender = expo-calendar, shown on iOS/Android when the agreed time contains a date. Job-day tools moved to `/jobbdag/[id]`. |
 | `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | ✅ done | Org.nr format + mod-11 check + **live Enhetsregisteret lookup** (data.brreg.no: name, address, form), contact fields with validation, categories, consent → PENDING. Opens on the status (Sendt / Til verifisering / Verifisert, or rejected → send again) when already registered. |
 | `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` + `src/components/chat/*` | ✅ done | Tap bubble → reactions (stored as emoji 👍❤️😊✅), long-press → fest/løsne. Time proposals are text messages with a "📅 Tidsforslag:" marker rendered as cards; answers "✓ Tidspunktet passer" / "↻ Nytt tidspunkt ønskes". "Del sted" tile only after an agreement (existing feature, not in the design). Send tilbud opens the Gi tilbud sheet (helper only). Mute is on-device. Decline held for Angre. |
@@ -195,7 +195,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Vilkar.dc.html` | ✅ Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
 | `SlettKonto.dc.html` | ✅ Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
 | `Bedrift.dc.html` | ✅ Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
-| `Admin.dc.html` | Adminpanel | KPIs, tabs: reports queue actions, verifications, users (suspend), listings (hide), partners (max 2 enforced), weekly stats bars. Admin role only |
+| `Admin.dc.html` | ✅ Adminpanel | KPIs, tabs: reports queue actions, verifications, users (suspend), listings (hide), partners (max 2 enforced), weekly stats bars. Admin role only |
 
 ## 11 · System
 

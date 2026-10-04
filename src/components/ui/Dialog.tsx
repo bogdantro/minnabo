@@ -51,13 +51,18 @@ export function Dialog({
   useEffect(() => {
     if (visible) {
       p.set(withSpring(1, motion.spring));
-    } else {
-      p.set(
-        withTiming(0, { duration: 180 }, (done) => {
-          if (done) runOnJS(setMounted)(false);
-        }),
-      );
+      return;
     }
+    p.set(
+      withTiming(0, { duration: 180 }, (done) => {
+        if (done) runOnJS(setMounted)(false);
+      }),
+    );
+    // The full-screen Modal must never outlive a close: if the animation is
+    // interrupted its callback reports done=false and an invisible scrim would
+    // keep swallowing every tap in the app.
+    const t = setTimeout(() => setMounted(false), 260);
+    return () => clearTimeout(t);
   }, [visible, p]);
 
   const card = useAnimatedStyle(() => ({

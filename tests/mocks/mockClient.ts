@@ -34,12 +34,21 @@ import { neighbourhoodStore } from '@mocks/data/neighbourhoodStore';
 import { consentStore } from '@mocks/data/consentStore';
 import { settingsStore } from '@mocks/data/settingsStore';
 import { businessStore } from '@mocks/data/businessStore';
+import { adminStore } from '@mocks/data/adminStore';
 import { jobWorkspaceStore } from '@mocks/data/jobWorkspaceStore';
 import { partners, documentedDonations } from '@mocks/data/seedCommunity';
 import type {
   ApiClient,
   ListConversationsParams,
+  AdminBusiness,
+  AdminDayStat,
+  AdminListing,
+  AdminOverview,
+  AdminPartner,
+  AdminReport,
+  AdminUser,
   BusinessProfile,
+  ReportOutcome,
   ConsentRecord,
   MySettings,
   NotificationPrefs,
@@ -344,7 +353,7 @@ export class MockApiClient implements ApiClient {
 
   async listPartners(): Promise<Partner[]> {
     await delay(80);
-    return partners;
+    return adminStore.visiblePartners(partners);
   }
 
   async listDonations(): Promise<Donation[]> {
@@ -458,6 +467,79 @@ export class MockApiClient implements ApiClient {
   async removeSavedSearch(id: string): Promise<void> {
     await delay(60);
     savedSearchStore.remove(id);
+  }
+
+  // --- admin ---
+
+  async getAdminOverview(): Promise<AdminOverview> {
+    await delay(80);
+    return adminStore.overview();
+  }
+
+  async listAdminReports(): Promise<AdminReport[]> {
+    await delay(100);
+    return adminStore.reports();
+  }
+
+  async decideReport(reportId: string, outcome: ReportOutcome): Promise<void> {
+    await delay(120);
+    adminStore.decideReport(reportId, outcome);
+  }
+
+  async reopenReport(reportId: string): Promise<void> {
+    await delay(80);
+    adminStore.reopenReport(reportId);
+  }
+
+  async listAdminBusinesses(): Promise<AdminBusiness[]> {
+    await delay(100);
+    return businessStore.list();
+  }
+
+  async decideBusiness(profileId: string, approve: boolean): Promise<void> {
+    await delay(120);
+    businessStore.decide(profileId, approve);
+    if (approve && profileId === profileRepository.currentUserId) profileRepository.markVerified('BUSINESS');
+  }
+
+  async listAdminUsers(query = ''): Promise<AdminUser[]> {
+    await delay(100);
+    return adminStore.users(query);
+  }
+
+  async setUserSuspended(profileId: string, suspended: boolean): Promise<void> {
+    await delay(80);
+    adminStore.setSuspended(profileId, suspended);
+  }
+
+  async listFlaggedListings(): Promise<AdminListing[]> {
+    await delay(100);
+    return adminStore.flaggedListings();
+  }
+
+  async setListingHidden(listingId: string, hidden: boolean): Promise<void> {
+    await delay(80);
+    adminStore.setHidden(listingId, hidden);
+  }
+
+  async listAdminPartners(): Promise<AdminPartner[]> {
+    await delay(80);
+    return adminStore.partners(partners);
+  }
+
+  async setMainPartner(partnerId: string, main: boolean): Promise<void> {
+    await delay(80);
+    adminStore.setMain(partners, partnerId, main);
+  }
+
+  async setPartnerActive(partnerId: string, active: boolean): Promise<void> {
+    await delay(80);
+    adminStore.setActive(partnerId, active);
+  }
+
+  async getWeekStats(day?: string): Promise<AdminDayStat[]> {
+    await delay(100);
+    return adminStore.weekStats(day);
   }
 
   // --- safety ---

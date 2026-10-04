@@ -5,7 +5,7 @@ const SEED_REPORTS: Report[] = [
   {
     id: 'rep-seed-1',
     targetType: 'LISTING',
-    targetId: 'l-mur',
+    targetId: 'l-mont-kjokken',
     reason: 'Svindel eller falsk oppføring',
     details: 'Prisen virker urealistisk lav og profilen er ny.',
     byProfileId: 'u-emma',
@@ -50,6 +50,12 @@ export const safetyStore = {
   isResolved: (id: string) => resolved.has(id),
   resolveReport: (id: string) => {
     resolved = new Set(resolved).add(id);
+    emit();
+  },
+  reopenReport: (id: string) => {
+    const next = new Set(resolved);
+    next.delete(id);
+    resolved = next;
     emit();
   },
   openReportCount: () => reports.filter((r) => !resolved.has(r.id)).length,

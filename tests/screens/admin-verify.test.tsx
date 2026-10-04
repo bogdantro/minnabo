@@ -68,13 +68,65 @@ test('Bedrift: org.nr is checked (format + Enhetsregisteret), then the form subm
   }
 });
 
-test('admin panel shows the report queue and resolves a report', async () => {
+test('Admin: report queue – Avvis resolves, Angre puts it back; tab counts follow', async () => {
   safetyStore._reset();
   await renderWithProviders(<AdminScreen />);
-  await settle();
-  expect(screen.getAllByText('Adminpanel').length).toBeGreaterThan(0);
-  const openBefore = safetyStore.openReportCount();
-  expect(openBefore).toBeGreaterThan(0);
-  fireEvent.press(screen.getAllByText('Marker som håndtert')[0]);
-  await waitFor(() => expect(safetyStore.openReportCount()).toBe(openBefore - 1));
+  expect(await screen.findByText('Kø · 2 åpne')).toBeTruthy();
+  expect(screen.getByText('Ventende verifiseringer')).toBeTruthy();
+  // oldest first: the MESSAGE report (24 aug) comes before the LISTING one (25 aug)
+  expect(screen.getByText('Upassende oppførsel')).toBeTruthy();
+  expect(screen.getAllByText('Avvis').length).toBe(2);
+
+  await fireEvent.press(screen.getAllByText('Avvis')[0]);
+  expect(await screen.findByText('Kø · 1 åpne')).toBeTruthy();
+  expect(screen.getByText('Behandlet')).toBeTruthy();
+  expect(screen.getByText('Avvist')).toBeTruthy();
+  expect(safetyStore.openReportCount()).toBe(1);
+
+  await fireEvent.press(screen.getByLabelText('Angre behandling'));
+  expect(await screen.findByText('Kø · 2 åpne')).toBeTruthy();
+  expect(safetyStore.openReportCount()).toBe(2);
+});
+
+test('Admin: approving a business sets it verified; suspending a user; max 2 main partners', async () => {
+  const { businessStore } = require('@mocks/data/businessStore');
+  const { adminStore } = require('@mocks/data/adminStore');
+  const realFetch = global.fetch;
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ organisasjonsnummer: '923609016', navn: 'X' }) }) as unknown as typeof fetch;
+  try {
+    await renderWithProviders(<AdminScreen />);
+    await fireEvent.press(await screen.findByRole('tab', { name: /Verifisering/ }));
+    expect(await screen.findByText('Bedrifter som venter · 2')).toBeTruthy();
+    expect(screen.getByText('Berg Maling og Hage AS')).toBeTruthy();
+    await fireEvent.press(screen.getAllByText('Godkjenn')[0]);
+    await waitFor(() => expect(businessStore.list().find((b: { profileId: string }) => b.profileId === 'u-andreas').status).toBe('APPROVED'));
+    expect(businessStore.list().find((b: { profileId: string }) => b.profileId === 'u-jonas').status).toBe('PENDING');
+    expect(await screen.findByText('Verifisert')).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('tab', { name: /Brukere/ }));
+    await fireEvent.press(await screen.findByLabelText('Suspender Jonas Berg'));
+    await waitFor(() => expect(adminStore.isSuspended('u-jonas')).toBe(true));
+    expect(await screen.findByText('Suspendert')).toBeTruthy();
+    expect(screen.queryByLabelText('Suspender Marius B.')).toBeNull(); // admins can't be suspended
+
+    await fireEvent.press(screen.getByRole('tab', { name: /Partnere/ }));
+    expect(await screen.findByText('2 / 2')).toBeTruthy();
+    expect(screen.getByText('Maks 2 hovedpartnere. Slå av en av dem før du kan velge en ny.')).toBeTruthy();
+    expect(screen.getAllByText('Ikke tilgjengelig – 2 av 2 plasser brukt').length).toBeGreaterThan(0);
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('Admin: non-admins get no access', async () => {
+  const mod = require('@/hooks/useCurrentUser');
+  const spy = jest.spyOn(mod, 'useCurrentUser').mockReturnValue({ isLoading: false, isAdmin: false, initials: 'MB' });
+  try {
+    await renderWithProviders(<AdminScreen />);
+    await settle();
+    expect(screen.queryByText('Kø · 2 åpne')).toBeNull();
+    expect(screen.queryByText('Avvis')).toBeNull();
+  } finally {
+    spy.mockRestore();
+  }
 });

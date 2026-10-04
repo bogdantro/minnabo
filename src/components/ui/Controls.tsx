@@ -19,19 +19,22 @@ export type ToggleProps = {
   disabled?: boolean;
   /** sm = 44×26 (Varsler "Bare uleste"). */
   size?: 'md' | 'sm';
+  /** danger = red track when on (Admin "Suspender"). */
+  tone?: 'ok' | 'danger';
   testID?: string;
 };
 
 /** `.tgl` – 52×32 switch; knob springs 20 px, track fades grey → green. */
-export function Toggle({ value, onValueChange, accessibilityLabel, disabled, size = 'md', testID }: ToggleProps) {
+export function Toggle({ value, onValueChange, accessibilityLabel, disabled, size = 'md', tone = 'ok', testID }: ToggleProps) {
   const sm = size === 'sm';
+  const onColor = tone === 'danger' ? colors.danger : colors.toggleOn;
   const travel = sm ? 18 : 20;
   const p = useSharedValue(value ? 1 : 0);
   useEffect(() => {
     p.value = withSpring(value ? 1 : 0, motion.spring);
   }, [value, p]);
   const track = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(Math.min(Math.max(p.value, 0), 1), [0, 1], [colors.toggleOff, colors.toggleOn]),
+    backgroundColor: interpolateColor(Math.min(Math.max(p.value, 0), 1), [0, 1], [colors.toggleOff, onColor]),
   }));
   const knob = useAnimatedStyle(() => ({ transform: [{ translateX: p.value * travel }] }));
 

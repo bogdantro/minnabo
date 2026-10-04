@@ -137,6 +137,11 @@ afterEach(() => {
     /* not loaded */
   }
   try {
+    require('@mocks/data/adminStore').adminStore._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
     require('@/data/draftStore').draftStore.clear();
   } catch {
     /* not loaded */

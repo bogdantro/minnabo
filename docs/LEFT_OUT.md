@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-03 (after Trygge kontakter).
+Last updated: 2026-10-04 (after Adminpanel).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -121,7 +121,6 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Sikkerhet / Jobbdag | "Stopper du ikke innen fristen, får kontaktene dine en påminnelse" – the reminder to contacts is not sent (only the overdue state shows in the app) | Needs a server-side timer | Scheduled job on `safe_trips.due_at` that texts the contacts |
 | Sikkerhet | Blocked rows say "Blokkert" without date or "via rapport" | Blocks have no timestamp/source in the API | Return `blocks.created_at` and whether it came from a report |
 | Rapporter | "Skjermbilde" attachment | Reports have no attachment field | `reports.attachment_path` (+ upload to a private bucket only admins can read) |
-| Rapporter | "Du får varsel i appen når saken er avgjort" / "Du får beskjed om utfallet" – changed to "Vi går gjennom rapporten så snart vi kan" / "Saken lukkes når den er behandlet" | No notification is sent when an admin resolves a report | Notification kind `REPORT_RESOLVED` from `resolve_report` – then restore the design copy |
 | Rapporter | Tilbud and Vurdering cannot be reported from where they are shown yet (only users, oppdrag and messages have a "Rapporter" entry) | Tilbudsdetaljer / review cards link to the user instead | Add `?tilbud=` / `?vurdering=` entries (API already supports PROPOSAL / REVIEW) |
 | Rapporter | Case number is made from the report id (e.g. "MN-863468"), not a running number | No case-number column | Optional `reports.case_no serial` |
 | Personvern | Retention answers have no numbers (design: "[x] dager", "[x] måneder") and "Vilkår v2.1" has no version | Legal decisions; no terms-version field | Decide retention periods + a terms version (`consent_records.terms_version`) |
@@ -132,6 +131,10 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Vilkår | Download icon shares the terms as text instead of a PDF | No PDF library | Optional: host a PDF and link to it |
 | Slett konto | "Vi har sendt en bekreftelse til e-posten din" left out | No e-mail sending | E-mail provider + edge function |
 | Slett konto | Deletion is anonymise + soft-delete (the profile row stays as «Slettet bruker» so other people's chats keep their messages); reasons are stored anonymously in `account_deletions` | Intentional – see design copy «Andre ser "Slettet bruker"» | Decide how long to keep anonymised rows (Personvern retention) |
+| Admin | Partners can only be switched (hovedpartner / karusell) – new partners and logos are added with SQL (like `0025_seed_main_partners.sql`) | The design has no partner editor | Ask for an editor screen if you want to manage partners in the app |
+| Admin | Suspended users can still log in and read; they can't post oppdrag, tilbud, messages, oppslag or reviews (enforced by database triggers) | The design doesn't say what suspension blocks | Decide whether suspension should also block login |
+| Admin | "Fjern innhold" on a message/review blanks the text (kept for Angre); on an oppdrag/oppslag it hides it; on a user it suspends | Design shows one button for every type | Confirm this is the wanted behaviour |
+| Admin | Statistikk shows the current week (Mon–Sun) from real data; "Testdata." removed from the hint; supporter rows show the real partner name instead of "[Lokal bedrift]" | Real data instead of design samples | ✅ |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -140,7 +143,6 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
 ---
@@ -149,6 +151,9 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Was | Fixed in |
 |-----|----------|
+| Rapporter: no notification when a report is decided (copy had been softened) | `admin_decide_report` notifies the reporter ("Rapporten din er behandlet"); design copy restored (`0032_admin.sql`) |
+| Bedrift: `profiles.is_business` was set on submit | Set on admin approval, with a BUSINESS verification + notification (`0032_admin.sql`) |
+| Users could change their own `role` / `is_business` through the profile update policy | Guard trigger in `0032_admin.sql` |
 | "Avlys avtalen" had no backend | `0026_cancel_agreement.sql` + `cancelAgreement` API (`d1497de`) – still needs A2 |
 | "Legg i kalender" had no library | `expo-calendar` installed (approved 2026-10-03) – needs A5/A6 |
 | Trygg tur card had old styling (Jobbdag) | New `TryggTurCard` in the Sikkerhet design, used on Sikkerhet and Jobbdag |

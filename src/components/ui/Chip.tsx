@@ -82,7 +82,7 @@ export function Chip({
       <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[sm ? text.chipSm : text.chip, { color: fg }]}>
         {label}
       </Text>
-      {trailing}
+      {trailing != null ? <View style={styles.trailing}>{trailing}</View> : null}
     </PressableScale>
   );
 }
@@ -102,6 +102,8 @@ export function ChipRow({ children, style }: { children: ReactNode; style?: Styl
 }
 
 const styles = StyleSheet.create({
+  // Pills default to alignSelf flex-start; keep trailing counts centred in the chip.
+  trailing: { alignSelf: 'center', justifyContent: 'center' },
   base: {
     flexDirection: 'row',
     alignItems: 'center',

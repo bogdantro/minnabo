@@ -167,7 +167,7 @@ export function InnboksScreen() {
               selected={filter === 'uleste'}
               onPress={() => setFilter('uleste')}
               accessibilityLabel={`${nb.inbox.filterUnread}, ${unreadN}`}
-              trailing={unreadN ? <Pill label={String(unreadN)} tone={filter === 'uleste' ? 'accent' : 'neutral'} size="sm" /> : undefined}
+              trailing={unreadN ? <Pill label={String(unreadN)} tone={filter === 'uleste' ? 'accent' : 'neutral'} /> : undefined}
             />
           </ChipRow>
         </View>

@@ -78,9 +78,6 @@ function PostButton({ onPress }: { onPress: () => void }) {
           <Icon name="plus" size={sizes.fabIcon} color={colors.ink} strokeWidth={2.4} />
         </Animated.View>
       </View>
-      <Text style={[text.tabLabel, { color: colors.ink }]} maxFontSizeMultiplier={1.2}>
-        {nb.tabs.leggUt}
-      </Text>
     </Pressable>
   );
 }
@@ -169,7 +166,8 @@ const styles = StyleSheet.create({
   },
   niOn: { backgroundColor: colors.limeTint },
   count: { position: 'absolute', top: -3, right: 2 },
-  fabw: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: -30 },
+  // No label under the button (icon only, labelled for screen readers); the bottom padding keeps it raised as before.
+  fabw: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -30, paddingBottom: 16 },
   fabShadow: { width: sizes.fab, height: sizes.fab, borderRadius: sizes.fab / 2 },
   fab: {
     width: sizes.fab,

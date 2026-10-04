@@ -81,6 +81,65 @@ export type BusinessProfile = {
   createdAt: string;
 };
 
+// ---------------------------------------------------------------------------
+// Adminpanel (design/screens/Admin.dc.html) — every call is admin-only on the backend.
+// ---------------------------------------------------------------------------
+export type AdminOverview = {
+  openReports: number;
+  pendingBusinesses: number;
+  newUsersToday: number;
+  activeListings: number;
+};
+export type ReportOutcome = 'dismiss' | 'remove' | 'warn';
+export type AdminReport = {
+  id: string;
+  targetType: 'USER' | 'LISTING' | 'PROPOSAL' | 'MESSAGE' | 'REVIEW' | 'NOTICE';
+  targetId: string;
+  reason: string;
+  details?: string;
+  /** what was reported, e.g. «Billig flyttehjelp» – «Vipps 500 kr først» */
+  targetText: string;
+  byName: string;
+  createdAt: string;
+  status: 'OPEN' | 'RESOLVED';
+  outcome: ReportOutcome | null;
+  resolvedAt: string | null;
+};
+export type AdminBusiness = BusinessProfile & { decidedAt: string | null };
+export type AdminUser = {
+  id: string;
+  displayName: string;
+  initials: string;
+  avatarUrl?: string;
+  place: string | null;
+  municipality: string | null;
+  memberSince: string;
+  rating: number | null;
+  ratingCount: number;
+  suspended: boolean;
+  isAdmin: boolean;
+};
+export type AdminListing = {
+  id: string;
+  title: string;
+  categorySlug: string;
+  reportCount: number;
+  lastReason: string | null;
+  hidden: boolean;
+};
+export type AdminPartner = {
+  id: string;
+  name: string;
+  blurb: string;
+  municipality: string | null;
+  /** one of the (max 2) hovedpartnere on Fellesskap */
+  main: boolean;
+  /** shown in the supporter carousel */
+  active: boolean;
+};
+/** One day (yyyy-mm-dd, Oslo) of the weekly statistics. */
+export type AdminDayStat = { day: string; listings: number; offers: number; completed: number };
+
 /** One row in the consent log (consent_records). Each change is a new row. */
 export type ConsentRecord = {
   id: string;
@@ -306,4 +365,21 @@ export interface ApiClient {
   }): Promise<void>;
   /** My own business registration, or null when I haven't registered. */
   getMyBusinessProfile(): Promise<BusinessProfile | null>;
+
+  // --- admin (role 'admin' only; the backend refuses everyone else) ---
+  getAdminOverview(): Promise<AdminOverview>;
+  listAdminReports(): Promise<AdminReport[]>;
+  decideReport(reportId: string, outcome: ReportOutcome): Promise<void>;
+  reopenReport(reportId: string): Promise<void>;
+  listAdminBusinesses(): Promise<AdminBusiness[]>;
+  decideBusiness(profileId: string, approve: boolean): Promise<void>;
+  listAdminUsers(query?: string): Promise<AdminUser[]>;
+  setUserSuspended(profileId: string, suspended: boolean): Promise<void>;
+  listFlaggedListings(): Promise<AdminListing[]>;
+  setListingHidden(listingId: string, hidden: boolean): Promise<void>;
+  listAdminPartners(): Promise<AdminPartner[]>;
+  setMainPartner(partnerId: string, main: boolean): Promise<void>;
+  setPartnerActive(partnerId: string, active: boolean): Promise<void>;
+  /** Mon–Sun of the week containing `day` (default: this week). */
+  getWeekStats(day?: string): Promise<AdminDayStat[]>;
 }

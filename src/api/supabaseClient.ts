@@ -41,6 +41,17 @@ import type {
   UpdateProfilePatch,
 } from './ApiClient';
 import { withDefaultPrefs } from './ApiClient';
+import type {
+  AdminBusiness,
+  AdminDayStat,
+  AdminListing,
+  AdminOverview,
+  AdminPartner,
+  AdminReport,
+  AdminUser,
+  ReportOutcome,
+} from './ApiClient';
+import { publicUrl } from '@/lib/storage';
 import {
   toAgreement,
   toConversation,
@@ -941,6 +952,151 @@ export class SupabaseApiClient implements ApiClient {
   async removeSavedSearch(id: string): Promise<void> {
     const { error } = await supabase.from('saved_searches').delete().eq('id', id);
     if (error) fail(error.message);
+  }
+
+  // --- admin ---
+
+  async getAdminOverview(): Promise<AdminOverview> {
+    const { data, error } = await supabase.rpc('admin_overview');
+    if (error) fail(error.message);
+    const r = data as { open_reports: number; pending_businesses: number; new_users_today: number; active_listings: number };
+    return {
+      openReports: r.open_reports,
+      pendingBusinesses: r.pending_businesses,
+      newUsersToday: r.new_users_today,
+      activeListings: r.active_listings,
+    };
+  }
+
+  async listAdminReports(): Promise<AdminReport[]> {
+    const { data, error } = await supabase.rpc('admin_reports');
+    if (error) fail(error.message);
+    return (data as {
+      id: string; target_type: AdminReport['targetType']; target_id: string; reason: string; details: string | null;
+      target_text: string; by_name: string; created_at: string; status: AdminReport['status'];
+      outcome: ReportOutcome | null; resolved_at: string | null;
+    }[]).map((r) => ({
+      id: r.id,
+      targetType: r.target_type,
+      targetId: r.target_id,
+      reason: r.reason,
+      details: r.details ?? undefined,
+      targetText: r.target_text,
+      byName: r.by_name,
+      createdAt: r.created_at,
+      status: r.status,
+      outcome: r.outcome,
+      resolvedAt: r.resolved_at,
+    }));
+  }
+
+  async decideReport(reportId: string, outcome: ReportOutcome): Promise<void> {
+    const { error } = await supabase.rpc('admin_decide_report', { p_report_id: reportId, p_outcome: outcome });
+    if (error) fail(error.message);
+  }
+
+  async reopenReport(reportId: string): Promise<void> {
+    const { error } = await supabase.rpc('admin_reopen_report', { p_report_id: reportId });
+    if (error) fail(error.message);
+  }
+
+  async listAdminBusinesses(): Promise<AdminBusiness[]> {
+    const { data, error } = await supabase.rpc('admin_businesses');
+    if (error) fail(error.message);
+    return (data as {
+      profile_id: string; org_nr: string; company_name: string; contact_person: string; email: string; phone: string;
+      category_slugs: string[] | null; status: AdminBusiness['status']; created_at: string; decided_at: string | null;
+    }[]).map((r) => ({
+      profileId: r.profile_id,
+      orgNr: r.org_nr,
+      companyName: r.company_name,
+      contactPerson: r.contact_person,
+      email: r.email,
+      phone: r.phone,
+      categorySlugs: r.category_slugs ?? [],
+      status: r.status,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+    }));
+  }
+
+  async decideBusiness(profileId: string, approve: boolean): Promise<void> {
+    const { error } = await supabase.rpc('admin_decide_business', { p_profile_id: profileId, p_approve: approve });
+    if (error) fail(error.message);
+  }
+
+  async listAdminUsers(query = ''): Promise<AdminUser[]> {
+    const { data, error } = await supabase.rpc('admin_users', { p_q: query });
+    if (error) fail(error.message);
+    return (data as {
+      id: string; display_name: string; initials: string; avatar_path: string | null; place: string | null;
+      municipality: string | null; member_since: string; rating: number | null; rating_count: number;
+      suspended: boolean; role: string;
+    }[]).map((r) => ({
+      id: r.id,
+      displayName: r.display_name,
+      initials: r.initials,
+      avatarUrl: publicUrl('avatars', r.avatar_path),
+      place: r.place,
+      municipality: r.municipality,
+      memberSince: r.member_since,
+      rating: r.rating === null ? null : Number(r.rating),
+      ratingCount: r.rating_count,
+      suspended: r.suspended,
+      isAdmin: r.role === 'admin',
+    }));
+  }
+
+  async setUserSuspended(profileId: string, suspended: boolean): Promise<void> {
+    const { error } = await supabase.rpc('admin_set_suspended', { p_profile_id: profileId, p_suspended: suspended });
+    if (error) fail(error.message);
+  }
+
+  async listFlaggedListings(): Promise<AdminListing[]> {
+    const { data, error } = await supabase.rpc('admin_flagged_listings');
+    if (error) fail(error.message);
+    return (data as {
+      id: string; title: string; category_slug: string; report_count: number; last_reason: string | null; hidden: boolean;
+    }[]).map((r) => ({
+      id: r.id,
+      title: r.title,
+      categorySlug: r.category_slug,
+      reportCount: r.report_count,
+      lastReason: r.last_reason,
+      hidden: r.hidden,
+    }));
+  }
+
+  async setListingHidden(listingId: string, hidden: boolean): Promise<void> {
+    const { error } = await supabase.rpc('admin_set_listing_hidden', { p_listing_id: listingId, p_hidden: hidden });
+    if (error) fail(error.message);
+  }
+
+  async listAdminPartners(): Promise<AdminPartner[]> {
+    const { data, error } = await supabase.rpc('admin_partners');
+    if (error) fail(error.message);
+    return data as AdminPartner[];
+  }
+
+  async setMainPartner(partnerId: string, main: boolean): Promise<void> {
+    const { error } = await supabase.rpc('admin_set_main_partner', { p_partner_id: partnerId, p_main: main });
+    if (error) fail(error.message);
+  }
+
+  async setPartnerActive(partnerId: string, active: boolean): Promise<void> {
+    const { error } = await supabase.rpc('admin_set_partner_active', { p_partner_id: partnerId, p_active: active });
+    if (error) fail(error.message);
+  }
+
+  async getWeekStats(day?: string): Promise<AdminDayStat[]> {
+    const { data, error } = await supabase.rpc('admin_week_stats', day ? { p_day: day } : {});
+    if (error) fail(error.message);
+    return (data as { stat_day: string; n_listings: number; n_offers: number; n_completed: number }[]).map((r) => ({
+      day: r.stat_day,
+      listings: r.n_listings,
+      offers: r.n_offers,
+      completed: r.n_completed,
+    }));
   }
 
   // --- safety ---
