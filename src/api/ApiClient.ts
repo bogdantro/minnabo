@@ -33,6 +33,17 @@ export type SavedSearchRecord = {
   createdAt: string;
 };
 
+/** One row in the consent log (consent_records). Each change is a new row. */
+export type ConsentRecord = {
+  id: string;
+  terms: boolean;
+  privacy: boolean;
+  age: boolean;
+  /** optional "tips om oppdrag" (0024); undefined on rows from before it existed */
+  tips?: boolean;
+  createdAt: string;
+};
+
 /** Nabolag: the group for one area (sted) in a kommune. `id` is null until someone joins. */
 export type NeighbourhoodInfo = {
   id: string | null;
@@ -202,6 +213,12 @@ export interface ApiClient {
   // community
   listPartners(): Promise<Partner[]>;
   listDonations(): Promise<Donation[]>;
+
+  // personvern
+  /** My consent log, newest first. */
+  listConsentRecords(): Promise<ConsentRecord[]>;
+  /** Turn the optional tips consent on/off – stored as a new timestamped row. */
+  setTipsConsent(on: boolean): Promise<ConsentRecord>;
 
   // nabolag
   getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;

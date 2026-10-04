@@ -122,6 +122,11 @@ afterEach(() => {
     /* not loaded */
   }
   try {
+    require('@mocks/data/consentStore').consentStore._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
     require('@/data/draftStore').draftStore.clear();
   } catch {
     /* not loaded */

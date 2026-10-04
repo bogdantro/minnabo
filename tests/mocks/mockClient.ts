@@ -31,11 +31,13 @@ import { endorsementsStore } from '@mocks/data/endorsementsStore';
 import { followStore } from '@mocks/data/followStore';
 import { noticeboardStore } from '@mocks/data/noticeboardStore';
 import { neighbourhoodStore } from '@mocks/data/neighbourhoodStore';
+import { consentStore } from '@mocks/data/consentStore';
 import { jobWorkspaceStore } from '@mocks/data/jobWorkspaceStore';
 import { partners, documentedDonations } from '@mocks/data/seedCommunity';
 import type {
   ApiClient,
   ListConversationsParams,
+  ConsentRecord,
   ListListingsParams,
   NeighbourhoodInfo,
   ReviseProposalPatch,
@@ -366,6 +368,18 @@ export class MockApiClient implements ApiClient {
   async deleteNoticeboardPost(id: string): Promise<void> {
     await delay(80);
     noticeboardStore.remove(id);
+  }
+
+  // --- personvern ---
+
+  async listConsentRecords(): Promise<ConsentRecord[]> {
+    await delay(80);
+    return consentStore.list();
+  }
+
+  async setTipsConsent(on: boolean): Promise<ConsentRecord> {
+    await delay(120);
+    return consentStore.setTips(on);
   }
 
   // --- nabolag ---

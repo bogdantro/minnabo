@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query';
 import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
-import type { NeighbourhoodInfo } from './ApiClient';
+import type { ConsentRecord, NeighbourhoodInfo } from './ApiClient';
 import { apiClient } from './client';
 
 export const listingKeys = {
@@ -526,6 +526,21 @@ export function usePartners() {
 
 export function useDonations() {
   return useQuery({ queryKey: communityKeys.donations, queryFn: () => apiClient.listDonations() });
+}
+
+export const consentKeys = { log: ['consents'] as const };
+
+export function useConsentRecords() {
+  return useQuery({ queryKey: consentKeys.log, queryFn: () => apiClient.listConsentRecords() });
+}
+
+/** Personvern tips toggle: a new row in the consent log. */
+export function useSetTipsConsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (on: boolean) => apiClient.setTipsConsent(on),
+    onSuccess: (row) => qc.setQueryData<ConsentRecord[]>(consentKeys.log, (old) => [row, ...(old ?? [])]),
+  });
 }
 
 export const neighbourhoodKeys = {

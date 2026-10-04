@@ -9,6 +9,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { categoryArtId } from '@/domain/categories';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
+import { ENV } from '@/lib/env';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
 import {
@@ -24,7 +25,6 @@ import {
   Note,
   PaymentNote,
   Pill,
-  ScaleIn,
   Screen,
   Segmented,
   SlideIn,
@@ -33,7 +33,7 @@ import {
 } from '@/components/ui';
 import { wizardDraft } from './wizardModel';
 
-type Phase = 'idle' | 'busy' | 'done';
+type Phase = 'idle' | 'busy';
 
 /** Leg ut · Forhåndsvisning (design/screens/Forhandsvisning.dc.html). */
 export function PreviewScreen() {
@@ -44,7 +44,6 @@ export function PreviewScreen() {
   const create = useCreateListing();
   const [tab, setTab] = useState<'card' | 'detail'>('card');
   const [phase, setPhase] = useState<Phase>('idle');
-  const [publishedId, setPublishedId] = useState<string | null>(null);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/legg-ut'));
 
@@ -78,17 +77,17 @@ export function PreviewScreen() {
   const publish = async () => {
     setPhase('busy');
     try {
-      if (session) {
-        const created = await create.mutateAsync(listing);
-        setPublishedId(created.id);
+      let id = 'lokal';
+      if (session || ENV.useMocks) {
+        id = (await create.mutateAsync(listing)).id;
       } else {
-        // Mock login: nothing is saved – show the flow with the local draft.
-        await new Promise((r) => setTimeout(r, 1400));
-        setPublishedId('lokal');
+        // Mock Vipps login without a backend session: nothing to save to – show the flow.
+        await new Promise((r) => setTimeout(r, 900));
       }
       await wizardDraft.clear();
       haptics.success();
-      setPhase('done');
+      // Straight to the success page – no extra "Fortsett" tap.
+      router.replace(`/legg-ut/publisert?id=${id}`);
     } catch {
       setPhase('idle');
       toast.error(nb.preview.publishFailed, { bottom: 130 });
@@ -107,17 +106,8 @@ export function PreviewScreen() {
               <Button label={nb.preview.edit} icon="edit" variant="ghost" onPress={back} style={styles.flex} />
               <Button label={nb.preview.publish} onPress={publish} style={styles.flex14} />
             </FooterRow>
-          ) : phase === 'busy' ? (
-            <Button label={nb.preview.publishing} loading loadingLabel={nb.preview.publishing} onPress={() => undefined} />
           ) : (
-            <ScaleIn>
-              <Button
-                label={nb.preview.publishedContinue}
-                icon="check"
-                variant="ink"
-                onPress={() => router.replace(`/legg-ut/publisert?id=${publishedId}`)}
-              />
-            </ScaleIn>
+            <Button label={nb.preview.publishing} loading loadingLabel={nb.preview.publishing} onPress={() => undefined} />
           )}
         </StickyFooter>
       }

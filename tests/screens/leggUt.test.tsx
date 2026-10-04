@@ -56,7 +56,7 @@ test('walking all 9 steps ends in Forhåndsvisning with a built oppdrag', async 
   expect(l?.location).toMatchObject({ municipality: 'Lillehammer', place: 'Nordre Ål' });
 });
 
-test('Forhåndsvisning publishes and continues to Publisert', async () => {
+test('Forhåndsvisning publishes and goes straight to Publisert', async () => {
   const s = {
     ...emptyWizard('Lillehammer'),
     cat: 'hage' as const,
@@ -72,7 +72,6 @@ test('Forhåndsvisning publishes and continues to Publisert', async () => {
   await fireEvent.press(screen.getByText('Detaljsiden'));
   expect(screen.getByText('Åpent oppdrag')).toBeTruthy();
   await fireEvent.press(screen.getByText('Publiser'));
-  await waitFor(() => expect(screen.getByText('Publisert – fortsett')).toBeTruthy(), { timeout: 5000 });
-  await fireEvent.press(screen.getByText('Publisert – fortsett'));
-  expect(router.replace).toHaveBeenCalledWith(expect.stringMatching(/^\/legg-ut\/publisert\?id=/));
+  // No extra "Fortsett" tap – publishing goes straight to Publisert.
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith(expect.stringMatching(/^\/legg-ut\/publisert\?id=/)), { timeout: 5000 });
 });

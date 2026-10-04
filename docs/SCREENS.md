@@ -35,7 +35,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Oppdragsdetaljer.dc.html` | `/oppdrag/[id]` | `src/screens/TaskDetailScreen.tsx` + `src/components/GiTilbudSheet.tsx` | ✅ done | Oppdrag only (ServiceOfferDetailScreen, `/tilbud/ny`, `/tilbud/be-om` removed). **API gaps:** no public offer count on a listing ("N naboer har gitt tilbud" + avatar stack hidden) and no response-time stat ("Svarer vanligvis innen …" hidden); no image captions. Map is a stylised approximate area, never a pin. |
 | `Oppsett.dc.html` | `/oppsett` | `src/screens/Onboarding/SetupScreen.tsx` | ✅ done | Signed-in users without `onboardedAt` are redirected here. "Fullt navn · Fra Vipps" field + name chips need Vipps data. Area chips: Lillehammer only (`KOMMUNE_AREAS`) |
 | `Oppslagstavle.dc.html` | `/oppslagstavle` | `src/screens/NoticeboardScreen.tsx` | ✅ done | Kind chips with counts, cards, compose sheet (type/title/text validation, optional photo via `0028_noticeboard_images.sql`), fresh post highlight. "Svar" / "Lagre" hidden (see LEFT_OUT). |
-| `Personvern.dc.html` | `/personvern` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs consent toggle + log, data export (`src/lib/dataExport.ts` exists), retention accordion |
+| `Personvern.dc.html` | `/personvern` | `src/screens/PersonvernScreen.tsx` | ✅ done | Consent log from `consent_records`; tips toggle inserts a new row; export gathers data (progress) and opens the share sheet; retention accordion; Vilkår / Slett konto links. |
 | `Profil.dc.html` | `/profil`, `/profil/[id]` | `src/screens/ProfileScreen.tsx` | ✅ done | Own vs public via `profileId` param. Own: "Slik ser andre deg" preview. Someone else's: Ta kontakt (only when you already share a conversation) + Følg, flag icon → Rapporter. Endorse = "Anbefal" on the Anbefalt av naboer rows. |
 | `Publisert.dc.html` | `/legg-ut/publisert` | `src/screens/LeggUt/PublishedScreen.tsx` | ✅ done | Share sheet: copy link, SMS, e-post, system share |
 | `Rapporter.dc.html` | `/rapporter` | `src/screens/RapporterScreen.tsx` | ✅ done | `?profil=` / `?listing=` / `?melding=` set the context card and type chips; without them it is a general report (details required). Block toggle (auto-on for svindel/trakassering) blocks after sending. Old SafetyScreen removed. |
@@ -176,7 +176,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Sikkerhet.dc.html` | ✅ Sikkerhet | Rapporter → Rapporter, blocked users (Opphev [D]), trygge kontakter → TryggeKontakter, Trygg tur start/stop with pulse, tips accordion |
 | `Rapporter.dc.html` | ✅ Rapporter | 3 steps: what → reason → details (+ screenshot, block toggle) → success with status timeline |
 | `TryggeKontakter.dc.html` | ✅ Trygge kontakter | List, remove [D], add [S] with phone validation and relation chips → [T] |
-| `Personvern.dc.html` | Personvern | Tips toggle writes a new timestamped consent-log row, data export progress → done, retention accordion, Vilkår, Slett konto |
+| `Personvern.dc.html` | ✅ Personvern | Tips toggle writes a new timestamped consent-log row, data export progress → done, retention accordion, Vilkår, Slett konto |
 
 ## 9 · Fellesskap
 

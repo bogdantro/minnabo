@@ -25,6 +25,7 @@ import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type {
   ApiClient,
   ListConversationsParams,
+  ConsentRecord,
   ListListingsParams,
   NeighbourhoodInfo,
   ReviseProposalPatch,
@@ -758,6 +759,40 @@ export class SupabaseApiClient implements ApiClient {
   async deleteNoticeboardPost(id: string): Promise<void> {
     const { error } = await supabase.from('noticeboard_posts').delete().eq('id', id);
     if (error) fail(error.message);
+  }
+
+  // --- personvern ---
+
+  async listConsentRecords(): Promise<ConsentRecord[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('consent_records')
+      .select('*')
+      .eq('profile_id', me)
+      .order('created_at', { ascending: false });
+    if (error) fail(error.message);
+    type Row = { id: string; terms: boolean; privacy: boolean; age: boolean; tips?: boolean | null; created_at: string };
+    return ((data ?? []) as Row[]).map((r) => ({
+      id: r.id,
+      terms: r.terms,
+      privacy: r.privacy,
+      age: r.age,
+      tips: r.tips ?? undefined,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async setTipsConsent(on: boolean): Promise<ConsentRecord> {
+    const me = await myId();
+    const last = (await this.listConsentRecords())[0];
+    const { data, error } = await supabase
+      .from('consent_records')
+      .insert({ profile_id: me, terms: last?.terms ?? true, privacy: last?.privacy ?? true, age: last?.age ?? true, tips: on })
+      .select('*')
+      .single();
+    if (error) fail(error.message);
+    const r = data as { id: string; terms: boolean; privacy: boolean; age: boolean; tips: boolean; created_at: string };
+    return { id: r.id, terms: r.terms, privacy: r.privacy, age: r.age, tips: r.tips, createdAt: r.created_at };
   }
 
   // --- nabolag ---

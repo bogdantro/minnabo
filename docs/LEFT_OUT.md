@@ -124,6 +124,8 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Rapporter | "Du får varsel i appen når saken er avgjort" / "Du får beskjed om utfallet" – changed to "Vi går gjennom rapporten så snart vi kan" / "Saken lukkes når den er behandlet" | No notification is sent when an admin resolves a report | Notification kind `REPORT_RESOLVED` from `resolve_report` – then restore the design copy |
 | Rapporter | Tilbud and Vurdering cannot be reported from where they are shown yet (only users, oppdrag and messages have a "Rapporter" entry) | Tilbudsdetaljer / review cards link to the user instead | Add `?tilbud=` / `?vurdering=` entries (API already supports PROPOSAL / REVIEW) |
 | Rapporter | Case number is made from the report id (e.g. "MN-863468"), not a running number | No case-number column | Optional `reports.case_no serial` |
+| Personvern | Retention answers have no numbers (design: "[x] dager", "[x] måneder") and "Vilkår v2.1" has no version | Legal decisions; no terms-version field | Decide retention periods + a terms version (`consent_records.terms_version`) |
+| Personvern | Export opens the share sheet with the data as JSON ("Eksporten er klar") instead of "sendt til e-post" | No e-mail sending | An edge function that mails a download link |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -132,7 +134,6 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Personvern | to do | Personvern/Rapporter only partly match today |
 | Innstillinger, Varslinger, Vilkår, Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
