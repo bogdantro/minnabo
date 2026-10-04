@@ -726,12 +726,19 @@ export function useSubmitReport() {
   });
 }
 
+export function useMyBusinessProfile() {
+  return useQuery({ queryKey: ['my-business'], queryFn: () => apiClient.getMyBusinessProfile() });
+}
+
 export function useSubmitBusinessProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: Parameters<typeof apiClient.submitBusinessProfile>[0]) =>
       apiClient.submitBusinessProfile(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] });
+      qc.invalidateQueries({ queryKey: ['my-business'] });
+    },
   });
 }
 

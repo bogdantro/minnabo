@@ -26,6 +26,7 @@ import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type {
   ApiClient,
   ListConversationsParams,
+  BusinessProfile,
   ConsentRecord,
   MySettings,
   NotificationPrefs,
@@ -1036,6 +1037,28 @@ export class SupabaseApiClient implements ApiClient {
       await supabase.from('blocks').insert({ by_profile_id: me, blocked_profile_id: profileId });
     }
     return this.listBlockedProfileIds();
+  }
+
+  async getMyBusinessProfile(): Promise<BusinessProfile | null> {
+    const me = await myId();
+    const { data, error } = await supabase.from('business_profiles').select('*').eq('profile_id', me).maybeSingle();
+    if (error) fail(error.message);
+    if (!data) return null;
+    const r = data as {
+      profile_id: string; org_nr: string; company_name: string; contact_person: string; email: string; phone: string;
+      category_slugs: string[] | null; status: BusinessProfile['status']; created_at: string;
+    };
+    return {
+      profileId: r.profile_id,
+      orgNr: r.org_nr,
+      companyName: r.company_name,
+      contactPerson: r.contact_person,
+      email: r.email,
+      phone: r.phone,
+      categorySlugs: r.category_slugs ?? [],
+      status: r.status,
+      createdAt: r.created_at,
+    };
   }
 
   async submitBusinessProfile(input: {

@@ -11,7 +11,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 |---|---|---|---|---|
 | `Admin.dc.html` | `/admin` (`admin.tsx`) | `src/screens/AdminScreen.tsx` | exists | Behind `featureFlags.adminPanel` (off). DB role is `user` \| `admin` |
 | `Avtale.dc.html` | `/avtale/[id]` | `src/screens/AvtaleSammendragScreen.tsx` | ✅ done | Avlys = new `cancel_agreement` RPC (migration 0026, ACCEPTED → CANCELLED, reopens the oppdrag). Legg i kalender = expo-calendar, shown on iOS/Android when the agreed time contains a date. Job-day tools moved to `/jobbdag/[id]`. |
-| `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | exists | Behind `featureFlags.businessRegistration` (off) |
+| `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | ✅ done | Org.nr format + mod-11 check + **live Enhetsregisteret lookup** (data.brreg.no: name, address, form), contact fields with validation, categories, consent → PENDING. Opens on the status (Sendt / Til verifisering / Verifisert, or rejected → send again) when already registered. |
 | `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` + `src/components/chat/*` | ✅ done | Tap bubble → reactions (stored as emoji 👍❤️😊✅), long-press → fest/løsne. Time proposals are text messages with a "📅 Tidsforslag:" marker rendered as cards; answers "✓ Tidspunktet passer" / "↻ Nytt tidspunkt ønskes". "Del sted" tile only after an agreement (existing feature, not in the design). Send tilbud opens the Gi tilbud sheet (helper only). Mute is on-device. Decline held for Angre. |
 | `Fellesskap.dc.html` | `/(tabs)/fellesskap` | `src/screens/FellesskapScreen.tsx` | ✅ done | Partner logos are placeholders until partners deliver them; no member-avatar stack (no member data) |
 | `ForMeg.dc.html` | `/oppdrag-for-meg` | `src/screens/ForMegScreen.tsx` | ✅ done | Matching uses the profile's categories (`categorySlugs`) – **API gap:** the Supabase profile has no skills column, so live users get distance/newest ranking only. "N nye forslag i dag" = posted in the last 24 h (hidden when 0). Hidden suggestions are stored on the device. |
@@ -194,7 +194,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Varslinger.dc.html` | ✅ Varslinger | Master toggle, per-category Push / E-post, quiet hours |
 | `Vilkar.dc.html` | ✅ Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
 | `SlettKonto.dc.html` | ✅ Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
-| `Bedrift.dc.html` | Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
+| `Bedrift.dc.html` | ✅ Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
 | `Admin.dc.html` | Adminpanel | KPIs, tabs: reports queue actions, verifications, users (suspend), listings (hide), partners (max 2 enforced), weekly stats bars. Admin role only |
 
 ## 11 · System

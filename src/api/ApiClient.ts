@@ -68,6 +68,19 @@ export function withDefaultPrefs(p: Partial<NotificationPrefs> | null | undefine
   };
 }
 
+/** Bedrift registration (business_profiles). */
+export type BusinessProfile = {
+  profileId: string;
+  orgNr: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  categorySlugs: string[];
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+};
+
 /** One row in the consent log (consent_records). Each change is a new row. */
 export type ConsentRecord = {
   id: string;
@@ -291,4 +304,6 @@ export interface ApiClient {
     phone: string;
     categorySlugs: string[];
   }): Promise<void>;
+  /** My own business registration, or null when I haven't registered. */
+  getMyBusinessProfile(): Promise<BusinessProfile | null>;
 }

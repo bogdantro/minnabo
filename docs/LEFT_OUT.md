@@ -140,7 +140,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Bedrift, Admin | to do | |
+| Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
 ---

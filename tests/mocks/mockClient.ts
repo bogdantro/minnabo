@@ -33,11 +33,13 @@ import { noticeboardStore } from '@mocks/data/noticeboardStore';
 import { neighbourhoodStore } from '@mocks/data/neighbourhoodStore';
 import { consentStore } from '@mocks/data/consentStore';
 import { settingsStore } from '@mocks/data/settingsStore';
+import { businessStore } from '@mocks/data/businessStore';
 import { jobWorkspaceStore } from '@mocks/data/jobWorkspaceStore';
 import { partners, documentedDonations } from '@mocks/data/seedCommunity';
 import type {
   ApiClient,
   ListConversationsParams,
+  BusinessProfile,
   ConsentRecord,
   MySettings,
   NotificationPrefs,
@@ -496,8 +498,13 @@ export class MockApiClient implements ApiClient {
     return safetyStore.listBlocked();
   }
 
-  async submitBusinessProfile(): Promise<void> {
+  async submitBusinessProfile(input: Parameters<ApiClient['submitBusinessProfile']>[0]): Promise<void> {
     await delay(200);
-    profileRepository.markVerified('BUSINESS');
+    businessStore.submit(profileRepository.currentUserId, input);
+  }
+
+  async getMyBusinessProfile(): Promise<BusinessProfile | null> {
+    await delay(60);
+    return businessStore.get(profileRepository.currentUserId);
   }
 }
