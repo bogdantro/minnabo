@@ -54,7 +54,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Varsler.dc.html` | `/varsler` | `src/screens/NotificationsScreen.tsx` | ✅ done | Category per notification kind (Tilbud/Melding/Avtale/Annet). Rows deep-link via the notification `route`. |
 | `Varslinger.dc.html` | `/varslinger` | `src/screens/NotificationPrefsScreen.tsx` | ✅ done | Master pause, push/e-post matrix per type, quiet hours with timeline + time picker – all saved to `profile_settings.notification_prefs` (0030). "Send et testvarsel" shows a real local notification (expo-notifications). |
 | `Verifisering.dc.html` | `/verifisering` | `src/screens/VerifiseringssenterScreen.tsx` | ✅ done | Vipps-ID always counts (rule 3); phone/e-mail/bedrift from `verifications` incl. `verified_at` dates. BankID row removed. "Bygg tillit" is computed from the real profile + trygge kontakter (tap opens the place to fix it). |
-| `Vilkar.dc.html` | `/vilkar` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs TOC chips, progress bar, "Kort fortalt" boxes |
+| `Vilkar.dc.html` | `/vilkar` | `src/screens/VilkarScreen.tsx` | ✅ done | Text + values in `src/content/terms.ts`; reading progress, current section, TOC jump, Til toppen, share (download icon), accepted date from the consent log. Jurist markers only in dev builds. |
 | `Vurdering.dc.html` | `/vurder/[id]` | `src/screens/ReviewScreen.tsx` | ✅ done | Question adapts to role ("få hjelp av" / "hjelpe"). "Anbefale? Ja" is saved as the "Anbefales" tag (no recommend field). Send disabled if already reviewed. |
 
 Existing routes with **no** design file:
@@ -192,7 +192,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 |---|---|---|
 | `Innstillinger.dc.html` | ✅ Innstillinger | Account (Vipps), location, notification toggles, feriemodus, text size, dev mode + flags, Logg ut [D], Slett konto |
 | `Varslinger.dc.html` | ✅ Varslinger | Master toggle, per-category Push / E-post, quiet hours |
-| `Vilkar.dc.html` | Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
+| `Vilkar.dc.html` | ✅ Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
 | `SlettKonto.dc.html` | Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
 | `Bedrift.dc.html` | Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
 | `Admin.dc.html` | Adminpanel | KPIs, tabs: reports queue actions, verifications, users (suspend), listings (hide), partners (max 2 enforced), weekly stats bars. Admin role only |

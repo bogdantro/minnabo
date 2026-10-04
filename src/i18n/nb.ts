@@ -2487,6 +2487,23 @@ const nb = {
     testUnavailable: 'Testvarsel virker bare i appen på telefonen, med varsler slått på.',
   },
 
+  // Vilkår (design/screens/Vilkar.dc.html) – the terms text itself is in src/content/terms.ts
+  vilkar: {
+    title: 'Vilkår for bruk',
+    share: 'Del vilkårene',
+    progress: 'Lesefremdrift',
+    version: (v: string) => `Versjon ${v}`,
+    current: (n: number, title: string, pct: number) => `${n} · ${title} · ${pct} %`,
+    meta: (v: string, from: string, min: number) => `Versjon ${v} · gjelder fra ${from} · ca. ${min} min å lese`,
+    summaryTitle: 'Det viktigste på 20 sekunder',
+    toc: 'Innhold',
+    short: 'Kort fortalt',
+    jur: '[Endelig juridisk tekst settes inn av jurist]',
+    acceptedPre: 'Du godtok vilkårene ',
+    acceptedPost: ' da du opprettet kontoen. Nye versjoner varsles i appen.',
+    toTop: 'Til toppen',
+  },
+
   // Personvern (design/screens/Personvern.dc.html)
   personvern: {
     title: 'Personvern',

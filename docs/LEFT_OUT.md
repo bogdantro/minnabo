@@ -128,6 +128,8 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Personvern | Export opens the share sheet with the data as JSON ("Eksporten er klar") instead of "sendt til e-post" | No e-mail sending | An edge function that mails a download link |
 | Innstillinger | "Stor" text size only enlarges the preview; app-wide large text follows the phone's text-size setting (button opens phone settings) | React Native can't scale every Text from one place without rewriting all screens | OK as is (accessibility is covered by the OS setting) |
 | Innstillinger | "Vilkår for bruk · Versjon [x.x]" shows "Les vilkårene for MinNabo" | No terms version | Same as Personvern (`terms_version`) |
+| Vilkår | **Final legal text** – the design's working copy is used. Values to confirm in `src/content/terms.ts`: version (1.0), valid-from date, minimum age (15), notice days (30), contact e-mail (empty → sentence hidden). The "[Endelig juridisk tekst …]" markers show only in dev builds | Needs a lawyer | Send the text to a lawyer, then update `terms.ts` |
+| Vilkår | Download icon shares the terms as text instead of a PDF | No PDF library | Optional: host a PDF and link to it |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
 
 ---
@@ -136,7 +138,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Vilkår, Slett konto, Bedrift, Admin | to do | |
+| Slett konto, Bedrift, Admin | to do | |
 | Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
 
 ---
