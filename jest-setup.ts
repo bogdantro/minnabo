@@ -127,6 +127,11 @@ afterEach(() => {
     /* not loaded */
   }
   try {
+    require('@mocks/data/settingsStore').settingsStore._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
     require('@/data/draftStore').draftStore.clear();
   } catch {
     /* not loaded */
@@ -258,6 +263,16 @@ jest.mock('expo-calendar', () => ({
   createEventAsync: jest.fn().mockResolvedValue('evt-1'),
   deleteEventAsync: jest.fn().mockResolvedValue(undefined),
 }));
+
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  scheduleNotificationAsync: jest.fn().mockResolvedValue('notif-1'),
+  getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'ExponentPushToken[test]' }),
+}));
+
+jest.mock('expo-device', () => ({ isDevice: true }));
 
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),

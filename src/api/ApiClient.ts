@@ -33,6 +33,41 @@ export type SavedSearchRecord = {
   createdAt: string;
 };
 
+/** Varslinger: one switch per notification type and channel. */
+export type NotifKey = 'msg' | 'offer' | 'changed' | 'decided' | 'time' | 'done' | 'review' | 'match' | 'board' | 'mod';
+export type NotificationPrefs = {
+  /** "Alle varsler" – off pauses everything except safety/moderation */
+  master: boolean;
+  /** Innstillinger quick switches: channel on/off */
+  channels: { push: boolean; email: boolean };
+  push: Record<NotifKey, boolean>;
+  email: Record<NotifKey, boolean>;
+  quiet: { on: boolean; from: string; to: string };
+};
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  master: true,
+  channels: { push: true, email: false },
+  push: { msg: true, offer: true, changed: true, decided: true, time: true, done: true, review: true, match: true, board: false, mod: true },
+  email: { msg: false, offer: true, changed: false, decided: true, time: true, done: false, review: false, match: false, board: false, mod: true },
+  quiet: { on: true, from: '22:00', to: '07:00' },
+};
+
+/** Private settings (profile_settings) – only the owner can read them. */
+export type MySettings = { email?: string; notificationPrefs: NotificationPrefs };
+
+/** Merge stored (possibly partial / older) prefs over the defaults. */
+export function withDefaultPrefs(p: Partial<NotificationPrefs> | null | undefined): NotificationPrefs {
+  const d = DEFAULT_NOTIFICATION_PREFS;
+  return {
+    master: p?.master ?? d.master,
+    channels: { ...d.channels, ...(p?.channels ?? {}) },
+    push: { ...d.push, ...(p?.push ?? {}) },
+    email: { ...d.email, ...(p?.email ?? {}) },
+    quiet: { ...d.quiet, ...(p?.quiet ?? {}) },
+  };
+}
+
 /** One row in the consent log (consent_records). Each change is a new row. */
 export type ConsentRecord = {
   id: string;
@@ -213,6 +248,12 @@ export interface ApiClient {
   // community
   listPartners(): Promise<Partner[]>;
   listDonations(): Promise<Donation[]>;
+
+  // innstillinger
+  getMySettings(): Promise<MySettings>;
+  updateNotificationPrefs(prefs: NotificationPrefs): Promise<MySettings>;
+  /** Store this device's Expo push token. */
+  registerPushToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<void>;
 
   // personvern
   /** My consent log, newest first. */

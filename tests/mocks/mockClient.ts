@@ -32,12 +32,15 @@ import { followStore } from '@mocks/data/followStore';
 import { noticeboardStore } from '@mocks/data/noticeboardStore';
 import { neighbourhoodStore } from '@mocks/data/neighbourhoodStore';
 import { consentStore } from '@mocks/data/consentStore';
+import { settingsStore } from '@mocks/data/settingsStore';
 import { jobWorkspaceStore } from '@mocks/data/jobWorkspaceStore';
 import { partners, documentedDonations } from '@mocks/data/seedCommunity';
 import type {
   ApiClient,
   ListConversationsParams,
   ConsentRecord,
+  MySettings,
+  NotificationPrefs,
   ListListingsParams,
   NeighbourhoodInfo,
   ReviseProposalPatch,
@@ -368,6 +371,23 @@ export class MockApiClient implements ApiClient {
   async deleteNoticeboardPost(id: string): Promise<void> {
     await delay(80);
     noticeboardStore.remove(id);
+  }
+
+  // --- innstillinger ---
+
+  async getMySettings(): Promise<MySettings> {
+    await delay(60);
+    return settingsStore.get();
+  }
+
+  async updateNotificationPrefs(prefs: NotificationPrefs): Promise<MySettings> {
+    await delay(80);
+    return settingsStore.setPrefs(prefs);
+  }
+
+  async registerPushToken(token: string): Promise<void> {
+    await delay(20);
+    settingsStore.addToken(token);
   }
 
   // --- personvern ---

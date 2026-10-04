@@ -26,6 +26,8 @@ import type {
   ApiClient,
   ListConversationsParams,
   ConsentRecord,
+  MySettings,
+  NotificationPrefs,
   ListListingsParams,
   NeighbourhoodInfo,
   ReviseProposalPatch,
@@ -36,6 +38,7 @@ import type {
   SubmitReviewInput,
   UpdateProfilePatch,
 } from './ApiClient';
+import { withDefaultPrefs } from './ApiClient';
 import {
   toAgreement,
   toConversation,
@@ -758,6 +761,33 @@ export class SupabaseApiClient implements ApiClient {
 
   async deleteNoticeboardPost(id: string): Promise<void> {
     const { error } = await supabase.from('noticeboard_posts').delete().eq('id', id);
+    if (error) fail(error.message);
+  }
+
+  // --- innstillinger ---
+
+  async getMySettings(): Promise<MySettings> {
+    const me = await myId();
+    const { data, error } = await supabase.from('profile_settings').select('*').eq('profile_id', me).maybeSingle();
+    if (error) fail(error.message);
+    const row = data as { email: string | null; notification_prefs: Partial<NotificationPrefs> | null } | null;
+    return { email: row?.email ?? undefined, notificationPrefs: withDefaultPrefs(row?.notification_prefs) };
+  }
+
+  async updateNotificationPrefs(prefs: NotificationPrefs): Promise<MySettings> {
+    const me = await myId();
+    const { error } = await supabase
+      .from('profile_settings')
+      .upsert({ profile_id: me, notification_prefs: prefs, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' });
+    if (error) fail(error.message);
+    return this.getMySettings();
+  }
+
+  async registerPushToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<void> {
+    const me = await myId();
+    const { error } = await supabase
+      .from('push_tokens')
+      .upsert({ token, profile_id: me, platform, updated_at: new Date().toISOString() }, { onConflict: 'token' });
     if (error) fail(error.message);
   }
 

@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query';
 import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
-import type { ConsentRecord, NeighbourhoodInfo } from './ApiClient';
+import type { ConsentRecord, MySettings, NeighbourhoodInfo, NotificationPrefs } from './ApiClient';
 import { apiClient } from './client';
 
 export const listingKeys = {
@@ -526,6 +526,30 @@ export function usePartners() {
 
 export function useDonations() {
   return useQuery({ queryKey: communityKeys.donations, queryFn: () => apiClient.listDonations() });
+}
+
+export const settingsKeys = { mine: ['my-settings'] as const };
+
+export function useMySettings() {
+  return useQuery({ queryKey: settingsKeys.mine, queryFn: () => apiClient.getMySettings() });
+}
+
+/** Varslinger / Innstillinger: save the whole prefs object (optimistic). */
+export function useUpdateNotificationPrefs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (prefs: NotificationPrefs) => apiClient.updateNotificationPrefs(prefs),
+    onMutate: async (prefs) => {
+      await qc.cancelQueries({ queryKey: settingsKeys.mine });
+      const prev = qc.getQueryData<MySettings>(settingsKeys.mine);
+      if (prev) qc.setQueryData<MySettings>(settingsKeys.mine, { ...prev, notificationPrefs: prefs });
+      return { prev };
+    },
+    onError: (_e, _p, ctx) => {
+      if (ctx?.prev) qc.setQueryData(settingsKeys.mine, ctx.prev);
+    },
+    onSuccess: (data) => qc.setQueryData(settingsKeys.mine, data),
+  });
 }
 
 export const consentKeys = { log: ['consents'] as const };

@@ -18,7 +18,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | ✅ done | Under the mock login "Publiser" shows the flow but saves nothing |
 | `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | ✅ done | Two-party state from real confirmations (none / other / mine / both). Stats from the job workspace (timer, checklist, photos). "Gi vurdering" hidden once I've reviewed. |
 | `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | ✅ done | Tab. Live client-side search on name/oppdrag/message. "Merk alle som lest" uses the existing `mark_conversation_read` RPC per conversation, held for Angre. Unread bubble shows a dot (no per-conversation count in the API). |
-| `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | exists | |
+| `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | ✅ done | Profile card, Konto (phone + e-mail from `profile_settings`), Sted → location sheet, push/e-post channel switches, feriemodus with hidden count, text-size preview, Personvern/Vilkår/Bedrift, Utvikler (dev/admin only) with real flag overrides, logout dialog, Slett konto. |
 | `Jobbdag.dc.html` | `/jobbdag/[id]` | `src/screens/JobbdagScreen.tsx` | ✅ done | Timer on the workspace (start/pause; "Stopp" = pause + local stopped state). Before/after slider pairs Før[i] with Etter[i]; unpaired photos show under Underveis. Kept the existing job-day tools (på vei/framme, ring/SMS, trygg tur, no-show) in a "Trygghet og kontakt" section below the tabs. |
 | `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
 | `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | ✅ done | Oppføringer (unsave collapses + Angre) / Søk (filter chips, "nye treff" since saved, Kjør søk, delete + Angre). Alert bell hidden (no backend). Extra "Hjelpere" segment only when you follow someone. |
@@ -52,7 +52,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `TryggeKontakter.dc.html` | `/trygge-kontakter` | `src/screens/TrustedContactsScreen.tsx` | ✅ done | Hero, list with relation, add sheet (+47, 8-digit validation, relation chips), remove confirm. Stored on the phone (max 5). |
 | `Ungdomskonto.dc.html` | `/ungdomskonto` | `src/screens/Onboarding/YouthAccountScreen.tsx` | ✅ done | Reached from the Vipps sheet ("Under 18 år?") |
 | `Varsler.dc.html` | `/varsler` | `src/screens/NotificationsScreen.tsx` | ✅ done | Category per notification kind (Tilbud/Melding/Avtale/Annet). Rows deep-link via the notification `route`. |
-| `Varslinger.dc.html` | `/varslinger` | `src/screens/NotificationPrefsScreen.tsx` | exists | |
+| `Varslinger.dc.html` | `/varslinger` | `src/screens/NotificationPrefsScreen.tsx` | ✅ done | Master pause, push/e-post matrix per type, quiet hours with timeline + time picker – all saved to `profile_settings.notification_prefs` (0030). "Send et testvarsel" shows a real local notification (expo-notifications). |
 | `Verifisering.dc.html` | `/verifisering` | `src/screens/VerifiseringssenterScreen.tsx` | ✅ done | Vipps-ID always counts (rule 3); phone/e-mail/bedrift from `verifications` incl. `verified_at` dates. BankID row removed. "Bygg tillit" is computed from the real profile + trygge kontakter (tap opens the place to fix it). |
 | `Vilkar.dc.html` | `/vilkar` | `src/screens/InfoPageScreen.tsx` (static text) | partial | Design needs TOC chips, progress bar, "Kort fortalt" boxes |
 | `Vurdering.dc.html` | `/vurder/[id]` | `src/screens/ReviewScreen.tsx` | ✅ done | Question adapts to role ("få hjelp av" / "hjelpe"). "Anbefale? Ja" is saved as the "Anbefales" tag (no recommend field). Send disabled if already reviewed. |
@@ -190,8 +190,8 @@ Youth permission rules (backend must enforce, UI only reflects):
 
 | Design file | Screen | Must work |
 |---|---|---|
-| `Innstillinger.dc.html` | Innstillinger | Account (Vipps), location, notification toggles, feriemodus, text size, dev mode + flags, Logg ut [D], Slett konto |
-| `Varslinger.dc.html` | Varslinger | Master toggle, per-category Push / E-post, quiet hours |
+| `Innstillinger.dc.html` | ✅ Innstillinger | Account (Vipps), location, notification toggles, feriemodus, text size, dev mode + flags, Logg ut [D], Slett konto |
+| `Varslinger.dc.html` | ✅ Varslinger | Master toggle, per-category Push / E-post, quiet hours |
 | `Vilkar.dc.html` | Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
 | `SlettKonto.dc.html` | Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
 | `Bedrift.dc.html` | Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
