@@ -12,7 +12,7 @@ import {
   addAgreementToCalendar,
   daysUntil,
   deviceCalendarSupported,
-  parseAgreedTime,
+  agreedDate,
   parseDurationHours,
 } from '@/lib/deviceCalendar';
 import { safePush } from '@/lib/nav';
@@ -74,7 +74,7 @@ export function MineAvtalerScreen() {
   const [seg, setSeg] = useState<Seg>('up');
   const [day, setDay] = useState<string | null>(null);
 
-  const all = useMemo(() => (data ?? []).map((a) => ({ a, at: parseAgreedTime(a.scheduledText) })), [data]);
+  const all = useMemo(() => (data ?? []).map((a) => ({ a, at: agreedDate(a) })), [data]);
   const upcoming = all
     .filter(({ a, at }) => !a.fullyCompleted && !a.cancelled && (!at || daysUntil(at) >= 0))
     .sort((x, y) => (x.at?.getTime() ?? Infinity) - (y.at?.getTime() ?? Infinity));
@@ -125,7 +125,7 @@ export function MineAvtalerScreen() {
     }
     let ok = 0;
     for (const { a, at } of dated) {
-      const res = await addAgreementToCalendar({ title: a.listingTitle, start: at!, hours: parseDurationHours(undefined), notes: formatPrice(a.price) });
+      const res = await addAgreementToCalendar({ title: a.listingTitle, start: at!, hours: parseDurationHours(a.durationText), notes: formatPrice(a.price) });
       if (res.ok) ok += 1;
       else if (res.reason === 'denied') {
         toast.error(nb.avtaleSum.calDenied);
@@ -340,7 +340,7 @@ export function MineAvtalerScreen() {
 function monthGroups(items: AgendaItem[]) {
   const out: { key: string; label: string; items: AgendaItem[] }[] = [];
   for (const a of items) {
-    const d = parseAgreedTime(a.scheduledText) ?? new Date(a.agreedAt);
+    const d = agreedDate(a) ?? new Date(a.agreedAt);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
     let g = out.find((x) => x.key === key);
     if (!g) {
@@ -390,7 +390,9 @@ function AgendaCard({ item, at }: { item: AgendaItem; at: Date | null }) {
     >
       <View style={[styles.tcol, helper ? styles.tcolL : styles.tcolC]}>
         <Text style={[text.num, styles.f20]}>{time}</Text>
-        {compactDuration(listing?.task?.durationText) ? <Text style={text.meta}>{compactDuration(listing?.task?.durationText)}</Text> : null}
+        {compactDuration(item.durationText ?? listing?.task?.durationText) ? (
+          <Text style={text.meta}>{compactDuration(item.durationText ?? listing?.task?.durationText)}</Text>
+        ) : null}
       </View>
       <View style={styles.acardBody}>
         <Pill label={helper ? nb.agenda.youHelp : nb.agenda.youGetHelp} tone={helper ? 'need' : 'offer'} icon={helper ? 'hand' : 'user'} style={styles.selfStart} />
@@ -420,7 +422,7 @@ function DoneCard({ item }: { item: AgendaItem }) {
   const { data: other } = useProfile(item.counterpartId);
   const { data: listing } = useListing(item.listingId);
   const cat = categoryArtId(listing?.category.slug ?? 'annet');
-  const at = parseAgreedTime(item.scheduledText);
+  const at = agreedDate(item);
   const when = at ? shortDate(at.toISOString()) : item.scheduledText;
   const needsReview = !item.cancelled && item.fullyCompleted && item.myRating == null;
   return (

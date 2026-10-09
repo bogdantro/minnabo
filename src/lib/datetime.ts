@@ -44,6 +44,15 @@ const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 's
 const MONTHS_LONG = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 
 /** "12. mars 2024" */
+/** Median reply time as "20 min" / "1 t" / "2 dager" (long: "1 time", "3 timer"). */
+export function replyTime(minutes: number, long = false): string {
+  if (minutes < 60) return `${Math.max(1, Math.round(minutes / 5) * 5)} min`;
+  const h = Math.round(minutes / 60);
+  if (h < 24) return long ? `${h} ${h === 1 ? 'time' : 'timer'}` : `${h} t`;
+  const d = Math.round(h / 24);
+  return `${d} ${d === 1 ? 'dag' : 'dager'}`;
+}
+
 export function longDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getDate()}. ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;

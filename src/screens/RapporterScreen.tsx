@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { ReportTargetType } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
@@ -9,6 +9,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatTime } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
+import { pickAndUpload } from '@/lib/uploads';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
 import {
@@ -21,6 +22,7 @@ import {
   Field,
   Icon,
   IconButton,
+  ScaleIn,
   Input,
   Note,
   Pill,
@@ -34,16 +36,27 @@ import {
 } from '@/components/ui';
 
 type Step = 1 | 2 | 3 | 4;
-const TYPE_ICON: Record<ReportTargetType, IconName> = { USER: 'user', LISTING: 'clip', PROPOSAL: 'tag', MESSAGE: 'msg', REVIEW: 'star' };
+const TYPE_ICON: Record<ReportTargetType, IconName> = { USER: 'user', LISTING: 'clip', PROPOSAL: 'tag', MESSAGE: 'msg', REVIEW: 'star', COMMENT: 'reply' };
 const ALL_TYPES: ReportTargetType[] = ['USER', 'LISTING', 'PROPOSAL', 'MESSAGE', 'REVIEW'];
 const MAX = 500;
 
 /**
  * Rapporter (design/screens/Rapporter.dc.html). Opened with the thing to report:
- * `?profil=` (a user), `?listing=` (an oppdrag), `?melding=` (+ `profil` = sender).
+ * `?profil=` (a user), `?listing=` (an oppdrag), `?melding=` (+ `profil` = sender),
+ * `?kommentar=` (a comment under an oppslag, + `profil` = who wrote it).
  * Without any of them it is a general report and the details are required.
  */
-export function RapporterScreen({ profileId, listingId, messageId }: { profileId?: string; listingId?: string; messageId?: string }) {
+export function RapporterScreen({
+  profileId,
+  listingId,
+  messageId,
+  commentId,
+}: {
+  profileId?: string;
+  listingId?: string;
+  messageId?: string;
+  commentId?: string;
+}) {
   const router = useRouter();
   const me = useCurrentUser();
   const { data: listing } = useListing(listingId ?? '');
@@ -53,16 +66,35 @@ export function RapporterScreen({ profileId, listingId, messageId }: { profileId
   const report = useSubmitReport();
   const toggleBlock = useToggleBlock();
 
-  const general = !profileId && !listingId && !messageId;
+  const general = !profileId && !listingId && !messageId && !commentId;
   const types: ReportTargetType[] = general
     ? ALL_TYPES
-    : [...(listingId ? (['LISTING'] as const) : []), ...(messageId ? (['MESSAGE'] as const) : []), ...(personId ? (['USER'] as const) : [])];
+    : [
+        ...(commentId ? (['COMMENT'] as const) : []),
+        ...(listingId ? (['LISTING'] as const) : []),
+        ...(messageId ? (['MESSAGE'] as const) : []),
+        ...(personId ? (['USER'] as const) : []),
+      ];
 
   const [step, setStep] = useState<Step>(1);
   const [dir, setDir] = useState<'forward' | 'back'>('forward');
   const [type, setType] = useState<ReportTargetType>(types[0] ?? 'USER');
   const [reason, setReason] = useState<string | null>(null);
   const [details, setDetails] = useState('');
+  const [shot, setShot] = useState<{ path: string; uri?: string; bytes?: number } | null>(null);
+  const [shotBusy, setShotBusy] = useState(false);
+  const addShot = async () => {
+    if (shotBusy || !me.id) return;
+    setShotBusy(true);
+    try {
+      const res = await pickAndUpload({ bucket: 'report-attachments', folder: me.id, source: 'library' });
+      if (res) setShot({ path: res.path, uri: res.localUri, bytes: res.bytes });
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError);
+    } finally {
+      setShotBusy(false);
+    }
+  };
   const [block, setBlock] = useState(false);
   const [tried, setTried] = useState(false);
   const [caseNo, setCaseNo] = useState('');
@@ -73,7 +105,8 @@ export function RapporterScreen({ profileId, listingId, messageId }: { profileId
   const detailsRequired = general || reason === 'annet';
   const detOk = !detailsRequired || details.trim().length >= 10;
   const canBlock = !!personId && personId !== me.id && !blockedIds.includes(personId);
-  const targetId = type === 'LISTING' ? listingId ?? '' : type === 'MESSAGE' ? messageId ?? '' : type === 'USER' ? personId : '';
+  const targetId =
+    type === 'COMMENT' ? commentId ?? '' : type === 'LISTING' ? listingId ?? '' : type === 'MESSAGE' ? messageId ?? '' : type === 'USER' ? personId : '';
   const personName = person?.displayName ?? '';
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/sikkerhet'));
@@ -90,7 +123,7 @@ export function RapporterScreen({ profileId, listingId, messageId }: { profileId
     }
     if (!reasonItem) return;
     report.mutate(
-      { targetType: type, targetId, reason: reasonItem.label, details: details.trim() || undefined },
+      { targetType: type, targetId, reason: reasonItem.label, details: details.trim() || undefined, attachmentPath: shot?.path },
       {
         onSuccess: (r) => {
           setCaseNo(`MN-${r.id.replace(/[^0-9a-z]/gi, '').slice(-6).toUpperCase()}`);
@@ -282,6 +315,33 @@ export function RapporterScreen({ profileId, listingId, messageId }: { profileId
               <Text style={[text.meta, styles.f12]}>{nb.rapporter.count(details.length)}</Text>
             </View>
           </Field>
+          <View style={styles.shotLabel}>
+            <Text style={text.label}>{nb.rapporter.shot}</Text>
+            <Text style={text.hint}>{nb.rapporter.optional}</Text>
+          </View>
+          {shot ? (
+            <ScaleIn style={styles.attach}>
+              <View style={styles.shot}>
+                {shot.uri ? <Image source={{ uri: shot.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors /> : null}
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.shotName}>{nb.rapporter.shotName}</Text>
+                <Text style={[text.meta, styles.f12]}>{nb.rapporter.shotMeta(shot.bytes ? Math.max(1, Math.round(shot.bytes / 1024)) : null)}</Text>
+              </View>
+              <IconButton icon="x" iconSize={18} accessibilityLabel={nb.rapporter.shotRemove} onPress={() => setShot(null)} />
+            </ScaleIn>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={nb.rapporter.shotAdd}
+              accessibilityState={{ busy: shotBusy }}
+              onPress={() => void addShot()}
+              style={styles.shotAdd}
+            >
+              <Icon name="image" size={22} color={colors.ink2} />
+              <Text style={styles.shotAddText}>{shotBusy ? nb.rapporter.shotBusy : nb.rapporter.shotAdd}</Text>
+            </Pressable>
+          )}
           {canBlock ? (
             <View style={[styles.card, styles.blockCard, shadow.card]}>
               <View style={styles.blockIcon}>
@@ -410,6 +470,32 @@ const styles = StyleSheet.create({
   optSub: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 16.9, color: colors.mute, marginTop: 3 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   details: { minHeight: 132 },
+  shotLabel: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 16, marginBottom: 8 },
+  shotAdd: {
+    height: 84,
+    borderRadius: radius.tile,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.dashed,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  shotAddText: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.ink2 },
+  attach: {
+    height: 84,
+    borderRadius: radius.tile,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+  },
+  shot: { width: 60, height: 64, borderRadius: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bg, overflow: 'hidden' },
+  shotName: { fontFamily: fonts.bodyBold, fontSize: 14.5, color: colors.ink },
   card: { backgroundColor: colors.surface, borderRadius: radius.card },
   pad: { padding: 18 },
   blockCard: { marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },

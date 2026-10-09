@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { tokens } from '@/theme';
+import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import nb from '@/i18n/nb';
-import { AppText } from './Text';
-import { Icon, type IconName } from './Icon';
-import { Button } from './Button';
+import { screenPadding } from '@/theme/theme';
+import { RowSkeleton } from './Skeleton';
+import { EmptyState, ErrorState, NoAccess, StateView } from './States';
 
 export type ScreenStatus =
   | 'ready'
@@ -21,58 +21,42 @@ export type ScreenStateProps = {
   children?: ReactNode;
 };
 
-const config: Record<
-  Exclude<ScreenStatus, 'ready'>,
-  { icon: IconName; message: string; retry: boolean }
-> = {
-  loading: { icon: 'loader', message: nb.state.loading, retry: false },
-  error: { icon: 'alert-triangle', message: nb.state.error, retry: true },
-  offline: { icon: 'wifi-off', message: nb.state.offline, retry: true },
-  empty: { icon: 'inbox', message: nb.state.emptyListings, retry: false },
-  noAccess: { icon: 'lock', message: nb.state.noAccess, retry: false },
-};
-
+/** One switch for the screen states in design/screens/Tilstander.dc.html. */
 export function ScreenState({ status, onRetry, emptyText, children }: ScreenStateProps) {
-  if (status === 'ready') {
-    return <>{children}</>;
-  }
+  const router = useRouter();
 
-  const c = config[status];
-  const message = status === 'empty' ? emptyText ?? c.message : c.message;
-
-  return (
-    <View style={styles.wrap} accessibilityRole="alert">
-      {status === 'loading' ? (
-        <ActivityIndicator color={tokens.color.cyan} size="large" />
-      ) : (
-        <Icon name={c.icon} size={32} color="navyMuted" />
-      )}
-      <AppText variant="body" color="navyMuted" align="center">
-        {message}
-      </AppText>
-      {c.retry && onRetry ? (
-        <Button
-          variant="secondary"
-          label={nb.state.retry}
-          onPress={onRetry}
-          style={styles.retry}
+  switch (status) {
+    case 'ready':
+      return <>{children}</>;
+    case 'loading':
+      return (
+        <View style={styles.skeleton} accessibilityRole="progressbar" accessibilityLabel={nb.state.loading}>
+          {[0, 1, 2, 3].map((i) => (
+            <RowSkeleton key={i} />
+          ))}
+        </View>
+      );
+    case 'error':
+      return <ErrorState onRetry={onRetry} />;
+    case 'offline':
+      return (
+        <StateView
+          icon="wifioff"
+          tone="neutral"
+          title={nb.state.offlineTitle}
+          body={nb.state.offline}
+          actionLabel={nb.state.retry}
+          actionIcon="refresh"
+          onAction={onRetry}
         />
-      ) : null}
-    </View>
-  );
+      );
+    case 'empty':
+      return <EmptyState icon="clip" title={emptyText ?? nb.state.emptyListings} />;
+    case 'noAccess':
+      return <NoAccess onAction={() => router.replace('/')} />;
+  }
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.space.md,
-    padding: tokens.space.xxl,
-    minHeight: 220,
-  },
-  retry: {
-    marginTop: tokens.space.sm,
-    paddingHorizontal: tokens.space.xxl,
-  },
+  skeleton: { flex: 1, gap: 18, paddingHorizontal: screenPadding, paddingTop: 16 },
 });

@@ -8,8 +8,9 @@ import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
-import { profileKeys, useListing, useProposalsForListing } from '@/api/queries';
-import { dayKey } from '@/lib/datetime';
+import { profileKeys, useListing, useProposalsForListing, useReplyMinutes } from '@/api/queries';
+import { replyTime } from '@/lib/datetime';
+import { agreedDate } from '@/lib/deviceCalendar';
 import { safePush } from '@/lib/nav';
 import { colors, fonts, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
@@ -57,7 +58,7 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
   const rows: Row[] = proposals.map((p, i) => ({ p, from: profiles[i]?.data, kr: Math.round(p.price.amountMinor / 100) }));
   const sorted = [...rows].sort((a, b) => {
     if (sort === 'vurdering') return (b.from?.rating?.average ?? 0) - (a.from?.rating?.average ?? 0);
-    if (sort === 'dato') return (dayKey(a.p.scheduledText) ?? 9999) - (dayKey(b.p.scheduledText) ?? 9999);
+    if (sort === 'dato') return whenKey(a.p) - whenKey(b.p);
     return a.kr - b.kr;
   });
   const prices = rows.map((r) => r.kr);
@@ -212,6 +213,9 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
                   <Cell label={nb.sammenlign.when}>
                     <Text style={styles.cellB}>{r.p.scheduledText || '–'}</Text>
                   </Cell>
+                  <Cell label={nb.sammenlign.duration}>
+                    <Text style={styles.cellB}>{r.p.durationText ?? listing?.task?.durationText ?? '–'}</Text>
+                  </Cell>
                   <Cell label={nb.sammenlign.rating}>
                     {r.from?.rating?.count ? (
                       <View style={styles.stars}>
@@ -225,6 +229,9 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
                   </Cell>
                   <Cell label={nb.sammenlign.jobs}>
                     <Text style={styles.cellB}>{String(r.from?.completedTasks ?? 0)}</Text>
+                  </Cell>
+                  <Cell label={nb.sammenlign.reply}>
+                    <ReplyValue profileId={r.p.fromProfileId} />
                   </Cell>
                   <Cell label={nb.sammenlign.caveats} tall>
                     <Text style={styles.clamp} numberOfLines={2}>
@@ -290,6 +297,15 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
       </StickyFooter>
     </View>
   );
+}
+
+/** Sort key for "Dato": the offered time, offers without a day last. */
+const whenKey = (p: Proposal) => agreedDate(p)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+
+/** "Svartid" – the helper's median reply time, "–" until there is enough history. */
+function ReplyValue({ profileId }: { profileId: string }) {
+  const minutes = useReplyMinutes(profileId).data;
+  return <Text style={styles.cellB}>{minutes != null ? replyTime(minutes) : '–'}</Text>;
 }
 
 function Cell({ label, children, tall }: { label: string; children: ReactNode; tall?: boolean }) {

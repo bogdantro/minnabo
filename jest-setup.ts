@@ -22,7 +22,7 @@ jest.mock('@/api/client', () => {
 
 // These mocks keep any accidental import of the supabase client harmless.
 jest.mock('@/lib/env', () => ({
-  ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key', useMocks: false },
+  ENV: { supabaseUrl: 'http://test.local', supabaseAnonKey: 'test-anon-key' },
 }));
 
 // The seeded "current user" — tests run as this profile (see src/data/seed.ts).
@@ -44,6 +44,7 @@ jest.mock('@/lib/supabase', () => {
         onAuthStateChange: jest
           .fn()
           .mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } }),
+        signInAnonymously: jest.fn().mockResolvedValue({ data: { session, user: session.user }, error: null }),
         signInWithOtp: jest.fn().mockResolvedValue({ data: {}, error: null }),
         verifyOtp: jest.fn().mockResolvedValue({ data: { session }, error: null }),
         signInWithPassword: jest.fn().mockResolvedValue({ data: { session }, error: null }),
@@ -280,6 +281,7 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   scheduleNotificationAsync: jest.fn().mockResolvedValue('notif-1'),
   getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'ExponentPushToken[test]' }),
+  setBadgeCountAsync: jest.fn().mockResolvedValue(true),
 }));
 
 jest.mock('expo-device', () => ({ isDevice: true }));
@@ -300,6 +302,7 @@ jest.mock('expo-location', () => ({
   getForegroundPermissionsAsync: jest.fn().mockResolvedValue({ granted: true, canAskAgain: true }),
   requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   getCurrentPositionAsync: jest.fn().mockResolvedValue({ coords: { latitude: 61.115, longitude: 10.466 } }),
+  getLastKnownPositionAsync: jest.fn().mockResolvedValue(null),
   reverseGeocodeAsync: jest.fn().mockResolvedValue([{ subregion: 'Lillehammer', city: 'Lillehammer', region: 'Innlandet' }]),
 }));
 

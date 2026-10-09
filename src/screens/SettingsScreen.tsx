@@ -6,14 +6,14 @@ import type { NotificationPrefs } from '@/api/ApiClient';
 import nb from '@/i18n/nb';
 import { useMyListings, useMySettings, useProfile, useUpdateNotificationPrefs, useUpdateProfile } from '@/api/queries';
 import { signOut } from '@/auth/session';
-import { FLAG_META, setFlagOverride, useFeatureFlags, type FeatureFlag } from '@/config/featureFlags';
+import { useFeatureFlags } from '@/config/featureFlags';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { ENV } from '@/lib/env';
 import { haptics } from '@/lib/haptics';
 import { useLocationScope, type Reach } from '@/lib/locationScope';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
+import { GuardianSheet } from '@/components/GuardianSheet';
 import { LocationSheet } from '@/components/LocationSheet';
 import {
   Avatar,
@@ -31,8 +31,6 @@ import {
   VerifiedIcon,
 } from '@/components/ui';
 
-const DEV_KEY = 'devMode';
-
 /** Innstillinger (design/screens/Innstillinger.dc.html). */
 export function SettingsScreen() {
   const router = useRouter();
@@ -47,11 +45,10 @@ export function SettingsScreen() {
 
   const [locOpen, setLocOpen] = useState(false);
   const [logout, setLogout] = useState(false);
+  const [guardian, setGuardian] = useState(false);
   const [big, setBig] = useState(false);
-  const [dev, setDev] = useState(false);
 
   const version = Constants.expoConfig?.version ?? '';
-  const showDev = __DEV__ || me.isAdmin;
   const paused = !!profile?.paused;
   const hidden = (myListings ?? []).filter((l) => !['PAUSED', 'ARCHIVED', 'REMOVED', 'COMPLETED', 'REVIEWED', 'CANCELLED', 'EXPIRED'].includes(l.status)).length;
   const verified = (k: 'PHONE' | 'EMAIL') => !!profile?.verifications.some((v) => v.kind === k && v.verified);
@@ -93,7 +90,6 @@ export function SettingsScreen() {
     router.replace('/velkommen');
   };
 
-  const flagKeys = Object.keys(flags) as FeatureFlag[];
 
   return (
     <Screen scroll spacer="none" header={<SubHeader title={nb.innstillinger.title} onBack={back} />}>
@@ -248,6 +244,7 @@ export function SettingsScreen() {
       <Group>
         <ListRow icon="lock" title={nb.innstillinger.privacy} subtitle={nb.innstillinger.privacySub} chevron onPress={() => safePush('/personvern')} />
         <ListRow icon="file" title={nb.innstillinger.terms} subtitle={nb.innstillinger.termsSub} chevron onPress={() => safePush('/vilkar')} />
+        <ListRow icon="users" title={nb.guardian.rowAdult} subtitle={nb.guardian.rowAdultSub} chevron onPress={() => setGuardian(true)} />
         {flags.businessRegistration ? (
           <ListRow
             icon="building"
@@ -261,63 +258,6 @@ export function SettingsScreen() {
         ) : null}
       </Group>
 
-      {showDev ? (
-        <>
-          <Sec>{nb.innstillinger.secDev}</Sec>
-          <Group>
-            <ListRow
-              icon="key"
-              title={nb.innstillinger.dev}
-              subtitle={nb.innstillinger.devSub}
-              right={
-                <Toggle
-                  value={dev}
-                  onValueChange={(v) => {
-                    setDev(v);
-                    toast.success(v ? nb.innstillinger.devOn : nb.innstillinger.devOff, { icon: v ? 'key' : 'x' });
-                  }}
-                  accessibilityLabel={nb.innstillinger.dev}
-                  testID={DEV_KEY}
-                />
-              }
-            />
-          </Group>
-          {dev ? (
-            <FadeUp style={[styles.px, styles.mt10]}>
-              <View style={styles.devCard}>
-                <View style={styles.devGlow} />
-                <View style={styles.devHead}>
-                  <Text style={styles.devTitle}>{nb.innstillinger.flags}</Text>
-                  <View style={styles.devPill}>
-                    <Text style={styles.devPillText}>{nb.innstillinger.flagsOn(flagKeys.filter((f) => flags[f]).length)}</Text>
-                  </View>
-                </View>
-                {flagKeys.map((f, i) => (
-                  <View key={f} style={[styles.flag, i > 0 && styles.flagDivider]}>
-                    <View style={styles.flex}>
-                      <Text style={styles.flagLabel}>{FLAG_META[f].label}</Text>
-                      <Text style={styles.code}>{FLAG_META[f].code}</Text>
-                    </View>
-                    <Toggle
-                      value={flags[f]}
-                      onValueChange={(v) => {
-                        setFlagOverride(f, v);
-                        toast.success(nb.innstillinger.flagToast(FLAG_META[f].label, v), { icon: 'zap' });
-                      }}
-                      accessibilityLabel={FLAG_META[f].label}
-                    />
-                  </View>
-                ))}
-                <View style={styles.devFoot}>
-                  <Text style={styles.code}>{nb.innstillinger.env(ENV.useMocks ? 'demo' : __DEV__ ? 'test' : 'prod')}</Text>
-                  <Text style={styles.code}>{nb.innstillinger.build(version)}</Text>
-                </View>
-              </View>
-            </FadeUp>
-          ) : null}
-        </>
-      ) : null}
-
       <View style={[styles.px, styles.actions]}>
         <Button label={nb.innstillinger.logout} variant="ghost" icon="logout" onPress={() => setLogout(true)} />
         <Button label={nb.innstillinger.deleteAccount} variant="dangerGhost" icon="trash" onPress={() => safePush('/slett-konto')} />
@@ -325,6 +265,7 @@ export function SettingsScreen() {
       </View>
       <View style={styles.bottom} />
 
+      <GuardianSheet visible={guardian} onClose={() => setGuardian(false)} />
       <LocationSheet visible={locOpen} onClose={() => setLocOpen(false)} kommune={municipality} reach={reach} onApply={applyLocation} />
       <Dialog
         visible={logout}
@@ -379,17 +320,6 @@ const styles = StyleSheet.create({
   aaText: { fontFamily: fonts.display, fontSize: 18, color: colors.ink },
   demo: { flex: 1, fontFamily: fonts.body, fontSize: 15, lineHeight: 21, color: colors.ink2 },
   demoBig: { fontSize: 19, lineHeight: 26 },
-  devCard: { backgroundColor: colors.ink, borderRadius: 22, padding: 16, overflow: 'hidden' },
-  devGlow: { position: 'absolute', right: -60, top: -70, width: 180, height: 180, borderRadius: 90, backgroundColor: colors.lime, opacity: 0.22 },
-  devHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  devTitle: { fontFamily: fonts.display, fontSize: 16, color: colors.white },
-  devPill: { height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: colors.onInk12, justifyContent: 'center' },
-  devPillText: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.lime },
-  flag: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 },
-  flagDivider: { borderTopWidth: 1, borderTopColor: colors.onInk10 },
-  flagLabel: { fontFamily: fonts.bodyBold, fontSize: 14.5, color: colors.white, marginBottom: 5 },
-  code: { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 11.5, color: colors.onInk55 },
-  devFoot: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.onInk10 },
   actions: { gap: 10, marginTop: 30 },
   version: { textAlign: 'center', marginTop: 10 },
 });

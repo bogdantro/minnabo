@@ -102,3 +102,19 @@ test('no payment wording is present in seeded chat data', () => {
     .join(' ');
   expect(allText).not.toMatch(/Vipps|Betal nå/i);
 });
+
+test('an oppdrag with an accepted tilbud leaves the feed, and comes back if the avtale is called off', () => {
+  const { repositories } = require('@mocks/data/repositories');
+  chatRepository._reset();
+  repositories._reset?.();
+  const open = chatRepository.listReceivedProposals().find((p) => p.status === 'SENT')!;
+  expect(open).toBeTruthy();
+  const inFeed = () => repositories.listings.list().some((l: { id: string }) => l.id === open.listingId);
+  expect(inFeed()).toBe(true);
+
+  chatRepository.respondToProposal(open.id, 'ACCEPT', 'RECIPIENT');
+  expect(inFeed()).toBe(false);
+
+  chatRepository.cancelAgreement(open.id);
+  expect(inFeed()).toBe(true);
+});

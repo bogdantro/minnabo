@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
-import { detectKommune } from '@/lib/geo';
+import { detectKommune, locationErrorText } from '@/lib/geo';
 import type { Reach } from '@/lib/locationScope';
-import { INNLANDET_KOMMUNER, KOMMUNE_NEIGHBOURS } from '@/data/kommuner';
+import { KommuneWaitlist } from '@/components/KommuneWaitlist';
+import { KOMMUNE_NEIGHBOURS, LAUNCH_KOMMUNER, isLaunchKommune } from '@/data/kommuner';
 import { colors, motion, text } from '@/theme/theme';
 import {
   Button,
@@ -70,9 +71,10 @@ export function LocationSheet({ visible, onClose, kommune, reach, onApply }: Loc
   }
 
   const base = found ?? kommune ?? draftK;
-  const options = base
-    ? [base, ...(KOMMUNE_NEIGHBOURS[base] ?? [])].slice(0, 6)
-    : INNLANDET_KOMMUNER.slice(0, 6);
+  // Only the launch kommuner, the current one first, then its neighbours.
+  const near = base ? [base, ...(KOMMUNE_NEIGHBOURS[base] ?? [])].filter((k) => isLaunchKommune(k)) : [];
+  const options = [...new Set([...near, ...LAUNCH_KOMMUNER])];
+  // a kommune chosen before the list was narrowed stays selectable
   if (draftK && !options.includes(draftK)) options.unshift(draftK);
 
   const locate = async () => {
@@ -85,7 +87,7 @@ export function LocationSheet({ visible, onClose, kommune, reach, onApply }: Loc
       setFound(res.municipality);
       setDraftK(res.municipality);
     } else {
-      setErr(res.error === 'denied' ? nb.location.permissionDenied : nb.location.locationUnavailable);
+      setErr(locationErrorText(res.error));
     }
   };
 
@@ -126,6 +128,9 @@ export function LocationSheet({ visible, onClose, kommune, reach, onApply }: Loc
           ))}
         </View>
       </Field>
+      <View style={styles.waitlist}>
+        <KommuneWaitlist />
+      </View>
 
       <Text style={[text.label, styles.reachLabel]}>{nb.oppdrag.reachLabel}</Text>
       <View style={styles.reachRow}>
@@ -158,6 +163,7 @@ export function LocationSheet({ visible, onClose, kommune, reach, onApply }: Loc
 }
 
 const styles = StyleSheet.create({
+  waitlist: { marginTop: 12 },
   flex: { flex: 1 },
   mt22: { marginTop: 22 },
   found: {

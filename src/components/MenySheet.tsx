@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import nb from '@/i18n/nb';
 import { signOut } from '@/auth/session';
+import { toast } from '@/lib/toast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   useListing,
@@ -13,11 +14,12 @@ import {
   useReceivedProposals,
   useSavedListingIds,
   useSavedSearches,
+  useUpdateProfile,
   useUnreadConversationCount,
   useUnreadNotificationCount,
 } from '@/api/queries';
 import { isEnabled } from '@/config/featureFlags';
-import { colors, radius, shadow, text } from '@/theme/theme';
+import { colors, fonts, radius, shadow, text } from '@/theme/theme';
 import {
   Avatar,
   CountBadge,
@@ -26,10 +28,10 @@ import {
   Icon,
   ListGroup,
   ListRow,
-  Note,
   Pill,
   PressableScale,
   Sheet,
+  Toggle,
   type IconKey,
 } from './ui';
 
@@ -118,6 +120,23 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
   const received = useReceivedProposals().data ?? [];
   const savedIds = useSavedListingIds().data ?? [];
   const savedSearches = useSavedSearches().data ?? [];
+  const updateProfile = useUpdateProfile();
+  // optimistic: the switch moves at once and falls back if saving fails
+  const [availLocal, setAvailLocal] = useState<boolean | null>(null);
+  const avail = availLocal ?? profile?.availableForJobs ?? true;
+  const toggleAvail = (on: boolean) => {
+    setAvailLocal(on);
+    updateProfile.mutate(
+      { availableForJobs: on },
+      {
+        onSuccess: () => toast.success(on ? nb.meny.avail.onToast : nb.meny.avail.offToast),
+        onError: () => {
+          setAvailLocal(null);
+          toast.error(nb.meny.avail.error);
+        },
+      },
+    );
+  };
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -204,6 +223,16 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
               </View>
             </View>
           </PressableScale>
+          <View style={styles.avail}>
+            <View style={styles.availIcon}>
+              <Icon name="hand" size={16} color={colors.cyanDeep} />
+            </View>
+            <View style={styles.availText}>
+              <Text style={styles.availTitle}>{nb.meny.avail.title}</Text>
+              <Text style={text.meta}>{avail ? nb.meny.avail.on : nb.meny.avail.off}</Text>
+            </View>
+            <Toggle value={avail} onValueChange={toggleAvail} accessibilityLabel={nb.meny.avail.title} />
+          </View>
         </FadeUp>
 
         <Section delay={100}>{nb.meny.explore}</Section>
@@ -387,7 +416,6 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
         </FadeUp>
 
         <Text style={[text.meta, styles.version]}>{nb.meny.version(version)}</Text>
-        <Note style={styles.noteCenter}>{nb.meny.noPayment}</Note>
       </Sheet>
 
       <Dialog
@@ -430,6 +458,25 @@ const styles = StyleSheet.create({
   ustat: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sep: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.control },
   seeProfile: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  avail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.line2,
+  },
+  availIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.cyanTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  availText: { flex: 1, minWidth: 0 },
+  availTitle: { fontFamily: fonts.bodyBold, fontSize: 14.5, lineHeight: 18, color: colors.ink },
   msec: { ...text.eyebrow, marginTop: 24, marginBottom: 10, marginHorizontal: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   cell: { width: '48.5%', flexGrow: 1 },
@@ -469,5 +516,4 @@ const styles = StyleSheet.create({
   rbadgeText: { fontSize: 12, lineHeight: 22 },
   adminPill: { height: 22 },
   version: { textAlign: 'center', marginTop: 18 },
-  noteCenter: { justifyContent: 'center', marginTop: 6 },
 });

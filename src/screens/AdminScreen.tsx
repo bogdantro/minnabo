@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, LinearTransition, SlideOutLeft, SlideOutRight } from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
 import type { AdminBusiness, AdminDayStat, AdminPartner, AdminReport, AdminUser, ReportOutcome } from '@/api/ApiClient';
 import nb from '@/i18n/nb';
+import { MAX_MAIN_PARTNERS } from '@/domain/types';
 import {
   useAdminBusinesses,
   useAdminOverview,
@@ -18,7 +19,9 @@ import {
   useSetListingHidden,
   useSetMainPartner,
   useSetPartnerActive,
+  useSetPartnerHero,
   useSetUserSuspended,
+  useKommuneWaitlist,
   useWeekStats,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -27,6 +30,7 @@ import { lookupOrgNr } from '@/lib/brreg';
 import { formatTime, postedAgo } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
+import { apiClient } from '@/api/client';
 import { colors, fonts, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import {
@@ -43,6 +47,7 @@ import {
   ScaleIn,
   Screen,
   Segmented,
+  TextLink,
   Toggle,
   type IconName,
   type PillTone,
@@ -54,7 +59,7 @@ type Metric = 'o' | 't' | 'f';
 const t = nb.admin;
 const TAB_ORDER: Tab[] = ['rap', 'ver', 'usr', 'opp', 'par', 'sta'];
 const TYPE_ICON: Record<AdminReport['targetType'], IconName> = {
-  USER: 'user', LISTING: 'clip', PROPOSAL: 'tag', MESSAGE: 'msg', REVIEW: 'star', NOTICE: 'pinned',
+  USER: 'user', LISTING: 'clip', PROPOSAL: 'tag', MESSAGE: 'msg', REVIEW: 'star', NOTICE: 'pinned', COMMENT: 'reply',
 };
 const OUTCOME_TONE: Record<ReportOutcome, PillTone> = { dismiss: 'neutral', remove: 'danger', warn: 'warn' };
 const OUTCOME_TOAST: Record<ReportOutcome, [string, IconName]> = {
@@ -260,6 +265,18 @@ function ReportsTab({ q }: { q: ReturnType<typeof useAdminReports> }) {
             <Text style={styles.rtargetText}>{r.targetText}</Text>
             {r.details ? <Text style={[styles.rtargetText, styles.details]}>{r.details}</Text> : null}
           </View>
+          {r.attachmentPath ? (
+            <TextLink
+              label={t.seeScreenshot}
+              icon="image"
+              onPress={() =>
+                void apiClient
+                  .getReportAttachmentUrl(r.attachmentPath!)
+                  .then((url) => Linking.openURL(url))
+                  .catch(() => toast.error(nb.toast.genericError))
+              }
+            />
+          ) : null}
           <Text style={styles.meta125}>{t.reportedBy(r.byName)}</Text>
           <View style={styles.acts}>
             <Button label={t.dismiss} variant="ghost" size="sm" style={styles.act} onPress={() => act(r, 'dismiss')} />
@@ -545,11 +562,12 @@ function PartnersTab() {
   const q = useAdminPartners();
   const setMain = useSetMainPartner();
   const setActive = useSetPartnerActive();
+  const setHero = useSetPartnerHero();
   if (q.isLoading) return <Loading />;
   if (q.isError) return <ErrorState onRetry={() => void q.refetch()} retrying={q.isFetching} />;
   const all = q.data ?? [];
   const mains = all.filter((p) => p.main);
-  const full = mains.length >= 2;
+  const full = mains.length >= MAX_MAIN_PARTNERS;
   const sorted = [...mains, ...all.filter((p) => !p.main)];
   const sups = all.filter((p) => !p.main);
 
@@ -566,6 +584,11 @@ function PartnersTab() {
       },
     );
   };
+  const flipHero = (p: AdminPartner) =>
+    setHero.mutate(
+      { id: p.id, hero: !p.hero },
+      { onSuccess: () => toast.success(p.hero ? t.heroOff(p.name) : t.heroOn(p.name), { icon: 'heart' }), onError: () => toast.error(t.failed) },
+    );
   const flipSup = (p: AdminPartner) =>
     setActive.mutate(
       { id: p.id, active: !p.active },
@@ -578,10 +601,10 @@ function PartnersTab() {
     <View style={styles.stack}>
       <View style={styles.between}>
         <Text style={text.eyebrow}>{t.mains}</Text>
-        <Pill label={`${mains.length} / 2`} tone={full ? 'dark' : 'line'} size="sm" />
+        <Pill label={`${mains.length} / ${MAX_MAIN_PARTNERS}`} tone={full ? 'dark' : 'line'} size="sm" />
       </View>
       <View style={styles.slots}>
-        {[0, 1].map((i) => {
+        {Array.from({ length: MAX_MAIN_PARTNERS }, (_, i) => i).map((i) => {
           const m = mains[i];
           return (
             <View key={i} style={[styles.slot, m && styles.slotOn]}>
@@ -644,6 +667,17 @@ function PartnersTab() {
                 <View style={styles.flex3}>
                   <Text style={styles.b145}>{p.name}</Text>
                   <Text style={styles.meta125}>{[p.blurb, p.municipality].filter(Boolean).join(' · ')}</Text>
+                  <Pressable
+                    accessibilityRole="switch"
+                    accessibilityLabel={t.heroAria(p.name)}
+                    accessibilityState={{ checked: !!p.hero }}
+                    hitSlop={10}
+                    onPress={() => flipHero(p)}
+                    style={[styles.heroChip, p.hero && styles.heroChipOn]}
+                  >
+                    <Icon name="heart" size={14} color={p.hero ? colors.limeDeep : colors.mute} />
+                    <Text style={[styles.heroChipText, p.hero && { color: colors.limeDeep }]}>{t.hero}</Text>
+                  </Pressable>
                 </View>
                 <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                   <Toggle value={p.active} onValueChange={() => flipSup(p)} accessibilityLabel={p.name} />
@@ -662,6 +696,7 @@ function PartnersTab() {
 
 function StatsTab() {
   const q = useWeekStats();
+  const { data: waitlist } = useKommuneWaitlist();
   const [metric, setMetric] = useState<Metric>('o');
   const [day, setDay] = useState<number | null>(null);
   const days = useMemo(() => q.data ?? [], [q.data]);
@@ -732,11 +767,26 @@ function StatsTab() {
           <Text style={text.statLabel}>{t.sumF}</Text>
         </View>
       </View>
+      <View style={styles.card}>
+        <Text style={text.eyebrow}>{nb.waitlist.adminTitle}</Text>
+        {(waitlist ?? []).length === 0 ? (
+          <Text style={[text.meta, styles.mt10]}>{nb.waitlist.adminEmpty}</Text>
+        ) : (
+          (waitlist ?? []).map((w) => (
+            <View key={w.kommune} style={styles.waitRow}>
+              <Text style={[text.label, styles.waitName]}>{w.kommune}</Text>
+              <Text style={text.meta}>{nb.waitlist.adminCount(w.count)}</Text>
+            </View>
+          ))
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  waitRow: { flexDirection: 'row', alignItems: 'center', minHeight: 40, gap: 10 },
+  waitName: { flex: 1 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 56, paddingHorizontal: 16, paddingBottom: 6 },
   headText: { flex: 1, minWidth: 0, gap: 3 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -850,9 +900,10 @@ const styles = StyleSheet.create({
   lrow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hid: { opacity: 0.55 },
 
-  slots: { flexDirection: 'row', gap: 10 },
+  slots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   slot: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '45%',
     height: 84,
     borderRadius: radius.tile,
     borderWidth: 1.5,
@@ -866,6 +917,21 @@ const styles = StyleSheet.create({
   },
   slotOn: { borderStyle: 'solid', borderColor: colors.ink, backgroundColor: colors.white, ...shadow.card },
   slotText: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 16, color: colors.mute },
+  heroChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    height: 26,
+    paddingHorizontal: 10,
+    marginTop: 6,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+  },
+  heroChipOn: { backgroundColor: colors.limeTint, borderColor: colors.chipLimeBorder },
+  heroChipText: { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.mute },
   prow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, minHeight: sizes.minTouch },
   lph: {
     width: 40,

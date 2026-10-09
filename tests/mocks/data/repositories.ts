@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isOpenListing } from '@/domain/editing';
 import type { Listing, ListingFilter, ListingSort, ListingStatus } from '@/domain/types';
 import { listings as seedListings } from './seed';
 import { safetyStore } from './safetyStore';
@@ -9,10 +10,13 @@ const USER_ADDED_KEY = 'minnabo.listings.userAdded';
 let userAdded: Listing[] = [];
 /** status changes from Mine oppføringer (pause / archive / soft delete) */
 let statusOverrides: Record<string, ListingStatus> = {};
-const HIDDEN: ListingStatus[] = ['REMOVED', 'PAUSED', 'ARCHIVED'];
+let replaced: Record<string, Listing> = {};
+let editData: Record<string, { wizard: unknown | null; privateEstimateMinor: number | null }> = {};
 
 const all = (): Listing[] =>
-  [...userAdded, ...seedListings].map((l) => (statusOverrides[l.id] ? { ...l, status: statusOverrides[l.id] } : l));
+  [...userAdded, ...seedListings]
+    .map((l) => replaced[l.id] ?? l)
+    .map((l) => (statusOverrides[l.id] ? { ...l, status: statusOverrides[l.id] } : l));
 
 const matchesFilter = (listing: Listing, filter?: ListingFilter): boolean => {
   if (!filter) return true;
@@ -80,7 +84,7 @@ export const repositories = {
         all().filter(
           (l) =>
             matchesFilter(l, filter) &&
-            !HIDDEN.includes(l.status) &&
+            isOpenListing(l.status) &&
             !safetyStore.isBlocked(l.owner.id) &&
             !profileRepository.getProfile(l.owner.id)?.paused,
         ),
@@ -96,6 +100,23 @@ export const repositories = {
     },
     setStatus(id: string, status: ListingStatus): void {
       statusOverrides = { ...statusOverrides, [id]: status };
+    },
+    /** Edit: swap in the new version (status stays whatever setStatus says). */
+    replace(listing: Listing): void {
+      const { [listing.id]: _drop, ...rest } = statusOverrides;
+      statusOverrides = rest;
+      if (userAdded.some((l) => l.id === listing.id)) {
+        userAdded = userAdded.map((l) => (l.id === listing.id ? listing : l));
+        void repositories.listings.persist();
+      } else {
+        replaced = { ...replaced, [listing.id]: listing };
+      }
+    },
+    setEditData(id: string, data: { wizard: unknown | null; privateEstimateMinor: number | null }): void {
+      editData = { ...editData, [id]: data };
+    },
+    getEditData(id: string): { wizard: unknown | null; privateEstimateMinor: number | null } {
+      return editData[id] ?? { wizard: null, privateEstimateMinor: null };
     },
     add(listing: Listing): void {
       userAdded = [listing, ...userAdded];
@@ -119,6 +140,8 @@ export const repositories = {
     _reset(): void {
       userAdded = [];
       statusOverrides = {};
+      replaced = {};
+      editData = {};
     },
   },
 };

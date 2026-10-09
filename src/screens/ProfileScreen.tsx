@@ -4,7 +4,9 @@ import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import type { CategoryId } from '@/theme/theme';
+import type { IconName } from '@/components/ui';
 import { CATEGORIES, categoryArtId } from '@/domain/categories';
+import { milestonesFor } from '@/domain/milestones';
 import nb from '@/i18n/nb';
 import {
   useConversations,
@@ -15,17 +17,20 @@ import {
   useToggleEndorsement,
   useToggleFollow,
   useUpdateProfile,
+  usePortfolio,
+  useReliability,
+  useReplyMinutes,
 } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { longDate } from '@/lib/datetime';
+import { longDate, monthYear, replyTime } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { categoryLabels, colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import { ProfileReviews, firstName } from '@/components/profile/ProfileReviews';
-import { PortfolioViewer, VERIF_ART, VerifSheet, type VerifKind } from '@/components/profile/ProfileSheets';
+import { PortfolioViewer, VERIF_ART, VerifSheet, portfolioWhere, type VerifKind } from '@/components/profile/ProfileSheets';
 import {
   Avatar,
   Button,
@@ -67,7 +72,7 @@ function artForSkill(skill: string): CategoryId {
 }
 
 /** Profil (design/screens/Profil.dc.html) – own profile with a public preview, or someone else's. */
-export function ProfileScreen({ profileId }: { profileId?: string }) {
+export function ProfileScreen({ profileId, initialTab }: { profileId?: string; initialTab?: 'om' | 'rev' | 'port' }) {
   const router = useRouter();
   const myId = useSession().userId ?? '';
   const me = useCurrentUser();
@@ -81,8 +86,11 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
   const toggleFollow = useToggleFollow();
   const { data: conversations } = useConversations();
   const update = useUpdateProfile();
+  const replyMinutes = useReplyMinutes(id || undefined).data;
+  const rel = useReliability(id || undefined).data;
+  const { data: portfolioItems } = usePortfolio(id || undefined);
 
-  const [tab, setTab] = useState<Tab>('om');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'om');
   const [view, setView] = useState<View_>('me');
   const [verif, setVerif] = useState<VerifKind | null>(null);
   const [photo, setPhoto] = useState<number | null>(null);
@@ -104,7 +112,7 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
   const preview = isSelf && view === 'public';
   const first = firstName(profile.displayName);
   const reviewList = reviews ?? [];
-  const portfolio = profile.portfolio ?? [];
+  const portfolio = portfolioItems ?? [];
   const isFollowing = (followed ?? []).includes(id);
   const conversation = isSelf
     ? undefined
@@ -171,10 +179,28 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
   );
 
   const score = profile.reliability?.score;
+  const milestones = milestonesFor({ completedTasks: profile.completedTasks, replyMinutes, rating: profile.rating });
+  // Last-12-months figures when the backend has them (0044); the old overall score otherwise.
+  type RelBar = { label: string; icon: IconName; value: number };
+  const relBars = (
+    [
+      { label: nb.profile.relShowsUp, icon: 'hand', value: rel?.showsUp ?? score },
+      { label: nb.profile.relOnTime, icon: 'clock', value: rel?.onTime },
+      { label: nb.profile.relCompletes, icon: 'checks', value: rel?.completes },
+    ] as { label: string; icon: IconName; value: number | undefined }[]
+  ).filter((x): x is RelBar => x.value != null);
+  const pills: { label: string; icon: IconName }[] = [
+    ...(profile.languages?.length ? [{ label: profile.languages.join(', '), icon: 'globe' as IconName }] : []),
+    ...(profile.hasCar ? [{ label: nb.profile.hasCar, icon: 'transport' as IconName }] : []),
+    ...(profile.availabilityText ? [{ label: profile.availabilityText, icon: 'clock' as IconName }] : []),
+  ];
   const statTiles = [
     { key: 'jobs', value: String(profile.completedTasks ?? 0), label: nb.profile.statJobs, star: false },
     ...(profile.rating
       ? [{ key: 'rating', value: profile.rating.average.toFixed(1).replace('.', ','), label: nb.profile.statReviews(profile.rating.count), star: true }]
+      : []),
+    ...(replyMinutes != null
+      ? [{ key: 'reply', value: replyTime(replyMinutes), label: nb.profile.statReply, star: false, small: true }]
       : []),
   ];
 
@@ -230,6 +256,14 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
           </View>
           {isPub && profile.paused ? <Pill label={nb.profile.onVacation} tone="warn" icon="moon" /> : null}
         </FadeUp>
+        {/* earned badges: oppdrag fullført, quick replies, high vurderinger */}
+        {milestones.length ? (
+          <FadeUp delay={120} style={styles.badges}>
+            {milestones.map((m) => (
+              <Pill key={m.key} label={m.label} tone={m.key === 'jobs' ? 'ok' : 'neutral'} icon={m.icon} />
+            ))}
+          </FadeUp>
+        ) : null}
         <FadeUp delay={120} style={styles.metaCol}>
           <View style={styles.metaRow}>
             <Icon name="pin" size={14} color={colors.mute} />
@@ -237,7 +271,9 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
           </View>
           <View style={styles.metaRow}>
             <Icon name="cal" size={14} color={colors.mute} />
-            <Text style={text.meta}>{nb.profile.memberSinceLine(profile.memberSince)}</Text>
+            <Text style={text.meta}>
+              {nb.profile.memberSinceLine(profile.memberSinceDate ? monthYear(profile.memberSinceDate) : profile.memberSince)}
+            </Text>
           </View>
         </FadeUp>
         {!isPub ? (
@@ -279,7 +315,7 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
           <View key={s.key} style={[styles.stat, shadow.card]} accessible accessibilityLabel={`${s.value} ${s.label}`}>
             <View style={styles.statVal}>
               {s.star ? <Icon name="star" size={18} color={colors.star} filled /> : null}
-              <Text style={styles.statNum}>{s.value}</Text>
+              <Text style={[styles.statNum, 'small' in s && s.small && styles.statNumSm]}>{s.value}</Text>
             </View>
             <Text style={styles.statLabel}>{s.label}</Text>
           </View>
@@ -339,6 +375,21 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
             <FadeUp style={[styles.card, shadow.card]}>
               <Text style={text.eyebrow}>{nb.profile.presentation}</Text>
               <Text style={[text.body, styles.presText]}>{profile.presentation}</Text>
+              {pills.length ? (
+                <View style={styles.pills}>
+                  {pills.map((pl) => (
+                    <Pill key={pl.label} label={pl.label} icon={pl.icon} tone="neutral" />
+                  ))}
+                </View>
+              ) : null}
+            </FadeUp>
+          ) : pills.length ? (
+            <FadeUp style={[styles.card, shadow.card]}>
+              <View style={[styles.pills, styles.mt0]}>
+                {pills.map((pl) => (
+                  <Pill key={pl.label} label={pl.label} icon={pl.icon} tone="neutral" />
+                ))}
+              </View>
             </FadeUp>
           ) : null}
 
@@ -393,23 +444,29 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
             </View>
           </FadeUp>
 
-          {score != null ? (
+          {relBars.length ? (
             <FadeUp delay={120} style={[styles.card, shadow.card]}>
               <View style={styles.between}>
                 <Text style={text.eyebrow}>{nb.profile.reliability}</Text>
-                {score >= 95 ? <Pill label={nb.profile.relTop} tone="ok" icon="award" size="sm" /> : null}
+                {relBars.every((b) => b.value >= 95) ? <Pill label={nb.profile.relTop} tone="ok" icon="award" size="sm" /> : null}
               </View>
-              <View style={[styles.stack7, styles.mt14]}>
-                <View style={styles.between}>
-                  <View style={styles.relLabel}>
-                    <Icon name="hand" size={16} color={colors.mute} />
-                    <Text style={styles.relText}>{nb.profile.relShowsUp}</Text>
+              <View style={[styles.stack14, styles.mt14]}>
+                {relBars.map((b) => (
+                  <View key={b.label} style={styles.stack7}>
+                    <View style={styles.between}>
+                      <View style={styles.relLabel}>
+                        <Icon name={b.icon} size={16} color={colors.mute} />
+                        <Text style={styles.relText}>{b.label}</Text>
+                      </View>
+                      <Text style={styles.relVal}>{`${b.value} %`}</Text>
+                    </View>
+                    <GrowBar fill={b.value / 100} color={colors.toggleOn} />
                   </View>
-                  <Text style={styles.relVal}>{`${score} %`}</Text>
-                </View>
-                <GrowBar fill={score / 100} color={colors.toggleOn} />
+                ))}
               </View>
-              <Text style={[text.meta, styles.f12, styles.mt12]}>{nb.profile.relBasis(profile.reliability?.completed ?? 0)}</Text>
+              <Text style={[text.meta, styles.f12, styles.mt12]}>
+                {rel ? nb.profile.relBasis12(rel.completed) : nb.profile.relBasis(profile.reliability?.completed ?? 0)}
+              </Text>
             </FadeUp>
           ) : null}
 
@@ -487,13 +544,35 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
                   <View key={r} style={styles.row12}>
                     {[0, 1].map((c) => {
                       const i = r * 2 + c;
-                      const uri = portfolio[i];
-                      return uri ? (
-                        <FadeUp key={uri} delay={40 * (i + 1)} style={styles.flex}>
-                          <PressableScale accessibilityRole="button" accessibilityLabel={nb.profile.portOpen(i + 1)} onPress={() => setPhoto(i)}>
+                      const item = portfolio[i];
+                      return item ? (
+                        <FadeUp key={item.id} delay={40 * (i + 1)} style={styles.flex}>
+                          <PressableScale accessibilityRole="button" accessibilityLabel={nb.profile.portOpenTitle(item.title)} onPress={() => setPhoto(i)} style={styles.ptile}>
                             <View style={[styles.tile, shadow.card]}>
-                              <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+                              {item.beforeUrl ? (
+                                <>
+                                  <Image source={{ uri: item.beforeUrl }} style={styles.half} resizeMode="cover" accessibilityIgnoresInvertColors />
+                                  <Image source={{ uri: item.afterUrl }} style={styles.half} resizeMode="cover" accessibilityIgnoresInvertColors />
+                                  <View style={styles.pdiv} />
+                                  <View style={[styles.plab, styles.plabB]}>
+                                    <Text style={[styles.plabText, { color: colors.ink2 }]}>{nb.profile.before}</Text>
+                                  </View>
+                                  <View style={[styles.plab, styles.plabA]}>
+                                    <Text style={[styles.plabText, { color: colors.white }]}>{nb.profile.after}</Text>
+                                  </View>
+                                </>
+                              ) : (
+                                <Image source={{ uri: item.afterUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+                              )}
                             </View>
+                            <Text style={styles.ptitle} numberOfLines={1}>
+                              {item.title}
+                            </Text>
+                            {portfolioWhere(item) ? (
+                              <Text style={[text.meta, styles.f12]} numberOfLines={1}>
+                                {portfolioWhere(item)}
+                              </Text>
+                            ) : null}
                           </PressableScale>
                         </FadeUp>
                       ) : (
@@ -530,7 +609,7 @@ export function ProfileScreen({ profileId }: { profileId?: string }) {
           safePush('/verifisering');
         }}
       />
-      <PortfolioViewer photos={portfolio} index={photo} onIndex={setPhoto} onClose={() => setPhoto(null)} />
+      <PortfolioViewer items={portfolio} index={photo} onIndex={setPhoto} onClose={() => setPhoto(null)} />
     </Screen>
   );
 }
@@ -596,6 +675,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statVal: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statNumSm: { fontSize: 19 },
   statNum: { fontFamily: fonts.display, fontSize: 22, lineHeight: 22, letterSpacing: -0.44, color: colors.ink },
   statLabel: { fontFamily: fonts.body, fontSize: 12, lineHeight: 15, color: colors.mute, textAlign: 'center' },
   note: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', justifyContent: 'center', marginTop: 10 },
@@ -648,7 +728,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dashedCardBg,
   },
   grid: { gap: 14 },
-  tile: { height: 132, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.track },
+  tile: { height: 132, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.track, flexDirection: 'row' },
+  ptile: { gap: 6 },
+  half: { flex: 1, height: '100%' },
+  pdiv: { position: 'absolute', top: 0, bottom: 0, left: '50%', width: 3, marginLeft: -1.5, backgroundColor: colors.white },
+  plab: { position: 'absolute', top: 8, height: 20, paddingHorizontal: 8, borderRadius: radius.pill, justifyContent: 'center' },
+  plabB: { left: 8, backgroundColor: colors.onInk90 },
+  plabA: { right: 8, backgroundColor: colors.ink },
+  plabText: { fontFamily: fonts.bodyHeavy, fontSize: 10.5, letterSpacing: 0.4, textTransform: 'uppercase' },
+  ptitle: { fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 17.5, color: colors.ink },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  mt0: { marginTop: 0 },
   portEmpty: {
     padding: 22,
     alignItems: 'center',

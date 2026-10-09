@@ -3,6 +3,7 @@ import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-nati
 import type { PublicProfile } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { shortDate } from '@/lib/datetime';
+import { toast } from '@/lib/toast';
 import { colors, radius, text } from '@/theme/theme';
 import {
   Avatar,
@@ -45,11 +46,15 @@ export function ShareSheet({
   onPlace: () => void;
   onOffer: () => void;
 }) {
-  const tiles: { key: string; label: string; icon: IconKey; bg: string; fg: string; onPress: () => void }[] = [
+  // "Del sted" is always there, but locked until a tilbud is accepted (rule: no exact address before an avtale)
+  const lockedPlace = () => toast.info(nb.chat.placeLocked, { icon: 'lock', bottom: 150 });
+  const tiles: { key: string; label: string; icon: IconKey; bg: string; fg: string; onPress: () => void; locked?: boolean }[] = [
     { key: 'img', label: nb.chat.tileImage, icon: 'image', bg: colors.cyanTint, fg: colors.cyanDeep, onPress: onImage },
     { key: 'cam', label: nb.chat.tileCamera, icon: 'camera', bg: colors.limeTint, fg: colors.limeDeep, onPress: onCamera },
     { key: 'time', label: nb.chat.tileTime, icon: 'cal', bg: colors.ink, fg: colors.lime, onPress: onTime },
-    ...(canPlace ? [{ key: 'place', label: nb.chat.tilePlace, icon: 'pin' as const, bg: colors.warnTint, fg: colors.warn, onPress: onPlace }] : []),
+    canPlace
+      ? { key: 'place', label: nb.chat.tilePlace, icon: 'pin', bg: colors.warnTint, fg: colors.warn, onPress: onPlace }
+      : { key: 'place', label: nb.chat.tilePlace, icon: 'lock', bg: colors.neutralPill, fg: colors.mute, onPress: lockedPlace, locked: true },
   ];
   return (
     <Sheet visible={visible} onClose={onClose} title={nb.chat.shareTitle} titleSize="h2">
@@ -58,10 +63,10 @@ export function ShareSheet({
           <FadeUp key={t.key} delay={(i + 1) * 50} style={styles.atileWrap}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t.label}
+              accessibilityLabel={t.locked ? nb.chat.placeLockedA11y : t.label}
               disabled={busy}
               onPress={t.onPress}
-              style={({ pressed }) => [styles.atile, pressed && styles.pressed, busy && styles.dim]}
+              style={({ pressed }) => [styles.atile, pressed && styles.pressed, (busy || t.locked) && styles.dim]}
             >
               <View style={[styles.icirc, { backgroundColor: t.bg }]}>
                 <Icon name={t.icon} size={22} color={t.fg} />
@@ -102,18 +107,28 @@ export function TimeSheet({
   onClose,
   first,
   onSend,
+  title,
+  subtitle,
+  cta,
+  busy,
 }: {
   visible: boolean;
   onClose: () => void;
   first: string;
-  onSend: (when: string) => void;
+  /** `when` = "lør 12. okt kl. 10:00", `iso` = the same moment as a timestamp */
+  onSend: (when: string, iso: string) => void;
+  /** other wording when the sheet is used on an avtale */
+  title?: string;
+  subtitle?: string;
+  cta?: string;
+  busy?: boolean;
 }) {
   const days = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i + 1);
       const [dow, ...rest] = shortDate(d.toISOString()).split(' ');
-      return { key: `${dow} ${rest.join(' ')}`, dow, date: rest.join(' ') };
+      return { key: `${dow} ${rest.join(' ')}`, dow, date: rest.join(' '), at: d };
     });
   }, []);
   const [day, setDay] = useState<string | null>(null);
@@ -121,12 +136,15 @@ export function TimeSheet({
   const ready = !!day && !!slot;
   const send = () => {
     if (!ready) return;
-    onSend(`${day} kl. ${slot}`);
+    const at = new Date(days.find((d) => d.key === day)?.at ?? Date.now());
+    const [h, m] = (slot ?? '00:00').split(':').map(Number);
+    at.setHours(h, m, 0, 0);
+    onSend(`${day} kl. ${slot}`, at.toISOString());
     setDay(null);
     setSlot(null);
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title={nb.chat.proposeTime} titleSize="h2" subtitle={nb.chat.timeSheetSub(first)}>
+    <Sheet visible={visible} onClose={onClose} title={title ?? nb.chat.proposeTime} titleSize="h2" subtitle={subtitle ?? nb.chat.timeSheetSub(first)}>
       <Text style={[text.label, styles.mb10]}>{nb.chat.day}</Text>
       <View style={styles.dayrow}>
         {days.map((d) => {
@@ -163,7 +181,7 @@ export function TimeSheet({
           </View>
         </FadeUp>
       ) : null}
-      <Button label={nb.chat.sendTime} icon="send" size="lg" disabled={!ready} onPress={send} style={styles.mt18} />
+      <Button label={cta ?? nb.chat.sendTime} icon="send" size="lg" disabled={!ready} loading={busy} onPress={send} style={styles.mt18} />
     </Sheet>
   );
 }

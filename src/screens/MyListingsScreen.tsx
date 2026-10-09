@@ -5,6 +5,7 @@ import Animated, { FadeOutRight, LinearTransition } from 'react-native-reanimate
 import type { Listing, ListingStatus, Proposal } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
+import { canEditListing, editListingHref } from '@/domain/editing';
 import { useMyListings, useReceivedProposals, useSetListingStatus } from '@/api/queries';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
@@ -46,7 +47,8 @@ const PAUSABLE: ListingStatus[] = ['PUBLISHED', 'RECEIVING_OFFERS', 'ACTIVE', 'D
 
 function groupOf(s: ListingStatus): Group {
   if (s === 'PAUSED') return 'pauset';
-  if (s === 'ARCHIVED' || s === 'CANCELLED' || s === 'EXPIRED' || DONE.includes(s)) return 'arkivert';
+  // an oppdrag with an avtale is taken – it is no longer shown to others
+  if (s === 'ARCHIVED' || s === 'CANCELLED' || s === 'EXPIRED' || DONE.includes(s) || ONGOING.includes(s)) return 'arkivert';
   return 'aktiv';
 }
 
@@ -54,6 +56,7 @@ function statusPill(l: Listing): { tone: PillTone; icon: IconName; label: string
   const g = groupOf(l.status);
   if (g === 'aktiv') return { tone: 'ok', icon: 'zap', label: nb.mine.pill.aktiv };
   if (g === 'pauset') return { tone: 'warn', icon: 'pause', label: nb.mine.pill.pauset };
+  if (ONGOING.includes(l.status)) return { tone: 'ok', icon: 'hand', label: nb.mine.pill.agreed };
   return DONE.includes(l.status)
     ? { tone: 'neutral', icon: 'check', label: nb.mine.pill.done }
     : { tone: 'neutral', icon: 'archive', label: nb.mine.pill.arkivert };
@@ -211,10 +214,21 @@ export function MyListingsScreen() {
               </View>
               <IconButton icon="x" iconSize={18} accessibilityLabel="Lukk" onPress={() => setSheetId(null)} />
             </View>
+            {canEditListing(sel.status) ? (
+              <Act
+                icon="edit"
+                title={nb.mine.edit}
+                sub={nb.mine.editSub}
+                onPress={() => {
+                  setSheetId(null);
+                  safePush(editListingHref(sel.id, '/mine'));
+                }}
+              />
+            ) : null}
             {PAUSABLE.includes(sel.status) ? (
               <Act icon="pause" title={nb.mine.pause} sub={nb.mine.pauseSub} onPress={() => change(sel, 'PAUSED', nb.mine.toastPaused, 'pause')} />
             ) : null}
-            {groupOf(sel.status) !== 'aktiv' && !DONE.includes(sel.status) ? (
+            {groupOf(sel.status) !== 'aktiv' && !DONE.includes(sel.status) && !ONGOING.includes(sel.status) ? (
               <Act
                 icon="play"
                 iconBg={colors.okTint}
@@ -227,16 +241,30 @@ export function MyListingsScreen() {
             {groupOf(sel.status) !== 'arkivert' ? (
               <Act icon="archive" title={nb.mine.archive} sub={nb.mine.archiveSub} onPress={() => change(sel, 'ARCHIVED', nb.mine.toastArchived, 'archive')} />
             ) : null}
-            <Act
-              icon="trash"
-              danger
-              title={nb.mine.del}
-              sub={nb.mine.delSub}
-              onPress={() => {
-                setConfirmId(sel.id);
-                setSheetId(null);
-              }}
-            />
+            {ONGOING.includes(sel.status) ? (
+              <>
+                <Act
+                  icon="hand"
+                  title={nb.mine.seeAgreements}
+                  sub={nb.mine.agreedHint}
+                  onPress={() => {
+                    setSheetId(null);
+                    safePush('/avtaler');
+                  }}
+                />
+              </>
+            ) : (
+              <Act
+                icon="trash"
+                danger
+                title={nb.mine.del}
+                sub={nb.mine.delSub}
+                onPress={() => {
+                  setConfirmId(sel.id);
+                  setSheetId(null);
+                }}
+              />
+            )}
           </>
         ) : null}
       </Sheet>

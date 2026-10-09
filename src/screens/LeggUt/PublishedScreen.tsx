@@ -24,7 +24,7 @@ import {
   type IconKey,
 } from '@/components/ui';
 
-const linkFor = (id: string) => `https://minnabo.no/oppdrag/${id}`;
+const linkFor = (id: string) => `https://minnabo.app/oppdrag/${id}`;
 
 /** Legg ut · Publisert (design/screens/Publisert.dc.html). `id = 'lokal'` = mock publish (nothing saved). */
 export function PublishedScreen({ listingId }: { listingId?: string }) {
@@ -38,7 +38,7 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
     draftStore.clear();
     router.replace('/');
   };
-  const link = listingId && !local ? linkFor(listingId) : 'https://minnabo.no';
+  const link = listingId && !local ? linkFor(listingId) : 'https://minnabo.app';
   const title = listing?.title ?? '';
 
   const share: { icon: IconKey; label: string; run: () => Promise<unknown> | void; done: string }[] = [

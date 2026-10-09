@@ -8,14 +8,14 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_USE_MOCKS": "true"
+        "EXPO_PUBLIC_VIPPS_CLIENT_ID": "2ac3f8c4-1bad-4f98-a449-a5b7719f11a8"
       }
     },
     "preview": {
       "distribution": "internal",
       "ios": { "simulator": false },
       "env": {
-        "EXPO_PUBLIC_USE_MOCKS": "true",
+        "EXPO_PUBLIC_VIPPS_CLIENT_ID": "2ac3f8c4-1bad-4f98-a449-a5b7719f11a8",
         "EXPO_PUBLIC_SUPABASE_URL": "https://hvxuzvhzsaocsnwznsai.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_pmY85Uq6vbw9qwlsgTRzig_dx4zD-9j"
       }
@@ -23,7 +23,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_USE_MOCKS": "true",
+        "EXPO_PUBLIC_VIPPS_CLIENT_ID": "2ac3f8c4-1bad-4f98-a449-a5b7719f11a8",
         "EXPO_PUBLIC_SUPABASE_URL": "https://hvxuzvhzsaocsnwznsai.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_pmY85Uq6vbw9qwlsgTRzig_dx4zD-9j"
       }

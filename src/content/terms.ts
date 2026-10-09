@@ -15,6 +15,8 @@ export const TERMS = {
   noticeDays: 30,
   /** contact address for questions – empty hides the sentence */
   contactEmail: '',
+  /** the company that owns and runs MinNabo (Enhetsregisteret) */
+  owner: { name: 'Webiser AS', orgNr: '933 452 107' },
 } as const;
 
 export const TERMS_SUMMARY = [
@@ -32,6 +34,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
     short: 'MinNabo kobler naboer som trenger hjelp med naboer som kan hjelpe. Vi er møteplassen – ikke arbeidsgiver.',
     body: [
       'MinNabo er en tjeneste for småjobber i nærmiljøet. Du kan legge ut et oppdrag når du trenger hjelp, og gi tilbud på oppdrag når du kan hjelpe andre. Tjenesten er foreløpig tilgjengelig i Innlandet.',
+      `MinNabo eies og drives av ${TERMS.owner.name}, org.nr. ${TERMS.owner.orgNr}.`,
       'MinNabo er ikke part i avtalene mellom brukerne, og er ikke arbeidsgiver eller oppdragsgiver for noen som utfører jobber gjennom tjenesten.',
     ],
   },

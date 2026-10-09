@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import nb from '@/i18n/nb';
-import { MOCK_YOUTH, useVippsIdentity } from '@/auth/mockVipps';
+import { useVippsIdentity } from '@/auth/identity';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Avatar,
@@ -34,9 +34,12 @@ function Row({ ok, label }: { ok: boolean; label: string }) {
 /** Onboarding · Ungdomskonto (design/screens/Ungdomskonto.dc.html) – shown when Vipps age < 18. */
 export function YouthAccountScreen() {
   const router = useRouter();
-  const id = useVippsIdentity() ?? MOCK_YOUTH;
+  const id = useVippsIdentity();
   const [checks, setChecks] = useState([false, false, false]);
   const ready = checks.every(Boolean);
+
+  // Only reached right after a Vipps login; the identity is still loading for a moment.
+  if (!id) return <View style={styles.blank} />;
 
   return (
     <Screen
@@ -135,6 +138,7 @@ export function YouthAccountScreen() {
 }
 
 const styles = StyleSheet.create({
+  blank: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: screenPadding, paddingTop: 6, gap: 18 },
   hero: {
     borderRadius: 28,

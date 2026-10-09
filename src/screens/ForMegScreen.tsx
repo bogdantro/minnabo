@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
+  interpolate,
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -12,7 +15,7 @@ import Animated, {
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
-import { useIsSaved, useListings, useProfile } from '@/api/queries';
+import { useListings, useProfile, useSavedListingIds, useToggleSavedListing } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
@@ -61,6 +64,10 @@ type Suggestion = { listing: Listing; cat: CategoryId; match: boolean; why: Why[
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LEAVE_MS = 430;
+/** left = "Ikke aktuelt", right = "Lagre" */
+type Dir = 'left' | 'right';
+const SWIPE_DISTANCE = 110;
+const SWIPE_VELOCITY = 900;
 const km = (d: number) => d.toLocaleString('nb-NO', { maximumFractionDigits: 1 });
 
 /** "Hvorfor dette passer" chips: skill match, distance, timing, trust – max three. */
@@ -82,7 +89,9 @@ function whyChips(l: Listing, cat: CategoryId, match: boolean): Why[] {
 /**
  * Oppdrag for meg (design/screens/ForMeg.dc.html): open oppdrag ranked by the
  * user's skills (profile categories), distance and age, as a swipe-style
- * card stack or a list. "Ikke aktuelt" hides a suggestion (kept on device).
+ * card stack or a list. Swipe (or use the buttons): left = "Ikke aktuelt" hides
+ * the suggestion (kept on device), right = "Lagre" puts it in Lagrede. Either way
+ * the card leaves the stack; "Angre" brings the last one back.
  */
 export function ForMegScreen() {
   const router = useRouter();
@@ -92,12 +101,14 @@ export function ForMegScreen() {
   const { municipality, municipalities, ready } = useLocationScope();
   const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
   const { dismissed, dismiss, restore } = useDismissedLeads();
+  const savedIds = useSavedListingIds().data;
+  const toggleSaved = useToggleSavedListing();
 
   const [view, setView] = useState<View_>('stack');
   // Dismissed in this visit, in order – drives the counter, "Angre" and "Start på nytt".
   const [gone, setGone] = useState<string[]>([]);
-  const [leaving, setLeaving] = useState(false);
-  const [anim, setAnim] = useState<{ mode: 'rise' | 'back'; n: number }>({ mode: 'rise', n: 0 });
+  const [leaving, setLeaving] = useState<Dir | null>(null);
+  const [anim, setAnim] = useState<{ mode: 'rise' | 'back' | 'backRight'; n: number }>({ mode: 'rise', n: 0 });
   const [savedHere, setSavedHere] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -128,17 +139,45 @@ export function ForMegScreen() {
       });
   }, [jobs.data, me.id, skills]);
 
-  // The deck for this visit: everything not hidden earlier (this visit's hides stay counted).
-  const deck = useMemo(() => ranked.filter((s) => !dismissed.has(s.listing.id) || gone.includes(s.listing.id)), [ranked, dismissed, gone]);
+  // The deck for this visit: everything not hidden or saved earlier (what leaves the
+  // stack during this visit stays counted).
+  const deck = useMemo(
+    () =>
+      ranked.filter(
+        (s) => gone.includes(s.listing.id) || (!dismissed.has(s.listing.id) && !(savedIds ?? []).includes(s.listing.id)),
+      ),
+    [ranked, dismissed, gone, savedIds],
+  );
   const rem = useMemo(() => deck.filter((s) => !gone.includes(s.listing.id)), [deck, gone]);
   const [openedAt] = useState(() => Date.now());
   const newToday = deck.filter((s) => Date.parse(s.listing.createdAt) >= openedAt - DAY_MS).length;
 
-  const loading = jobs.isLoading || !ready;
+  const loading = jobs.isLoading || !ready || savedIds === undefined;
   const done = !loading && !jobs.isError && rem.length === 0;
   const idx = deck.length - rem.length;
   const top = rem[0];
   const firstName = (me.displayName || '').split(' ')[0];
+
+  /** The card has left the stack: store the choice and bring up the next one. */
+  const commit = (id: string, dir: Dir) => {
+    if (dir === 'right') {
+      toggleSaved.mutate(id);
+      setSavedHere((s) => [...s, id]);
+      toast.success(nb.forMeg.savedToast, { icon: 'heart', action: { label: nb.forMeg.undo, onPress: undo }, bottom: 28 });
+    } else {
+      dismiss(id);
+    }
+    setGone((g) => [...g, id]);
+    setLeaving(null);
+    setAnim((a) => ({ mode: 'rise', n: a.n + 1 }));
+  };
+
+  /** A button was pressed: fly the card out, then commit. */
+  const pass = (id: string, dir: Dir) => {
+    if (leaving) return;
+    setLeaving(dir);
+    timer.current = setTimeout(() => commit(id, dir), LEAVE_MS);
+  };
 
   const hide = (id: string, fromList: boolean) => {
     if (fromList) {
@@ -147,28 +186,27 @@ export function ForMegScreen() {
       toast.info(nb.forMeg.hiddenToast, { icon: 'x', action: { label: nb.forMeg.undo, onPress: undo }, bottom: 28 });
       return;
     }
-    if (leaving) return;
-    setLeaving(true);
-    timer.current = setTimeout(() => {
-      dismiss(id);
-      setGone((g) => [...g, id]);
-      setLeaving(false);
-      setAnim((a) => ({ mode: 'rise', n: a.n + 1 }));
-    }, LEAVE_MS);
+    pass(id, 'left');
   };
 
   function undo() {
-    setGone((g) => {
-      const last = g[g.length - 1];
-      if (!last) return g;
+    const last = gone[gone.length - 1];
+    if (!last) return;
+    const wasSaved = savedHere.includes(last);
+    if (wasSaved) {
+      toggleSaved.mutate(last);
+      setSavedHere((s) => s.filter((x) => x !== last));
+    } else {
       restore([last]);
-      return g.slice(0, -1);
-    });
-    setAnim((a) => ({ mode: 'back', n: a.n + 1 }));
+    }
+    setGone((g) => g.slice(0, -1));
+    // it comes back from the side it left on
+    setAnim((a) => ({ mode: wasSaved ? 'backRight' : 'back', n: a.n + 1 }));
   }
 
   const restart = () => {
-    restore(gone);
+    // "Start på nytt" shows the hidden ones again; what you saved stays in Lagrede
+    restore(gone.filter((id) => !savedHere.includes(id)));
     setGone([]);
     setView('stack');
     setAnim((a) => ({ mode: 'back', n: a.n + 1 }));
@@ -254,7 +292,14 @@ export function ForMegScreen() {
           <View style={styles.stackwrap}>
             {rem[2] ? <BackCard s={rem[2]} depth={2} /> : null}
             {rem[1] ? <BackCard s={rem[1]} depth={1} /> : null}
-            <FrontCard key={`${top.listing.id}-${anim.n}`} s={top} mode={anim.mode} leaving={leaving} onPress={() => open(top.listing)} />
+            <FrontCard
+              key={`${top.listing.id}-${anim.n}`}
+              s={top}
+              mode={anim.mode}
+              leaving={leaving}
+              onSwipe={(dir) => commit(top.listing.id, dir)}
+              onPress={() => open(top.listing)}
+            />
           </View>
           <View style={styles.controls}>
             <View style={styles.rcol}>
@@ -277,11 +322,20 @@ export function ForMegScreen() {
               onPress={() => open(top.listing)}
               style={styles.cta}
             />
-            <SaveControl
-              id={top.listing.id}
-              onChange={(on) => setSavedHere((s) => (on ? [...s, top.listing.id] : s.filter((x) => x !== top.listing.id)))}
-            />
+            <View style={styles.rcol}>
+              <PressableScale
+                accessibilityRole="button"
+                accessibilityLabel={nb.forMeg.saveLabel}
+                onPress={() => pass(top.listing.id, 'right')}
+                scaleTo={0.88}
+                style={[styles.rbtn, shadow.medium]}
+              >
+                <Icon name="heart" size={24} color={colors.heart} />
+              </PressableScale>
+              <Text style={styles.rlab}>{nb.forMeg.save}</Text>
+            </View>
           </View>
+          <Text style={[text.meta, styles.swipeHint]}>{nb.forMeg.swipeHint}</Text>
           <View style={styles.undoRow}>
             <UndoButton label={nb.forMeg.undo} disabled={gone.length === 0} onPress={undo} />
           </View>
@@ -348,11 +402,13 @@ function FrontCard({
   s,
   mode,
   leaving,
+  onSwipe,
   onPress,
 }: {
   s: Suggestion;
-  mode: 'rise' | 'back';
-  leaving: boolean;
+  mode: 'rise' | 'back' | 'backRight';
+  leaving: Dir | null;
+  onSwipe: (dir: Dir) => void;
   onPress: () => void;
 }) {
   const reduced = useReducedMotion();
@@ -362,11 +418,13 @@ function FrontCard({
   const c = categoryColors[s.cat];
 
   // .fcard.rise / .backA / .flyL from the design
-  const x = useSharedValue(reduced ? 0 : mode === 'back' ? -420 : 0);
-  const y = useSharedValue(reduced || mode === 'back' ? 0 : 18);
-  const rot = useSharedValue(reduced ? 0 : mode === 'back' ? -14 : 0);
-  const sc = useSharedValue(reduced || mode === 'back' ? 1 : 0.94);
-  const op = useSharedValue(reduced ? 1 : mode === 'back' ? 0 : 0.9);
+  const back = mode !== 'rise';
+  const side = mode === 'backRight' ? 1 : -1;
+  const x = useSharedValue(reduced ? 0 : back ? side * 420 : 0);
+  const y = useSharedValue(reduced || back ? 0 : 18);
+  const rot = useSharedValue(reduced ? 0 : back ? side * 14 : 0);
+  const sc = useSharedValue(reduced || back ? 1 : 0.94);
+  const op = useSharedValue(reduced ? 1 : back ? 0 : 0.9);
 
   useEffect(() => {
     if (reduced) return;
@@ -384,8 +442,9 @@ function FrontCard({
       op.set(withTiming(0, { duration: 200 }));
       return;
     }
-    x.set(withTiming(-480, cfg));
-    rot.set(withTiming(-18, cfg));
+    const d = leaving === 'right' ? 1 : -1;
+    x.set(withTiming(d * 480, cfg));
+    rot.set(withTiming(d * 18, cfg));
     op.set(withTiming(0, cfg));
   }, [leaving, reduced, x, rot, op]);
 
@@ -393,9 +452,47 @@ function FrontCard({
     opacity: op.value,
     transform: [{ translateX: x.value }, { translateY: y.value }, { rotate: `${rot.value}deg` }, { scale: sc.value }],
   }));
+  // the stamps fade in with the drag: right = Lagre, left = Ikke aktuelt
+  const saveStamp = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [10, 90], [0, 1], 'clamp') }));
+  const skipStamp = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [-90, -10], [1, 0], 'clamp') }));
+
+  // Drag the card sideways; let go past the threshold (or with a flick) to decide.
+  const pan = Gesture.Pan()
+    .enabled(!leaving)
+    .activeOffsetX([-14, 14])
+    .failOffsetY([-14, 14])
+    .onUpdate((e) => {
+      x.set(e.translationX);
+      rot.set(e.translationX / 18);
+    })
+    .onEnd((e) => {
+      const far = Math.abs(e.translationX) > SWIPE_DISTANCE || Math.abs(e.velocityX) > SWIPE_VELOCITY;
+      if (!far) {
+        x.set(withSpring(0, motion.spring));
+        rot.set(withSpring(0, motion.spring));
+        return;
+      }
+      const d = e.translationX > 0 ? 1 : -1;
+      rot.set(withTiming(d * 18, { duration: 220 }));
+      op.set(withTiming(0, { duration: 220 }));
+      x.set(
+        withTiming(d * 480, { duration: 220 }, (finished) => {
+          if (finished) runOnJS(onSwipe)(d > 0 ? 'right' : 'left');
+        }),
+      );
+    });
 
   return (
+    <GestureDetector gesture={pan}>
     <Animated.View style={[styles.fcard, shadow.stackFront, style]}>
+      <Animated.View style={[styles.stamp, styles.stampSave, saveStamp]} pointerEvents="none">
+        <Icon name="heart" size={16} color={colors.limeDeep} />
+        <Text style={[styles.stampText, { color: colors.limeDeep }]}>{nb.forMeg.save}</Text>
+      </Animated.View>
+      <Animated.View style={[styles.stamp, styles.stampSkip, skipStamp]} pointerEvents="none">
+        <Icon name="x" size={16} color={colors.danger} />
+        <Text style={[styles.stampText, { color: colors.danger }]}>{nb.forMeg.dismiss}</Text>
+      </Animated.View>
       <Pressable accessibilityRole="button" accessibilityLabel={`${l.title}, ${l.owner.displayName}, ${price.label} ${price.value}`} onPress={onPress} style={styles.fill}>
         <View style={[styles.fart, { backgroundColor: c.bg }]}>
           <View style={[styles.deco, styles.deco1]} />
@@ -457,33 +554,7 @@ function FrontCard({
         </View>
       </Pressable>
     </Animated.View>
-  );
-}
-
-function SaveControl({ id, onChange }: { id: string; onChange: (on: boolean) => void }) {
-  const [saved, toggle] = useIsSaved(id);
-  const press = () => {
-    toggle();
-    onChange(!saved);
-    if (!saved) toast.success(nb.forMeg.savedToast, { icon: 'heart', bottom: 28 });
-    else toast.info(nb.forMeg.unsavedToast, { icon: 'x', bottom: 28 });
-  };
-  return (
-    <View style={styles.rcol}>
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel={saved ? nb.forMeg.unsaveLabel : nb.forMeg.saveLabel}
-        accessibilityState={{ selected: saved }}
-        onPress={press}
-        scaleTo={0.88}
-        style={[styles.rbtn, shadow.medium, saved && styles.rbtnOn]}
-      >
-        <ScaleIn playKey={saved ? 1 : 0}>
-          <Icon name="heart" size={24} color={saved ? colors.heart : colors.ink} filled={saved} />
-        </ScaleIn>
-      </PressableScale>
-      <Text style={styles.rlab}>{saved ? nb.forMeg.saved : nb.forMeg.save}</Text>
-    </View>
+    </GestureDetector>
   );
 }
 
@@ -684,6 +755,23 @@ const styles = StyleSheet.create({
   rlab: { fontFamily: text.label.fontFamily, fontSize: 11.5, color: colors.mute, textAlign: 'center', marginTop: 7 },
   cta: { flex: 1, marginTop: 3 },
   undoRow: { alignItems: 'center', marginTop: 14 },
+  swipeHint: { textAlign: 'center', marginTop: 12 },
+  stamp: {
+    position: 'absolute',
+    top: 58,
+    zIndex: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    backgroundColor: colors.white,
+  },
+  stampSave: { left: 16, borderColor: colors.limeDeep, transform: [{ rotate: '-8deg' }] },
+  stampSkip: { right: 16, borderColor: colors.danger, transform: [{ rotate: '8deg' }] },
+  stampText: { fontFamily: text.label.fontFamily, fontSize: 14, letterSpacing: 0.4, textTransform: 'uppercase' },
   undo: {
     height: 44,
     paddingHorizontal: 14,

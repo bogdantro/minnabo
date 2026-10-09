@@ -13,8 +13,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
-import { MOCK_ADULT, MOCK_YOUTH, mockVipps } from '@/auth/mockVipps';
+import { useVippsIdentity } from '@/auth/identity';
+import { completeVippsLogin, startVippsLogin, vippsConfigured } from '@/auth/vipps';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/lib/toast';
+import { VippsIcon, VippsWordmark } from '@/components/VippsLogo';
+import { signOut } from '@/auth/session';
 import { colors, radius, safeTopExtra, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Avatar,
@@ -36,29 +40,6 @@ import {
 const logo = require('../../../assets/logo-icon.png');
 
 type VippsStep = 'opening' | 'confirm' | 'done';
-
-/** Vipps logo mark: white rounded square with an orange ring (`.vmark`). */
-function VippsMark({ size = 28, inverted = false }: { size?: number; inverted?: boolean }) {
-  const ring = Math.round(size * 0.43);
-  return (
-    <View
-      style={[
-        styles.vmark,
-        { width: size, height: size, borderRadius: size * 0.32, backgroundColor: inverted ? colors.vipps : colors.white },
-      ]}
-    >
-      <View
-        style={{
-          width: ring,
-          height: ring,
-          borderRadius: ring / 2,
-          borderWidth: Math.max(2, size * 0.1),
-          borderColor: inverted ? colors.white : colors.vipps,
-        }}
-      />
-    </View>
-  );
-}
 
 /** `.float` – gentle vertical drift. */
 function useFloat(period: number) {
@@ -103,7 +84,9 @@ function VippsPhone() {
       <Animated.View style={float}>
         <View style={[styles.vphone, shadow.phoneMock]}>
           <View style={styles.vscreen}>
-            <View style={styles.vbar} />
+            <View style={styles.vbar}>
+              <VippsWordmark variant="neg" height={14} />
+            </View>
             <View style={styles.vline} />
             <View style={[styles.vline, styles.vlineShort]} />
             <View style={styles.vline} />
@@ -155,42 +138,69 @@ function Steps({ n }: { n: number }) {
 
 /**
  * Onboarding · Logg inn (design/screens/LoggInn.dc.html). Vipps only.
- * The Vipps round-trip is MOCKED (timers + sample identity) until Vipps login
- * is wired; see `src/auth/mockVipps.ts`.
+ * With EXPO_PUBLIC_VIPPS_CLIENT_ID set this is the real Vipps round-trip
+ * (`src/auth/vipps.ts`): "Åpner Vipps" → the person approves in Vipps → Vipps
+ * sends them back to `/vipps`, which renders this screen with `callback`.
  */
-export function LoginScreen() {
+export function LoginScreen({ callback }: { callback?: { code?: string; state?: string; error?: string } }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [vipps, setVipps] = useState<VippsStep | null>(null);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const qc = useQueryClient();
+  const [vipps, setVipps] = useState<VippsStep | null>(callback ? 'confirm' : null);
+  const [result, setResult] = useState<{ isNew: boolean; youth: boolean } | null>(null);
   const logoFloat = useFloat(5000);
-  const id = MOCK_ADULT;
-
-  const clear = () => {
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
-  };
-  useEffect(() => clear, []);
+  const id = useVippsIdentity();
+  // Back from Vipps: swap the code for a session, then show who was confirmed.
+  const handled = useRef(false);
+  useEffect(() => {
+    if (!callback || handled.current) return;
+    handled.current = true;
+    completeVippsLogin(callback)
+      .then(async (r) => {
+        await qc.invalidateQueries({ queryKey: ['my-account'] });
+        setResult(r);
+        setVipps('done');
+      })
+      .catch((e: unknown) => {
+        setVipps(null);
+        toast.error(e instanceof Error ? e.message : nb.login.failed);
+        router.replace('/logg-inn');
+      });
+  }, [callback, qc, router]);
 
   const start = () => {
-    clear();
+    if (!vippsConfigured) {
+      toast.error(nb.login.notConfigured);
+      return;
+    }
     setVipps('opening');
-    timers.current.push(setTimeout(() => setVipps('confirm'), 1600));
-    timers.current.push(setTimeout(() => setVipps('done'), 3400));
+    startVippsLogin()
+      .then(() => setVipps('confirm'))
+      .catch(() => {
+        setVipps(null);
+        toast.error(nb.login.openFailed);
+      });
   };
 
   const cancel = () => {
-    clear();
     const was = vipps;
     setVipps(null);
     if (was && was !== 'done') toast.info(nb.login.cancelled, { icon: 'x' });
   };
 
-  const proceed = (youth: boolean) => {
-    clear();
-    mockVipps.signIn(youth ? MOCK_YOUTH : MOCK_ADULT);
+  // The age comes from Vipps; a returning user goes straight in.
+  const proceed = () => {
     setVipps(null);
-    router.replace(youth ? '/ungdomskonto' : '/samtykker');
+    if (!result) return;
+    router.replace(result.youth ? (result.isNew ? '/ungdomskonto' : '/ung') : result.isNew ? '/samtykker' : '/');
+  };
+
+  // "Ikke deg?" after a real login: sign out again before starting over.
+  const notYou = () => {
+    if (!result) return cancel();
+    setResult(null);
+    setVipps(null);
+    void signOut().then(() => router.replace('/logg-inn'));
   };
 
   const step = vipps === 'opening' ? 1 : vipps === 'confirm' ? 2 : 3;
@@ -220,7 +230,7 @@ export function LoginScreen() {
           <Text style={[text.body, styles.lead]}>{nb.login.lead}</Text>
         </FadeUp>
         <FadeUp delay={200} style={styles.ctaBlock}>
-          <Button label={nb.login.cta} variant="vipps" size="lg" leading={<VippsMark />} onPress={start} />
+          <Button label={nb.login.cta} variant="vipps" size="lg" leading={<VippsIcon size={28} onOrange />} onPress={start} />
           <Text style={[text.meta, styles.center]}>{nb.login.onlyVipps}</Text>
         </FadeUp>
         <FadeUp delay={300} style={styles.trust}>
@@ -246,7 +256,7 @@ export function LoginScreen() {
 
       <Sheet visible={!!vipps} onClose={cancel} dismissible={vipps !== 'done'}>
         <View style={styles.sheetHead}>
-          <Pill label={nb.login.sheetPill} tone="line" leading={<VippsMark size={18} inverted />} style={styles.sheetPill} />
+          <Pill label={nb.login.sheetPill} tone="line" leading={<VippsIcon size={18} />} style={styles.sheetPill} />
           <Steps n={step} />
         </View>
 
@@ -256,7 +266,7 @@ export function LoginScreen() {
               <Spinner size={72} thickness={4} color={colors.vipps} trackColor={colors.vippsTrack} />
               <View style={styles.spinMark}>
                 <View style={styles.spinMarkBg}>
-                  <VippsMark size={34} />
+                  <VippsIcon size={34} />
                 </View>
               </View>
             </View>
@@ -281,7 +291,13 @@ export function LoginScreen() {
           </FadeUp>
         ) : null}
 
-        {vipps === 'done' ? (
+        {vipps === 'done' && !id ? (
+          <View style={styles.stage}>
+            <Spinner size={48} thickness={4} color={colors.vipps} trackColor={colors.vippsTrack} />
+          </View>
+        ) : null}
+
+        {vipps === 'done' && id ? (
           <View>
             <View style={styles.doneHead}>
               <DrawnCheck size={84} bg={colors.ok} tickColor={colors.white} ring={shadow.okBadge} tickSize={44} />
@@ -303,16 +319,15 @@ export function LoginScreen() {
                 </View>
               </View>
               <KeyValueRow label={nb.login.phone} value={id.phoneMasked} />
-              <KeyValueRow label={nb.login.age} value={nb.login.over18} last />
+              <KeyValueRow label={nb.login.age} value={result?.youth ? nb.login.under18Value(id.age) : nb.login.over18} last />
             </FadeUp>
             <FadeUp delay={300}>
               <Note style={styles.mt12}>{nb.login.fetchNote}</Note>
             </FadeUp>
             <FadeUp delay={350} style={styles.mt18}>
-              <Button label={nb.login.continue} size="lg" iconRight="arrow" onPress={() => proceed(false)} />
+              <Button label={nb.login.continue} size="lg" iconRight="arrow" onPress={proceed} />
             </FadeUp>
-            <Button label={nb.login.under18} variant="text" onPress={() => proceed(true)} style={styles.under18} />
-            <Pressable accessibilityRole="button" onPress={cancel} style={styles.notYou}>
+            <Pressable accessibilityRole="button" onPress={notYou} style={styles.notYou}>
               <Text style={[text.bodySemi, styles.notYouText]}>{nb.login.notYou}</Text>
             </Pressable>
           </View>
@@ -327,6 +342,7 @@ export function LoginScreen() {
           </>
         ) : null}
       </Sheet>
+
     </Screen>
   );
 }
@@ -352,7 +368,6 @@ const styles = StyleSheet.create({
   title: { marginTop: 24, fontSize: 32, lineHeight: 34, letterSpacing: -0.96, textAlign: 'center' },
   lead: { marginTop: 12, color: colors.ink2, maxWidth: 320, textAlign: 'center' },
   ctaBlock: { alignSelf: 'stretch', marginTop: 30, gap: 14 },
-  vmark: { alignItems: 'center', justifyContent: 'center' },
   trust: {
     alignSelf: 'stretch',
     marginTop: 22,
@@ -407,7 +422,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 8,
   },
-  vbar: { alignSelf: 'stretch', height: 20, borderRadius: 7, backgroundColor: colors.vipps },
+  vbar: { alignSelf: 'stretch', height: 20, borderRadius: 7, backgroundColor: colors.vipps, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   vline: { width: '84%', height: 5, borderRadius: 3, backgroundColor: colors.line },
   vlineShort: { width: '56%' },
   vok: {

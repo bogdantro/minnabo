@@ -13,6 +13,8 @@ import {
 import { useNetworkState } from 'expo-network';
 import type { Conversation, Message, Proposal } from '@/domain/types';
 import { formatPrice } from '@/domain/price';
+import { isExpiredProposal, isTakenListing } from '@/domain/editing';
+import { useIsFocused } from 'expo-router';
 import nb from '@/i18n/nb';
 import {
   useAgreement,
@@ -30,6 +32,7 @@ import {
   useToggleReaction,
 } from '@/api/queries';
 import { useConversationChannel, usePresence, useTypingChannel } from '@/api/realtime';
+import { ImageViewer } from '@/components/ImageViewer';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatDayLabel, isSameDay } from '@/lib/calendar';
 import { formatTime, shortDate } from '@/lib/datetime';
@@ -38,7 +41,7 @@ import { useMutedConversation } from '@/lib/mutedConversations';
 import { safePush } from '@/lib/nav';
 import { outbox } from '@/lib/outbox';
 import { toast } from '@/lib/toast';
-import { pickAndUpload } from '@/lib/uploads';
+import { pickAndUpload, pickAndUploadMany } from '@/lib/uploads';
 import { colors, motion, radius, shadow, text } from '@/theme/theme';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import { AgreementBanner, BlockedBar, ChatTopBar, Composer, ListingStrip, PinBar } from '@/components/chat/ChatTop';
@@ -54,7 +57,8 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   const net = useNetworkState();
   const online = net.isConnected !== false && net.isInternetReachable !== false;
 
-  useConversationChannel(c.id);
+  const focused = useIsFocused();
+  useConversationChannel(c.id, focused);
   const presence = usePresence();
   const { counterpartTyping, notifyTyping } = useTypingChannel(c.id);
   const { data: messages, isLoading, isError, refetch } = useMessages(c.id);
@@ -73,6 +77,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   const respond = useRespondToProposal(c.id);
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<string | null>(null);
   const [pinFor, setPinFor] = useState<Message | null>(null);
   const [sheet, setSheet] = useState<'share' | 'time' | 'place' | 'menu' | 'offer' | null>(null);
   const [acceptFor, setAcceptFor] = useState<Proposal | null>(null);
@@ -122,6 +127,9 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
     if (atBottom.current && showJump) setShowJump(false);
   };
 
+  // the server says why when the other person has blocked you; otherwise a plain "try again"
+  const sendFailed = (e: unknown) =>
+    toast.error(e instanceof Error && /kan ikke sende meldinger/i.test(e.message) ? nb.chat.blockedByThem : nb.toast.genericError, { bottom: 150 });
   const send = (t: string) => {
     atBottom.current = true;
     setSelected(null);
@@ -129,7 +137,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
       outbox.enqueue({ kind: 'message', conversationId: c.id, text: t });
       return;
     }
-    sendMessage.mutate(t, { onError: () => toast.error(nb.toast.genericError) });
+    sendMessage.mutate(t, { onError: sendFailed });
   };
   const attach = (url: string) => {
     atBottom.current = true;
@@ -142,10 +150,14 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   const pickImage = async (source: 'camera' | 'library') => {
     setUploading(true);
     try {
-      const res = await pickAndUpload({ bucket: 'chat-attachments', folder: me.id, source });
-      if (res) {
+      // Library: pick several photos at once; each is sent as its own image message.
+      const res =
+        source === 'library'
+          ? await pickAndUploadMany({ bucket: 'chat-attachments', folder: me.id, max: 10 })
+          : [await pickAndUpload({ bucket: 'chat-attachments', folder: me.id, source })].filter((r): r is NonNullable<typeof r> => !!r);
+      if (res.length) {
         setSheet(null);
-        attach(res.publicUrl);
+        res.forEach((r) => attach(r.publicUrl));
       }
     } catch (e) {
       toast.error((e as Error).message || nb.chat.uploadFailed);
@@ -155,7 +167,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   };
   const retry = (m: Message) => {
     if (m.kind === 'IMAGE' && m.attachmentUrl) sendAttachment.mutate(m.attachmentUrl);
-    else sendMessage.mutate(m.text);
+    else sendMessage.mutate(m.text, { onError: sendFailed });
   };
 
   const confirmAccept = () => {
@@ -283,6 +295,12 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           selected={selected === m.id}
           statusText={i === lastMine ? (m.pending ? nb.chat.sending : STATUS[m.delivery]) : undefined}
           onSelect={() => {
+            // a photo opens in fullscreen (hold it to pin)
+            if (m.kind === 'IMAGE' && m.attachmentUrl) {
+              setSelected(null);
+              setViewer(m.attachmentUrl);
+              return;
+            }
             if (m.kind === 'TEXT' && m.text.startsWith('📍') && openMapLink(m.text)) return;
             setSelected(selected === m.id ? null : m.id);
           }}
@@ -290,7 +308,11 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
             toggleReaction.mutate({ messageId: m.id, emoji });
             setSelected(null);
           }}
-          onLongPress={() => setPinFor(m)}
+          onLongPress={() => {
+            // a photo opens on tap, so holding it gives the reactions; hold once more to pin
+            if (m.kind === 'IMAGE' && selected !== m.id) setSelected(m.id);
+            else setPinFor(m);
+          }}
           onRetry={() => retry(m)}
         />
       </View>
@@ -322,7 +344,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
             onJobDay={() => safePush(`/jobbdag/${activeAgreement.proposalId}`)}
           />
         ) : null}
-        <ListingStrip c={c} listing={listing} agreed={!!activeAgreement} offerCount={offerCount} onOpen={() => safePush(`/oppdrag/${c.listing.id}`)} />
+        <ListingStrip c={c} listing={listing} agreed={!!activeAgreement} offerCount={offerCount} onOpen={() => safePush(c.notice ? '/oppslagstavle' : `/oppdrag/${c.listing.id}`)} />
         {pinnedMessage ? <PinBar textValue={pinnedMessage.kind === 'IMAGE' ? `📷 ${nb.chat.image}` : pinnedMessage.text} onUnpin={unpin} /> : null}
       </View>
 
@@ -414,6 +436,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           onOpenChat={() => setSheet(null)}
         />
       ) : null}
+      <ImageViewer uri={viewer} onClose={() => setViewer(null)} />
       <ChatMenuSheet
         visible={sheet === 'menu'}
         onClose={closeSheet('menu')}
@@ -427,7 +450,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
         }}
         onListing={() => {
           setSheet(null);
-          safePush(`/oppdrag/${c.listing.id}`);
+          safePush(c.notice ? '/oppslagstavle' : `/oppdrag/${c.listing.id}`);
         }}
         onToggleMute={() => {
           const on = toggleMute();
@@ -519,9 +542,13 @@ function ProposalMessage({
   onAgreement: (id: string) => void;
 }) {
   const { data: p } = useProposal(proposalId);
+  const { data: offerListing } = useListing(p?.listingId ?? '');
   if (!p) return null;
   const mineSent = p.fromProfileId === meId;
-  const canRespond = p.toProfileId === meId && p.status === 'SENT' && !declining;
+  const expired = isExpiredProposal(p);
+  // another tilbud on the oppdrag is accepted → this one waits
+  const onHold = !!offerListing && isTakenListing(offerListing.status) && (p.status === 'SENT' || p.status === 'REVISION_PENDING');
+  const canRespond = p.toProfileId === meId && p.status === 'SENT' && !declining && !expired && !onHold;
   const state = p.status === 'ACCEPTED' ? 'accepted' : p.status === 'DECLINED' || p.status === 'WITHDRAWN' || p.status === 'CANCELLED' || declining ? 'declined' : 'pending';
   const fromName = mineSent ? 'deg' : counterpartName;
   return (
@@ -533,11 +560,12 @@ function ProposalMessage({
           fromLine={nb.chat.offerFrom(fromName, time)}
           price={formatPrice(p.price)}
           when={p.scheduledText}
+          duration={p.durationText}
           message={p.message}
           caveat={p.caveats}
           acceptedAt={acceptedAt}
           canRespond={canRespond || (declining && p.toProfileId === meId)}
-          pendingLabel={p.status === 'REVISION_PENDING' ? nb.mottatte.status.REVISION_PENDING : undefined}
+          pendingLabel={onHold ? nb.mottatte.onHold : expired ? nb.mottatte.expired : p.status === 'REVISION_PENDING' ? nb.mottatte.status.REVISION_PENDING : undefined}
           declinedTitle={p.status === 'WITHDRAWN' ? nb.chat.offerWithdrawn : p.status === 'CANCELLED' ? nb.mottatte.status.CANCELLED : undefined}
           declinedSub={p.status === 'WITHDRAWN' ? nb.tilbudDetalj.tlWithdrawnSub : mineSent ? nb.tilbudDetalj.closedDeclinedThem(counterpartName.split(' ')[0]) : undefined}
           onAccept={() => onAccept(p)}

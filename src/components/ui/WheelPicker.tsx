@@ -46,13 +46,17 @@ export function WheelPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Follow the value if it is changed from outside.
+  // Follow the value if it is changed from outside (state adjusted during render,
+  // the scroll position in an effect).
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    const idx = values.indexOf(value);
+    if (idx >= 0) setFocus(idx);
+  }
   useEffect(() => {
     const idx = values.indexOf(value);
-    if (idx >= 0 && idx !== focus) {
-      setFocus(idx);
-      ref.current?.scrollTo({ y: idx * WHEEL_ITEM_HEIGHT, animated: false });
-    }
+    if (idx >= 0) ref.current?.scrollTo({ y: idx * WHEEL_ITEM_HEIGHT, animated: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 

@@ -8,7 +8,7 @@ import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSession } from '@/auth/session';
-import { useVippsIdentity, type VippsIdentity } from '@/auth/mockVipps';
+import { useVippsIdentity, type VippsIdentity } from '@/auth/identity';
 import { colors, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Avatar,
@@ -96,7 +96,7 @@ export function ConsentScreen() {
   const router = useRouter();
   const me = useCurrentUser();
   const { session } = useSession();
-  // Identity from Vipps (mock login for now): name, masked phone, birth year.
+  // Identity from Vipps: name, masked phone, birth year.
   const vippsIdentity = useVippsIdentity();
   const [on, setOn] = useState<Record<ConsentId, boolean>>({
     terms: false,
@@ -139,17 +139,16 @@ export function ConsentScreen() {
     if (!ready) return;
     setBusy(true);
     try {
-      // Mock Vipps login has no account yet – nothing to store, just continue.
+      // Consents are only valid when stored with the signed-in account.
       const { data } = session ? await supabase.auth.getUser() : { data: { user: null } };
-      if (data.user) {
-        const row = { profile_id: data.user.id, terms: on.terms, privacy: on.privacy, age: on.age };
-        let { error } = await supabase.from('consent_records').insert({ ...row, tips: on.tips });
-        // `tips` arrives with migration 0024; never lose the required consents over it.
-        if (error && /tips/.test(error.message ?? '')) {
-          ({ error } = await supabase.from('consent_records').insert(row));
-        }
-        if (error) throw error;
+      if (!data.user) throw new Error('not signed in');
+      const row = { profile_id: data.user.id, terms: on.terms, privacy: on.privacy, age: on.age };
+      let { error } = await supabase.from('consent_records').insert({ ...row, tips: on.tips });
+      // `tips` arrives with migration 0024; never lose the required consents over it.
+      if (error && /tips/.test(error.message ?? '')) {
+        ({ error } = await supabase.from('consent_records').insert(row));
       }
+      if (error) throw error;
       router.replace('/oppsett');
     } catch (e) {
       reportError(e, { where: 'ConsentScreen.save' });

@@ -9,6 +9,8 @@ import { apiClient } from '@/api/client';
 import {
   listingKeys,
   useAddSavedSearch,
+  useMarkSavedSearchRun,
+  useSetSavedSearchAlert,
   useFollowedProfileIds,
   useProfile,
   useRemoveSavedSearch,
@@ -17,6 +19,7 @@ import {
   useToggleSavedListing,
 } from '@/api/queries';
 import { categoryArtId, categoryBySlug } from '@/domain/categories';
+import { isOpenListing, isTakenListing } from '@/domain/editing';
 import nb from '@/i18n/nb';
 import { dayMonth } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
@@ -35,6 +38,7 @@ import {
   ListingListSkeleton,
   ListRow,
   Note,
+  PressableScale,
   PAYMENT_NOTE,
   Screen,
   Segmented,
@@ -116,6 +120,11 @@ export function SavedScreen() {
                 <Animated.View key={l.id} exiting={ZoomOut.duration(300)} layout={LinearTransition.duration(300)}>
                   <ListingCard
                     title={l.title}
+                    statusBadge={
+                      isOpenListing(l.status)
+                        ? undefined
+                        : { label: isTakenListing(l.status) ? nb.saved.takenBadge : nb.saved.unavailableBadge, tone: 'dark' }
+                    }
                     category={categoryArtId(l.category.slug)}
                     photoUri={l.images[0]?.url}
                     ownerName={l.owner.displayName}
@@ -146,6 +155,7 @@ export function SavedScreen() {
         </View>
       ) : tab === 'search' ? (
         <View style={[styles.px, styles.stack12, styles.mt18]}>
+          {searches.length ? <Note icon="bell">{nb.saved.alertNote}</Note> : null}
           {searches.map((s) => (
             <Animated.View key={s.id} exiting={ZoomOut.duration(300)} layout={LinearTransition.duration(300)}>
               <SearchCard search={s} />
@@ -212,24 +222,53 @@ function filterChips(s: SavedSearchRecord): { icon: IconName; label: string }[] 
 function SearchCard({ search: s }: { search: SavedSearchRecord }) {
   const remove = useRemoveSavedSearch();
   const add = useAddSavedSearch();
-  // "Nye treff" = matches posted after the search was saved.
+  const setAlert = useSetSavedSearchAlert();
+  const markRun = useMarkSavedSearchRun();
+  // optimistic bell, falls back to the stored value if saving fails
+  const [bell, setBell] = useState<boolean | null>(null);
+  const alertOn = bell ?? !!s.alert;
+  // "Nye treff" = matches posted since the search was last run (or saved).
   const [{ data: hits }] = useQueries({
     queries: [{ queryKey: listingKeys.list(s.filter, s.sort), queryFn: () => apiClient.listListings({ filter: s.filter, sort: s.sort }) }],
   });
-  const fresh = (hits ?? []).filter((l) => l.createdAt > s.createdAt).length;
+  const since = s.lastRunAt ?? s.createdAt;
+  const fresh = (hits ?? []).filter((l) => l.createdAt > since).length;
   const q = s.filter.query?.trim() || s.name;
   const chips = filterChips(s);
-  const meta = [s.name !== q ? s.name : null, nb.saved.savedOn(dayMonth(s.createdAt))].filter(Boolean).join(' · ');
+  const meta = [
+    s.name !== q ? s.name : null,
+    nb.saved.savedOn(dayMonth(s.createdAt)),
+    s.lastRunAt ? nb.saved.lastRun(dayMonth(s.lastRunAt)) : null,
+    alertOn ? nb.saved.alertOn : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const toggleBell = () => {
+    const on = !alertOn;
+    haptics.light();
+    setBell(on);
+    setAlert.mutate(
+      { id: s.id, alert: on },
+      {
+        onSuccess: () => toast.success(on ? nb.saved.alertOnToast(q) : nb.saved.alertOffToast(q), { icon: on ? 'bell' : 'x' }),
+        onError: () => {
+          setBell(null);
+          toast.error(nb.toast.genericError);
+        },
+      },
+    );
+  };
 
   const del = () => {
     haptics.light();
     remove.mutate(s.id);
     toast.success(nb.saved.deleted(q), {
       icon: 'trash',
-      action: { label: nb.saved.undo, onPress: () => add.mutate({ name: s.name, filter: s.filter, sort: s.sort }) },
+      action: { label: nb.saved.undo, onPress: () => add.mutate({ name: s.name, filter: s.filter, sort: s.sort, alert: s.alert }) },
     });
   };
   const run = () => {
+    markRun.mutate(s.id);
     const params = new URLSearchParams();
     if (s.filter.query) params.set('q', s.filter.query);
     if (s.filter.categorySlug && s.filter.categorySlug !== 'alle') params.set('category', s.filter.categorySlug);
@@ -254,6 +293,16 @@ function SearchCard({ search: s }: { search: SavedSearchRecord }) {
             <Text style={[text.meta, styles.f125]}>{nb.saved.noNewHits}</Text>
           )}
         </View>
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityState={{ selected: alertOn }}
+          accessibilityLabel={alertOn ? nb.saved.alertOffAria(q) : nb.saved.alertOnAria(q)}
+          onPress={toggleBell}
+          scaleTo={0.9}
+          style={[styles.bell, alertOn && styles.bellOn]}
+        >
+          <Icon name="bell" size={18} color={alertOn ? colors.limeDeep : colors.mute} />
+        </PressableScale>
       </View>
       {chips.length ? (
         <View style={styles.fl}>
@@ -301,6 +350,17 @@ const styles = StyleSheet.create({
   bottom: { height: 60 },
   ss: { backgroundColor: colors.surface, borderRadius: 26, padding: 16, gap: 12 },
   ssTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  bell: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellOn: { backgroundColor: colors.limeTint, borderColor: colors.chipLimeBorder },
   ssIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   ssBody: { flex: 1, minWidth: 0, gap: 6 },
   q: { fontFamily: fonts.display, fontSize: 18, lineHeight: 21.6, letterSpacing: -0.36, color: colors.ink },

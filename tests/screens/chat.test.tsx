@@ -148,9 +148,12 @@ test('chat shows a day separator above the first message of a day', async () => 
   await waitFor(() => expect(screen.getByText(firstDayLabel)).toBeTruthy());
 });
 
-test('the Bilde tile uploads and posts an image message', async () => {
+test('the Bilde tile uploads several photos at once and posts one image message each', async () => {
   const uploads = require('@/lib/uploads');
-  const spy = jest.spyOn(uploads, 'pickAndUpload').mockResolvedValue({ path: 'u/x.jpg', publicUrl: 'https://example.com/x.jpg' });
+  const spy = jest.spyOn(uploads, 'pickAndUploadMany').mockResolvedValue([
+    { path: 'u/x.jpg', publicUrl: 'https://example.com/x.jpg' },
+    { path: 'u/y.jpg', publicUrl: 'https://example.com/y.jpg' },
+  ]);
   const conversation = chatRepository.getConversation('c-sara')!;
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
 
@@ -158,7 +161,7 @@ test('the Bilde tile uploads and posts an image message', async () => {
   await fireEvent.press(await screen.findByLabelText('Bilde'));
 
   await waitFor(() =>
-    expect(chatRepository.getMessages('c-sara').some((m) => m.kind === 'IMAGE')).toBe(true),
+    expect(chatRepository.getMessages('c-sara').filter((m) => m.kind === 'IMAGE').length).toBe(2),
   );
   spy.mockRestore();
 });
@@ -206,4 +209,12 @@ test('blocking from the menu replaces the composer with the blocked bar', async 
   expect(await screen.findByText(/Du har blokkert Andreas/)).toBeTruthy();
   await fireEvent.press(screen.getByText('Opphev'));
   await waitFor(() => expect(screen.queryByText(/Du har blokkert Andreas/)).toBeNull());
+});
+
+test('tapping a photo in the chat opens it in fullscreen', async () => {
+  const conv = chatRepository.getConversation('c-emma')!;
+  chatRepository.sendAttachment(conv.id, 'https://example.test/foto.jpg');
+  await renderWithProviders(<ChatScreen conversation={conv} onBack={() => {}} />);
+  await fireEvent.press(await screen.findByLabelText('Bilde. Trykk for å se det i fullskjerm'));
+  expect((await screen.findAllByLabelText('Lukk bildet')).length).toBeGreaterThan(0);
 });

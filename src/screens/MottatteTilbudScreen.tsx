@@ -5,6 +5,7 @@ import type { Proposal, ProposalStatus } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
+import { isExpiredProposal, isTakenListing } from '@/domain/editing';
 import { useListing, useProfile, useReceivedProposals } from '@/api/queries';
 import { formatTime, shortDate } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
@@ -31,7 +32,8 @@ import {
 
 type Seg = 'alle' | 'nye' | 'besvart';
 const DAY_MS = 24 * 60 * 60 * 1000;
-const isNew = (p: Proposal) => p.status === 'SENT';
+// a tilbud nobody answered within its 14 days is no longer "new" – it can't be accepted
+const isNew = (p: Proposal) => p.status === 'SENT' && !isExpiredProposal(p);
 const TONE: Record<ProposalStatus, PillTone> = {
   SENT: 'dark',
   REVISION_PENDING: 'warn',
@@ -260,7 +262,7 @@ function GroupCard({
         </View>
       </Pressable>
       {rows.map((p) => (
-        <OfferRow key={p.id} p={p} />
+        <OfferRow key={p.id} p={p} onHold={!!listing && isTakenListing(listing.status) && (p.status === 'SENT' || p.status === 'REVISION_PENDING')} />
       ))}
       {canCompare ? (
         <View style={styles.gfoot}>
@@ -280,12 +282,13 @@ function GroupCard({
   );
 }
 
-function OfferRow({ p }: { p: Proposal }) {
+/** `onHold`: another tilbud on the same oppdrag is accepted – this one waits. */
+function OfferRow({ p, onHold }: { p: Proposal; onHold: boolean }) {
   const { data: from } = useProfile(p.fromProfileId);
-  const fresh = isNew(p);
+  const fresh = isNew(p) && !onHold;
   const name = from?.displayName ?? '';
   const price = formatPrice(p.price);
-  const status = nb.mottatte.status[p.status];
+  const status = onHold ? nb.mottatte.onHold : isExpiredProposal(p) ? nb.mottatte.expired : nb.mottatte.status[p.status];
   return (
     <Pressable
       accessibilityRole="link"
@@ -308,12 +311,19 @@ function OfferRow({ p }: { p: Proposal }) {
             </View>
           ) : null}
         </View>
+        {from?.youthAge != null ? <Text style={[text.meta, styles.youth]}>{nb.youth.marker(from.youthAge)}</Text> : null}
         {p.scheduledText ? (
           <Text style={text.meta} numberOfLines={1}>
             {p.scheduledText}
           </Text>
         ) : null}
-        <Text style={[text.meta, styles.date]}>{nb.mottatte.sent(shortDate(p.createdAt).replace(/^\S+ /, ''), formatTime(p.createdAt))}</Text>
+        <Text style={[text.meta, styles.date]}>
+          {p.respondedAt && p.status === 'ACCEPTED'
+            ? nb.mottatte.accepted(shortDate(p.respondedAt).replace(/^\S+ /, ''))
+            : p.respondedAt && p.status === 'DECLINED'
+              ? nb.mottatte.declined(shortDate(p.respondedAt).replace(/^\S+ /, ''))
+              : nb.mottatte.sent(shortDate(p.createdAt).replace(/^\S+ /, ''), formatTime(p.createdAt))}
+        </Text>
       </View>
       <View style={styles.oright}>
         <Text style={[text.num, styles.f18]}>{price}</Text>
@@ -356,6 +366,7 @@ const styles = StyleSheet.create({
   sep: { position: 'absolute', top: 0, left: 74, right: 14, height: 1, backgroundColor: colors.line2 },
   newdot: { position: 'absolute', left: 6, top: '50%', width: 6, height: 6, marginTop: -3, borderRadius: 3, backgroundColor: colors.notifDot },
   ogrow: { flex: 1, minWidth: 0, gap: 4 },
+  youth: { fontFamily: text.label.fontFamily, color: colors.ink },
   oname: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   onameText: { fontFamily: text.label.fontFamily, fontSize: 15.5, lineHeight: 19, color: colors.ink, flexShrink: 1 },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 3 },

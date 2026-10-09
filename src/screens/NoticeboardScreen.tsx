@@ -1,16 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';
-import type { NoticeKind, NoticeboardPost } from '@/domain/types';
+import type { NoticeComment, NoticeKind, NoticeboardPost } from '@/domain/types';
+import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
-import { useCreateNoticeboardPost, useDeleteNoticeboardPost, useNoticeboard, useProfile } from '@/api/queries';
+import {
+  useCreateNoticeboardPost,
+  useDeleteNoticeboardPost,
+  useNoticeboard,
+  useProfile,
+  useSavedNoticeIds,
+  useAddNoticeComment,
+  useDeleteNoticeComment,
+  useNoticeComments,
+  useUpdateNoticeboardPost,
+  useToggleSavedNotice,
+} from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
 import { confirm } from '@/lib/confirm';
 import { postedAgo } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
+import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { pickAndUpload } from '@/lib/uploads';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -25,6 +38,7 @@ import {
   Icon,
   IconButton,
   Input,
+  Pill,
   Note,
   RowSkeleton,
   Screen,
@@ -38,6 +52,7 @@ import {
 type Filter = NoticeKind | 'ALL';
 const TITLE_MAX = 60;
 const TEXT_MAX = 400;
+const COMMENT_MAX = 500;
 
 /** Oppslagstavle (design/screens/Oppslagstavle.dc.html) – oppslag in your kommune. */
 export function NoticeboardScreen() {
@@ -48,6 +63,28 @@ export function NoticeboardScreen() {
   const kommune = me.municipality || scope.municipality || '';
   const { data, isLoading, isError, refetch } = useNoticeboard();
   const del = useDeleteNoticeboardPost();
+  const savedIds = useSavedNoticeIds().data ?? [];
+  const toggleSaved = useToggleSavedNotice();
+  const update = useUpdateNoticeboardPost();
+  // "Svar" opens the public comments under the oppslag
+  const { oppslag } = useLocalSearchParams<{ oppslag?: string }>();
+  const [commentsFor, setCommentsFor] = useState<string | null>(typeof oppslag === 'string' ? oppslag : null);
+  const [editing, setEditing] = useState<NoticeboardPost | null>(null);
+  const toggleDone = (post: NoticeboardPost) =>
+    update.mutate(
+      { id: post.id, patch: { done: !post.doneAt } },
+      {
+        onSuccess: () => toast.success(post.doneAt ? nb.noticeboard.reopened : nb.noticeboard.markedDone, { icon: post.doneAt ? 'undo' : 'check', bottom: 100 }),
+        onError: () => toast.error(nb.toast.genericError, { bottom: 100 }),
+      },
+    );
+  const save = (id: string) => {
+    const was = savedIds.includes(id);
+    toggleSaved.mutate(id, {
+      onSuccess: () => toast.success(was ? nb.noticeboard.unsaved : nb.noticeboard.saved, { icon: was ? 'x' : 'bookmark', bottom: 100 }),
+      onError: () => toast.error(nb.toast.genericError, { bottom: 100 }),
+    });
+  };
 
   const [filter, setFilter] = useState<Filter>('ALL');
   const [compose, setCompose] = useState(false);
@@ -130,7 +167,18 @@ export function NoticeboardScreen() {
           ) : shown.length ? (
             shown.map((p) => (
               <Animated.View key={p.id} entering={p.id === freshId ? FadeInUp.springify().damping(14) : undefined} layout={LinearTransition.duration(300)}>
-                <PostCard post={p} now={now} fresh={p.id === freshId} mine={p.authorProfileId === me.id} onDelete={() => remove(p.id)} />
+                <PostCard
+                  post={p}
+                  now={now}
+                  fresh={p.id === freshId}
+                  mine={p.authorProfileId === me.id}
+                  saved={savedIds.includes(p.id)}
+                  onReply={() => setCommentsFor(p.id)}
+                  onSave={() => save(p.id)}
+                  onEdit={() => setEditing(p)}
+                  onToggleDone={() => toggleDone(p)}
+                  onDelete={() => remove(p.id)}
+                />
               </Animated.View>
             ))
           ) : (
@@ -168,15 +216,53 @@ export function NoticeboardScreen() {
           setFreshId(post.id);
         }}
       />
+      {/* the same sheet, prefilled, for the owner's "Rediger" */}
+      <ComposeSheet
+        key={editing?.id ?? 'edit'}
+        visible={!!editing}
+        editing={editing ?? undefined}
+        kommune={kommune}
+        place={me.place || kommune}
+        userId={me.id}
+        onClose={() => setEditing(null)}
+        onPublished={() => setEditing(null)}
+      />
+      <CommentsSheet
+        post={all.find((p) => p.id === commentsFor) ?? null}
+        meId={me.id}
+        onClose={() => setCommentsFor(null)}
+      />
     </>
   );
 }
 
-function PostCard({ post, now, fresh, mine, onDelete }: { post: NoticeboardPost; now: number; fresh: boolean; mine: boolean; onDelete: () => void }) {
+function PostCard({
+  post,
+  now,
+  fresh,
+  mine,
+  saved,
+  onReply,
+  onSave,
+  onEdit,
+  onToggleDone,
+  onDelete,
+}: {
+  post: NoticeboardPost;
+  now: number;
+  fresh: boolean;
+  mine: boolean;
+  saved: boolean;
+  onReply: () => void;
+  onSave: () => void;
+  onEdit: () => void;
+  onToggleDone: () => void;
+  onDelete: () => void;
+}) {
   const { data: author } = useProfile(post.authorProfileId);
   const k = NOTICE_STYLE[post.kind];
   return (
-    <View style={[styles.post, shadow.card, fresh && styles.postFresh]}>
+    <View style={[styles.post, shadow.card, fresh && styles.postFresh, !!post.doneAt && styles.postDone]}>
       <View style={styles.postHead}>
         <Avatar initials={author?.initials ?? '·'} uri={author?.avatarUrl} seed={post.authorProfileId} size={40} ring={false} />
         <View style={styles.flex}>
@@ -184,7 +270,9 @@ function PostCard({ post, now, fresh, mine, onDelete }: { post: NoticeboardPost;
             {author?.displayName ?? ''}
           </Text>
           <Text style={[text.meta, styles.f125]}>
-            {[post.place, fresh ? nb.noticeboard.justNow : postedAgo(post.createdAt, new Date(now))].filter(Boolean).join(' · ')}
+            {[post.place, fresh ? nb.noticeboard.justNow : postedAgo(post.createdAt, new Date(now)), post.editedAt ? nb.noticeboard.edited : null]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
         </View>
         <View style={[styles.kp, { backgroundColor: k.bg }]}>
@@ -193,6 +281,7 @@ function PostCard({ post, now, fresh, mine, onDelete }: { post: NoticeboardPost;
         </View>
       </View>
       <View style={styles.gap6}>
+        {post.doneAt ? <Pill label={nb.noticeboard.done} tone="ok" icon="check" size="sm" style={styles.selfStart} /> : null}
         <Text style={styles.title}>{post.title}</Text>
         {post.body ? <Text style={styles.body}>{post.body}</Text> : null}
       </View>
@@ -201,10 +290,184 @@ function PostCard({ post, now, fresh, mine, onDelete }: { post: NoticeboardPost;
           <Image source={{ uri: post.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
         </View>
       ) : null}
-      {mine ? (
-        <View style={styles.pact}>
-          <IconButton icon="trash" variant="ghost" iconSize={18} iconColor={colors.danger} accessibilityLabel={nb.noticeboard.remove} onPress={onDelete} />
+      <View style={styles.pact}>
+        <Button
+          label={post.replies ? nb.noticeboard.replies(post.replies) : nb.noticeboard.reply}
+          icon="reply"
+          variant="ink"
+          size="sm"
+          block={false}
+          accessibilityLabel={nb.noticeboard.replyAria(post.title, post.replies ?? 0)}
+          onPress={onReply}
+        />
+        {mine ? (
+          <View style={styles.own}>
+            <IconButton icon="edit" variant="ghost" iconSize={18} accessibilityLabel={nb.noticeboard.editAria(post.title)} onPress={onEdit} />
+            <IconButton
+              icon={post.doneAt ? 'undo' : 'check'}
+              variant="ghost"
+              iconSize={18}
+              iconColor={post.doneAt ? colors.ink2 : colors.ok}
+              accessibilityLabel={post.doneAt ? nb.noticeboard.reopenAria(post.title) : nb.noticeboard.doneAria(post.title)}
+              onPress={onToggleDone}
+            />
+            <IconButton icon="trash" variant="ghost" iconSize={18} iconColor={colors.danger} accessibilityLabel={nb.noticeboard.remove} onPress={onDelete} />
+          </View>
+        ) : (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: saved }}
+              accessibilityLabel={saved ? nb.noticeboard.savedLabel : nb.noticeboard.save}
+              onPress={onSave}
+              style={[styles.savebtn, saved && styles.savebtnOn]}
+            >
+              <Icon name="bookmark" size={16} color={saved ? colors.white : colors.ink2} filled={saved} />
+              <Text style={[styles.savebtnText, saved && styles.white]}>{saved ? nb.noticeboard.savedLabel : nb.noticeboard.save}</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
+/** "Svar": public comments under one oppslag, oldest first, with a field to add your own. */
+function CommentsSheet({ post, meId, onClose }: { post: NoticeboardPost | null; meId: string; onClose: () => void }) {
+  return (
+    <Sheet
+      visible={!!post}
+      onClose={onClose}
+      title={nb.noticeboard.commentsTitle}
+      subtitle={post?.title}
+      titleSize="h2"
+      scroll
+      heightRatio={0.85}
+    >
+      {post ? (
+        <Comments
+          post={post}
+          meId={meId}
+          onReport={(c) => {
+            onClose();
+            safePush(`/rapporter?kommentar=${c.id}&profil=${c.authorProfileId}`);
+          }}
+        />
+      ) : null}
+    </Sheet>
+  );
+}
+
+function Comments({ post, meId, onReport }: { post: NoticeboardPost; meId: string; onReport: (c: NoticeComment) => void }) {
+  const { data, isLoading, isError, refetch } = useNoticeComments(post.id);
+  const add = useAddNoticeComment(post.id);
+  const del = useDeleteNoticeComment(post.id);
+  const [draft, setDraft] = useState('');
+  const [now] = useState(() => Date.now());
+  const list = data ?? [];
+  const mineOppslag = post.authorProfileId === meId;
+
+  const send = () => {
+    const t = draft.trim();
+    if (!t || add.isPending) return;
+    add.mutate(t, {
+      onSuccess: () => {
+        setDraft('');
+        haptics.light();
+      },
+      onError: (e) => toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError),
+    });
+  };
+
+  return (
+    <View style={styles.cwrap}>
+      {post.doneAt ? (
+        <Note icon="check">{nb.noticeboard.doneNote}</Note>
+      ) : (
+        <View style={styles.cform}>
+          <Input
+            value={draft}
+            onChangeText={(v) => setDraft(v.slice(0, COMMENT_MAX))}
+            placeholder={nb.noticeboard.commentPh}
+            multiline
+            accessibilityLabel={nb.noticeboard.commentLabel}
+            style={styles.cinput}
+          />
+          <View style={styles.cformFoot}>
+            <Text style={text.hint}>{`${draft.length}/${COMMENT_MAX}`}</Text>
+            <Button
+              label={nb.noticeboard.commentSend}
+              icon="send"
+              variant="ink"
+              size="sm"
+              block={false}
+              disabled={!draft.trim()}
+              loading={add.isPending}
+              onPress={send}
+            />
+          </View>
+          <Note icon="eye">{nb.noticeboard.commentPublic}</Note>
         </View>
+      )}
+
+      {isLoading ? (
+        <RowSkeleton />
+      ) : isError ? (
+        <ErrorState onRetry={() => void refetch()} />
+      ) : list.length === 0 ? (
+        <Text style={[text.meta, styles.cempty]}>{nb.noticeboard.noComments}</Text>
+      ) : (
+        list.map((c) => (
+          <CommentRow
+            key={c.id}
+            comment={c}
+            now={now}
+            byOwner={c.authorProfileId === post.authorProfileId}
+            canDelete={c.authorProfileId === meId || mineOppslag}
+            onDelete={() => del.mutate(c.id, { onError: () => toast.error(nb.toast.genericError) })}
+            onReport={c.authorProfileId === meId ? undefined : () => onReport(c)}
+          />
+        ))
+      )}
+    </View>
+  );
+}
+
+function CommentRow({
+  comment: c,
+  now,
+  byOwner,
+  canDelete,
+  onDelete,
+  onReport,
+}: {
+  comment: NoticeComment;
+  now: number;
+  byOwner: boolean;
+  canDelete: boolean;
+  onDelete: () => void;
+  /** someone else's comment can be reported */
+  onReport?: () => void;
+}) {
+  const { data: author } = useProfile(c.authorProfileId);
+  return (
+    <View style={styles.crow}>
+      <Avatar initials={author?.initials ?? '·'} uri={author?.avatarUrl} seed={c.authorProfileId} size={36} ring={false} />
+      <View style={styles.cbody}>
+        <View style={styles.chead}>
+          <Text style={styles.cname} numberOfLines={1}>
+            {author?.displayName ?? ''}
+          </Text>
+          {byOwner ? <Pill label={nb.noticeboard.author} tone="neutral" size="sm" /> : null}
+          <Text style={[text.meta, styles.f125]}>{postedAgo(c.createdAt, new Date(now))}</Text>
+        </View>
+        <Text style={styles.ctext}>{c.body}</Text>
+      </View>
+      {canDelete ? (
+        <IconButton icon="trash" variant="ghost" iconSize={16} iconColor={colors.mute} accessibilityLabel={nb.noticeboard.commentDelete} onPress={onDelete} />
+      ) : null}
+      {onReport ? (
+        <IconButton icon="flag" variant="ghost" iconSize={16} iconColor={colors.mute} accessibilityLabel={nb.noticeboard.commentReport} onPress={onReport} />
       ) : null}
     </View>
   );
@@ -212,6 +475,7 @@ function PostCard({ post, now, fresh, mine, onDelete }: { post: NoticeboardPost;
 
 function ComposeSheet({
   visible,
+  editing,
   kommune,
   place,
   userId,
@@ -219,6 +483,8 @@ function ComposeSheet({
   onPublished,
 }: {
   visible: boolean;
+  /** set → the sheet edits this oppslag instead of making a new one */
+  editing?: NoticeboardPost;
   kommune: string;
   place: string;
   userId: string;
@@ -226,10 +492,13 @@ function ComposeSheet({
   onPublished: (post: NoticeboardPost) => void;
 }) {
   const create = useCreateNoticeboardPost();
-  const [kind, setKind] = useState<NoticeKind | null>(null);
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [photo, setPhoto] = useState<{ path: string; url: string } | null>(null);
+  const update = useUpdateNoticeboardPost();
+  const [kind, setKind] = useState<NoticeKind | null>(editing?.kind ?? null);
+  const [title, setTitle] = useState(editing?.title ?? '');
+  const [body, setBody] = useState(editing?.body ?? '');
+  const [photo, setPhoto] = useState<{ path: string; url: string } | null>(
+    editing?.imageUrl ? { path: editing.imageUrl, url: editing.imageUrl } : null,
+  );
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
   const [shake, setShake] = useState(0);
@@ -265,6 +534,20 @@ function ComposeSheet({
       haptics.warning();
       return;
     }
+    if (editing) {
+      update.mutate(
+        { id: editing.id, patch: { kind, title: title.trim(), body: body.trim(), imagePath: photo?.path ?? null } },
+        {
+          onSuccess: (post) => {
+            haptics.success();
+            toast.success(nb.noticeboard.savedEdit, { bottom: 100 });
+            onPublished(post);
+          },
+          onError: (e) => toast.error(serverMessage(e, nb.toast.genericError)),
+        },
+      );
+      return;
+    }
     create.mutate(
       { kind, title: title.trim(), body: body.trim(), place, municipality: kommune, imagePath: photo?.path },
       {
@@ -274,13 +557,13 @@ function ComposeSheet({
           reset();
           onPublished(post);
         },
-        onError: () => toast.error(nb.toast.genericError),
+        onError: (e) => toast.error(serverMessage(e, nb.toast.genericError)),
       },
     );
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={nb.noticeboard.newPost} titleSize="h2" scroll heightRatio={0.9}>
+    <Sheet visible={visible} onClose={onClose} title={editing ? nb.noticeboard.editTitle : nb.noticeboard.newPost} titleSize="h2" scroll heightRatio={0.9}>
       <View style={styles.labelRow}>
         <Text style={text.label}>{nb.noticeboard.typeLabel}</Text>
         <Text style={text.hint}>{nb.noticeboard.typeHint}</Text>
@@ -363,7 +646,7 @@ function ComposeSheet({
         </Text>
       </View>
 
-      <Button label={nb.noticeboard.publish} variant="lime" size="lg" icon="send" loading={create.isPending} onPress={publish} style={styles.mt18} />
+      <Button label={editing ? nb.noticeboard.saveEdit : nb.noticeboard.publish} variant="lime" size="lg" icon="send" loading={create.isPending || update.isPending} onPress={publish} style={styles.mt18} />
     </Sheet>
   );
 }
@@ -408,7 +691,33 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.display, fontSize: 17, lineHeight: 21, letterSpacing: -0.2, color: colors.ink },
   body: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 21.75, color: colors.ink2 },
   tile: { height: 150, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.track },
-  pact: { flexDirection: 'row', justifyContent: 'flex-end' },
+  pact: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  savebtn: {
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  savebtnOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  savebtnText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.ink2 },
+  own: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto' },
+  postDone: { opacity: 0.72 },
+  selfStart: { alignSelf: 'flex-start' },
+  cwrap: { gap: 14 },
+  cform: { gap: 8 },
+  cinput: { minHeight: 76, textAlignVertical: 'top' },
+  cformFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cempty: { textAlign: 'center', paddingVertical: 18 },
+  crow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  cbody: { flex: 1, minWidth: 0, gap: 3, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.m, backgroundColor: colors.bg },
+  chead: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  cname: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.ink, flexShrink: 1 },
+  ctext: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 21, color: colors.ink },
   empty: {
     padding: 26,
     alignItems: 'center',

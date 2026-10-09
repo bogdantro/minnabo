@@ -23,7 +23,7 @@ import { parseDurationHours } from '@/lib/deviceCalendar';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
-import { pickAndUpload } from '@/lib/uploads';
+import { pickAndUploadMany } from '@/lib/uploads';
 import { colors, fonts, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import { TryggTurCard } from '@/components/TryggTurCard';
@@ -44,11 +44,13 @@ import {
   PhotoAddTile,
   ScaleIn,
   Screen,
+  Segmented,
   Sheet,
   StickyFooter,
   SubHeader,
   Tabs,
 } from '@/components/ui';
+import type { ChecklistItem, JobParty, JobPhotoPhase, MaterialPayer } from '@/domain/types';
 
 type Tab = 'sjekk' | 'mat' | 'bilder';
 type Run = 'idle' | 'running' | 'paused' | 'stopped';
@@ -77,43 +79,59 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
   const sendMessage = useSendMessage(proposal?.conversationId ?? '', me.id);
 
   const [tab, setTab] = useState<Tab>('sjekk');
-  const [stopped, setStopped] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [newItem, setNewItem] = useState('');
   const [matOpen, setMatOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [caption, setCaption] = useState('');
 
   const running = ws?.timerStartedAt != null;
+  // the clock also ticks during a pause ("Pauser" counts up)
+  const ticking = running || ws?.pausedAt != null;
   useEffect(() => {
-    if (!running) return;
+    if (!ticking) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [running]);
+  }, [ticking]);
 
   if (!proposal) {
     return <FallbackScreen status={isError ? 'error' : isLoading ? 'loading' : 'empty'} onRetry={() => refetch()} title={nb.jobWorkspace.screenTitle} />;
   }
 
   const first = (other?.displayName ?? '').split(' ')[0];
-  const run: Run = running ? 'running' : stopped ? 'stopped' : ws && ws.timerAccumMs > 0 ? 'paused' : 'idle';
+  const run: Run = running ? 'running' : ws?.timerStoppedAt ? 'stopped' : ws && ws.timerAccumMs > 0 ? 'paused' : 'idle';
+  const paused = ws ? ws.pausedMs + (ws.pausedAt ? Math.max(0, now - ws.pausedAt) : 0) : 0;
+  // CLIENT posted the oppdrag (received the tilbud), HELPER sent it.
+  const iAmHelper = proposal.fromProfileId === me.id;
+  const myFirst = me.displayName.split(' ')[0];
+  const party = {
+    CLIENT: iAmHelper
+      ? { name: first, initials: other?.initials ?? '·', uri: other?.avatarUrl, me: false }
+      : { name: myFirst, initials: me.initials, uri: me.avatarUrl, me: true },
+    HELPER: iAmHelper
+      ? { name: myFirst, initials: me.initials, uri: me.avatarUrl, me: true }
+      : { name: first, initials: other?.initials ?? '·', uri: other?.avatarUrl, me: false },
+  };
   const tracked = ws ? ws.timerAccumMs + (ws.timerStartedAt ? Math.max(0, now - ws.timerStartedAt) : 0) : 0;
-  const session = ws?.timerStartedAt ? Math.max(0, now - ws.timerStartedAt) : 0;
   const secs = Math.floor(tracked / 1000);
   const hh = Math.floor(secs / 3600);
   const mm = Math.floor((secs % 3600) / 60);
   const ss = secs % 60;
-  const estText = listing?.task?.durationText;
+  const estText = agreement?.durationText ?? proposal.durationText ?? listing?.task?.durationText;
   const estMs = estText ? parseDurationHours(estText) * 3_600_000 : 0;
   const pct = estMs ? Math.min(100, Math.round((tracked / estMs) * 100)) : 0;
   const items = ws?.checklist ?? [];
   const done = items.filter((x) => x.done).length;
   const mats = ws?.materials ?? [];
   const sum = mats.reduce((a, m) => a + m.amountKr, 0);
+  const sumOf = (payer: MaterialPayer) => mats.filter((m) => (m.payer ?? 'CLIENT') === payer).reduce((a, m) => a + m.amountKr, 0);
   const befores = ws?.photos.filter((p) => p.phase === 'BEFORE') ?? [];
   const afters = ws?.photos.filter((p) => p.phase === 'AFTER') ?? [];
   const pairs = Math.min(befores.length, afters.length);
-  const extras = [...befores.slice(pairs), ...afters.slice(pairs)];
+  const extras = [...befores.slice(pairs), ...afters.slice(pairs), ...(ws?.photos.filter((p) => p.phase === 'DURING') ?? [])];
+  const phaseLabel = { BEFORE: nb.jobWorkspace.before, AFTER: nb.jobWorkspace.after, DURING: nb.jobWorkspace.alongTheWay };
+  const clock = (iso?: string) => (iso ? `kl. ${formatTime(iso)}` : null);
   const photoCount = ws?.photos.length ?? 0;
   const cat = categoryArtId(listing?.category.slug ?? 'annet');
   const when = agreement?.scheduledText ?? proposal.scheduledText;
@@ -123,7 +141,6 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
     update.mutate({ kind: 'toggleTimer' });
   };
   const start = () => {
-    setStopped(false);
     if (!running) toggle();
     toast.info(nb.jobWorkspace.resumedToast, { icon: 'play', bottom: 150 });
   };
@@ -132,8 +149,8 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
     toast.info(nb.jobWorkspace.pausedToast, { icon: 'pause', bottom: 150 });
   };
   const stop = () => {
-    if (running) toggle();
-    setStopped(true);
+    haptics.light();
+    update.mutate({ kind: 'stopTimer' });
     toast.info(nb.jobWorkspace.stoppedToast(dur(tracked)), { icon: 'clock', bottom: 150 });
   };
   const toggleItem = (id: string) => {
@@ -148,12 +165,19 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
     setNewItem('');
     toast.success(nb.jobWorkspace.addedToast, { icon: 'plus', bottom: 150 });
   };
-  const addPhoto = async (phase: 'BEFORE' | 'AFTER') => {
+  // Felles → client → helper → Felles
+  const cycleWho = (it: ChecklistItem) => {
+    const next: JobParty | undefined = !it.who ? 'CLIENT' : it.who === 'CLIENT' ? 'HELPER' : undefined;
+    haptics.light();
+    update.mutate({ kind: 'setChecklistWho', itemId: it.id, who: next });
+  };
+  const addPhoto = async (phase: JobPhotoPhase) => {
     setUploading(true);
     try {
-      const res = await pickAndUpload({ bucket: 'listing-images', folder: me.id, source: 'library' });
-      if (res) {
-        update.mutate({ kind: 'addPhoto', url: res.publicUrl, phase });
+      const res = await pickAndUploadMany({ bucket: 'listing-images', folder: me.id, max: 10 });
+      for (const r of res) update.mutate({ kind: 'addPhoto', url: r.publicUrl, phase, caption: caption.trim() || undefined });
+      if (res.length) {
+        setCaption('');
         setPhotoOpen(false);
         toast.success(nb.jobWorkspace.photoShared(first), { icon: 'image', bottom: 150 });
       }
@@ -245,8 +269,8 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
               </>
             ) : null}
             <View style={styles.hstats}>
-              <HStat label={nb.jobWorkspace.started} value={ws?.timerStartedAt ? `kl. ${formatTime(new Date(ws.timerStartedAt).toISOString())}` : '–'} />
-              <HStat label={nb.jobWorkspace.session} value={running ? dur(session) : '–'} />
+              <HStat label={nb.jobWorkspace.started} value={ws?.firstStartedAt ? `kl. ${formatTime(new Date(ws.firstStartedAt).toISOString())}` : '–'} />
+              <HStat label={nb.jobWorkspace.pauses} value={dur(paused)} />
               <HStat label={nb.jobWorkspace.total} value={dur(tracked)} />
             </View>
             <View style={styles.hbtns}>
@@ -305,6 +329,23 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
                     {i > 0 ? <View style={styles.taskLine} /> : null}
                     <Checkbox checked={it.done} />
                     <StrikeText textValue={it.text} done={it.done} />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={nb.jobWorkspace.whoA11y(it.who ? party[it.who].name : nb.jobWorkspace.shared)}
+                      accessibilityHint={nb.jobWorkspace.whoHint}
+                      hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+                      onPress={() => cycleWho(it)}
+                      style={styles.who}
+                    >
+                      {it.who ? (
+                        <Avatar initials={party[it.who].initials} uri={party[it.who].uri} me={party[it.who].me} seed={otherId} size={22} ring={false} />
+                      ) : (
+                        <View style={styles.whoShared}>
+                          <Icon name="users" size={12} color={colors.mute} />
+                        </View>
+                      )}
+                      <Text style={styles.whoText}>{it.who ? party[it.who].name : nb.jobWorkspace.shared}</Text>
+                    </Pressable>
                   </Pressable>
                 ))}
                 <View style={styles.addrow}>
@@ -338,17 +379,26 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
                     <View style={styles.mi}>
                       <Icon name="tag" size={18} color={colors.limeDeep} />
                     </View>
-                    <Text style={[styles.matName, styles.flex1]}>{m.label}</Text>
+                    <View style={styles.flex1}>
+                      <Text style={styles.matName}>{m.label}</Text>
+                      <WhoPill payer={m.payer ?? 'CLIENT'} party={party} />
+                    </View>
                     <View style={styles.mamt}>
                       <Text style={styles.mamtB}>{m.amountKr ? `${groupThousands(m.amountKr)} kr` : nb.jobWorkspace.bringsOwn}</Text>
-                      <Text style={styles.mamtS}>{m.amountKr ? nb.jobWorkspace.approx : nb.jobWorkspace.ownGear}</Text>
+                      <Text style={styles.mamtS}>
+                        {m.payer === 'HELPER_OUTLAY' ? nb.jobWorkspace.outlay : m.amountKr ? nb.jobWorkspace.approx : nb.jobWorkspace.ownGear}
+                      </Text>
                     </View>
                   </Pressable>
                 ))}
                 <View style={styles.sumrow}>
                   <View>
                     <Text style={[text.label, styles.f15]}>{nb.jobWorkspace.sumMaterials}</Text>
-                    <Text style={[text.meta, styles.mt3]}>{nb.jobWorkspace.materialsCount(mats.length)}</Text>
+                    <Text style={[text.meta, styles.mt3]}>
+                      {sum
+                        ? nb.jobWorkspace.split(party.CLIENT.name, `${groupThousands(sumOf('CLIENT'))} kr`, party.HELPER.name, `${groupThousands(sumOf('HELPER_OUTLAY'))} kr`)
+                        : nb.jobWorkspace.materialsCount(mats.length)}
+                    </Text>
                   </View>
                   <Text style={[text.num, styles.f24]}>{`${groupThousands(sum)} kr`}</Text>
                 </View>
@@ -362,7 +412,12 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
                 <View key={befores[i].id} style={[styles.card, styles.pair, shadow.card]}>
                   <BeforeAfter before={befores[i].url} after={afters[i].url} accessibilityLabel={nb.jobWorkspace.compareA11y(i + 1)} />
                   <View style={styles.pairFoot}>
-                    <Text style={[text.label, styles.f15, styles.flex1]}>{nb.jobWorkspace.pairTitle(i + 1)}</Text>
+                    <View style={styles.flex1}>
+                      <Text style={[text.label, styles.f15]}>{befores[i].caption ?? afters[i].caption ?? nb.jobWorkspace.pairTitle(i + 1)}</Text>
+                      {clock(befores[i].at) && clock(afters[i].at) ? (
+                        <Text style={text.meta}>{nb.jobWorkspace.pairMeta(clock(befores[i].at)!, clock(afters[i].at)!)}</Text>
+                      ) : null}
+                    </View>
                     <View style={styles.pill}>
                       <Icon name="image" size={14} color={colors.ink2} />
                       <Text style={styles.pillText}>{nb.jobWorkspace.twoPhotos}</Text>
@@ -379,7 +434,9 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
                   {extras.map((p) => (
                     <View key={p.id} style={styles.ptile}>
                       <CategoryArt category={cat} uri={p.url} width="100%" height="100%" radius={18} />
-                      <Text style={styles.fchip}>{p.phase === 'BEFORE' ? nb.jobWorkspace.before : nb.jobWorkspace.after}</Text>
+                      <Text style={styles.fchip} numberOfLines={1}>
+                        {p.caption ?? phaseLabel[p.phase]}
+                      </Text>
                     </View>
                   ))}
                   <View style={styles.ptile}>
@@ -425,15 +482,20 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
       <MaterialSheet
         visible={matOpen}
         onClose={() => setMatOpen(false)}
-        onAdd={(label, amountKr) => {
-          update.mutate({ kind: 'addMaterial', label, amountKr });
+        party={party}
+        onAdd={(label, amountKr, payer) => {
+          update.mutate({ kind: 'addMaterial', label, amountKr, payer });
           setMatOpen(false);
           toast.success(nb.jobWorkspace.matAdded(label), { icon: 'plus', bottom: 150 });
         }}
       />
       <Sheet visible={photoOpen} onClose={() => setPhotoOpen(false)} title={nb.jobWorkspace.photoPhase} titleSize="h2">
         <View style={styles.gap10}>
+          <Field label={nb.jobWorkspace.captionLabel} hint={nb.jobWorkspace.optional}>
+            <Input value={caption} onChangeText={setCaption} placeholder={nb.jobWorkspace.captionPh} maxLength={40} accessibilityLabel={nb.jobWorkspace.captionLabel} />
+          </Field>
           <Button label={nb.jobWorkspace.photoBefore} icon="image" variant="ghost" loading={uploading} onPress={() => void addPhoto('BEFORE')} />
+          <Button label={nb.jobWorkspace.photoDuring} icon="camera" variant="ghost" loading={uploading} onPress={() => void addPhoto('DURING')} />
           <Button label={nb.jobWorkspace.photoAfter} icon="image" loading={uploading} onPress={() => void addPhoto('AFTER')} />
         </View>
       </Sheet>
@@ -519,9 +581,31 @@ function StrikeText({ textValue, done }: { textValue: string; done: boolean }) {
   );
 }
 
-function MaterialSheet({ visible, onClose, onAdd }: { visible: boolean; onClose: () => void; onAdd: (label: string, kr: number) => void }) {
+type Party = Record<JobParty, { name: string; initials: string; uri?: string; me: boolean }>;
+const PAYER_TONE: Record<MaterialPayer, { bg: string; fg: string }> = {
+  CLIENT: { bg: colors.neutralPill, fg: colors.ink },
+  HELPER: { bg: colors.cyanTint, fg: colors.cyanDeep },
+  HELPER_OUTLAY: { bg: colors.warnTint, fg: colors.warn },
+};
+const payerLabel = (payer: MaterialPayer, party: Party) =>
+  payer === 'CLIENT' ? nb.jobWorkspace.buys(party.CLIENT.name) : payer === 'HELPER' ? nb.jobWorkspace.brings(party.HELPER.name) : nb.jobWorkspace.paysOut(party.HELPER.name);
+
+/** `.whop` – who sorts out a material. */
+function WhoPill({ payer, party }: { payer: MaterialPayer; party: Party }) {
+  const who = party[payer === 'CLIENT' ? 'CLIENT' : 'HELPER'];
+  const tone = PAYER_TONE[payer];
+  return (
+    <View style={[styles.whop, { backgroundColor: tone.bg }]}>
+      <Avatar initials={who.initials} uri={who.uri} me={who.me} seed={who.name} size={16} ring={false} />
+      <Text style={[styles.whopText, { color: tone.fg }]}>{payerLabel(payer, party)}</Text>
+    </View>
+  );
+}
+
+function MaterialSheet({ visible, onClose, onAdd, party }: { visible: boolean; onClose: () => void; onAdd: (label: string, kr: number, payer: MaterialPayer) => void; party: Party }) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [payer, setPayer] = useState<MaterialPayer>('CLIENT');
   const [err, setErr] = useState(0);
   const save = () => {
     const n = name.trim();
@@ -529,9 +613,10 @@ function MaterialSheet({ visible, onClose, onAdd }: { visible: boolean; onClose:
       setErr((e) => e + 1);
       return;
     }
-    onAdd(n, Number(amount) || 0);
+    onAdd(n, Number(amount) || 0, payer);
     setName('');
     setAmount('');
+    setPayer('CLIENT');
     setErr(0);
   };
   return (
@@ -552,6 +637,13 @@ function MaterialSheet({ visible, onClose, onAdd }: { visible: boolean; onClose:
       <Field label={nb.jobWorkspace.matAmount} hint={nb.jobWorkspace.optional} style={styles.mt16}>
         <AmountInput value={amount} onChangeText={setAmount} suffix="kr" accessibilityLabel={nb.jobWorkspace.matAmount} />
       </Field>
+      <Text style={[text.label, styles.whoLabel]}>{nb.jobWorkspace.whoSorts}</Text>
+      <Segmented
+        accessibilityLabel={nb.jobWorkspace.whoSorts}
+        value={payer}
+        onChange={setPayer}
+        options={(['CLIENT', 'HELPER', 'HELPER_OUTLAY'] as MaterialPayer[]).map((v) => ({ value: v, label: payerLabel(v, party) }))}
+      />
       <Note style={styles.mt14}>{nb.jobWorkspace.matSheetNote}</Note>
       <Button label={nb.jobWorkspace.add} icon="plus" size="lg" onPress={save} style={styles.mt18} />
     </Sheet>
@@ -625,6 +717,12 @@ const styles = StyleSheet.create({
   alldoneText: { flex: 1, fontFamily: text.label.fontFamily, fontSize: 14.5, lineHeight: 19, color: colors.okText },
   list: { overflow: 'hidden' },
   emptyLine: { padding: 16 },
+  who: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  whoShared: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.track, alignItems: 'center', justifyContent: 'center' },
+  whoText: { fontFamily: fonts.bodyBold, fontSize: 11.5, color: colors.mute },
+  whop: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, marginTop: 5, height: 22, paddingLeft: 3, paddingRight: 8, borderRadius: radius.pill },
+  whopText: { fontFamily: fonts.bodyBold, fontSize: 11.5 },
+  whoLabel: { marginTop: 18, marginBottom: 10 },
   task: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, minHeight: 60 },
   taskLine: { position: 'absolute', top: 0, left: 52, right: 0, height: 1, backgroundColor: colors.line2 },
   tx: { fontFamily: text.bodySemi.fontFamily, fontSize: 15, lineHeight: 20, color: colors.ink },

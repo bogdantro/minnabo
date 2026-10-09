@@ -20,6 +20,7 @@ let suspended = new Set<string>();
 let hidden = new Set<string>();
 let mainOverride: Record<string, boolean> = {};
 let inactive = new Set<string>();
+let heroes = new Set<string>();
 
 const names = (id: string) => Object.values(profiles).find((p) => p.id === id)?.displayName ?? 'Slettet bruker';
 
@@ -145,11 +146,19 @@ export const adminStore = {
       municipality: p.municipality,
       main: mainOverride[p.id] ?? p.featured,
       active: !inactive.has(p.id),
+      hero: heroes.has(p.id),
     }));
   },
+  setHero(id: string, on: boolean): void {
+    const next = new Set(heroes);
+    if (on) next.add(id);
+    else next.delete(id);
+    heroes = next;
+    if (on) adminStore.setActive(id, true);
+  },
   setMain(all: Partner[], id: string, on: boolean): void {
-    if (on && adminStore.partners(all).filter((p) => p.main && p.id !== id).length >= 2) {
-      throw new Error('Maks 2 hovedpartnere.');
+    if (on && adminStore.partners(all).filter((p) => p.main && p.id !== id).length >= 4) {
+      throw new Error('Maks 4 hovedpartnere.');
     }
     mainOverride = { ...mainOverride, [id]: on };
     if (on) adminStore.setActive(id, true);
@@ -164,7 +173,7 @@ export const adminStore = {
   visiblePartners(all: Partner[]): Partner[] {
     return all
       .filter((p) => !inactive.has(p.id))
-      .map((p) => ({ ...p, featured: mainOverride[p.id] ?? p.featured }));
+      .map((p) => ({ ...p, featured: mainOverride[p.id] ?? p.featured, localHero: heroes.has(p.id) || !!p.localHero }));
   },
 
   overview(): AdminOverview {
@@ -194,5 +203,6 @@ export const adminStore = {
     hidden = new Set();
     mainOverride = {};
     inactive = new Set();
+    heroes = new Set();
   },
 };

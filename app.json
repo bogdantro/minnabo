@@ -10,7 +10,10 @@
     "backgroundColor": "#FDFBFA",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "no.minnabo.app"
+      "bundleIdentifier": "no.minnabo.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "no.minnabo.app",
@@ -50,6 +53,7 @@
         }
       ],
       "expo-image",
+      "expo-notifications",
       [
         "expo-image-picker",
         {
@@ -69,8 +73,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "4307319d-692b-417d-b9c9-6b506f4c746a"
+        "projectId": "b5f95414-ddb5-4c91-8128-4024c5378b51"
       }
-    }
+    },
+    "owner": "webiser-as"
   }
 }

@@ -3,10 +3,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Listing, PublicProfile, Review } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
-import { useListingsByIds, useProfile } from '@/api/queries';
+import { useListingsByIds, useProfile, useReplyToReview } from '@/api/queries';
+import { useSession } from '@/auth/session';
+import { toast } from '@/lib/toast';
 import { dayMonthYear } from '@/lib/datetime';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
-import { Avatar, Chip, ChipRow, FadeUp, GrowBar, Icon, Pill } from '@/components/ui';
+import { Avatar, Button, Chip, ChipRow, FadeUp, Field, GrowBar, Icon, Input, Pill, Sheet, TextLink } from '@/components/ui';
 
 type Filter = 'alle' | 'five' | 'hjelper' | 'oppdragsgiver';
 type Role = 'hjelper' | 'oppdragsgiver' | undefined;
@@ -111,8 +113,26 @@ function StarRow({ value, size = 14 }: { value: number; size?: number }) {
   );
 }
 
+const REPLY_MAX = 400;
+
 function ReviewCard({ review: r, listing, role, first }: { review: Review; listing?: Listing; role: Role; first: string }) {
   const { data: author } = useProfile(r.fromProfileId);
+  // Only the person who was reviewed can answer, publicly, under the review.
+  const canReply = useSession().userId === r.toProfileId;
+  const reply = useReplyToReview();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const send = () =>
+    reply.mutate(
+      { reviewId: r.id, reply: draft.trim() },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          toast.success(nb.profile.replySent);
+        },
+        onError: (e) => toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError),
+      },
+    );
   const name = author?.displayName ?? 'Nabo';
   const meta = [role === 'hjelper' ? nb.profile.roleHelper(first) : role === 'oppdragsgiver' ? nb.profile.roleClient(first) : null, dayMonthYear(r.createdAt)]
     .filter(Boolean)
@@ -143,6 +163,37 @@ function ReviewCard({ review: r, listing, role, first }: { review: Review; listi
           ))}
         </View>
       ) : null}
+      {r.reply ? (
+        <View style={styles.reply}>
+          <Text style={styles.replyFrom}>{nb.profile.replyFrom(first)}</Text>
+          <Text style={styles.replyText}>{r.reply}</Text>
+        </View>
+      ) : null}
+      {canReply ? (
+        <TextLink
+          label={r.reply ? nb.profile.replyEdit : nb.profile.replyWrite}
+          icon="reply"
+          onPress={() => {
+            setDraft(r.reply ?? '');
+            setOpen(true);
+          }}
+        />
+      ) : null}
+      {canReply ? (
+        <Sheet visible={open} onClose={() => setOpen(false)} title={nb.profile.replyTitle(name)} subtitle={nb.profile.replySub}>
+          <Field label={nb.profile.replyLabel} hint={`${draft.length}/${REPLY_MAX}`}>
+            <Input
+              value={draft}
+              onChangeText={(t) => setDraft(t.slice(0, REPLY_MAX))}
+              multiline
+              placeholder={nb.profile.replyPh}
+              accessibilityLabel={nb.profile.replyLabel}
+              style={styles.replyInput}
+            />
+          </Field>
+          <Button label={nb.profile.replySend} disabled={draft.trim().length < 2} loading={reply.isPending} onPress={send} style={styles.mt14} />
+        </Sheet>
+      ) : null}
     </FadeUp>
   );
 }
@@ -152,6 +203,18 @@ const styles = StyleSheet.create({
   px: { paddingHorizontal: screenPadding },
   flex: { flex: 1, minWidth: 0 },
   f12: { fontSize: 12 },
+  mt14: { marginTop: 14 },
+  reply: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.m,
+    backgroundColor: colors.surface2,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.cyan,
+  },
+  replyFrom: { fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.ink, marginBottom: 3 },
+  replyText: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 19.5, color: colors.ink },
+  replyInput: { minHeight: 110 },
   mb10: { marginBottom: 10 },
   mt4: { marginTop: 4 },
   gap12: { gap: 12 },

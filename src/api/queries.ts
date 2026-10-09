@@ -58,11 +58,44 @@ export function useListingsByIds(ids: string[]) {
 export function useCreateListing() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (listing: Parameters<typeof apiClient.createListing>[0]) =>
-      apiClient.createListing(listing),
+    mutationFn: (v: Parameters<typeof apiClient.createListing>[0] | { listing: Parameters<typeof apiClient.createListing>[0]; extras?: Parameters<typeof apiClient.createListing>[1] }) =>
+      'listing' in v && 'extras' in v ? apiClient.createListing(v.listing, v.extras) : apiClient.createListing(v as Parameters<typeof apiClient.createListing>[0]),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: listingKeys.all });
     },
+  });
+}
+
+export function useUpdateListing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; listing: Parameters<typeof apiClient.updateListing>[1]; extras: Parameters<typeof apiClient.updateListing>[2] }) =>
+      apiClient.updateListing(v.id, v.listing, v.extras),
+    onSuccess: (l) => {
+      qc.invalidateQueries({ queryKey: listingKeys.all });
+      qc.invalidateQueries({ queryKey: ['listing-edit', l.id] });
+      void qc.invalidateQueries({ queryKey: ['myListings'] });
+    },
+  });
+}
+
+export function useListingEditData(id: string | undefined) {
+  return useQuery({
+    queryKey: ['listing-edit', id],
+    queryFn: () => apiClient.getListingEditData(id!),
+    enabled: !!id,
+    staleTime: 0,
+  });
+}
+
+export function useMyAccountStatus(enabled: boolean) {
+  return useQuery({
+    queryKey: ['account-status'],
+    queryFn: () => apiClient.getMyAccountStatus(),
+    enabled,
+    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    staleTime: 60_000,
   });
 }
 
@@ -71,6 +104,9 @@ export function useConversations(unreadOnly?: boolean, query?: string) {
     queryKey: chatKeys.conversations(unreadOnly, query),
     queryFn: () => apiClient.listConversations({ unreadOnly, query }),
     placeholderData: keepPreviousData,
+    // the last message must never be a stale one from the cache
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
@@ -151,6 +187,20 @@ export function useAgreementByProposal(proposalId: string) {
     queryKey: ['agreement', 'proposal', proposalId] as const,
     queryFn: () => apiClient.getAgreement(proposalId),
     enabled: !!proposalId,
+  });
+}
+
+export function useEditProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { proposalId: string; patch: Parameters<typeof apiClient.editProposal>[1] }) =>
+      apiClient.editProposal(v.proposalId, v.patch),
+    onSuccess: (p) => {
+      void qc.invalidateQueries({ queryKey: ['proposal', p.id] });
+      void qc.invalidateQueries({ queryKey: ['proposals'] });
+      void qc.invalidateQueries({ queryKey: ['messages', p.conversationId] });
+      void qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
   });
 }
 
@@ -282,7 +332,17 @@ export function useSendProposal(conversationId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
       qc.invalidateQueries({ queryKey: ['conversations'] });
+      qc.invalidateQueries({ queryKey: ['offer-count'] });
     },
+  });
+}
+
+/** Tilbud I have sent (youth app "Mine tilbud"). */
+export function useSentProposals(enabled = true) {
+  return useQuery({
+    queryKey: ['proposals', 'sent'],
+    queryFn: () => apiClient.listSentProposals(),
+    enabled,
   });
 }
 
@@ -362,6 +422,67 @@ export function useProfile(id: string) {
     queryKey: profileKeys.profile(id),
     queryFn: () => apiClient.getProfile(id),
     enabled: !!id,
+  });
+}
+
+/** Pålitelighet (last 12 months). */
+export function useReliability(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['reliability', profileId],
+    queryFn: () => apiClient.getReliability(profileId!),
+    enabled: !!profileId,
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function usePortfolio(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['portfolio', profileId],
+    queryFn: () => apiClient.listPortfolio(profileId!),
+    enabled: !!profileId,
+  });
+}
+
+export function useAddPortfolioItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof apiClient.addPortfolioItem>[0]) => apiClient.addPortfolioItem(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portfolio'] }),
+  });
+}
+
+export function useRemovePortfolioItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.removePortfolioItem(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portfolio'] }),
+  });
+}
+
+export function useReplyToReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { reviewId: string; reply: string }) => apiClient.replyToReview(v.reviewId, v.reply),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reviews'] }),
+  });
+}
+
+/** "Svarer vanligvis innen …" – median reply minutes, null until there is enough history. */
+export function useReplyMinutes(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['reply-minutes', profileId],
+    queryFn: () => apiClient.getReplyMinutes(profileId!),
+    enabled: !!profileId,
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Public offer count on an oppdrag (a number only). */
+export function useListingOfferCount(listingId: string | undefined) {
+  return useQuery({
+    queryKey: ['offer-count', listingId],
+    queryFn: () => apiClient.getListingOfferCount(listingId!),
+    enabled: !!listingId,
   });
 }
 
@@ -559,8 +680,8 @@ export function useUpdateNotificationPrefs() {
 
 export const consentKeys = { log: ['consents'] as const };
 
-export function useConsentRecords() {
-  return useQuery({ queryKey: consentKeys.log, queryFn: () => apiClient.listConsentRecords() });
+export function useConsentRecords(enabled = true) {
+  return useQuery({ queryKey: consentKeys.log, queryFn: () => apiClient.listConsentRecords(), enabled });
 }
 
 /** Personvern tips toggle: a new row in the consent log. */
@@ -621,6 +742,58 @@ export function useNoticeboard(kind?: import('@/domain/types').NoticeKind) {
   return useQuery({
     queryKey: noticeboardKeys.list(kind),
     queryFn: () => apiClient.listNoticeboard(kind),
+  });
+}
+
+export function useSavedNoticeIds() {
+  return useQuery({ queryKey: ['saved-notices'], queryFn: () => apiClient.listSavedNoticeIds() });
+}
+
+export function useToggleSavedNotice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (noticeId: string) => apiClient.toggleSavedNotice(noticeId),
+    onSuccess: (ids) => qc.setQueryData(['saved-notices'], ids),
+  });
+}
+
+export function useUpdateNoticeboardPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; patch: Parameters<typeof apiClient.updateNoticeboardPost>[1] }) =>
+      apiClient.updateNoticeboardPost(v.id, v.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
+  });
+}
+
+/** Oppslagstavle "Svar": the comments under one oppslag. */
+export function useNoticeComments(noticeId: string | null) {
+  return useQuery({
+    queryKey: ['notice-comments', noticeId],
+    queryFn: () => apiClient.listNoticeComments(noticeId!),
+    enabled: !!noticeId,
+  });
+}
+
+export function useAddNoticeComment(noticeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => apiClient.addNoticeComment(noticeId, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['notice-comments', noticeId] });
+      void qc.invalidateQueries({ queryKey: noticeboardKeys.all });
+    },
+  });
+}
+
+export function useDeleteNoticeComment(noticeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteNoticeComment(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['notice-comments', noticeId] });
+      void qc.invalidateQueries({ queryKey: noticeboardKeys.all });
+    },
   });
 }
 
@@ -689,6 +862,22 @@ export function useAddSavedSearch() {
     mutationFn: (input: Parameters<typeof apiClient.addSavedSearch>[0]) =>
       apiClient.addSavedSearch(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: savedKeys.searches }),
+  });
+}
+
+export function useSetSavedSearchAlert() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; alert: boolean }) => apiClient.setSavedSearchAlert(v.id, v.alert),
+    onSettled: () => qc.invalidateQueries({ queryKey: savedKeys.searches }),
+  });
+}
+
+export function useMarkSavedSearchRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.markSavedSearchRun(id),
+    onSettled: () => qc.invalidateQueries({ queryKey: savedKeys.searches }),
   });
 }
 
@@ -764,6 +953,8 @@ export const useSetListingHidden = () =>
   useAdminMutation((v: { id: string; hidden: boolean }) => apiClient.setListingHidden(v.id, v.hidden));
 export const useSetMainPartner = () =>
   useAdminMutation((v: { id: string; main: boolean }) => apiClient.setMainPartner(v.id, v.main));
+export const useSetPartnerHero = () =>
+  useAdminMutation((v: { id: string; hero: boolean }) => apiClient.setPartnerHero(v.id, v.hero));
 export const useSetPartnerActive = () =>
   useAdminMutation((v: { id: string; active: boolean }) => apiClient.setPartnerActive(v.id, v.active));
 
@@ -812,4 +1003,89 @@ export function useToggleBlock() {
     mutationFn: (profileId: string) => apiClient.toggleBlock(profileId),
     onSuccess: (ids) => qc.setQueryData(safetyKeys.blocked, ids),
   });
+}
+
+// --- avtale: nytt tidspunkt, be om hjelp igjen --------------------------------
+export function useAgreementTimeProposal(proposalId: string) {
+  return useQuery({
+    queryKey: ['agreement', 'time', proposalId] as const,
+    queryFn: () => apiClient.getAgreementTimeProposal(proposalId),
+    enabled: !!proposalId,
+    // the other person may have proposed or answered since this was last open
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+function useTimeProposalDone(proposalId: string, conversationId: string) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: ['agreement', 'time', proposalId] });
+    qc.invalidateQueries({ queryKey: ['agreement', 'proposal', proposalId] });
+    qc.invalidateQueries({ queryKey: chatKeys.agreement(conversationId) });
+    qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
+    qc.invalidateQueries({ queryKey: ['my-agreements'] });
+  };
+}
+
+export function useProposeAgreementTime(proposalId: string, conversationId: string) {
+  const done = useTimeProposalDone(proposalId, conversationId);
+  return useMutation({
+    mutationFn: (v: { scheduledAt: string; scheduledText: string }) =>
+      apiClient.proposeAgreementTime(proposalId, v.scheduledAt, v.scheduledText),
+    onSuccess: done,
+  });
+}
+
+export function useRespondAgreementTime(proposalId: string, conversationId: string) {
+  const done = useTimeProposalDone(proposalId, conversationId);
+  return useMutation({
+    mutationFn: (v: { id: string; answer: 'ACCEPT' | 'DECLINE' | 'WITHDRAW' }) => apiClient.respondAgreementTime(v.id, v.answer),
+    onSuccess: done,
+  });
+}
+
+export function useRequestHelpAgain(proposalId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input?: { when?: string; note?: string }) => apiClient.requestHelpAgain(proposalId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['listings'] });
+      qc.invalidateQueries({ queryKey: ['my-listings'] });
+    },
+  });
+}
+
+// --- prisveiledning ------------------------------------------------------------
+export function usePriceGuidance(categorySlug: string | undefined) {
+  return useQuery({
+    queryKey: ['price-guidance', categorySlug] as const,
+    queryFn: () => apiClient.getPriceGuidance(categorySlug as string),
+    enabled: !!categorySlug,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+// --- foresatt --------------------------------------------------------------------
+export function useGuardianLinks(enabled = true) {
+  return useQuery({ queryKey: ['guardian-links'] as const, queryFn: () => apiClient.getGuardianLinks(), enabled });
+}
+
+export function useGuardianActions() {
+  const qc = useQueryClient();
+  const onSuccess = () => qc.invalidateQueries({ queryKey: ['guardian-links'] });
+  return {
+    createCode: useMutation({ mutationFn: () => apiClient.createGuardianCode(), onSuccess }),
+    link: useMutation({ mutationFn: (code: string) => apiClient.linkGuardian(code), onSuccess }),
+    unlink: useMutation({ mutationFn: (id: string) => apiClient.unlinkGuardian(id), onSuccess }),
+  };
+}
+
+// --- venteliste for andre kommuner -----------------------------------------------
+export function useJoinKommuneWaitlist() {
+  return useMutation({ mutationFn: (kommune: string) => apiClient.joinKommuneWaitlist(kommune) });
+}
+
+export function useKommuneWaitlist() {
+  return useQuery({ queryKey: ['admin', 'waitlist'] as const, queryFn: () => apiClient.listKommuneWaitlist() });
 }

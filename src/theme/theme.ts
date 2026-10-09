@@ -36,6 +36,7 @@ export const colors = {
   notifDot: '#F2542D',   // unread badge / bell dot
   online: '#2FBF62',
   scrim: 'rgba(10,23,64,0.45)',
+  viewerBg: 'rgba(5,10,28,0.97)', // fullscreen photo
   vipps: '#FF5B24',      // ONLY the login button
 
   // component colours (also from mn.css)
@@ -164,6 +165,7 @@ export const colors = {
   radarRing: 'rgba(184,238,60,0.35)',
   radarSweep: 'rgba(184,238,60,0.55)',
   onInk72: 'rgba(255,255,255,0.72)',
+  onInk90: 'rgba(255,255,255,0.9)',   // "Før" label on photos
   onInk12: 'rgba(255,255,255,0.12)',
   confettiGreen: '#63E08A',
   confettiLime: '#C6F43C',
@@ -216,6 +218,18 @@ export const categoryColors = {
   data:        { bg: '#D4F2E8', fg: '#136F5C' },
   arrangement: { bg: '#EEDDF7', fg: '#7B359F' },
   annet:       { bg: '#E9ECF1', fg: '#46506A' },
+  snekring:    { bg: '#EFE3D3', fg: '#7A4A1C' },
+  vinduspuss:  { bg: '#DDF0F7', fg: '#13708F' },
+  bilpleie:    { bg: '#E2E7F0', fg: '#34466B' },
+  handling:    { bg: '#FBEBD3', fg: '#8A5300' },
+  leksehjelp:  { bg: '#E6E2F8', fg: '#4A3BA8' },
+  husvakt:     { bg: '#DCF1DF', fg: '#2D6B37' },
+  ved:         { bg: '#F6E0D4', fg: '#8C3F1A' },
+  bortkjoring: { bg: '#E0EEE6', fg: '#2F6248' },
+  sykkel:      { bg: '#DCEBF6', fg: '#1F5C8A' },
+  matlaging:   { bg: '#FBE4E0', fg: '#9A3426' },
+  selskap:     { bg: '#F7E2EE', fg: '#8A2F62' },
+  barnevakt:   { bg: '#FDF0CF', fg: '#7A5A00' },
 } as const;
 export type CategoryId = keyof typeof categoryColors;
 
@@ -224,6 +238,18 @@ export const categoryLabels: Record<CategoryId, string> = {
   transport: 'Transport/levering', montering: 'Montering', snomaking: 'Snømåking',
   maling: 'Maling/vedlikehold', dyrepass: 'Dyrepass', data: 'Datahjelp',
   arrangement: 'Arrangementshjelp', annet: 'Annet',
+  snekring: 'Snekring/småreparasjoner',
+  vinduspuss: 'Vinduspuss',
+  bilpleie: 'Bilpleie',
+  handling: 'Handling og ærender',
+  leksehjelp: 'Leksehjelp',
+  husvakt: 'Hus- og plantevakt',
+  ved: 'Ved og fyring',
+  bortkjoring: 'Bortkjøring og rydding',
+  sykkel: 'Sykkelreparasjon',
+  matlaging: 'Matlaging og baking',
+  selskap: 'Selskap og følge',
+  barnevakt: 'Barnevakt',
 };
 
 /** Avatar fallback colours (initials). Pick by hash of user id. 'me' = current user. */
@@ -463,6 +489,7 @@ export const icons = {
   hage: 'Leaf', rengjoring: 'Sparkles', flytting: 'Package', transport: 'Truck', montering: 'Wrench',
   snomaking: 'Snowflake', maling: 'PaintRoller', dyrepass: 'PawPrint', data: 'Laptop',
   arrangement: 'PartyPopper', annet: 'LayoutGrid',
+  snekring: 'Hammer', vinduspuss: 'AppWindow', bilpleie: 'Car', handling: 'ShoppingCart', leksehjelp: 'BookOpen', husvakt: 'Sprout', ved: 'Axe', bortkjoring: 'Recycle', sykkel: 'Bike', matlaging: 'ChefHat', selskap: 'HeartHandshake', barnevakt: 'Baby',
 } as const;
 
 export const theme = { colors, categoryColors, avatarColors, fonts, text, space, radius, sizes, shadow, motion, icons };

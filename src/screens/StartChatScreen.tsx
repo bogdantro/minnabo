@@ -24,9 +24,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import nb from '@/i18n/nb';
 import { categoryArtId } from '@/domain/categories';
 import { apiClient } from '@/api/client';
-import { chatKeys, useConversations, useListing, useStartConversation } from '@/api/queries';
+import { chatKeys, useConversations, useListing, useReplyMinutes, useStartConversation } from '@/api/queries';
 import { useSession } from '@/auth/session';
-import { formatTime } from '@/lib/datetime';
+import { formatTime, replyTime } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
@@ -61,6 +61,7 @@ export function StartChatScreen({ listingId }: { listingId: string }) {
   const { data: listing, isLoading, isError, refetch } = useListing(listingId);
   const conversations = useConversations();
   const startConversation = useStartConversation();
+  const replyMinutes = useReplyMinutes(listing?.owner.id).data;
 
   const [draft, setDraft] = useState('');
   const [focused, setFocused] = useState(false);
@@ -113,17 +114,15 @@ export function StartChatScreen({ listingId }: { listingId: string }) {
   const deliver = async (m: Sent) => {
     try {
       let id = convId;
-      // Mock Vipps login: no account yet – run the flow without saving.
-      if (userId) {
-        if (!id) {
-          const conv = await startConversation.mutateAsync(listing.id);
-          id = conv.id;
-          setConvId(id);
-        }
-        await apiClient.sendMessage(id, m.text);
-        qc.invalidateQueries({ queryKey: chatKeys.messages(id) });
-        qc.invalidateQueries({ queryKey: ['conversations'] });
+      if (!userId) throw new Error('not signed in');
+      if (!id) {
+        const conv = await startConversation.mutateAsync(listing.id);
+        id = conv.id;
+        setConvId(id);
       }
+      await apiClient.sendMessage(id, m.text);
+      qc.invalidateQueries({ queryKey: chatKeys.messages(id) });
+      qc.invalidateQueries({ queryKey: ['conversations'] });
       setMsgs((all) => all.map((x) => (x.id === m.id ? { ...x, status: 'sent' } : x)));
     } catch {
       setMsgs((all) => all.map((x) => (x.id === m.id ? { ...x, status: 'failed' } : x)));
@@ -194,6 +193,12 @@ export function StartChatScreen({ listingId }: { listingId: string }) {
                   {nb.startChat.sayHi(first)}
                 </Text>
               </FadeUp>
+              {replyMinutes != null ? (
+                <FadeUp delay={150} style={styles.replyRow}>
+                  <Icon name="zap" size={14} color={colors.cyan2} />
+                  <Text style={[text.meta, styles.f14]}>{nb.detail.replyWithin(replyTime(replyMinutes, true))}</Text>
+                </FadeUp>
+              ) : null}
               <FadeUp delay={150} style={styles.badges}>
                 <VerifiedBadge label={nb.startChat.vipps} />
                 {owner.rating?.count ? (
@@ -366,6 +371,8 @@ const styles = StyleSheet.create({
   pinnedText: { flex: 1, minWidth: 0, gap: 5 },
   content: { paddingHorizontal: screenPadding, paddingTop: 20, paddingBottom: 20 },
   hello: { alignItems: 'center', gap: 6 },
+  replyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  f14: { fontSize: 14 },
   avwrap: { width: 104, height: 104, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   halo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 52, backgroundColor: colors.halo },
   pring: { position: 'absolute', top: 8, left: 8, right: 8, bottom: 8, borderRadius: 44, borderWidth: 3, borderColor: colors.pulseCyan },

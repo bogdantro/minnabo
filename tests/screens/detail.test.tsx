@@ -59,7 +59,7 @@ test('Gi tilbud validates amount and message before the preview', async () => {
   expect(mine()).toHaveLength(0);
 });
 
-test('sending an offer creates a SENT proposal and the footer shows "Tilbud sendt"', async () => {
+test('sending an offer creates a SENT proposal and the footer offers "Endre tilbud"', async () => {
   await renderWithProviders(<TaskDetailScreen listing={task()} onBack={() => {}} />);
   await settle();
   await fillOffer('850');
@@ -73,7 +73,7 @@ test('sending an offer creates a SENT proposal and the footer shows "Tilbud send
   expect(proposals).toHaveLength(1);
   expect(proposals[0].status).toBe('SENT');
   expect(proposals[0].price.amountMinor).toBe(85000);
-  expect(screen.getByText('Tilbud sendt')).toBeTruthy();
+  expect(await screen.findByText('Endre tilbud')).toBeTruthy();
 });
 
 test('the sent offer shows up in the inbox without a manual refetch', async () => {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { categoryArtId } from '@/domain/categories';
+import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
 import { useListing, useMyAgreements, useProfile, useProposal, useSubmitReview } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -79,7 +80,7 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
           haptics.success();
           setDone(true);
         },
-        onError: () => toast.error(nb.toast.genericError),
+        onError: (e) => toast.error(serverMessage(e, nb.toast.genericError)),
       },
     );
   };

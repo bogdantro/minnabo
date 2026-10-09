@@ -35,7 +35,10 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { SafeTripBanner } from '@/components/SafeTripBanner';
 import { ToastHost } from '@/components/ToastHost';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
+import { AccountGuard } from '@/components/AccountGuard';
+import { PushBridge } from '@/components/PushBridge';
 import { OfflineOutbox } from '@/lib/outbox';
+import { queryClientRef } from '@/auth/queryClientRef';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -59,6 +62,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+queryClientRef.current = queryClient;
 
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,
@@ -112,6 +117,8 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: colors.bg },
                 }}
               />
+              <AccountGuard />
+              <PushBridge />
               <InboxRealtime />
               <OfflineOutbox />
               <OfflineBanner />

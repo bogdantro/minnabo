@@ -1,14 +1,19 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GuardianSheet } from '@/components/GuardianSheet';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
-import { useListings } from '@/api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { useConversations, useListings, useListingsByIds, useSentProposals, useStartConversation } from '@/api/queries';
+import { formatPrice } from '@/domain/price';
+import { safePush } from '@/lib/nav';
 import { useLocationScope } from '@/lib/locationScope';
-import { MOCK_YOUTH, useVippsIdentity } from '@/auth/mockVipps';
-import { signOut } from '@/auth/session';
+import { useVippsIdentity } from '@/auth/identity';
+import { signOut, useSession } from '@/auth/session';
 import { toast } from '@/lib/toast';
 import {
   categoryLabels,
@@ -58,9 +63,11 @@ import {
 const logo = require('../../../assets/logo-icon.png');
 
 type View4 = 'oppdrag' | 'tilbud' | 'innboks' | 'profil';
-type OfferStatus = 'sendt' | 'venter' | 'godtatt' | 'trukket';
+type OfferStatus = 'sendt' | 'venter' | 'godtatt' | 'trukket' | 'avslatt';
 type Offer = {
   id: string;
+  /** set for offers stored on the backend → the row opens the real chat */
+  conversationId?: string;
   listingId: string;
   category: CategoryId;
   title: string;
@@ -77,6 +84,7 @@ const STATUS_TONE: Record<OfferStatus, 'dark' | 'warn' | 'ok' | 'neutral'> = {
   venter: 'warn',
   godtatt: 'ok',
   trukket: 'neutral',
+  avslatt: 'neutral',
 };
 
 /** `.ubadge` – ink pill with lime shield. */
@@ -91,19 +99,25 @@ function YouthBadge() {
 
 /**
  * Youth app shell (design/screens/OppdragUng.dc.html): 4 tabs, no Legg ut.
- * Browsing uses real oppdrag. Youth roles are not on the backend yet, so the
- * offers given here are MOCK (kept in screen state, nothing is sent).
+ * Oppdrag, tilbud and conversations are real; what a youth account may do is
+ * enforced on the backend (0038_vipps_youth.sql).
  */
 export function YouthAppScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const id = useVippsIdentity() ?? MOCK_YOUTH;
+  // empty for the moment it takes to load who is signed in
+  const id = useVippsIdentity() ?? { name: '', firstName: '', initials: '·', birthYear: 0, age: 0, phoneMasked: '', youth: true };
   const { municipality, municipalities, ready } = useLocationScope();
   const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
 
   const [view, setView] = useState<View4>('oppdrag');
+  const [guardian, setGuardian] = useState(false);
   const [cat, setCat] = useState<CategoryId | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const { userId } = useSession();
+  const qc = useQueryClient();
+  const startConversation = useStartConversation();
+  const sent = useSentProposals(!!userId);
+  const convs = useConversations();
   const [cur, setCur] = useState<Listing | null>(null);
   const [step, setStep] = useState<SheetStep>('detail');
   const [amount, setAmount] = useState('');
@@ -111,12 +125,54 @@ export function YouthAppScreen() {
   const [msg, setMsg] = useState('');
   const [tried, setTried] = useState(false);
   const [lock, setLock] = useState<string | null>(null);
-  const busyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tasks = useMemo(
     () => (jobs.data ?? []).filter((l) => !cat || categoryArtId(l.category.slug) === cat),
     [jobs.data, cat],
   );
+  const offerListings = useListingsByIds([...new Set((sent.data ?? []).map((pr) => pr.listingId))]);
+  const offers = useMemo<Offer[]>(() => {
+    return (sent.data ?? []).map((pr) => {
+      const conv = (convs.data ?? []).find((c) => c.id === pr.conversationId);
+      // a taken oppdrag is no longer in the open list, so it is fetched by id
+      const l = (jobs.data ?? []).find((x) => x.id === pr.listingId) ?? offerListings[pr.listingId];
+      const status: OfferStatus =
+        pr.status === 'ACCEPTED'
+          ? 'godtatt'
+          : pr.status === 'WITHDRAWN'
+            ? 'trukket'
+            : pr.status === 'DECLINED' || pr.status === 'CANCELLED'
+              ? 'avslatt'
+              : pr.status === 'REVISION_PENDING' || pr.seenAt
+                ? 'venter'
+                : 'sendt';
+      return {
+        id: pr.id,
+        conversationId: pr.conversationId,
+        listingId: pr.listingId,
+        category: l ? categoryArtId(l.category.slug) : 'annet',
+        title: conv?.listing.title ?? l?.title ?? '',
+        who: conv?.counterpart.displayName ?? l?.owner.displayName ?? '',
+        price: formatPrice(pr.price),
+        message: pr.message ?? '',
+        status,
+      };
+    });
+  }, [sent.data, convs.data, jobs.data, offerListings]);
+  const refreshOffers = () => {
+    void qc.invalidateQueries({ queryKey: ['proposals'] });
+    void qc.invalidateQueries({ queryKey: ['conversations'] });
+    void qc.invalidateQueries({ queryKey: ['offer-count'] });
+  };
+  const withdraw = async (o: Offer) => {
+    try {
+      await apiClient.respondToProposal(o.id, 'WITHDRAW', 'PROPOSER');
+      refreshOffers();
+      toast.success(nb.youth.withdrawn);
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError);
+    }
+  };
   const sentIds = new Set(offers.filter((o) => o.status !== 'trukket').map((o) => o.listingId));
   const pending = offers.filter((o) => o.status === 'sendt' || o.status === 'venter').length;
   const chats = offers.filter((o) => o.status !== 'trukket');
@@ -145,26 +201,29 @@ export function YouthAppScreen() {
       return;
     }
     setStep('busy');
-    busyTimer.current = setTimeout(() => {
-      setOffers((o) => [
-        {
-          id: `y${Date.now()}`,
-          listingId: cur.id,
-          category: categoryArtId(cur.category.slug),
-          title: cur.title,
-          who: cur.owner.displayName,
-          price: `${amount} kr`,
+    const listing = cur;
+    startConversation
+      .mutateAsync(listing.id)
+      .then((conv) =>
+        apiClient.sendProposal({
+          conversationId: conv.id,
+          listingId: listing.id,
+          priceAmountMinor: Number(amount) * 100,
           message: msg.trim(),
-          status: 'sendt',
-        },
-        ...o,
-      ]);
-      setStep('done');
-    }, 1300);
+          scheduledText: nb.youth.days[day],
+        }),
+      )
+      .then(() => {
+        refreshOffers();
+        setStep('done');
+      })
+      .catch((e: unknown) => {
+        setStep('form');
+        toast.error(e instanceof Error && e.message ? e.message : nb.giTilbud.sendFailed);
+      });
   };
 
   const closeSheet = () => {
-    if (busyTimer.current) clearTimeout(busyTimer.current);
     setCur(null);
   };
   const go = (v: View4) => {
@@ -291,10 +350,7 @@ export function YouthAppScreen() {
                       variant="ghost"
                       size="sm"
                       block={false}
-                      onPress={() => {
-                        setOffers((all) => all.map((x) => (x.id === o.id ? { ...x, status: 'trukket' } : x)));
-                        toast.success(nb.youth.withdrawn);
-                      }}
+                      onPress={() => void withdraw(o)}
                     />
                   ) : null}
                 </FadeUp>
@@ -317,7 +373,14 @@ export function YouthAppScreen() {
               <Text style={[text.body, styles.empty]}>{nb.youth.noChats}</Text>
             ) : (
               chats.map((c, i) => (
-                <FadeUp key={c.id} delay={100 + i * 50} style={styles.orow}>
+                <FadeUp key={c.id} delay={100 + i * 50}>
+                 <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel={`${c.who}, ${c.title}`}
+                  disabled={!c.conversationId}
+                  onPress={() => c.conversationId && safePush(`/chat/${c.conversationId}`)}
+                  style={styles.orow}
+                 >
                   <Avatar initials={c.who.slice(0, 2)} seed={c.who} size={48} ring={false} />
                   <View style={styles.orowBody}>
                     <Text style={text.cardTitle}>{c.who}</Text>
@@ -330,6 +393,7 @@ export function YouthAppScreen() {
                     </Text>
                   </View>
                   {c.status === 'godtatt' ? <Pill label={nb.youth.accepted} tone="ok" /> : null}
+                 </Pressable>
                 </FadeUp>
               ))
             )}
@@ -369,6 +433,7 @@ export function YouthAppScreen() {
               <ListGroup>
                 <ListRow icon="shield" title={nb.youth.safety} subtitle={nb.youth.safetySub} onPress={() => router.push('/sikkerhet')} />
                 <ListRow icon="lock" title={nb.youth.privacy} onPress={() => router.push('/personvern')} />
+                <ListRow icon="users" title={nb.guardian.rowYouth} subtitle={nb.guardian.rowYouthSub} onPress={() => setGuardian(true)} />
                 <ListRow
                   icon="logout"
                   title={nb.youth.logout}
@@ -506,6 +571,7 @@ export function YouthAppScreen() {
           <Button label={nb.youth.understood} variant="ink" onPress={() => setLock(null)} />
         </View>
       </Sheet>
+      <GuardianSheet visible={guardian} onClose={() => setGuardian(false)} />
     </View>
   );
 }

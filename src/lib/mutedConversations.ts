@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiClient } from '@/api/client';
 
 /**
- * "Slå av varsler" per conversation (Chat menu). Stored on the device only –
- * push notifications don't know about it until the backend gets a mute field
- * (see docs/LEFT_OUT.md).
+ * "Slå av varsler" per conversation (Chat menu). Kept on the device for an
+ * instant UI, and sent to the backend (conversation_participants.muted, 0039)
+ * so no push is sent for a muted chat.
  */
 const KEY = 'minnabo.mutedConversations.v1';
 
@@ -34,6 +35,7 @@ export const mutedConversations = {
     else next.delete(id);
     cache = next;
     AsyncStorage.setItem(KEY, JSON.stringify([...cache])).catch(() => undefined);
+    apiClient.setConversationMuted(id, on).catch(() => undefined);
     emit();
     return on;
   },

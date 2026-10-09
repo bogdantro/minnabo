@@ -17,6 +17,18 @@ export function parseAgreedTime(textValue: string | undefined, now: Date = new D
   return date;
 }
 
+/** The agreed day/time: the stored timestamp when there is one, else parsed from the text. */
+export function agreedDate(
+  x: { scheduledAt?: string; scheduledText?: string } | null | undefined,
+  now: Date = new Date(),
+): Date | null {
+  if (x?.scheduledAt) {
+    const d = new Date(x.scheduledAt);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return parseAgreedTime(x?.scheduledText, now);
+}
+
 /** "ca. 5 t", "2–3 timer", "Omtrent en dag" → hours (default 2). */
 export function parseDurationHours(textValue: string | undefined): number {
   const m = /(\d+(?:[.,]\d+)?)\s*(?:[–-]\s*\d+\s*)?(?:t\b|timer|time)/i.exec(textValue ?? '');

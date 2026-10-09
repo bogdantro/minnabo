@@ -6,6 +6,7 @@ import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
 import {
+  useAddPortfolioItem,
   useAgreementByProposal,
   useCompletion,
   useConfirmCompletion,
@@ -60,6 +61,8 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
   const { data: ws } = useJobWorkspace(proposalId);
   const agenda = useMyAgreements();
   const confirm = useConfirmCompletion(proposalId);
+  const addPortfolio = useAddPortfolioItem();
+  const [inPortfolio, setInPortfolio] = useState(false);
   const [issue, setIssue] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [openedAt] = useState(() => Date.now());
@@ -80,6 +83,29 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
   const tracked = ws ? ws.timerAccumMs + (ws.timerStartedAt ? Math.max(0, openedAt - ws.timerStartedAt) : 0) : 0;
   const tasksDone = ws?.checklist.filter((c) => c.done).length ?? 0;
   const tasksTotal = ws?.checklist.length ?? 0;
+  // the helper can put the job's photos in the portfolio with one tap
+  const afterPhoto = [...(ws?.photos ?? [])].reverse().find((p) => p.phase === 'AFTER');
+  const beforePhoto = (ws?.photos ?? []).find((p) => p.phase === 'BEFORE');
+  const canPortfolio = done && proposal.fromProfileId === me.id && !!afterPhoto && !!listing;
+  const toPortfolio = () => {
+    if (!afterPhoto || !listing || addPortfolio.isPending || inPortfolio) return;
+    addPortfolio.mutate(
+      {
+        beforePath: beforePhoto?.url,
+        afterPath: afterPhoto.url,
+        title: listing.title,
+        place: listing.location.place || listing.location.municipality,
+        categorySlug: listing.category.slug,
+      },
+      {
+        onSuccess: () => {
+          setInPortfolio(true);
+          toast.success(nb.completion.portfolioAdded, { icon: 'image', bottom: 150 });
+        },
+        onError: () => toast.error(nb.toast.genericError, { bottom: 150 }),
+      },
+    );
+  };
 
   const doConfirm = () => {
     if (!me.id || confirm.isPending) return;
@@ -139,7 +165,8 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
           <View style={[styles.card, styles.duo, shadow.card]}>
             <View style={styles.duoRow}>
               <View style={styles.track}>
-                <ProgressFill to={(theirs ? 0.5 : 0) + (mine ? 0.5 : 0)} />
+                {/* the line grows from whoever has confirmed: they are on the left, I am on the right */}
+                <ProgressFill to={(theirs ? 0.5 : 0) + (mine ? 0.5 : 0)} fromRight={!!mine && !theirs} />
               </View>
               <View style={[styles.mid, done && styles.midOk]}>
                 <Icon name="hand" size={18} color={done ? colors.white : colors.mute} />
@@ -190,6 +217,24 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
             <TextLink label={nb.completion.seeAgreement} icon="right" onPress={() => safePush(`/avtale/${proposalId}`)} style={styles.mt6} />
           </View>
         </FadeUp>
+
+        {canPortfolio ? (
+          <FadeUp delay={180} style={[styles.px, styles.mt14]}>
+            <View style={[styles.card, styles.pad, styles.portfolio, shadow.card]}>
+              <Text style={[text.label, styles.f145]}>{nb.completion.portfolioTitle}</Text>
+              <Text style={text.meta}>{beforePhoto ? nb.completion.portfolioSubBoth : nb.completion.portfolioSub}</Text>
+              <Button
+                label={inPortfolio ? nb.completion.portfolioDone : nb.completion.portfolioAdd}
+                icon={inPortfolio ? 'check' : 'image'}
+                variant={inPortfolio ? 'ghost' : 'ink'}
+                size="sm"
+                disabled={inPortfolio}
+                loading={addPortfolio.isPending}
+                onPress={toPortfolio}
+              />
+            </View>
+          </FadeUp>
+        ) : null}
 
         <FadeUp delay={200} style={[styles.px, styles.mt14]}>
           <View style={styles.pay}>
@@ -270,14 +315,14 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
   );
 }
 
-function ProgressFill({ to }: { to: number }) {
+function ProgressFill({ to, fromRight }: { to: number; fromRight: boolean }) {
   const reduced = useReducedMotion();
   const p = useSharedValue(reduced ? to : 0);
   useEffect(() => {
     p.set(reduced ? to : withTiming(to, { duration: 1000, easing: Easing.bezier(0.6, 0, 0.2, 1) }));
   }, [to, reduced, p]);
   const style = useAnimatedStyle(() => ({ width: `${p.value * 100}%` }));
-  return <Animated.View style={[styles.trackFill, style]} />;
+  return <Animated.View style={[styles.trackFill, fromRight && styles.trackFillRight, style]} />;
 }
 
 function Party({
@@ -388,11 +433,13 @@ const styles = StyleSheet.create({
   bigRing: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 44, borderWidth: 2, borderColor: colors.bigOkRing },
   display: { fontFamily: text.h1.fontFamily, fontSize: 38, lineHeight: 41, letterSpacing: -1, color: colors.ink, marginTop: 10 },
   card: { backgroundColor: colors.white, borderRadius: radius.card },
+  portfolio: { gap: 8 },
   pad: { padding: 18 },
   duo: { paddingTop: 22, paddingHorizontal: 18, paddingBottom: 18 },
   duoRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   track: { position: 'absolute', left: 84, right: 84, top: 25, height: 6, borderRadius: 3, backgroundColor: colors.track, overflow: 'hidden' },
   trackFill: { height: '100%', borderRadius: 3, backgroundColor: colors.ok },
+  trackFillRight: { alignSelf: 'flex-end' },
   mid: {
     position: 'absolute',
     left: '50%',

@@ -1,4 +1,4 @@
-import type { NoticeboardPost, NoticeKind } from '@/domain/types';
+import type { NoticeboardPost, NoticeComment, NoticeKind } from '@/domain/types';
 import { profileRepository } from './profileRepository';
 
 const SEED: NoticeboardPost[] = [
@@ -36,10 +36,13 @@ const SEED: NoticeboardPost[] = [
 
 let posts: NoticeboardPost[] = [...SEED];
 let seq = 0;
+let saved = new Set<string>();
+let comments: NoticeComment[] = [];
 
 export const noticeboardStore = {
   list(kind?: NoticeKind): NoticeboardPost[] {
     return [...posts]
+      .map((p) => ({ ...p, replies: comments.filter((c) => c.noticeId === p.id).length }))
       .filter((p) => !kind || p.kind === kind)
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   },
@@ -69,7 +72,45 @@ export const noticeboardStore = {
   remove(id: string): void {
     posts = posts.filter((p) => p.id !== id);
   },
+  get: (id: string): NoticeboardPost | undefined => posts.find((p) => p.id === id),
+  update(id: string, patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; done?: boolean }): NoticeboardPost {
+    const cur = posts.find((p) => p.id === id);
+    if (!cur || cur.authorProfileId !== profileRepository.currentUserId) throw new Error('Ikke tilgang.');
+    const next: NoticeboardPost = {
+      ...cur,
+      kind: patch.kind ?? cur.kind,
+      title: patch.title?.trim() ?? cur.title,
+      body: patch.body?.trim() ?? cur.body,
+      imageUrl: patch.imagePath === undefined ? cur.imageUrl : patch.imagePath ?? undefined,
+      doneAt: patch.done === undefined ? cur.doneAt : patch.done ? new Date().toISOString() : undefined,
+      editedAt: patch.title !== undefined || patch.body !== undefined ? new Date().toISOString() : cur.editedAt,
+    };
+    posts = posts.map((p) => (p.id === id ? next : p));
+    return next;
+  },
+  comments: (noticeId: string): NoticeComment[] => comments.filter((c) => c.noticeId === noticeId),
+  addComment(noticeId: string, body: string, authorProfileId = profileRepository.currentUserId): NoticeComment {
+    const post = posts.find((p) => p.id === noticeId);
+    if (!post) throw new Error('Fant ikke oppslaget.');
+    if (post.doneAt) throw new Error('Oppslaget er avsluttet.');
+    const c: NoticeComment = { id: `nc-${Date.now()}-${seq++}`, noticeId, authorProfileId, body: body.trim(), createdAt: new Date().toISOString() };
+    comments = [...comments, c];
+    return c;
+  },
+  removeComment(id: string): void {
+    comments = comments.filter((c) => c.id !== id);
+  },
+  savedIds: (): string[] => [...saved],
+  toggleSaved(id: string): string[] {
+    const next = new Set(saved);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    saved = next;
+    return [...saved];
+  },
   _reset(): void {
     posts = [...SEED];
+    saved = new Set();
+    comments = [];
   },
 };

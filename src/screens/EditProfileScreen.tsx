@@ -1,12 +1,16 @@
-import { useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { PublicProfile } from '@/domain/types';
+import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
+import { CATEGORIES, categoryArtId } from '@/domain/categories';
+import { PortfolioManager } from '@/components/profile/PortfolioManager';
 import { useSession } from '@/auth/session';
-import { useVippsIdentity } from '@/auth/mockVipps';
+import { useVippsIdentity } from '@/auth/identity';
 import { useProfile, useUpdateProfile } from '@/api/queries';
-import { INNLANDET_KOMMUNER, WHOLE_KOMMUNE, profileAreas } from '@/data/kommuner';
+import { KommuneWaitlist } from '@/components/KommuneWaitlist';
+import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE, profileAreas } from '@/data/kommuner';
 import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
 import { haptics } from '@/lib/haptics';
@@ -31,13 +35,14 @@ import {
   Sheet,
   Spinner,
   StickyFooter,
+  Toggle,
   SubHeader,
   TextLink,
   type IconName,
 } from '@/components/ui';
 
 const BIO_MAX = 400;
-const PORT_MAX = 9;
+const LANGUAGES = ['Norsk', 'Engelsk', 'Svensk', 'Dansk', 'Polsk', 'Tysk', 'Spansk', 'Arabisk', 'Ukrainsk', 'Tigrinja'];
 
 type Form = {
   dn: string;
@@ -48,9 +53,15 @@ type Form = {
   /** undefined = unchanged, null = remove, string = new storage path */
   avatarPath: string | null | undefined;
   portfolio: string[];
+  /** category slugs I want jobs in (Oppdrag for meg, match notifications) */
+  skills: string[];
+  languages: string[];
+  hasCar: boolean;
+  availability: string;
 };
 
-const snap = (f: Form) => JSON.stringify([f.dn, f.bio, f.kom, f.area, f.notes, f.avatarPath, f.portfolio]);
+const snap = (f: Form) =>
+  JSON.stringify([f.dn, f.bio, f.kom, f.area, f.notes, f.avatarPath, f.portfolio, [...f.skills].sort(), [...f.languages].sort(), f.hasCar, f.availability]);
 
 function initialForm(profile: PublicProfile): Form {
   const kom = profile.location.municipality || 'Lillehammer';
@@ -63,6 +74,10 @@ function initialForm(profile: PublicProfile): Form {
     notes: profile.homeNotes ?? '',
     avatarPath: undefined,
     portfolio: profile.portfolio ?? [],
+    skills: profile.categorySlugs ?? [],
+    languages: profile.languages ?? [],
+    hasCar: !!profile.hasCar,
+    availability: profile.availabilityText ?? '',
   };
 }
 
@@ -89,7 +104,6 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
   const [photoOpen, setPhotoOpen] = useState(false);
   const [komOpen, setKomOpen] = useState(false);
   const [busy, setBusy] = useState<'avatar' | 'port' | null>(null);
-  const removed = useRef<{ uri: string; idx: number } | null>(null);
 
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
   const dirty = snap(form) !== snap(base);
@@ -130,44 +144,6 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
     toast.success(nb.editProfile.photoRemovedToast, { icon: 'trash', bottom: 150 });
   };
 
-  const addPortfolio = async () => {
-    if (!userId || form.portfolio.length >= PORT_MAX || busy) return;
-    setBusy('port');
-    try {
-      const res = await pickAndUpload({ bucket: 'listing-images', folder: userId, source: 'library' });
-      if (res) setForm((f) => ({ ...f, portfolio: [...f.portfolio, res.publicUrl] }));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : nb.toast.genericError, { bottom: 150 });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const removePortfolio = (uri: string) => {
-    const idx = form.portfolio.indexOf(uri);
-    removed.current = { uri, idx };
-    set({ portfolio: form.portfolio.filter((u) => u !== uri) });
-    haptics.light();
-    toast.success(nb.editProfile.portRemoved, {
-      icon: 'trash',
-      bottom: 150,
-      action: {
-        label: nb.editProfile.undo,
-        onPress: () => {
-          const r = removed.current;
-          if (!r) return;
-          removed.current = null;
-          setForm((f) => {
-            if (f.portfolio.includes(r.uri)) return f;
-            const next = [...f.portfolio];
-            next.splice(r.idx, 0, r.uri);
-            return { ...f, portfolio: next };
-          });
-        },
-      },
-    });
-  };
-
   const save = () => {
     if (!canSave) return;
     const place = form.area === WHOLE_KOMMUNE ? form.kom : form.area;
@@ -179,6 +155,10 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
         place,
         homeNotes: form.notes.trim(),
         portfolio: form.portfolio,
+        categorySlugs: form.skills,
+        languages: form.languages,
+        hasCar: form.hasCar,
+        availabilityText: form.availability.trim(),
         ...(form.avatarPath !== undefined ? { avatarPath: form.avatarPath } : {}),
       },
       {
@@ -190,16 +170,10 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
           setPreview(undefined);
           toast.success(nb.editProfile.saved, { bottom: 150 });
         },
-        onError: () => toast.error(nb.toast.genericError, { bottom: 150 }),
+        onError: (e) => toast.error(serverMessage(e, nb.toast.genericError), { bottom: 150 }),
       },
     );
   };
-
-  const tiles: ({ kind: 'photo'; uri: string; i: number } | { kind: 'add' })[] = [
-    ...form.portfolio.map((uri, i) => ({ kind: 'photo' as const, uri, i })),
-    ...(form.portfolio.length < PORT_MAX ? [{ kind: 'add' as const }] : []),
-  ];
-  const rows = Array.from({ length: Math.ceil(tiles.length / 3) }, (_, r) => tiles.slice(r * 3, r * 3 + 3));
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -343,6 +317,61 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
             </Field>
           </FadeUp>
 
+          {/* skills – not in RedigerProfil.dc.html; ForMeg's "Endre" link lands here */}
+          <FadeUp delay={160} style={[styles.sec, shadow.card]}>
+            <SecHead icon="hand" bg={colors.limeTint} fg={colors.limeDeep} title={nb.editProfile.secSkills} />
+            <Text style={text.meta}>{nb.editProfile.skillsHint}</Text>
+            <View style={styles.skills}>
+              {CATEGORIES.map((c) => {
+                const on = form.skills.includes(c.slug);
+                return (
+                  <Chip
+                    key={c.slug}
+                    size="sm"
+                    label={c.label}
+                    category={categoryArtId(c.slug)}
+                    selected={on}
+                    onPress={() => set({ skills: on ? form.skills.filter((s) => s !== c.slug) : [...form.skills, c.slug] })}
+                  />
+                );
+              })}
+            </View>
+          </FadeUp>
+
+          {/* presentation pills on Profil (Norsk, engelsk · Har bil · Kvelder etter kl. 17) – not in RedigerProfil.dc.html */}
+          <FadeUp delay={170} style={[styles.sec, shadow.card]}>
+            <SecHead icon="globe" bg={colors.cyanTint} fg={colors.cyanDeep} title={nb.editProfile.secMore} />
+            <Field label={nb.editProfile.languages}>
+              <View style={styles.skills}>
+                {LANGUAGES.map((l) => {
+                  const on = form.languages.includes(l);
+                  return (
+                    <Chip
+                      key={l}
+                      size="sm"
+                      label={l}
+                      selected={on}
+                      onPress={() => set({ languages: on ? form.languages.filter((x) => x !== l) : [...form.languages, l] })}
+                    />
+                  );
+                })}
+              </View>
+            </Field>
+            <View style={styles.carRow}>
+              <Icon name="transport" size={18} color={colors.ink2} />
+              <Text style={[text.bodySemi, styles.flex]}>{nb.editProfile.hasCar}</Text>
+              <Toggle value={form.hasCar} onValueChange={(hasCar) => set({ hasCar })} accessibilityLabel={nb.editProfile.hasCar} />
+            </View>
+            <Field label={nb.editProfile.availability} hint={nb.editProfile.optional}>
+              <Input
+                value={form.availability}
+                onChangeText={(v) => set({ availability: v.slice(0, 40) })}
+                placeholder={nb.editProfile.availabilityPh}
+                accessibilityLabel={nb.editProfile.availability}
+              />
+            </Field>
+          </FadeUp>
+
           {/* home notes */}
           <FadeUp delay={180} style={[styles.sec, shadow.card]}>
             <View style={styles.between}>
@@ -365,54 +394,12 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
 
           {/* portfolio */}
           <FadeUp delay={220} style={[styles.sec, shadow.card]}>
-            <View style={styles.between}>
+            <View>
               <SecHead icon="image" bg={categoryColors.maling.bg} fg={categoryColors.maling.fg} title={nb.editProfile.secPortfolio} />
-              <Text style={text.meta}>{nb.editProfile.portCount(form.portfolio.length, PORT_MAX)}</Text>
+              <View style={styles.portBody}>
+                <PortfolioManager userId={userId} />
+              </View>
             </View>
-            <View style={styles.grid}>
-              {rows.map((row, r) => (
-                <View key={r} style={styles.gridRow}>
-                  {[0, 1, 2].map((c) => {
-                    const t = row[c];
-                    if (!t) return <View key={c} style={styles.cell} />;
-                    if (t.kind === 'add') {
-                      return (
-                        <PressableScale
-                          key="add"
-                          accessibilityRole="button"
-                          accessibilityLabel={nb.editProfile.portAddAria}
-                          onPress={addPortfolio}
-                          disabled={busy === 'port'}
-                          style={[styles.cell, styles.add]}
-                        >
-                          <View style={styles.addIcon}>
-                            {busy === 'port' ? <Spinner size={16} color={colors.ink} /> : <Icon name="plus" size={18} color={colors.ink} />}
-                          </View>
-                          <Text style={styles.addText}>{nb.editProfile.portAdd}</Text>
-                        </PressableScale>
-                      );
-                    }
-                    return (
-                      <ScaleIn key={t.uri} style={styles.cell}>
-                        <View style={styles.ptl}>
-                          <Image source={{ uri: t.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
-                        </View>
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={nb.editProfile.portRemoveAria(t.i + 1)}
-                          onPress={() => removePortfolio(t.uri)}
-                          hitSlop={7}
-                          style={styles.rm}
-                        >
-                          <Icon name="x" size={14} color={colors.white} />
-                        </Pressable>
-                      </ScaleIn>
-                    );
-                  })}
-                </View>
-              ))}
-            </View>
-            <Text style={text.help}>{nb.editProfile.portHelp}</Text>
           </FadeUp>
         </View>
       </Screen>
@@ -429,7 +416,8 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
       </Sheet>
 
       <Sheet visible={komOpen} onClose={() => setKomOpen(false)} title={nb.editProfile.pickKommune} scroll heightRatio={0.7}>
-        {INNLANDET_KOMMUNER.map((k) => (
+        {/* the launch kommuner; a kommune saved earlier stays in the list */}
+        {[...new Set([...LAUNCH_KOMMUNER, form.kom])].map((k) => (
           <Pressable
             key={k}
             accessibilityRole="radio"
@@ -444,6 +432,9 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
             <Radio selected={form.kom === k} />
           </Pressable>
         ))}
+        <View style={styles.waitlist}>
+          <KommuneWaitlist />
+        </View>
       </Sheet>
     </KeyboardAvoidingView>
   );
@@ -474,6 +465,7 @@ function PickRow({ icon, bg, fg, label, onPress, danger }: { icon: IconName; bg:
 }
 
 const styles = StyleSheet.create({
+  waitlist: { marginTop: 12 },
   flex: { flex: 1, minWidth: 0 },
   px: { paddingHorizontal: screenPadding },
   mt16: { marginTop: 16 },
@@ -533,6 +525,9 @@ const styles = StyleSheet.create({
   areaCenter: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.ink },
   seenText: { flex: 1, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 18.9, color: colors.ink2 },
   notesLabel: { fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 16, color: colors.mute },
+  skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  carRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  portBody: { marginTop: 14, gap: 12 },
   grid: { gap: 12 },
   gridRow: { flexDirection: 'row', gap: 12 },
   cell: { flex: 1, aspectRatio: 1 },

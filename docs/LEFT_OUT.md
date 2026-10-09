@@ -1,7 +1,7 @@
 # Left out – what's missing, why, and what you need to do
 
 Living list for the MinNabo redesign. Updated with every screen commit.
-Last updated: 2026-10-04 (after Adminpanel).
+Last updated: 2026-10-06 (fourth pass: launch kommuner, Gi tilbud layout, Fullføring line, taken oppdrag, comments on oppslag; migrations 0045–0048 waiting to be pushed).
 
 Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 🟡 nice to have / decision needed · ✅ resolved
 
@@ -12,18 +12,26 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | # | Prio | Action | Why |
 |---|------|--------|-----|
 | A1 | ✅ | ~~Restore the Supabase project~~ – **done by you (2026-10-03)**: `profiles` exists, the app saves with a real Supabase session. Still to do: verify the **`avatars` bucket** upload with the storage policies you prepared (folder = Supabase user id). | Onboarding photo and Rediger profil photo/portfolio upload depend on it. |
-| A2 | 🔴 | **Apply ALL migrations (0001–0028) – the database is empty.** Checked 2026-10-03: only a hand-made `profiles` table exists; `listings`, `categories`, `partners`, `noticeboard_posts` … are missing, which is why most screens show "Noe gikk galt". Steps: (1) in the Supabase SQL editor run `drop table if exists public.profiles cascade;` (it only holds your test rows – 0001 creates the real one, and would fail if it exists); (2) put `SUPABASE_DB_PASSWORD` in `.env`; (3) `set -a; source .env; set +a` → `npx supabase login` → `npx supabase link --project-ref hvxuzvhzsaocsnwznsai --password "$SUPABASE_DB_PASSWORD"` → `npm run db:push`. Your storage policies can stay (0004 adds its own with other names; the `avatars` bucket is reused). | Every data screen depends on these tables. |
-| A3 | 🔴 | **Real Vipps login (OIDC)**. Today the Vipps sheet is a mock (`src/auth/mockVipps.ts`) with sample identities. Needs a Vipps Login merchant agreement, client id/secret, and a Supabase auth hook / edge function. | Rule 3: Vipps is the only login. Name, birth year and phone on Samtykke / Oppsett also come from Vipps. |
-| A4 | 🔴 | **Youth roles on the backend** (under-18). Add a role/claim from the Vipps birth date and RLS rules: youth can only browse oppdrag, give/withdraw tilbud, chat in their own offer conversations, view profile, safety/privacy. | Rule 5 says enforce on the backend. The youth app (`/ung`) works, but its offers/chats are local only until this exists. |
+| A2 | ✅ | ~~Apply the migrations~~ – **0001–0035 are applied** on the live project (checked 2026-10-05 with `supabase migration list`). The new ones are in A14. | – |
+| A3 | ✅ | ~~Vipps credentials~~ – real Vipps login works end-to-end (tested on TestFlight 2026-10-09). Production sales unit, Login plan upgraded so `birthDate` is delivered (the basic plan leaves it out silently). Redirect URI `minnabo://vipps/callback`; secrets VIPPS_CLIENT_ID/SECRET/MSN/SUBSCRIPTION_KEY set; flow is `app_to_app_v2` + PKCE. Still open: show the name/logo **MinNabo** on the sales unit (portal → sales unit → *Edit* "What your business looks like"). Later: universal link (https) instead of the custom scheme, and an in-app browser (`expo-web-browser`, ask first) so no Safari tab is left behind. | Rule 3: Vipps is the only login. |
+| A4 | ✅ | ~~Youth roles on the backend~~ – built in `0038_vipps_youth.sql`: the Vipps birth date decides, database triggers block everything a youth account may not do, `/ung` now sends real tilbud and opens real chats, posters see "Ungdomskonto · 16 år". Active once A14 + A3 are done. | – |
 | A5 | 🟠 | **Commit your own changes** that I keep out of my commits: `app.json` (EAS/owner/infoPlist), `package.json` version bumps + `package-lock.json`, `app/(tabs)/_layout.tsx` (SKIP_LOGIN), partner-logo edits (`mappers.ts`, `supabaseClient.ts`, `types.ts`, `FellesskapScreen.tsx`, `seedCommunity.ts`), migration 0025, the **SetupScreen anonymous-auth fix** (`src/screens/Onboarding/SetupScreen.tsx` – remove the two `console.log` lines and the `console.error` before release), and delete the temp file `app.json.BLV1_…`. | `package-lock.json` now also contains the `expo-calendar` install, so it must be committed together with your version bumps. |
 | A6 | 🟠 | **Make a new app build** (EAS) once A5 is in. | `expo-calendar` adds a native module + the calendar permission text; Expo Go/old builds can't use "Legg i kalender". |
 | A7 | 🟠 | **Decide the backend fields** in section 3 (skills, availability, offer count, response time, …). Tell me which to add and I'll write the migrations. | Each one un-hides a part of the design. |
 | A8 | 🟡 | **Partner logos**: get logo files from the partners and set `logo_path`. | Fellesskap shows dashed placeholders until then. |
 | A9 | ✅ | ~~Mock switch~~ – **back (2026-10-03)**: `EXPO_PUBLIC_USE_MOCKS=true` in `.env` runs the app on the demo data as Marius B.; `false` uses the real Supabase. Restart Expo with `-c` after changing it. Dev builds only. | – |
 | A10 | 🟡 | `design/compare/knapper-app.png` does not exist (asked about in the Komponenter task). Add it if you want that comparison redone. | Komponenter was compared against `design/screenshots/Komponenter.png` instead. |
-| A11 | 🟠 | **Anonymous Supabase auth is a dev stand-in** (added by you in Oppsett). Enable "Anonymous sign-ins" only for development, and replace it with the Vipps OIDC session (A3) before launch – the profile id model (auth.uid() = profiles.id) stays the same. Anonymous users are never cleaned up automatically. | Otherwise anyone can create accounts without Vipps (rule 3). |
+| A11 | 🔴 | **Before the public launch: remove the temporary test login.** Until the Vipps agreement is in place, testers create a real account with only a name ("Fortsett uten Vipps (test)" on Logg inn). It is switched on by `EXPO_PUBLIC_TEST_LOGIN=true` (in `.env` and in every profile in `eas.json`) and needs "Anonymous sign-ins" **on** in Supabase (it is on, checked 2026-10-06). At launch: delete the flag from `eas.json`, turn "Anonymous sign-ins" off, and delete the test accounts. A test account lives on the phone that made it – logging out or deleting the app loses it for good. Test accounts count as verified and as adults. | Rule 3: login is Vipps only. Anyone with a test build can make an account. |
 | A12 | 🟡 | **Test the price fields on a phone** after the fix (Legg ut step 6, Gi tilbud, youth tilbud). I could only reproduce on web, so I fixed the native causes I could find: big-number clipping on Android, keyboard covering the field (iOS screens + all sheets), and the first tap on a quick-amount chip only closing the keyboard. If something is still off, send a screenshot. | The bug was reported on device. |
-| A13 | 🟡 | **Decide: replies and saving on Oppslagstavle.** The design has "Svar" (opens a chat with the poster), "Lagre" and "N svar" on every oppslag. Chats are tied to an oppdrag in the database (`conversations.listing_id` is required), so this needs either chats on oppslag (`conversations.notice_id`) or a simple reply thread, plus a `saved_notices` table. Say which and I'll build it. | Hidden for now – the board works without them. |
+| A13 | ✅ | ~~Decide: replies and saving on Oppslagstavle~~ – the design file is clear ("Svar" links to the chat), so "Svar" opens a chat with the poster, "Lagre" saves the oppslag and "N svar" counts neighbours who have written (`0041_notice_replies.sql`). | – |
+| A14 | 🔴 | **Push migrations 0047–0053** (`set -a; source .env; set +a; npm run db:push`) and **redeploy `send-push`** (`npx supabase functions deploy send-push --no-verify-jwt`). 0001–0046 are applied (checked 2026-10-06). 0047 a taken oppdrag takes no more tilbud · 0048 comments on oppslag, edit, "Avsluttet" · 0049 up to 4 hovedpartnere · 0050 push tokens follow the signed-in user, notifications for a new vurdering and for updated terms, live "Lest" in chat · 0051 the bug round (blocking stops messages, reports on comments, protected oppdrag, "Levert", no false e-post verification) · 0052 other tilbud on a taken oppdrag are "på vent" and their senders are told. · 0053 reminders before a job, nytt tidspunkt on an avtale, be om hjelp igjen, price guidance, app-icon badge, foresatt, spam limits + word filter, waiting list. Also **redeploy `vipps-login`** (it can now attach Vipps to a test account). Not run locally (no Docker) – tell me if one fails. | Until then: comments on oppslag fail, "Lest" does not update live (chat and the ticks in Innboks), "Levert" never shows, and the two new notifications are not sent. |
+| A18 | 🔴 | **Check that pg_cron is on** after pushing 0053: Supabase dashboard → Database → Extensions → `pg_cron`. If the push printed "pg_cron could not be enabled", switch it on there and run the last block of `0053_more_features.sql` (the `cron.schedule` part) in the SQL editor. | Without it no reminders are sent (the evening before, an hour before, "tid for neste gang"). |
+| A19 | 🟡 | **Look through the word list** in the `banned_words` table (seeded in 0053 with a short list of slurs). Add or remove rows in the dashboard; no app update needed. | – |
+| A15 | 🔴 | **Deploy the two new edge functions and set up push**: `npx supabase functions deploy vipps-login --no-verify-jwt` and `npx supabase functions deploy send-push --no-verify-jwt`; `npx supabase secrets set PUSH_SECRET=<random string>`; then run the `insert into app_secrets …` statement from the top of `0039_push.sql` with your functions URL and the same secret. | Nothing sent push notifications before – tokens were not even registered. Now new notifications and chat messages are pushed, respecting Varslinger (master, per type, quiet hours) and a muted chat. |
+| A16 | 🟡 | **Remove `expo-linear-gradient`** from `package.json` when you next touch dependencies – nothing uses it (rule 7). | Smaller build. |
+| A17 | 🟠 | **TestFlight build**: `npx eas-cli build -p ios --profile production`, then `npx eas-cli submit -p ios --latest`. Say yes when EAS asks to set up push notifications (it creates the Apple push key). `expo-notifications` was added to the plugins in `app.json` on 2026-10-06 – without it iOS builds get no push permission, so older builds cannot receive push. | Needed to test with real data and notifications. |
+| A18 | 🟠 | **Fill in the hovedpartner pages.** Each hovedpartner now has its own page (`/partner/<id>`). The text comes from new columns on `partners`: `about`, `offer`, `address`, `phone`, `email`, `opening_hours`, `cover_path` (wide photo), `gallery` (photo URLs), plus the existing `url` and `logo_path`. Fill them in the Supabase table editor; empty fields are simply not shown. Make a partner a "Lokal helt" in Adminpanel → Partnere (the "Lokal helt" chip on a støttespiller). | Until then a hovedpartner page shows name, tagline and area only. |
+| A19 | 🟡 | **Location on iOS – tell me what it said.** I could not reproduce "Bruk posisjonen min" failing, so I fixed the three likely causes: a slow fix now falls back to the last known position (12 s limit), a position outside Innlandet now says so instead of "Fant ikke posisjonen din", and a permission that was refused earlier is handled without asking again. If it still fails, the message shown tells which case it is. | MinNabo only covers kommuner in Innlandet – a phone anywhere else cannot be placed in one. |
 
 ---
 
@@ -44,98 +52,90 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | Hidden / changed | Why | What's needed |
 |--------|------------------|-----|---------------|
-| Meny | "Tilgjengelig for småjobber" toggle | No field for it (`paused`/feriemodus means something else) | `profiles.available_for_jobs boolean` |
 | Meny | "Legg ut" tile says "Nytt oppdrag" | Rule 1 (design text implied offers) | Confirm wording |
 | Oppsett | Name chips + "Fullt navn · Fra Vipps"; area chips only for Lillehammer | Needs real Vipps data; `KOMMUNE_AREAS` only has Lillehammer | A3 + area lists for other kommuner |
 | Samtykke | Vipps identity card + "Bekreftet via Vipps" | Mock login has no verified identity | A3 |
 | Samtykke | Optional tips consent | Column added in `0024_consent_tips.sql` | A2 |
 | Oppdrag (home) | "184 aktive" counts per kommune in the location sheet | No count endpoint | Count view / RPC per kommune |
-| Legg ut wizard | "Hvem kan gi tilbud", "Maks avstand", private price estimate – shown in the summary but **not saved** | No columns on oppdrag | `listings.offer_audience`, `max_distance_km`, `private_estimate` |
 | Legg ut / Forhåndsvisning | "Publiser" under the mock login runs the flow but saves nothing | No real session (A3) | A3 |
 | Fellesskap | Partner logos; member avatar stack | No logo files; no member data | A8; member count/avatars endpoint |
-| Oppdrag for meg | Skill matching (the chips "Datahjelp, Hage …" and "Passer …") | Supabase profile has no skills column – live users get distance/newest ranking only | `profiles.category_slugs text[]` (+ edit in Rediger profil) |
 | Oppdrag for meg | "Ikke aktuelt" hides are stored on the device only | No table | Optional `dismissed_listings` table to sync across devices |
-| Oppdragsdetaljer | "N naboer har gitt tilbud" + avatar stack | Non-owners can't read other people's proposals (RLS) | Public `offer_count` on listings (count only, no identities) |
-| Oppdragsdetaljer, StartSamtale, Sammenlign | "Svarer vanligvis innen 1 t" / "Svartid" | No response-time statistic | Computed `profiles.median_reply_minutes` |
 | Oppdragsdetaljer | Image captions ("Plenen, ca. 300 m²") | Images have no caption field | `listing_images.caption` |
-| Mottatte tilbud | Row date always "Sendt …" (design: "Godtatt 15. sep", "Avslått 15. sep") | No accepted/declined timestamp on proposals | `proposals.responded_at` |
-| Tilbudsdetaljer | Timeline rows "Sett av deg" and "Tilbudet gjelder til …" | No seen timestamp, no offer expiry | `proposals.seen_at`, `expires_at` |
 | Tilbudsdetaljer | Decline is held ~4 s for "Angre" before it is sent | DECLINED is final in the state machine | OK as is; or add an UNDO_DECLINE transition |
-| Sammenlign | "Varighet" cell | Offers have no duration field | `proposals.duration_text` (+ field in Gi tilbud) |
-| Sammenlign, Avtale | Date sort / countdown / calendar read the date from free text | Proposal time is free text ("Lør 10. okt kl. 10:00") | `proposals.scheduled_at timestamptz` – then "Fredag ettermiddag"-style offers also get a countdown |
-| Avtalesammendrag | "Om 11 dager" countdown + "Legg i kalender" hidden when the time has no date | Same as above | Same as above |
-| Jobbdag | "Pauser" total and the day's first "Startet kl." – shows "Denne økten" and the current session start instead | The timer only stores accumulated time + current start | `job_workspaces.first_started_at`, `paused_ms` |
-| Jobbdag | "Stopp" is not saved (after reopening, a stopped timer shows as Pause) | No stopped state on the workspace | `job_workspaces.timer_stopped_at` |
-| Jobbdag | Who does a task ("Mari" / "Jonas" on each row) | Checklist items have no owner | `checklist_items.assignee_id` |
-| Jobbdag | "Hvem ordner det?" (Mari kjøper / Jonas tar med / legger ut) and the per-person split under the sum | Materials only have label + amount | `materials.payer` (`CLIENT`/`HELPER`/`HELPER_OUTLAY`) |
-| Jobbdag | Photo pair titles ("Langsiden mot veien") and Før/Etter times; "Underveis" as its own phase | Photos only have BEFORE/AFTER; pairs are made by order | `job_photos.caption`, `pair_id`, phase `DURING` |
-| Jobbdag | Estimate bar only shows when the oppdrag has a duration with hours/day in it | Estimate is parsed from free text | `listings.estimated_minutes` |
+| Avtalesammendrag, Mine avtaler | Countdown, calendar and week-strip dot are missing only for tilbud sent without a day chip (free text like "Fredag ettermiddag") | Those offers have no date at all | OK as is – every tilbud sent with a day now stores a real timestamp (`proposals.scheduled_at`, 0037) |
+| Jobbdag | Estimate bar only shows when the tilbud (or the oppdrag) has a duration with hours/day in it | The estimate is read from text ("ca. 5 t") | OK as is – tilbud sent with a duration chip always have one |
 | Vurdering | "Vil du anbefale …?" Ja/Nei has no field – "Ja" is saved as the "Anbefales" tag, "Nei" is not stored | No `recommends` column on reviews | `reviews.recommends boolean` |
 | Vurdering | "Jonas har nå 33 vurderinger" count in the success row | Would need a refetch of the profile's review count | Shown without the count; OK as is |
 | Fullføring | "Tid brukt", "Oppgaver", "Bilder" show "–" / 0 when nobody used the job-day tools | They come from the Jobbdag workspace | OK as is – fills in once Jobbdag is used |
-| Chat | "Slå av varsler" (mute) is stored on the device only – push notifications still arrive | No mute field on the backend | `conversation_participants.muted boolean` + respect it in the push sender |
 | Chat | Time proposals are text messages with a "📅 Tidsforslag:" marker; the "Passer" answer is also a text message | No structured message type for time proposals | Add message kind `TIME` (+ answer state) so the card and the agreed time are data, not text |
-| Chat | Duration fact ("ca. 5 t") on the inline offer card | Offers have no duration | `proposals.duration_text` (see Sammenlign) |
 | Chat | Image captions ("Sett fra plenen") and file-name chip on photos | Image messages have no caption/file name | `messages.caption` |
-| Chat | "Svarer vanligvis …" / response time | See Oppdragsdetaljer | `profiles.median_reply_minutes` |
-| Chat | Block/unblock uses the existing block list; the blocked person isn't hidden from oppdrag lists yet | Lists don't filter blocked profiles | Filter blocked owners in `listListings` (RLS or query) |
-| Innboks | Unread count per conversation ("2" in the bubble) – shows a dot instead; subline counts conversations, not messages | The API only knows read/unread per conversation | Return `unread_count` (messages after `last_read_at`) from the conversations query |
-| Innboks | Status tag "Endring forespurt" | `statusTag` only has NEW_OFFER / OFFER_ACCEPTED | Add REVISION_PENDING to the conversation status tag |
-| Innboks | "Du: …" prefix on my own last message | Preview has no author | Return the last message's author with the preview |
-| Mine avtaler | Agreements without a real date ("Lørdag kl. 10:00") get no dot in the week strip, no time and sit under "Uten dato"; "Legg alle i kalenderen" skips them | Free-text time (see `scheduled_at` above) | `proposals.scheduled_at timestamptz` |
-| Mine avtaler | Duration in the time column comes from the oppdrag, not the offer | Offers have no duration | `proposals.duration_text` (see Sammenlign) |
 | Mine avtaler | "Legg alle i kalenderen" button | Only on iOS/Android (no device calendar on web) | OK as is |
 | Avtalesammendrag | "Legg i kalender" only on iOS/Android | Web has no device calendar | OK as is (or offer an .ics download on web) |
-| Youth app | Offers/chats from `/ung` stay on the device | Needs youth roles | A4 |
-| Profil | "Svarer vanligvis innen" stat tile (3rd tile) | No response-time data | `profiles.median_reply_minutes` (same as Chat) |
-| Profil | Presentation pills: languages, "Har bil", availability ("Kvelder etter kl. 17") | Profile has no such fields | `profiles.languages text[]`, `has_car boolean`, `availability_text` |
-| Profil | "Medlem siden mars 2024" shows only the year ("Medlem siden 2026") and place shows the kommune/sted only | `memberSince` is a year string | Return `created_at` (month + year) |
-| Profil | Pålitelighet: only "Møter opp" is shown; "Presis" and "Fullfører" bars are hidden. Footer says "Basert på N fullførte avtaler." (not "siste 12 måneder") | Reliability only has completed + no-shows + score | `reliability.on_time_pct`, `completion_pct`, and a 12-month window |
 | Profil | Anbefalt av naboer: the avatar stack of who recommended is hidden. The note "Bare naboer som har hatt en fullført avtale med … kan anbefale" is shown, but the backend lets anyone endorse | Endorsements return only skill + count | Return endorser ids (first 3) and **enforce in `toggle_endorsement` that the caller has a completed agreement with the person** |
 | Profil | Verification sheet: Telefon/E-post/Bedrift show the backend's `explanation` text as the single "Dette ble sjekket" line (the date is now shown from `verified_at`) | Verifications have no list of checks | Optional: check lines per verification |
 | Profil | Vipps-ID chip and "Verifisert med Vipps" are shown for every profile | Login is Vipps only (rule 3) – correct once A3 is live | A3 |
 | Profil | Private card: "E-post" row hidden | Profile has no e-mail field | Return the masked e-mail for the own profile |
-| Profil | Review cards: "Svar fra …" (owner reply) hidden | Reviews can't be replied to | `reviews.reply text`, `replied_at` + an API to reply |
-| Profil | Portfolio tiles are single photos: no Før/Etter pairs, no titles/place under the tiles, no Før/Etter switch in the viewer | `portfolio` is a list of image URLs | `portfolio_items (before_url, after_url, title, place, caption, done_at)` |
 | Rediger profil | "Fullt navn" shows the Vipps name only when the Vipps identity is available (mock login today); otherwise it falls back to the display name | There is no separate full-name field on the profile | A3 (real Vipps) + `profiles.full_name` filled from Vipps |
-| Rediger profil | Portfolio tiles have no caption ("Terrasse", "Hagebed") | Portfolio is a list of image URLs | Same as the Profil portfolio item (`portfolio_items.title`) |
 | Rediger profil | Photos picked for the avatar/portfolio are uploaded immediately; if you press "Forkast" the uploaded file stays in Storage | Storage upload happens before save | Optional: a cleanup job for unreferenced files in `avatars/` and `listing-images/` |
-| Mine oppføringer | **"Rediger" in the ⋯ sheet is missing** – there is no way to edit a published oppdrag | No `updateListing` API and the Legg ut wizard has no edit mode | `updateListing(id, patch)` (+ task_details) and a wizard "edit" mode prefilled from the listing. Tell me if you want this built. |
 | Mine oppføringer | "visninger denne uka" mini stat, "48 visninger" and "2 lagret" per card | No view or save counters | `listing_views` (or a `view_count`) and a saved count per listing |
 | Mine oppføringer | Archived card subline "Fullført 2. sep med Erik Moen" and "Du ga 5 stjerner"; "Se avtalen" opens Mine avtaler, not the exact avtale | The owner list doesn't include the agreement / review | Return the accepted proposal id, counterpart and my rating with `listMyListings` |
 | Mine oppføringer | "Slett" is a soft delete (status REMOVED): offers and chats stay in the database, the oppdrag disappears for everyone | Hard delete would cascade-delete the chats, which the design says are kept | OK as is |
-| Lagrede | Alert bell per saved search, "Slå på varsel …" note, "· varsel på" and "sist kjørt …" | Saved searches have no alert flag, no last-run time and nothing sends alerts | `saved_searches.alert boolean`, `last_run_at`, and a job that pushes new hits |
-| Lagrede | "Nye treff" counts oppdrag posted since the search was **saved**, not since you last opened it | No last-seen time per saved search | `saved_searches.last_seen_at` (set when "Kjør søk" is pressed) |
 | Lagrede | "Kjør søk" only carries the text and category into Søk (not kommune / verified / sort) | `/sok` only reads `q` and `category` | Let `/sok` accept the full saved filter |
 | Lagrede | Extra "Hjelpere (n)" segment (only when you follow someone) – not in the design | Following ("Følg") still exists on Profil and this is the only list of them | Decide: keep, or drop following |
 | Nabolag | The group is your **own area** ("<sted> nabolag" in your kommune), not a group you pick or name. Borettslag-style named groups are gone | The design shows one area group; the old free-text group was stored on the phone only | Decide if you also want named groups (borettslag) later |
 | Nabolag | The fake member number (a hash of the place name) is gone – the count is now real and starts at 0 until people join | Needs 0027 (A2) | – |
 | Nabolag | Cover art avatars and the member stack show the latest members; there is no "who is online" | – | OK as is |
 | Oppslagstavle | Image tile only when a photo was added (the design shows coloured category tiles as stand-ins for photos) | Prototype stand-ins | OK as is |
-| Oppslagstavle | "Svar", "Lagre" and "N svar" | See A13 | A13 |
 | Verifisering | E-post row shows "Fra Vipps-profilen din" instead of the masked address | Profile has no e-mail field | Return the masked e-mail for the own profile (same as Profil) |
-| Verifisering | "Du kan svare offentlig på en vurdering du har fått." is left out of "Slik fungerer vurderinger" | There is no reply-to-review feature | `reviews.reply` (see Profil) – then add the line back |
 | Verifisering | Phone row says "Hentet fra Vipps da du logget inn" – true once real Vipps login exists; with the mock login the phone is not from Vipps | A3 | A3 |
 | Verifisering | BankID row (old "Kommer snart") removed | Rule 3 – Vipps only | ✅ |
-| Sikkerhet / Jobbdag | **Trygg tur sends nothing by itself**: Start / Forleng / Stopp open the phone's SMS app with the message pre-filled to your trygge kontakter; you press send. The trip and contacts are stored on the phone only | No SMS service on the backend | An SMS provider (e.g. Twilio / Link Mobility) + an edge function, and `safe_trips` + `trusted_contacts` tables |
+| Sikkerhet / Jobbdag | **Trygg tur sends nothing by itself**: Start / Forleng / Stopp open the phone's SMS app with the message pre-filled to your trygge kontakter; you press send. The trip and contacts are stored on the phone only | You chose to skip the SMS provider for now (2026-10-06) | Pick a provider (Twilio / Sveve / Link Mobility) when you want this – then an edge function + `safe_trips` / `trusted_contacts` tables |
 | Sikkerhet / Jobbdag | "Stopper du ikke innen fristen, får kontaktene dine en påminnelse" – the reminder to contacts is not sent (only the overdue state shows in the app) | Needs a server-side timer | Scheduled job on `safe_trips.due_at` that texts the contacts |
 | Sikkerhet | Blocked rows say "Blokkert" without date or "via rapport" | Blocks have no timestamp/source in the API | Return `blocks.created_at` and whether it came from a report |
-| Rapporter | "Skjermbilde" attachment | Reports have no attachment field | `reports.attachment_path` (+ upload to a private bucket only admins can read) |
 | Rapporter | Tilbud and Vurdering cannot be reported from where they are shown yet (only users, oppdrag and messages have a "Rapporter" entry) | Tilbudsdetaljer / review cards link to the user instead | Add `?tilbud=` / `?vurdering=` entries (API already supports PROPOSAL / REVIEW) |
 | Rapporter | Case number is made from the report id (e.g. "MN-863468"), not a running number | No case-number column | Optional `reports.case_no serial` |
 | Personvern | Retention answers have no numbers (design: "[x] dager", "[x] måneder") and "Vilkår v2.1" has no version | Legal decisions; no terms-version field | Decide retention periods + a terms version (`consent_records.terms_version`) |
-| Personvern | Export opens the share sheet with the data as JSON ("Eksporten er klar") instead of "sendt til e-post" | No e-mail sending | An edge function that mails a download link |
+| Personvern | Export opens the share sheet with the data as JSON ("Eksporten er klar") instead of "sendt til e-post" | You chose to skip the e-mail provider for now (2026-10-06) | Pick a provider (Resend / Postmark) when you want this |
 | Innstillinger | "Stor" text size only enlarges the preview; app-wide large text follows the phone's text-size setting (button opens phone settings) | React Native can't scale every Text from one place without rewriting all screens | OK as is (accessibility is covered by the OS setting) |
 | Innstillinger | "Vilkår for bruk · Versjon [x.x]" shows "Les vilkårene for MinNabo" | No terms version | Same as Personvern (`terms_version`) |
 | Vilkår | **Final legal text** – the design's working copy is used. Values to confirm in `src/content/terms.ts`: version (1.0), valid-from date, minimum age (15), notice days (30), contact e-mail (empty → sentence hidden). The "[Endelig juridisk tekst …]" markers show only in dev builds | Needs a lawyer | Send the text to a lawyer, then update `terms.ts` |
 | Vilkår | Download icon shares the terms as text instead of a PDF | No PDF library | Optional: host a PDF and link to it |
-| Slett konto | "Vi har sendt en bekreftelse til e-posten din" left out | No e-mail sending | E-mail provider + edge function |
+| Slett konto | "Vi har sendt en bekreftelse til e-posten din" left out | E-mail provider skipped for now (2026-10-06) | Same as Personvern |
 | Slett konto | Deletion is anonymise + soft-delete (the profile row stays as «Slettet bruker» so other people's chats keep their messages); reasons are stored anonymously in `account_deletions` | Intentional – see design copy «Andre ser "Slettet bruker"» | Decide how long to keep anonymised rows (Personvern retention) |
 | Admin | Partners can only be switched (hovedpartner / karusell) – new partners and logos are added with SQL (like `0025_seed_main_partners.sql`) | The design has no partner editor | Ask for an editor screen if you want to manage partners in the app |
-| Admin | Suspended users can still log in and read; they can't post oppdrag, tilbud, messages, oppslag or reviews (enforced by database triggers) | The design doesn't say what suspension blocks | Decide whether suspension should also block login |
 | Admin | "Fjern innhold" on a message/review blanks the text (kept for Angre); on an oppdrag/oppslag it hides it; on a user it suspends | Design shows one button for every type | Confirm this is the wanted behaviour |
 | Admin | Statistikk shows the current week (Mon–Sun) from real data; "Testdata." removed from the hint; supporter rows show the real partner name instead of "[Lokal bedrift]" | Real data instead of design samples | ✅ |
 | Profil | "Be om tilbud" is only in the preview of your own profile; on others' profiles "Ta kontakt" shows only when you already have a conversation together | There is no direct request/message without an oppdrag (rule 1) | Decide: keep as is, or allow a direct conversation without a listing |
+
+| Rediger profil | Extra section "Dette kan jeg hjelpe med" (category chips) – not in the design | Oppdrag for meg's "Endre" link lands here and the matching needs a place to set skills | Confirm placement / wording |
+| Rediger profil | Extra section "Mer om deg" (språk, Har bil, når passer det) – not in the design | Profil shows these as pills and they need a place to be set | Confirm placement / wording |
+| Rediger profil | Portefølje: "Legg til" opens a sheet (før-bilde valgfritt, etter-bilde, tittel, sted, beskrivelse) and each job is **saved right away**, not with "Lagre endringer". Max 9 jobs | The design only shows labelled tiles; Profil needs før/etter pairs with title and place | Confirm |
+| Profil | "Presis" = as helper, the Jobbdag timer was started no later than 15 min after the agreed time; "Fullfører" = completed agreements out of those completed or called off by you; all three bars cover the last 12 months and stay hidden until there are 3 agreements to judge from | The design shows the bars but not how they are measured | Confirm the rules |
+| Profil | A review can be answered by the person reviewed ("Svar på vurderingen"), up to 400 characters, and the answer can be changed later | Design shows the answer, not the rules | Confirm |
+| Jobbdag | Tapping the name chip on a task switches who does it (Felles → oppdragsgiver → hjelper); new tasks start as "Felles" | The design shows who does each task but no way to set it | Confirm |
+| Jobbdag | The photo sheet has an optional "Hva viser bildet?" field and a third choice "Underveis" | Pair titles and "Underveis" in the design need a source | Confirm |
+| Jobbdag | Material icons are the same tag icon for every row (the design varies them by type) | Materials have no category | OK as is |
+| Oppslagstavle | Saved oppslag are marked "Lagret" on the board, but there is no list of them (Lagrede has only Oppføringer and Søk in the design) | No screen for it in the design | Decide: a third segment in Lagrede, or a "Lagret" filter chip on the board |
+| Oppslagstavle | A chat about an oppslag shows an "Oppslag" strip instead of the oppdrag card, and "Send tilbud" is disabled there | There is no oppdrag to give a tilbud on | OK as is |
+| Lagrede | Alerts are sent for a new oppdrag that matches the saved text (in title or place), category, kommuner and "kun verifiserte" | Design says "nye treff" without defining the match | Confirm |
+| Offline | While offline the content of every screen is dimmed (and greyscale where the phone supports it); headers and footers are not | The design greys the cached list | OK as is |
+| Gi tilbud | Extra chip row "Omtrent hvor lenge?" – not in the design's sheet | The offer's "Varighet" (Sammenlign, Tilbudsdetaljer, chat card) needs a source; without a choice it falls back to the oppdrag's duration | Confirm, or remove and always use the oppdrag's duration |
+| Tilbud | A tilbud is valid for 14 days ("Tilbudet gjelder til …"); an expired one can't be accepted, an edit renews it | The design shows the date but not the rule | Confirm 14 days |
+| Meny | "Tilgjengelig for småjobber" off = no "Nytt oppdrag som passer deg" notifications. It does not hide your profile or existing tilbud | There are no helper listings to hide (rule 1) | Confirm |
+| Vipps login | Minimum age 15 is enforced in `vipps-login` (`MIN_AGE` secret) | Open legal question `[minstealder]` | Confirm with the lawyer |
+| Push | Chat messages are pushed but do not create a row in Varsler (they live in Innboks) | Avoids filling Varsler with every message | Confirm |
+
+---
+
+| Fellesskap | Changed from the design on request (2026-10-06): hovedpartnere are large cards that open their own page; new level "Lokale helter" (card + the old information sheet); lokale støttespillere stay logo + name without a sheet | Product decision | – |
+| Oppdrag for meg | Changed on request: the card can be swiped (right = Lagre, left = Ikke aktuelt); saving removes it from the stack and oppdrag you already saved are not suggested again | Product decision | – |
+| For bedrifter | Only the information card is shown; the registration form is switched off with the flag `businessForm` (Innstillinger → Utvikler can turn it on) | Product decision. The form, the Enhetsregisteret lookup and admin approval are still in the code | Say when it should come back |
+| Meny | The payment note at the bottom is removed | Product decision; there is no price in the menu (rule 4 is about prices) | – |
+| Legg ut | "Annet" is the first category | Product decision | – |
+
+| Oppslagstavle | Changed on request (2026-10-06): "Svar" is a public comment under the oppslag, not a private chat as in the design. The owner can edit the oppslag and mark it "Avsluttet" (no more comments; can be opened again). The owner of an oppslag can delete any comment under it. Chats started from an oppslag before this change still open | Product decision | – |
+| Oppdrag | An oppdrag with an accepted tilbud is taken: gone from the feed, searches and Oppdrag for meg, shown under Arkivert in Mine oppdrag as "Avtale inngått", and it takes no more tilbud. Calling the avtale off puts it back. Other open tilbud on it stay open, so they count again if the avtale is called off | Product decision | Say if the other tilbud should be declined automatically instead |
+| Kommuner | Only Lillehammer, Øyer, Gausdal, Ringsaker, Gjøvik, Hamar and Nordre Land can be chosen (account, oppdrag, Rediger profil, location sheet); "Bruk posisjonen min" only places you in one of them | Launch area: Lillehammer + about 40 km, plus Hamar | Extend `LAUNCH_KOMMUNER` in `src/data/kommuner.ts` when you grow |
 
 ---
 
@@ -143,7 +143,7 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Screen | State | Notes |
 |--------|-------|-------|
-| Tilstander (NoAccess / Success states, offline banner redesign) | partial | |
+| – | – | All design screens are built. Tilstander: NoAccess / Success exist, `ScreenState` uses the designed illustrations, the offline banner is redesigned ("Tilkoblet igjen", "Sist oppdatert kl. …", Prøv igjen). Cached content is greyed out while offline. |
 
 ---
 
@@ -151,6 +151,34 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 
 | Was | Fixed in |
 |-----|----------|
+| Bug round 2026-10-06 (22 items): blocked people could still message you and showed in Innboks · comments on oppslag could not be reported · Samtykke could be skipped by closing the app · an oppdrag with an avtale could be deleted, and calling the avtale off revived a removed oppdrag · wrong texts on paused/removed oppdrag · no logout warning for a test account · test users marked "e-post bekreftet" · expired tilbud looked new · photos could not get reactions · a chat behind another screen was marked read · comment notification opened the board · "Du: Sendte et tilbud" · "Sendt" never shown · carousel past its end · Vilkår silent about the test login · youth check failure, cold-start notification taps, tilbud edit dropping its day · inbox and block-list refetching · category mapping unverified | `0051_bugfixes.sql` + app. Details in the commit / chat of that day |
+| Vilkår did not say who runs the service | "Eies og drives av Webiser AS · org.nr. 933 452 107" under MinNabo at the top and in "Om MinNabo" (`TERMS.owner` in `src/content/terms.ts`; org.nr. from Enhetsregisteret) |
+| The Vipps mark on Logg inn was a drawn stand-in | Real Vipps icon on the button, the sheet pill and the spinner, and the white wordmark in the phone illustration (`src/components/VippsLogo.tsx`). The orange wordmark on white is in the component but not placed anywhere yet |
+| Chat never showed "Lest" | The app hard-coded every message as "Levert". It now reads how far the other person has read; 0050 sends that change live |
+| Push went to the wrong account on a shared phone / kept arriving after sign-out | 0050: the token follows whoever is signed in and is released on sign-out |
+| No notification for a new vurdering, or when the helper sent updated terms after "Be om endring" | 0050 |
+| A photo in a chat could not be opened | Tap opens it in fullscreen (pinch to zoom on iOS); hold to pin |
+| Gi tilbud: content pushed outside the screen | Long texts in a row could not shrink ("<navn> ønsker …", the day/time line and the place in the preview, a wide price pill) and ran past the right edge; the three chip rows were cut off 20 px inside the sheet. Sheets also could be pushed under the status bar by the keyboard – every sheet now stays below it |
+| Fullføring: the green line started on the wrong side | It always grew from the left (the other person). It now starts from whoever has confirmed |
+| Legg ut: a new step opened scrolled down | Every step starts at the top |
+| Innboks often showed an old last message, in the wrong order, and the other person's Innboks did not refresh | Cause: the database trigger that copies a new message onto the conversation ran with the sender's rights and was silently blocked for ordinary chat messages (only tilbud and system lines got through). `0045_fix_last_message.sql` fixes the trigger and repairs existing rows. The app also reads the real last message itself now, sorts by it, refreshes when you return to the tab and when any message arrives, and marks a chat read while it is open |
+| The app could run on sample data (demo user Marius B., sample Vipps identities, a dev shortcut past the login, "Publiser" that saved nothing) | Removed 2026-10-06: the app always uses the live Supabase backend and a real account. The in-memory data under `tests/mocks` is used by Jest only |
+| Innboks: a chat looked unread after I sent a message, and nothing showed that I wrote last | The app now reads who wrote the last message (works before the migrations too); 0036 also marks the conversation read for the sender. Tests in `mappers.test.ts` and `innboks.test.tsx` |
+| Jobbdag: who does a task, who pays for materials, photo captions / Underveis, Pauser, Startet, a saved Stopp | `0040_jobbdag.sql` + screen (the function now also checks that you are part of the agreement) |
+| Oppslagstavle: Svar, Lagre, N svar | `0041_notice_replies.sql` + screen |
+| Lagrede: bell, "varsel på", "sist kjørt", nye treff since last run | `0042_saved_search_alerts.sql` + screen |
+| Rapporter: screenshot | `0043_report_attachments.sql` (private bucket), Rapporter + "Se skjermbildet" in Adminpanel |
+| Profil: pills, "Medlem siden <måned år>", Presis / Fullfører, Svar fra …, før/etter-portefølje | `0044_profile_details.sql`, Profil, Rediger profil, Verifisering |
+| Meny (and every other sheet) could not be opened again after swiping it down / tapping outside / the X | `Sheet.tsx` no longer dismisses a sheet the library already dismissed (test: `sheetReopen.test.tsx`) |
+| Conversations never became "read" on the backend (0007 wrote one table, Innboks read another) | `0036_public_stats.sql` writes both and carries the old values over |
+| `notify_matching_helpers` was called by the app but did not exist in the database | Added in 0036 (same kommune + your categories + "Tilgjengelig for småjobber") |
+| Signing out kept the previous person's cached data on the phone | `signOut()` clears the query cache |
+| Push: tokens were never registered and nothing was sent | `PushBridge` + `send-push` + 0039 (A15) |
+| Blocked people's oppdrag still showed in lists | Filtered in `listListings` |
+| Meny toggle, offer count, "Svarer vanligvis innen", Innboks counts / "Du:" / "Endring forespurt", skills | 0036 + screens |
+| Offer date as a timestamp, duration, "Godtatt/Avslått <dato>", "Sett av …", "Tilbudet gjelder til …" | `0037_proposal_fields.sql` + screens |
+| Youth roles, real Vipps login, chat mute on the backend | 0038, 0039 (A3, A14, A15) |
+| "Rediger" for a published oppdrag; wizard fields not saved; suspension did not block login | Already built in the working tree (`0034_edit_and_suspend.sql`, applied) – the list was out of date |
 | Rapporter: no notification when a report is decided (copy had been softened) | `admin_decide_report` notifies the reporter ("Rapporten din er behandlet"); design copy restored (`0032_admin.sql`) |
 | Bedrift: `profiles.is_business` was set on submit | Set on admin approval, with a BUSINESS verification + notification (`0032_admin.sql`) |
 | Users could change their own `role` / `is_business` through the profile update policy | Guard trigger in `0032_admin.sql` |
@@ -159,3 +187,18 @@ Legend: 🔴 blocks real use · 🟠 design element hidden until data exists · 
 | Trygg tur card had old styling (Jobbdag) | New `TryggTurCard` in the Sikkerhet design, used on Sikkerhet and Jobbdag |
 | Price input UI on device (reported 2026-10-03) | Android font padding removed from the big amount, "kr" centred, inputs inside sheets use the sheet's keyboard-aware input, iOS screens adjust for the keyboard, taps on chips work while the keyboard is open – please confirm on a phone (A12) |
 | Lists stuck on skeletons under the mock login | `locationScope` keeps the kommune locally without a backend user (`b7f045f`) |
+| Reminders before an agreed job (evening before + about an hour before) | 0053 `send_agreement_reminders` on pg_cron (A14, A18) |
+| "Foreslå nytt tidspunkt" on an avtale (propose → godta / passer ikke / trekk) | 0053 + Avtale screen |
+| "Be om hjelp igjen" on a finished avtale: a new oppdrag only that helper sees | 0053 `request_help_again`, `listings.invited_profile_id` |
+| Repeating oppdrag ("Gjentas oppdraget?" in Legg ut step 5) + a nudge when the next round is due | wizard + 0053 |
+| Price guidance from earlier tilbud ("Vanlig i ditt område") in Legg ut and Gi tilbud; needs 5 tilbud in the category, else the fixed range / nothing | 0053 `price_guidance` |
+| Other tilbud when one is accepted: **kept "på vent"** (0052) – they count again if the avtale is called off, which an automatic decline would lose | decision, no change |
+| Quick replies in chat, quiet hours in Varslinger | existed already; tests pass |
+| "Del sted" in chat is shown locked before an avtale (it was hidden) | `ShareSheet` |
+| Number on the app icon (unread conversations + notifications) | `PushBridge` + `send-push` + 0053 `badge_count` |
+| Foresatt for a youth account: code from the youth, the parent is told who and when | 0053 + `GuardianSheet` (Innstillinger, youth Profil). Youth accounts need Vipps (A3), so this can't be tried with test accounts |
+| Before/after photos → portfolio with one tap on the Fullføring screen (helper) | `CompletionScreen` |
+| Spam limits on new oppdrag and oppslag + word filter on public text | 0053; the refusal text is shown in the app |
+| Test account → Vipps ("Koble kontoen til Vipps" in Innstillinger, shown once Vipps is configured) | `vipps-login` `linkToken`. Not tried against Vipps (A3) |
+| Waiting list for other kommuner (under every kommune list) + count in Admin → Statistikk | 0053 `kommune_waitlist` |
+| Milestones on the profile (5/10/25/50 oppdrag fullført, Rask til å svare, Toppvurdert) | `domain/milestones.ts` |

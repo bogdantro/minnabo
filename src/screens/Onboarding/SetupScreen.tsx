@@ -18,15 +18,15 @@ import nb from '@/i18n/nb';
 import type { Purpose } from '@/domain/types';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/auth/session';
-import { useVippsIdentity } from '@/auth/mockVipps';
+import { useVippsIdentity } from '@/auth/identity';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { profileKeys } from '@/api/queries';
-import { detectKommune } from '@/lib/geo';
-import * as ImagePicker from 'expo-image-picker';
+import { detectKommune, locationErrorText } from '@/lib/geo';
 import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
-import { INNLANDET_KOMMUNER, KOMMUNE_AREAS } from '@/data/kommuner';
+import { KommuneWaitlist } from '@/components/KommuneWaitlist';
+import { KOMMUNE_AREAS, LAUNCH_KOMMUNER } from '@/data/kommuner';
 import { locationScope } from '@/lib/locationScope';
 import { colors, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
@@ -157,7 +157,7 @@ export function SetupScreen() {
   const { userId } = useSession();
   const me = useCurrentUser();
   const queryClient = useQueryClient();
-  // Full name from Vipps (mock login for now) – shown locked as "Fra Vipps".
+  // Full name from Vipps – shown locked as "Fra Vipps".
   const vippsName = useVippsIdentity()?.name ?? null;
 
   const [step, setStep] = useState<Step>(1);
@@ -184,7 +184,7 @@ export function SetupScreen() {
   const suggestions = useMemo(() => nameSuggestions(vippsName ?? me.displayName ?? ''), [vippsName, me.displayName]);
   const kommuner = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return INNLANDET_KOMMUNER.filter((k) => !needle || k.toLowerCase().includes(needle));
+    return LAUNCH_KOMMUNER.filter((k) => !needle || k.toLowerCase().includes(needle));
   }, [q]);
   const areas = KOMMUNE_AREAS[kommune ?? 'Lillehammer'] ?? [];
 
@@ -195,36 +195,63 @@ export function SetupScreen() {
   const toastAbove = (msg: string, icon: IconKey) => toast.success(msg, { icon, bottom: 130 });
 
   const save = async () => {
-    // Mock Vipps login: there is no account to save to yet – keep the kommune locally and continue.
-    if (!userId) {
-      if (kommune) locationScope.setLocalKommune(kommune);
-      return true;
+  setSaving(true);
+
+  try {
+    // Oppsett is only reached after the Vipps login, so there is always a session.
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const supabaseUserId = session?.user?.id;
+
+    if (!supabaseUserId) {
+      throw new Error('Supabase-bruker kunne ikke opprettes.');
     }
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+
+
+    const now = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: supabaseUserId,
           display_name: name,
           initials: initialsOf(name) || 'N',
           purpose: role,
           municipality: kommune,
           place: area.trim() || kommune,
-          ...(photo?.path ? { avatar_path: photo.path } : null),
-          onboarded_at: new Date().toISOString(),
-        })
-        .eq('id', userId ?? '');
-      if (error) throw error;
-      if (userId) queryClient.invalidateQueries({ queryKey: profileKeys.profile(userId) });
-      return true;
-    } catch (e) {
-      reportError(e, { where: 'SetupScreen.save' });
-      fail(nb.setup.saveFailed);
-      return false;
-    } finally {
-      setSaving(false);
+          ...(photo?.path ? { avatar_path: photo.path } : {}),
+          onboarded_at: now,
+          updated_at: now,
+        },
+        {
+          onConflict: 'id',
+        },
+      );
+
+    if (error) {
+      throw error;
     }
-  };
+
+    queryClient.invalidateQueries({
+      queryKey: profileKeys.profile(supabaseUserId),
+    });
+
+    return true;
+  } catch (e) {
+    reportError(e, {
+      where: 'SetupScreen.save',
+    });
+
+    fail(nb.setup.saveFailed);
+
+    return false;
+  } finally {
+    setSaving(false);
+  }
+};
 
   const next = async () => {
     if (step === 1) {
@@ -234,7 +261,6 @@ export function SetupScreen() {
     if (step === 2 && !role) return fail(nb.setup.errRole);
     if (step === 3) {
       if (!kommune) return fail(nb.setup.errKommune);
-      // Real accounts save here; under the mock Vipps login save() is a no-op.
       if (!(await save())) return;
     }
     setErr(null);
@@ -266,36 +292,50 @@ export function SetupScreen() {
       toastAbove(nb.setup.found(res.municipality), 'pin');
     } else {
       setLocState('idle');
-      fail(res.error === 'denied' ? nb.location.permissionDenied : nb.location.locationUnavailable);
+      fail(locationErrorText(res.error));
     }
-  };
-
-  /** Mock login: pick and show the photo locally, nothing is uploaded. */
-  const pickLocal = async (source: 'camera' | 'library') => {
-    const r =
-      source === 'camera'
-        ? await ImagePicker.launchCameraAsync({ quality: 0.9 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
-    return r.canceled ? null : { path: '', publicUrl: r.assets[0].uri };
   };
 
   const choosePhoto = async (source: 'camera' | 'library') => {
-    setPhotoOpen(false);
-    setPhotoBusy(true);
-    try {
-      const res = userId
-        ? await pickAndUpload({ bucket: 'avatars', folder: userId, source })
-        : await pickLocal(source);
-      if (res) {
-        setPhoto({ path: res.path, url: res.publicUrl });
-        toastAbove(nb.setup.toastPhotoAdded, 'camera');
-      }
-    } catch (e) {
-      toast.error(e instanceof Error && e.message ? e.message : nb.setup.photoFailed, { bottom: 130 });
-    } finally {
-      setPhotoBusy(false);
+  setPhotoOpen(false);
+  setPhotoBusy(true);
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const supabaseUserId = session?.user?.id;
+
+    if (!supabaseUserId) throw new Error(nb.setup.photoFailed);
+
+    const res = await pickAndUpload({
+      bucket: 'avatars',
+      folder: supabaseUserId,
+      source,
+    });
+
+    if (res) {
+      setPhoto({
+        path: res.path,
+        url: res.publicUrl,
+      });
+
+      toastAbove(nb.setup.toastPhotoAdded, 'camera');
     }
-  };
+  } catch (e) {
+    reportError(e, { where: 'SetupScreen.photo' });
+
+    toast.error(
+      e instanceof Error && e.message
+        ? e.message
+        : nb.setup.photoFailed,
+      { bottom: 130 },
+    );
+  } finally {
+    setPhotoBusy(false);
+  }
+};
 
   if (step === 4) {
     return <Done name={name} role={role ?? 'BOTH'} kommune={kommune ?? ''} area={area.trim()} hasPhoto={!!photo} />;
@@ -584,6 +624,9 @@ export function SetupScreen() {
                   </ScaleIn>
                 ) : null}
               </View>
+              <View style={styles.waitlist}>
+                <KommuneWaitlist initial={kommuner.length === 0 ? q.trim() : undefined} />
+              </View>
 
               <Field label={nb.setup.area} hint={nb.setup.optional} style={styles.mt22}>
                 <Input
@@ -732,6 +775,7 @@ function Done({
 }
 
 const styles = StyleSheet.create({
+  waitlist: { marginTop: 12 },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
   mt14: { marginTop: 14 },

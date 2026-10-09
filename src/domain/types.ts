@@ -51,6 +51,13 @@ export type PublicProfile = {
   rating?: Rating;
   /** e.g. "2026" */
   memberSince: string;
+  /** ISO – when the account was created ("Medlem siden mars 2024") */
+  memberSinceDate?: string;
+  /** presentation pills */
+  languages?: string[];
+  hasCar?: boolean;
+  /** "Kvelder etter kl. 17" */
+  availabilityText?: string;
   location: LocationInfo;
   verifications: Verification[];
   isBusiness: boolean;
@@ -67,6 +74,10 @@ export type PublicProfile = {
   purpose?: Purpose;
   /** holiday mode: listings hidden from others, chat auto-replies you're away */
   paused?: boolean;
+  /** set for youth accounts (under 18) – shown as "Ungdomskonto · 16 år" on their offers */
+  youthAge?: number;
+  /** Meny "Tilgjengelig for småjobber" – off = no match notifications */
+  availableForJobs?: boolean;
   /** "about my home" — pets, stairs, parking; reused across the person's tasks */
   homeNotes?: string;
   /** neighbour endorsements of specific skills */
@@ -92,7 +103,25 @@ export type NoticeboardPost = {
   createdAt: string;
   /** optional photo (Oppslagstavle) */
   imageUrl?: string;
+  /** "N svar" – comments under the oppslag */
+  replies?: number;
+  /** ISO – the owner marked it as done ("Avsluttet"); no new comments */
+  doneAt?: string;
+  /** ISO – set when the owner edited it */
+  editedAt?: string;
 };
+
+/** A public comment under an oppslag. */
+export type NoticeComment = {
+  id: string;
+  noticeId: string;
+  authorProfileId: string;
+  body: string;
+  createdAt: string;
+};
+
+/** How many hovedpartnere Fellesskap shows (mirrors admin_set_main_partner, 0049). */
+export const MAX_MAIN_PARTNERS = 4;
 
 /** A sponsor shown on Fellesskap. Deals and payment are handled outside the app. */
 export type Partner = {
@@ -100,9 +129,23 @@ export type Partner = {
   name: string;
   tagline: string;
   url: string | null;
+  /** absolute logo URL; null → dashed placeholder */
+  logoUrl: string | null;
   municipality: string | null;
   /** has an active placement on Fellesskap → shown as a main partner */
   featured: boolean;
+  /** "Lokal helt" – the middle level: a card that opens the short information sheet */
+  localHero?: boolean;
+  // --- shown on a hovedpartner's own page ---
+  about?: string;
+  /** what they offer the neighbours */
+  offer?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  openingHours?: string;
+  coverUrl?: string;
+  gallery?: string[];
 };
 
 /** A donation that has actually been transferred (only those are shown). */
@@ -128,6 +171,24 @@ export type ReliabilityStats = {
   noShows: number;
   /** 0–100; undefined when there isn't enough history yet */
   score?: number;
+};
+
+/** Pålitelighet over the last 12 months; a percentage is undefined until there is enough history. */
+export type ReliabilityDetails = { completed: number; showsUp?: number; onTime?: number; completes?: number };
+
+/** One job in the portfolio: an "after" photo, usually with a "before". */
+export type PortfolioItem = {
+  id: string;
+  profileId: string;
+  beforeUrl?: string;
+  afterUrl: string;
+  title: string;
+  place?: string;
+  caption?: string;
+  categorySlug?: string;
+  /** ISO date */
+  doneAt?: string;
+  createdAt: string;
 };
 
 export type ListingImage = { id: string; url: string };
@@ -180,8 +241,36 @@ export type ListingStatus =
   | 'PAUSED'
   | 'ARCHIVED';
 
+/** "Foreslå nytt tidspunkt" on an avtale: one side proposes, the other answers. */
+export type AgreementTimeProposal = {
+  id: string;
+  proposalId: string;
+  proposedBy: string;
+  /** ISO */
+  scheduledAt: string;
+  scheduledText: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN';
+};
+
+/** What earlier tilbud in a category usually land on, in kroner. */
+export type PriceRange = { low: number; high: number; sampleSize: number };
+
+/** Foresatt ↔ ungdomskonto. */
+export type GuardianLinks = {
+  /** I am a youth account */
+  youth: boolean;
+  /** my open invitation code (youth) */
+  code?: { code: string; expiresAt: string };
+  /** my foresatte (youth) */
+  guardians: { id: string; name: string }[];
+  /** the youths I follow (foresatt) */
+  youths: { id: string; name: string; age?: number }[];
+};
+
 export type Listing = {
   id: string;
+  /** sent to one helper ("Be om hjelp igjen") – only they and the owner see it */
+  invitedProfileId?: string;
   type: ListingType;
   title: string;
   category: Category;
@@ -196,6 +285,14 @@ export type Listing = {
   task?: TaskDetails;
   offer?: ServiceOfferDetails;
   saved?: boolean;
+  /** "Hvem kan gi tilbud" – everyone, or only Vipps-verified neighbours */
+  offerAudience?: 'ALL' | 'VERIFIED';
+  /** "Maks avstand" for helpers, km */
+  maxDistanceKm?: number;
+  /** estimated duration in minutes (from the wizard's hours) */
+  estimatedMinutes?: number;
+  /** ISO – set when the owner edited it after publishing */
+  editedAt?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -216,6 +313,16 @@ export type Proposal = {
   caveats?: string;
   status: ProposalStatus;
   createdAt: string;
+  /** ISO – the offered day/time as a real timestamp (scheduledText stays the display text) */
+  scheduledAt?: string;
+  /** "ca. 5 t" – the helper's own estimate */
+  durationText?: string;
+  /** ISO – when it was accepted or declined */
+  respondedAt?: string;
+  /** ISO – when the recipient first opened it */
+  seenAt?: string;
+  /** ISO – "Tilbudet gjelder til …" */
+  expiresAt?: string;
 };
 
 export type AgreementSnapshot = {
@@ -226,14 +333,22 @@ export type AgreementSnapshot = {
   description: string;
   caveats?: string;
   agreedAt: string;
+  scheduledAt?: string;
+  durationText?: string;
   /** set when one of the parties called the agreement off */
   cancelledAt?: string;
   cancelReason?: string;
 };
 
-export type ChecklistItem = { id: string; text: string; done: boolean };
-export type MaterialItem = { id: string; label: string; amountKr: number };
-export type JobPhoto = { id: string; url: string; phase: 'BEFORE' | 'AFTER' };
+/** CLIENT = the one who posted the oppdrag, HELPER = the one who gave the tilbud. */
+export type JobParty = 'CLIENT' | 'HELPER';
+/** Who sorts out a material: the client buys it, the helper brings it, or the helper pays and is paid back. */
+export type MaterialPayer = 'CLIENT' | 'HELPER' | 'HELPER_OUTLAY';
+export type JobPhotoPhase = 'BEFORE' | 'AFTER' | 'DURING';
+/** `who` undefined = "Felles". */
+export type ChecklistItem = { id: string; text: string; done: boolean; who?: JobParty };
+export type MaterialItem = { id: string; label: string; amountKr: number; payer?: MaterialPayer };
+export type JobPhoto = { id: string; url: string; phase: JobPhotoPhase; caption?: string; /** ISO */ at?: string };
 
 /** Shared working state for one agreement, on the day the job happens. */
 export type JobWorkspace = {
@@ -245,6 +360,13 @@ export type JobWorkspace = {
   timerStartedAt: number | null;
   /** accumulated tracked time in ms */
   timerAccumMs: number;
+  /** epoch ms of the very first start ("Startet kl."), or null */
+  firstStartedAt: number | null;
+  /** finished pauses in ms; a running pause is `pausedAt` → now */
+  pausedMs: number;
+  pausedAt: number | null;
+  /** epoch ms when "Stopp" was pressed, or null */
+  timerStoppedAt: number | null;
 };
 
 /** One row in "Mine avtaler" — an accepted proposal the current user is part of. */
@@ -255,6 +377,8 @@ export type AgendaItem = {
   counterpartId: string;
   price: Price;
   scheduledText?: string;
+  scheduledAt?: string;
+  durationText?: string;
   agreedAt: string;
   fullyCompleted: boolean;
   /** HELPER = I sent the accepted offer ("Du hjelper"); CLIENT = it's my oppdrag ("Du får hjelp") */
@@ -268,7 +392,7 @@ export type AgendaItem = {
 // Conversations and messages
 // ---------------------------------------------------------------------------
 
-export type ConversationStatusTag = 'NEW_OFFER' | 'OFFER_ACCEPTED' | null;
+export type ConversationStatusTag = 'NEW_OFFER' | 'OFFER_ACCEPTED' | 'REVISION_PENDING' | null;
 
 export type MessageDelivery = 'SENT' | 'DELIVERED' | 'READ';
 
@@ -309,6 +433,9 @@ export type Review = {
   /** structured quick-tags, e.g. "Punktlig", "Ryddig" */
   tags?: string[];
   createdAt: string;
+  /** public answer from the person who was reviewed */
+  reply?: string;
+  repliedAt?: string;
 };
 
 export type ReportTargetType =
@@ -316,7 +443,9 @@ export type ReportTargetType =
   | 'LISTING'
   | 'PROPOSAL'
   | 'MESSAGE'
-  | 'REVIEW';
+  | 'REVIEW'
+  /** a comment under an oppslag */
+  | 'COMMENT';
 
 export type Report = {
   id: string;
@@ -352,7 +481,9 @@ export type NotificationKind =
   | 'COMPLETION_REQUESTED'
   | 'REVIEW_RECEIVED'
   | 'MODERATION'
-  | 'AGREEMENT_CANCELLED';
+  | 'AGREEMENT_CANCELLED'
+  | 'NEW_MATCH'
+  | 'NOTICE_REPLY';
 
 export type AppNotification = {
   id: string;
@@ -371,11 +502,19 @@ export type Conversation = {
     place: string;
     imageUrl?: string;
   };
+  /** set when the chat is about an oppslag (Oppslagstavle "Svar") instead of an oppdrag; `listing.id` is then '' */
+  notice?: { id?: string; title: string };
   /** the other participant, from the current user's point of view */
   counterpart: PublicProfile & { online?: boolean };
   lastMessagePreview: string;
   lastMessageAt: string;
   unread: boolean;
+  /** messages from the other person since I last read; undefined when unknown */
+  unreadCount?: number;
+  /** I wrote the last message ("Du: …") */
+  lastMessageMine?: boolean;
+  /** when the last message is mine: sent / delivered / read (the ticks in Innboks) */
+  lastMessageDelivery?: MessageDelivery;
   statusTag: ConversationStatusTag;
 };
 

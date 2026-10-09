@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { ENV } from '@/lib/env';
-import { mockVipps, useVippsIdentity } from './mockVipps';
+import { unregisterPush } from '@/lib/notifications';
+import { queryClientRef } from './queryClientRef';
 
 export type SessionStatus = 'loading' | 'authed' | 'anon';
 
@@ -15,12 +15,10 @@ export type SessionState = {
 /**
  * The Supabase auth session, kept live via `onAuthStateChange`.
  * `status` is 'loading' until the first `getSession()` resolves.
- * A mock Vipps login (see `mockVipps.ts`) also counts as signed in.
  */
 export function useSession(): SessionState {
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<SessionStatus>('loading');
-  const vipps = useVippsIdentity();
 
   useEffect(() => {
     let active = true;
@@ -39,19 +37,15 @@ export function useSession(): SessionState {
     };
   }, []);
 
-  return useMemo(
-    () => ({
-      session,
-      // Demo mode (EXPO_PUBLIC_USE_MOCKS=true): signed in as the demo user Marius B.
-      userId: ENV.useMocks ? 'u-mb' : (session?.user?.id ?? null),
-      status: ENV.useMocks ? 'authed' : vipps && status !== 'authed' ? 'authed' : status,
-    }),
-    [session, status, vipps],
-  );
+  return useMemo(() => ({ session, userId: session?.user?.id ?? null, status }), [session, status]);
 }
 
 /** Sign out everywhere. */
 export async function signOut(): Promise<void> {
-  mockVipps.signOut();
+  // while still signed in: this phone stops getting the account's push notifications –
+  // but never hold the logout up for it (offline, slow network)
+  await Promise.race([unregisterPush(), new Promise((resolve) => setTimeout(resolve, 1500))]);
   await supabase.auth.signOut();
+  // nothing of the previous person may stay in memory or in the persisted cache
+  queryClientRef.current?.clear();
 }

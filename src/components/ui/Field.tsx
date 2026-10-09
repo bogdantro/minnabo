@@ -142,17 +142,29 @@ export type AmountInputProps = Omit<InputProps, 'value' | 'onChangeText' | 'keyb
 };
 
 /** `.amount` – 76 px display-font amount with "kr" suffix and 1 250 grouping. */
-export function AmountInput({ value, onChangeText, maxDigits = 6, style, ...rest }: AmountInputProps) {
+export function AmountInput({ value, onChangeText, maxDigits = 6, style, placeholder = '0', containerStyle, ...rest }: AmountInputProps) {
+  // The native placeholder is drawn off-centre (or clipped) at the 34 px amount size on
+  // some devices, so the field draws its own, centred inside the input.
   return (
-    <Input
-      {...rest}
-      value={formatAmount(value)}
-      onChangeText={(t) => onChangeText(t.replace(/\D/g, '').replace(/^0+/, '').slice(0, maxDigits))}
-      keyboardType="number-pad"
-      inputMode="numeric"
-      suffix="kr"
-      style={[styles.amount, style]}
-    />
+    <View style={[styles.inwrap, containerStyle]}>
+      <Input
+        {...rest}
+        value={formatAmount(value)}
+        onChangeText={(t) => onChangeText(t.replace(/\D/g, '').replace(/^0+/, '').slice(0, maxDigits))}
+        keyboardType="number-pad"
+        inputMode="numeric"
+        suffix="kr"
+        placeholder=""
+        style={[styles.amount, style]}
+      />
+      {!value ? (
+        <View style={styles.amountPh} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Text style={[styles.amountPhText]} numberOfLines={1}>
+            {placeholder}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -228,5 +240,13 @@ const styles = StyleSheet.create({
     letterSpacing: text.amount.letterSpacing,
   },
   select: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  amountPh: { position: 'absolute', top: 0, bottom: 0, left: 18, right: 60, justifyContent: 'center' },
+  amountPhText: {
+    fontFamily: text.amount.fontFamily,
+    fontSize: text.amount.fontSize,
+    letterSpacing: text.amount.letterSpacing,
+    color: colors.placeholder,
+    includeFontPadding: false,
+  },
   selectV: { flex: 1 },
 });

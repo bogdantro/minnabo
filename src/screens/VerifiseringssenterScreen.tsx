@@ -242,6 +242,7 @@ export function VerifiseringssenterScreen() {
               ['hand', nb.verificationCenter.how.parties],
               ['checks', nb.verificationCenter.how.once],
               ['eye', nb.verificationCenter.how.blind],
+              ['reply', nb.verificationCenter.how.reply],
             ] as [IconName, string][]
           ).map(([icon, t]) => (
             <View key={t} style={styles.how}>

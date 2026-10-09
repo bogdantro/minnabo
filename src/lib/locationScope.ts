@@ -11,7 +11,7 @@ import { expandKommuner } from '@/data/kommuner';
  * with the profile kommune by `useLocationScope()` into a municipality
  * allow-list. Kommune is MinNabo's location unit — no distance/coordinates.
  *
- * Without a backend session (the mock Vipps login) the kommune lives here too,
+ * Before the profile exists (e.g. on the waiting list) the kommune lives here too,
  * so location-scoped screens still work before anything is saved.
  *
  * Mirrors the singleton + listener + hook pattern of `src/lib/neighbourhood.ts`.
@@ -51,7 +51,7 @@ export const locationScope = {
     AsyncStorage.setItem(KEY, String(r)).catch(() => undefined);
     emit();
   },
-  /** Kommune for a session with no backend user (mock login). */
+  /** Kommune kept on the device while there is no profile to save it on. */
   setLocalKommune(k: string) {
     localKommune = k;
     AsyncStorage.setItem(KOMMUNE_KEY, k).catch(() => undefined);

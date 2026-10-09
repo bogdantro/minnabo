@@ -20,7 +20,7 @@ test('"Merk alle som lest" clears unread, is held for Angre and then sent', asyn
   try {
     await renderWithProviders(<InnboksScreen />);
     await jest.advanceTimersByTimeAsync(400);
-    expect(screen.getByText(/samtaler? med uleste meldinger/)).toBeTruthy();
+    expect(screen.getByText(/uleste? meldinge?r? i \d+ samtaler?/)).toBeTruthy();
     await fireEvent.press(screen.getByText('Merk alle som lest'));
     expect(screen.getByText('Alt er lest')).toBeTruthy();
     expect(chatRepository.listConversations({ unreadOnly: true }).length).toBeGreaterThan(0);
@@ -37,4 +37,25 @@ test('"Uleste" with nothing unread shows "Du er à jour!"', async () => {
   await waitFor(() => expect(screen.getByText('Emma Larsen')).toBeTruthy());
   await fireEvent.press(screen.getByText('Uleste'));
   expect(screen.getByText('Du er à jour!')).toBeTruthy();
+});
+
+test('a conversation I just wrote in is not unread and shows "Du:"', async () => {
+  const conv = chatRepository.listConversations()[0];
+  chatRepository._receive(conv.id, 'Hei, passer lørdag?', conv.counterpart.id);
+  chatRepository.sendMessage(conv.id, 'Ja, det passer fint');
+  await renderWithProviders(<InnboksScreen />);
+  await waitFor(() => expect(screen.getByText(/Du: Ja, det passer fint/)).toBeTruthy());
+  expect(chatRepository.listConversations({ unreadOnly: true }).some((c) => c.id === conv.id)).toBe(false);
+});
+
+test('my last message shows its receipt; theirs shows none', async () => {
+  const [mine, theirs] = chatRepository.listConversations();
+  chatRepository.sendMessage(mine.id, 'Er du der?');
+  chatRepository._receive(theirs.id, 'Hei igjen', theirs.counterpart.id);
+  await renderWithProviders(<InnboksScreen />);
+  await waitFor(() => expect(screen.getByText(/Du: Er du der\?/)).toBeTruthy());
+  expect(screen.getAllByLabelText('Sendt')).toHaveLength(1);
+  const withReceipt = chatRepository.listConversations().filter((c) => c.lastMessageDelivery).length;
+  expect(screen.queryAllByLabelText(/^(Sendt|Levert|Lest)$/)).toHaveLength(withReceipt);
+  expect(chatRepository.listConversations().find((c) => c.id === theirs.id)?.lastMessageDelivery).toBeUndefined();
 });

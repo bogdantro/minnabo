@@ -1,5 +1,6 @@
 import type {
   AgreementSnapshot,
+  AgreementTimeProposal,
   AppNotification,
   Conversation,
   ConversationStatusTag,
@@ -11,6 +12,7 @@ import type {
   Partner,
   Donation,
   NoticeKind,
+  PortfolioItem,
   Rating,
   Review,
   TaskDetails,
@@ -40,6 +42,13 @@ export type ProfileRow = {
   max_distance_km?: number | null;
   purpose?: string | null;
   paused?: boolean | null;
+  available_for_jobs?: boolean | null;
+  created_at?: string | null;
+  languages?: string[] | null;
+  has_car?: boolean | null;
+  availability_text?: string | null;
+  youth_age?: number | null;
+  category_slugs?: string[] | null;
   home_notes?: string | null;
   portfolio?: string[] | null;
   phone?: string | null;
@@ -61,6 +70,11 @@ export type ListingRow = {
   place: string;
   status: Listing['status'];
   created_at: string;
+  offer_audience?: 'ALL' | 'VERIFIED' | null;
+  max_distance_km?: number | null;
+  estimated_minutes?: number | null;
+  edited_at?: string | null;
+  invited_profile_id?: string | null;
   owner: ProfileRow;
   task_details?: {
     description: string;
@@ -99,6 +113,11 @@ export type ProposalRow = {
   caveats: string | null;
   status: Proposal['status'];
   created_at: string;
+  scheduled_at?: string | null;
+  duration_text?: string | null;
+  responded_at?: string | null;
+  seen_at?: string | null;
+  expires_at?: string | null;
 };
 
 export type MessageRow = {
@@ -123,6 +142,8 @@ export type AgreementRow = {
   description: string;
   caveats: string | null;
   agreed_at: string;
+  scheduled_at?: string | null;
+  duration_text?: string | null;
   cancelled_at?: string | null;
   cancel_reason?: string | null;
 };
@@ -137,6 +158,8 @@ export type ReviewRow = {
   comment: string | null;
   tags?: string[] | null;
   created_at: string;
+  reply?: string | null;
+  replied_at?: string | null;
 };
 
 export type NotificationRow = {
@@ -151,13 +174,19 @@ export type NotificationRow = {
 
 export type ConversationRow = {
   id: string;
-  listing: Pick<ListingRow, 'id' | 'title' | 'type' | 'place'> & {
+  /** null when the conversation is about an oppslag (0041) */
+  listing: (Pick<ListingRow, 'id' | 'title' | 'type' | 'place'> & {
     listing_images?: { storage_path: string; ord: number }[] | null;
-  };
+  }) | null;
+  notice_id?: string | null;
+  notice_title?: string | null;
+  notice_place?: string | null;
   last_message_preview: string;
   last_message_at: string;
-  conversation_participants: { profile: ProfileRow }[];
+  conversation_participants: { profile: ProfileRow; profile_id?: string; last_read_at?: string | null; last_delivered_at?: string | null }[];
   message_reads?: { profile_id: string; last_read_at: string }[] | null;
+  /** newest message only (embedded with order + limit 1) */
+  messages?: { author_id: string; kind: string; created_at: string; text?: string | null }[] | null;
   proposals?: { status: Proposal['status']; created_at: string }[] | null;
 };
 
@@ -198,6 +227,13 @@ export function toProfile(row: ProfileRow): PublicProfile {
     maxDistanceKm: row.max_distance_km ?? undefined,
     purpose: (row.purpose as PublicProfile['purpose']) ?? undefined,
     paused: row.paused ?? undefined,
+    availableForJobs: row.available_for_jobs ?? undefined,
+    memberSinceDate: row.created_at ?? undefined,
+    languages: row.languages?.length ? row.languages : undefined,
+    hasCar: row.has_car ?? undefined,
+    availabilityText: row.availability_text ?? undefined,
+    youthAge: row.youth_age ?? undefined,
+    categorySlugs: row.category_slugs ?? undefined,
     homeNotes: row.home_notes ?? undefined,
     portfolio: row.portfolio ?? undefined,
     phone: row.phone ?? undefined,
@@ -235,6 +271,11 @@ export function toListing(row: ListingRow): Listing {
     owner: toProfile(row.owner),
     createdAt: row.created_at,
     status: row.status,
+    offerAudience: row.offer_audience ?? undefined,
+    maxDistanceKm: row.max_distance_km ?? undefined,
+    estimatedMinutes: row.estimated_minutes ?? undefined,
+    editedAt: row.edited_at ?? undefined,
+    invitedProfileId: row.invited_profile_id ?? undefined,
     task: row.task_details
       ? {
           description: row.task_details.description,
@@ -276,6 +317,11 @@ export function toProposal(row: ProposalRow): Proposal {
     caveats: row.caveats ?? undefined,
     status: row.status,
     createdAt: row.created_at,
+    scheduledAt: row.scheduled_at ?? undefined,
+    durationText: row.duration_text ?? undefined,
+    respondedAt: row.responded_at ?? undefined,
+    seenAt: row.seen_at ?? undefined,
+    expiresAt: row.expires_at ?? undefined,
   };
 }
 
@@ -292,10 +338,37 @@ export function toMessage(row: MessageRow): Message {
         ? publicUrl('chat-attachments', row.attachment_path) ?? undefined
         : undefined,
     createdAt: row.created_at,
-    delivery: 'DELIVERED',
+    // stored on the server = "Sendt"; "Levert" / "Lest" are added by withReadState
+    delivery: 'SENT',
     reactions: row.reactions ?? undefined,
     pinned: row.pinned ?? undefined,
   };
+}
+
+/**
+ * Receipts on my own messages: "Lest" when the other person has read that far,
+ * "Levert" when their app has fetched it, otherwise whatever it already was ("Sendt").
+ */
+export function withReadState(
+  messages: Message[],
+  meId: string,
+  otherReadAt: string | null | undefined,
+  otherDeliveredAt?: string | null,
+): Message[] {
+  const ms = (t: string | null | undefined) => {
+    const v = t ? Date.parse(t) : NaN;
+    return Number.isNaN(v) || v <= 0 ? null : v;
+  };
+  const readAt = ms(otherReadAt);
+  const deliveredAt = ms(otherDeliveredAt);
+  if (readAt == null && deliveredAt == null) return messages;
+  return messages.map((m) => {
+    if (m.authorProfileId !== meId || m.kind === 'SYSTEM') return m;
+    const at = Date.parse(m.createdAt);
+    if (readAt != null && at <= readAt) return { ...m, delivery: 'READ' as const };
+    if (deliveredAt != null && at <= deliveredAt) return { ...m, delivery: 'DELIVERED' as const };
+    return m;
+  });
 }
 
 export function toAgreement(row: AgreementRow): AgreementSnapshot {
@@ -307,6 +380,8 @@ export function toAgreement(row: AgreementRow): AgreementSnapshot {
     description: row.description,
     caveats: row.caveats ?? undefined,
     agreedAt: row.agreed_at,
+    scheduledAt: row.scheduled_at ?? undefined,
+    durationText: row.duration_text ?? undefined,
     cancelledAt: row.cancelled_at ?? undefined,
     cancelReason: row.cancel_reason ?? undefined,
   };
@@ -317,9 +392,22 @@ export type PartnerRow = {
   name: string;
   blurb: string;
   url: string | null;
+  logo_path: string | null;
   municipality: string | null;
   partner_placements: { surface: string; active: boolean }[] | null;
+  local_hero?: boolean | null;
+  about?: string | null;
+  offer?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  opening_hours?: string | null;
+  cover_path?: string | null;
+  gallery?: string[] | null;
 };
+
+/** Partner images are full URLs, or paths in the public `listing-images` bucket. */
+const partnerImage = (p?: string | null) => (p ? publicUrl('listing-images', p) : undefined);
 
 export function toPartner(row: PartnerRow): Partner {
   return {
@@ -327,8 +415,18 @@ export function toPartner(row: PartnerRow): Partner {
     name: row.name,
     tagline: row.blurb,
     url: row.url,
+    logoUrl: row.logo_path && /^https?:\/\//i.test(row.logo_path) ? row.logo_path : null,
     municipality: row.municipality,
     featured: (row.partner_placements ?? []).some((p) => p.active && p.surface === 'fellesskap'),
+    localHero: !!row.local_hero,
+    about: row.about ?? undefined,
+    offer: row.offer ?? undefined,
+    address: row.address ?? undefined,
+    phone: row.phone ?? undefined,
+    email: row.email ?? undefined,
+    openingHours: row.opening_hours ?? undefined,
+    coverUrl: partnerImage(row.cover_path),
+    gallery: (row.gallery ?? []).map((g) => partnerImage(g)!).filter(Boolean),
   };
 }
 
@@ -360,6 +458,8 @@ export type NoticeRow = {
   municipality: string;
   created_at: string;
   image_path?: string | null;
+  done_at?: string | null;
+  edited_at?: string | null;
 };
 
 export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
@@ -375,6 +475,8 @@ export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
     municipality: row.municipality ?? '',
     createdAt: row.created_at,
     imageUrl: publicUrl('listing-images', row.image_path ?? null),
+    doneAt: row.done_at ?? undefined,
+    editedAt: row.edited_at ?? undefined,
   };
 }
 
@@ -388,6 +490,36 @@ export function toReview(row: ReviewRow): Review {
     rating: row.rating,
     comment: row.comment ?? undefined,
     tags: row.tags ?? undefined,
+    createdAt: row.created_at,
+    reply: row.reply ?? undefined,
+    repliedAt: row.replied_at ?? undefined,
+  };
+}
+
+export type PortfolioRow = {
+  id: string;
+  profile_id: string;
+  before_path: string | null;
+  after_path: string;
+  title: string;
+  place: string | null;
+  caption: string | null;
+  category_slug: string | null;
+  done_at: string | null;
+  created_at: string;
+};
+
+export function toPortfolioItem(row: PortfolioRow): PortfolioItem {
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    beforeUrl: publicUrl('listing-images', row.before_path),
+    afterUrl: publicUrl('listing-images', row.after_path)!,
+    title: row.title,
+    place: row.place ?? undefined,
+    caption: row.caption ?? undefined,
+    categorySlug: row.category_slug ?? undefined,
+    doneAt: row.done_at ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -405,39 +537,91 @@ export function toNotification(row: NotificationRow): AppNotification {
 }
 
 const statusTag = (status?: Proposal['status']): ConversationStatusTag => {
-  if (status === 'SENT' || status === 'REVISION_PENDING') return 'NEW_OFFER';
+  if (status === 'REVISION_PENDING') return 'REVISION_PENDING';
+  if (status === 'SENT') return 'NEW_OFFER';
   if (status === 'ACCEPTED') return 'OFFER_ACCEPTED';
   return null;
 };
 
-export function toConversation(row: ConversationRow, meId: string): Conversation {
+/** One row of my_conversation_meta() (0036). */
+export type ConversationMetaRow = {
+  conversation_id: string;
+  unread_count: number;
+  last_author_id: string | null;
+  last_kind: string | null;
+};
+
+export function toConversation(row: ConversationRow, meId: string, meta?: ConversationMetaRow): Conversation {
   const other = row.conversation_participants
     .map((p) => p.profile)
     .find((p) => p.id !== meId);
-  const myRead = (row.message_reads ?? []).find((r) => r.profile_id === meId);
+  // Two places have held the read time (message_reads, and the participant row since 0007).
+  const readTimes = [
+    (row.message_reads ?? []).find((r) => r.profile_id === meId)?.last_read_at,
+    row.conversation_participants.find((p) => (p.profile_id ?? p.profile?.id) === meId)?.last_read_at,
+  ]
+    .map((t) => (t ? Date.parse(t) : NaN))
+    .filter((t) => !Number.isNaN(t) && t > 0);
+  const readAt = readTimes.length ? Math.max(...readTimes) : null;
+  // My own message is never "unread", and it is what "Du: …" hangs on.
+  const last = (row.messages ?? [])[0];
+  const lastByMe = meta ? meta.last_author_id === meId : last ? last.author_id === meId : undefined;
+  const lastKind = meta ? meta.last_kind : last?.kind;
+  // Show the real last message. The copy on the conversation row can lag behind
+  // (it did for every plain chat message before 0045).
+  const preview = last
+    ? last.kind === 'IMAGE'
+      ? '📷 Bilde'
+      : last.kind === 'PROPOSAL'
+        ? lastByMe
+          ? 'Du sendte et tilbud'
+          : 'Sendte et tilbud'
+        : (last.text ?? '').slice(0, 120) || row.last_message_preview
+    : row.last_message_preview;
+  const lastAt = last && Date.parse(last.created_at) > Date.parse(row.last_message_at) ? last.created_at : row.last_message_at;
+  // The receipt on my own last message: how far the other person has got.
+  const them = row.conversation_participants.filter((p) => (p.profile_id ?? p.profile?.id) !== meId);
+  const reached = (key: 'last_read_at' | 'last_delivered_at') =>
+    them.some((p) => !!p[key] && Date.parse(p[key] as string) >= Date.parse(lastAt));
+  const myDelivery: Conversation['lastMessageDelivery'] =
+    lastByMe && lastKind !== 'SYSTEM' ? (reached('last_read_at') ? 'READ' : reached('last_delivered_at') ? 'DELIVERED' : 'SENT') : undefined;
   const latestProposal = (row.proposals ?? [])
     .slice()
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
-  const thumb = (row.listing.listing_images ?? [])
+  const thumb = (row.listing?.listing_images ?? [])
     .slice()
     .sort((a, b) => a.ord - b.ord)[0];
+  const isNotice = !row.listing;
 
   return {
     id: row.id,
-    listing: {
-      id: row.listing.id,
-      title: row.listing.title,
-      type: row.listing.type,
-      place: row.listing.place,
-      imageUrl: publicUrl('listing-images', thumb?.storage_path ?? null) ?? undefined,
-    },
+    listing: row.listing
+      ? {
+          id: row.listing.id,
+          title: row.listing.title,
+          type: row.listing.type,
+          place: row.listing.place,
+          imageUrl: publicUrl('listing-images', thumb?.storage_path ?? null) ?? undefined,
+        }
+      : { id: '', title: row.notice_title ?? 'Oppslag', type: 'TASK_REQUEST', place: row.notice_place ?? '' },
+    notice: isNotice ? { id: row.notice_id ?? undefined, title: row.notice_title ?? 'Oppslag' } : undefined,
     counterpart: {
       ...(other ? toProfile(other) : placeholderProfile()),
       online: false,
     },
-    lastMessagePreview: row.last_message_preview,
-    lastMessageAt: row.last_message_at,
-    unread: myRead ? Date.parse(row.last_message_at) > Date.parse(myRead.last_read_at) : true,
+    lastMessagePreview: preview,
+    lastMessageAt: lastAt,
+    unread: meta
+      ? meta.unread_count > 0
+      : lastByMe
+        ? false
+        : readAt != null
+          ? Date.parse(lastAt) > readAt
+          : true,
+    unreadCount: meta?.unread_count,
+    lastMessageDelivery: myDelivery,
+    // "Du: …" in front of my own text or photo (a tilbud already says "Du sendte et tilbud")
+    lastMessageMine: lastByMe === undefined ? undefined : lastByMe && lastKind !== 'SYSTEM' && lastKind !== 'PROPOSAL',
     statusTag: statusTag(latestProposal?.status),
   };
 }
@@ -451,5 +635,25 @@ function placeholderProfile(): PublicProfile {
     location: { municipality: '', place: '' },
     isBusiness: false,
     verifications: [],
+  };
+}
+
+export type TimeProposalRow = {
+  id: string;
+  proposal_id: string;
+  proposed_by: string;
+  scheduled_at: string;
+  scheduled_text: string;
+  status: string;
+};
+
+export function toTimeProposal(row: TimeProposalRow): AgreementTimeProposal {
+  return {
+    id: row.id,
+    proposalId: row.proposal_id,
+    proposedBy: row.proposed_by,
+    scheduledAt: row.scheduled_at,
+    scheduledText: row.scheduled_text,
+    status: row.status as AgreementTimeProposal['status'],
   };
 }

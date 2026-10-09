@@ -67,3 +67,11 @@ describe('expandKommuner', () => {
     expect(r2).toEqual(expect.arrayContaining([...INNLANDET_KOMMUNER]));
   });
 });
+
+test('the launch area is Lillehammer and its surroundings, with Gjøvik and Hamar', () => {
+  const { LAUNCH_KOMMUNER, isLaunchKommune } = require('@/data/kommuner');
+  expect(LAUNCH_KOMMUNER).toEqual(expect.arrayContaining(['Lillehammer', 'Gjøvik', 'Hamar']));
+  expect(isLaunchKommune('Øyer')).toBe(true);
+  expect(isLaunchKommune('Elverum')).toBe(false);
+  expect(isLaunchKommune(undefined)).toBe(false);
+});

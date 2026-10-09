@@ -101,8 +101,9 @@ test('a helper profile shows their portfolio gallery', async () => {
   await renderWithProviders(<ProfileScreen profileId="u-andreas" />);
   await waitFor(() => expect(screen.getByText('Portefølje')).toBeTruthy());
   await fireEvent.press(screen.getByRole('tab', { name: 'Portefølje' }));
-  await fireEvent.press(screen.getByLabelText('Åpne bilde 2'));
-  expect(await screen.findByText('Bilde 2 av 2')).toBeTruthy();
+  await fireEvent.press(await screen.findByLabelText('Åpne før og etter: Tidligere jobb 2'));
+  // the tile and the viewer's heading
+  await waitFor(() => expect(screen.getAllByText('Tidligere jobb 2').length).toBeGreaterThan(1));
 });
 
 test('following a helper from their profile adds them to the follow list', async () => {

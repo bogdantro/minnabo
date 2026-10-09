@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import type { PortfolioItem } from '@/domain/types';
+import { monthYear } from '@/lib/datetime';
 import nb from '@/i18n/nb';
-import { colors, radius, shadow, text } from '@/theme/theme';
-import { Button, Icon, IconButton, Sheet, type IconName } from '@/components/ui';
+import { colors, fonts, radius, shadow, text } from '@/theme/theme';
+import { Button, Icon, IconButton, Segmented, Sheet, type IconName } from '@/components/ui';
 
 export type VerifKind = 'VIPPS' | 'PHONE' | 'EMAIL' | 'BUSINESS';
 
@@ -68,24 +71,44 @@ export function VerifSheet({
   );
 }
 
-/** Profil portfolio viewer: big photo, Forrige / Neste and position dots. */
+/** "Søre Ål · aug 2026" */
+export function portfolioWhere(item: PortfolioItem): string {
+  return [item.place, item.doneAt ? monthYear(item.doneAt) : null].filter(Boolean).join(' · ');
+}
+
+/** Profil portfolio viewer: one job, Før / Etter switch, caption, Forrige / Neste and position dots. */
 export function PortfolioViewer({
-  photos,
+  items,
   index,
   onIndex,
   onClose,
 }: {
-  photos: string[];
+  items: PortfolioItem[];
   index: number | null;
   onIndex: (i: number) => void;
   onClose: () => void;
 }) {
   const i = index ?? 0;
-  const n = photos.length;
+  const n = items.length;
+  const item = items[i];
+  const [side, setSide] = useState<'for' | 'etter'>('etter');
+  // every job opens on "Etter"
+  const [shownFor, setShownFor] = useState(i);
+  if (shownFor !== i) {
+    setShownFor(i);
+    setSide('etter');
+  }
+  const before = side === 'for' && !!item?.beforeUrl;
+  const uri = before ? item?.beforeUrl : item?.afterUrl;
   return (
-    <Sheet visible={index !== null} onClose={onClose} title={nb.profile.portCount(i + 1, n)}>
+    <Sheet visible={index !== null} onClose={onClose} title={item?.title ?? ''} subtitle={item ? portfolioWhere(item) || undefined : undefined}>
       <View style={[styles.big, shadow.medium]}>
-        {photos[i] ? <Image source={{ uri: photos[i] }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors /> : null}
+        {uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors /> : null}
+        {item?.beforeUrl ? (
+          <View style={[styles.plab, before ? styles.plabB : styles.plabA]}>
+            <Text style={[styles.plabText, { color: before ? colors.ink2 : colors.white }]}>{before ? nb.profile.before : nb.profile.after}</Text>
+          </View>
+        ) : null}
         {n > 1 ? (
           <>
             <IconButton icon="left" variant="glass" accessibilityLabel={nb.profile.prev} onPress={() => onIndex((i + n - 1) % n)} style={[styles.nav, styles.navL]} />
@@ -93,10 +116,23 @@ export function PortfolioViewer({
           </>
         ) : null}
       </View>
+      {item?.beforeUrl ? (
+        <Segmented
+          accessibilityLabel={nb.profile.beforeAfter}
+          value={side}
+          onChange={setSide}
+          options={[
+            { value: 'for', label: nb.profile.before },
+            { value: 'etter', label: nb.profile.after },
+          ]}
+          style={styles.mt14}
+        />
+      ) : null}
+      {item?.caption ? <Text style={styles.caption}>{item.caption}</Text> : null}
       {n > 1 ? (
         <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          {photos.map((p, d) => (
-            <View key={p} style={[styles.dot, d === i ? styles.dotOn : null]} />
+          {items.map((p, d) => (
+            <View key={p.id} style={[styles.dot, d === i ? styles.dotOn : null]} />
           ))}
         </View>
       ) : null}
@@ -119,6 +155,12 @@ const styles = StyleSheet.create({
   privRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 12, paddingHorizontal: 14, borderRadius: radius.m, borderWidth: 1, borderColor: colors.line },
   privText: { ...text.body, flex: 1, fontSize: 14, lineHeight: 20.3, color: colors.ink2 },
   mt18: { marginTop: 18 },
+  mt14: { marginTop: 14 },
+  caption: { ...text.body, marginTop: 14, color: colors.ink2 },
+  plab: { position: 'absolute', top: 14, height: 26, paddingHorizontal: 12, borderRadius: radius.pill, justifyContent: 'center' },
+  plabB: { left: 14, backgroundColor: colors.onInk90 },
+  plabA: { right: 14, backgroundColor: colors.ink },
+  plabText: { fontFamily: fonts.bodyHeavy, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase' },
   big: { height: 262, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.track },
   nav: { position: 'absolute', top: '50%', marginTop: -22 },
   navL: { left: 12 },

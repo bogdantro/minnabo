@@ -7,6 +7,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   L.getForegroundPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true } as never);
   L.getCurrentPositionAsync.mockResolvedValue({ coords: { latitude: 61.1, longitude: 10.4 } } as never);
+  L.getLastKnownPositionAsync.mockResolvedValue(null as never);
   L.reverseGeocodeAsync.mockResolvedValue([{ subregion: 'Lillehammer', city: 'Lillehammer', region: 'Innlandet' }] as never);
 });
 
@@ -41,8 +42,26 @@ it('falls back to the nearest kommune centre when reverse geocoding throws (web)
   await expect(detectKommune()).resolves.toEqual({ municipality: 'Hamar' });
 });
 
-it('returns {error:unavailable} far outside the kommuner we serve', async () => {
-  L.reverseGeocodeAsync.mockResolvedValue([] as never);
+it('says "outside" (not "could not find you") far outside the kommuner we serve', async () => {
+  L.reverseGeocodeAsync.mockResolvedValue([{ subregion: 'Oslo', city: 'Oslo', region: 'Oslo' }] as never);
   L.getCurrentPositionAsync.mockResolvedValue({ coords: { latitude: 59.91, longitude: 10.75 } } as never); // Oslo
-  await expect(detectKommune()).resolves.toEqual({ error: 'unavailable' });
+  await expect(detectKommune()).resolves.toEqual({ error: 'outside' });
+});
+
+it('uses the last known position when a fresh fix fails (slow GPS indoors on iOS)', async () => {
+  L.getCurrentPositionAsync.mockRejectedValue(new Error('kCLErrorLocationUnknown'));
+  L.getLastKnownPositionAsync.mockResolvedValue({ coords: { latitude: 61.1, longitude: 10.4 } } as never);
+  await expect(detectKommune()).resolves.toEqual({ municipality: 'Lillehammer', place: 'Lillehammer' });
+});
+
+it('tells a blocked permission (iOS never asks twice) apart from a plain "no"', async () => {
+  L.getForegroundPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false } as never);
+  await expect(detectKommune()).resolves.toEqual({ error: 'blocked' });
+  expect(L.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+});
+
+it('only places you in a launch kommune (Lillehammer and the kommuner around it)', async () => {
+  L.reverseGeocodeAsync.mockResolvedValue([{ subregion: 'Elverum', city: 'Elverum', region: 'Innlandet' }] as never);
+  L.getCurrentPositionAsync.mockResolvedValue({ coords: { latitude: 60.881, longitude: 11.564 } } as never);
+  await expect(detectKommune()).resolves.toEqual({ error: 'outside' });
 });

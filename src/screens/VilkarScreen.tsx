@@ -69,6 +69,7 @@ export function VilkarScreen() {
         <View style={[styles.px, styles.pt18]}>
           <FadeUp style={styles.gap10}>
             <Text style={text.eyebrow}>MinNabo</Text>
+            <Text style={text.meta}>{nb.vilkar.owner(TERMS.owner.name, TERMS.owner.orgNr)}</Text>
             <Text style={text.h1} accessibilityRole="header">
               {nb.vilkar.title}
             </Text>

@@ -1,22 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { ListingExtras } from '@/api/ApiClient';
 import type { Listing, PublicProfile } from '@/domain/types';
 import { nok, groupThousands } from '@/domain/price';
-import { categoryBySlug, slugForArtId } from '@/domain/categories';
+import { categoryArtId, categoryBySlug, slugForArtId } from '@/domain/categories';
 import { categoryLabels, type CategoryId } from '@/theme/theme';
-import { EQUIPMENT, INTAKE, TIMES_OF_DAY, type EquipKey } from './wizardConfig';
+import { EQUIPMENT, FORMS, TIMES_OF_DAY, type EquipKey, type IntakeField } from './wizardConfig';
 
 export type WhenMode = 'fast' | 'flex' | 'innen';
 export type PriceMode = 'budget' | 'offer';
 export type Who = 'alle' | 'verif';
+/** One answer to a category question: choice(s), a number or free text. */
+export type Answer = string | string[] | number;
 
 /** Everything the 9-step wizard collects. Serialisable (saved as a draft). */
 export type WizardState = {
   cat: CategoryId | null;
   title: string;
   desc: string;
-  q1: string | null;
-  size: number;
-  q3: 'Ja' | 'Nei';
+  /** answers to the category's questions (wizardConfig FORMS), by field key */
+  answers: Record<string, Answer>;
+  /** how many helpers are needed */
+  helpers: number;
+  /** "Haster" – shown as a tag on the oppdrag */
+  urgent: boolean;
+  /** Editing an older oppdrag: its free-text time, kept until new days are picked. */
+  keepWhen?: string;
   photos: string[];
   kommune: string;
   area: string;
@@ -25,6 +33,8 @@ export type WizardState = {
   days: string[];
   tod: string[];
   hours: number;
+  /** the oppdrag repeats (undefined = one time) */
+  repeat?: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
   priceMode: PriceMode;
   amount: string;
   eq: Record<EquipKey, boolean>;
@@ -37,9 +47,9 @@ export const emptyWizard = (kommune = ''): WizardState => ({
   cat: null,
   title: '',
   desc: '',
-  q1: null,
-  size: INTAKE.annet.def,
-  q3: 'Ja',
+  answers: defaultAnswers('annet'),
+  helpers: 1,
+  urgent: false,
   photos: [],
   kommune,
   area: '',
@@ -49,11 +59,52 @@ export const emptyWizard = (kommune = ''): WizardState => ({
   hours: 2,
   priceMode: 'offer',
   amount: '',
-  eq: { utstyr: false, materialer: false, parkering: false, dyr: false },
+  eq: { utstyr: false, materialer: false, parkering: false, dyr: false, hjemme: false, nokkel: false, strom: false, avfall: false, trapp: false },
   practical: '',
   who: 'alle',
   km: 10,
 });
+
+/** Defaults for a category's questions (numbers + yes/no; choices start empty). */
+export function defaultAnswers(cat: CategoryId): Record<string, Answer> {
+  const out: Record<string, Answer> = {};
+  for (const f of FORMS[cat].fields) {
+    if (f.kind === 'number') out[f.key] = f.def;
+    if (f.kind === 'yesno') out[f.key] = f.def ?? 'Ja';
+  }
+  return out;
+}
+
+/** Choosing a category resets its questions and picks sensible defaults. */
+export function applyCategory(s: WizardState, cat: CategoryId): Partial<WizardState> {
+  const f = FORMS[cat];
+  return { cat, answers: defaultAnswers(cat), hours: f.hours, helpers: f.helpers };
+}
+
+/** Rough quantities (stepped in 5s, 10s …) read "ca. 300 m²"; counts read "2 etg.". */
+export const isApprox = (f: IntakeField) => f.kind === 'number' && f.step > 1;
+
+/** "Plen, Hekk" / "ca. 300 m²" / "Ja" – how an answer reads on the oppdrag. */
+export function answerText(f: IntakeField, a: Answer | undefined): string | null {
+  if (a == null || a === '' || (Array.isArray(a) && a.length === 0)) return null;
+  if (f.kind === 'number') return `${isApprox(f) ? 'ca. ' : ''}${a} ${f.unit}`;
+  if (Array.isArray(a)) return a.join(', ');
+  return String(a);
+}
+
+/** Category answers + helpers + urgency → `task.intake` label/value pairs. */
+export function intakeOf(s: WizardState): { label: string; value: string }[] {
+  const cat = s.cat ?? 'annet';
+  const rows = FORMS[cat].fields
+    .map((f) => {
+      const v = answerText(f, s.answers[f.key]);
+      return v ? { label: f.label, value: v } : null;
+    })
+    .filter((x): x is { label: string; value: string } => !!x);
+  if (s.helpers > 1) rows.push({ label: 'Antall hjelpere', value: `${s.helpers} personer` });
+  if (s.urgent) rows.push({ label: 'Haster', value: 'Ja' });
+  return rows;
+}
 
 // ---------------------------------------------------------------- dates
 
@@ -109,7 +160,7 @@ const dayLabel = (iso: string) => {
 /** "Uke 41 · fleksibel", "Innen fre 9. okt", "Fleksibel · 3 dager, 5.–9. okt" … */
 export function whenLabel(s: WizardState, days: DayItem[]): string {
   const sel = [...s.days].sort();
-  if (!sel.length) return '';
+  if (!sel.length) return s.keepWhen ?? '';
   const a = sel[0];
   const b = sel[sel.length - 1];
   if (s.whenMode === 'fast') return dayLabel(a);
@@ -129,7 +180,7 @@ export const fmtKr = (n: number) => `${groupThousands(n)} kr`;
 
 // ---------------------------------------------------------------- validation
 
-export type WizardError = { field: 'cat' | 'title' | 'desc' | 'area' | 'days' | 'amount'; message: string };
+export type WizardError = { field: 'cat' | 'title' | 'desc' | 'area' | 'days' | 'amount' | `q:${string}`; message: string };
 
 export function validateStep(step: number, s: WizardState): WizardError | null {
   if (step === 1 && !s.cat) return { field: 'cat', message: 'Velg en kategori for å gå videre.' };
@@ -139,8 +190,14 @@ export function validateStep(step: number, s: WizardState): WizardError | null {
     if (l < 5) return { field: 'title', message: 'Tittelen må ha minst 5 tegn.' };
   }
   if (step === 3 && s.desc.trim().length < 20) return { field: 'desc', message: 'Beskriv oppdraget med minst 20 tegn.' };
+  if (step === 3) {
+    const missing = FORMS[s.cat ?? 'annet'].fields.find(
+      (f) => f.kind === 'choice' && f.required && answerText(f, s.answers[f.key]) == null,
+    );
+    if (missing) return { field: `q:${missing.key}`, message: `Svar på «${missing.label.replace(/\?$/, '')}».` };
+  }
   if (step === 4 && !s.area.trim()) return { field: 'area', message: 'Skriv inn område eller bydel.' };
-  if (step === 5 && s.days.length === 0) {
+  if (step === 5 && s.days.length === 0 && !s.keepWhen) {
     return { field: 'days', message: s.whenMode === 'flex' ? 'Velg minst én dag som passer.' : 'Velg en dato.' };
   }
   if (step === 6 && s.priceMode === 'budget' && !(Number(s.amount) > 0)) {
@@ -157,9 +214,9 @@ export const placeLine = (s: WizardState) => [s.area.trim(), s.kommune].filter(B
 export type SummaryRow = { k: string; v: string; step: number };
 
 export function summary(s: WizardState, days: DayItem[]) {
-  const I = INTAKE[s.cat ?? 'annet'];
   const amt = Number(s.amount) || 0;
   const n = s.photos.length;
+  const details = intakeOf(s).map((r) => `${r.label.replace(/\?$/, '')}: ${r.value}`).join(' · ');
   const desc = s.desc.length > 84 ? `${s.desc.slice(0, 82).trim()} …` : s.desc;
   const tod = TIMES_OF_DAY.filter((t) => s.tod.includes(t.label)).map((t) => t.label.toLowerCase());
   const eqOn = EQUIPMENT.filter((e) => s.eq[e.id]).map((e) => e.label);
@@ -167,7 +224,7 @@ export function summary(s: WizardState, days: DayItem[]) {
     { k: 'Kategori', v: s.cat ? categoryLabels[s.cat] : '', step: 1 },
     { k: 'Tittel', v: s.title.trim(), step: 2 },
     { k: 'Beskrivelse', v: desc, step: 3 },
-    { k: 'Detaljer', v: `${s.q1 ?? 'Ikke valgt'} · ca. ${s.size} ${I.unit} · ${I.q3.replace('?', '')}: ${s.q3}`, step: 3 },
+    { k: 'Detaljer', v: details || 'Ingen detaljer', step: 3 },
     { k: 'Bilder', v: n === 0 ? 'Ingen bilder' : `${n} ${n === 1 ? 'bilde' : 'bilder'}`, step: 3 },
   ];
   const stedTid: SummaryRow[] = [
@@ -205,22 +262,13 @@ const placeholderOwner: PublicProfile = {
   verifications: [],
 };
 
-/**
- * Wizard → `Listing` for preview + createListing.
- * Not persisted yet (no columns for oppdrag): "Hvem kan gi tilbud", "Maks
- * avstand" and the private price estimate when "Ønsker tilbud" is chosen.
- */
+/** Wizard → `Listing` for preview + createListing / updateListing. */
 export function buildListing(s: WizardState, days: DayItem[]): Listing {
   const cat = s.cat ?? 'annet';
-  const I = INTAKE[cat];
   const tod = TIMES_OF_DAY.filter((t) => s.tod.includes(t.label)).map((t) => t.label.toLowerCase());
-  const eqOn = EQUIPMENT.filter((e) => s.eq[e.id]).map((e) => e.label);
+  const eqOn = EQUIPMENT.filter((e) => FORMS[cat].equipment.includes(e.id) && s.eq[e.id]).map((e) => e.label);
   const amt = Number(s.amount) || 0;
-  const intake = [
-    s.q1 ? { label: I.q1, value: s.q1 } : null,
-    { label: I.sz, value: `ca. ${s.size} ${I.unit}` },
-    { label: I.q3, value: s.q3 },
-  ].filter((x): x is { label: string; value: string } => !!x);
+  const intake = intakeOf(s);
 
   return {
     id: `l-user-${Date.now()}`,
@@ -241,20 +289,89 @@ export function buildListing(s: WizardState, days: DayItem[]): Listing {
       meetingNote: s.practical.trim() || undefined,
       durationText: hoursLabel(s.hours),
       scheduledText: [whenLabel(s, days), tod.join(', ')].filter(Boolean).join(' · ') || undefined,
+      recurrence: s.repeat,
       intake,
     },
   };
 }
 
+/** Settings stored next to the listing ("Hvem kan gi tilbud", km, private estimate, the form itself). */
+export function extrasFor(s: WizardState): ListingExtras {
+  const amt = Number(s.amount) || 0;
+  return {
+    offerAudience: s.who === 'verif' ? 'VERIFIED' : 'ALL',
+    maxDistanceKm: s.km,
+    privateEstimateMinor: s.priceMode === 'offer' && amt > 0 ? amt * 100 : null,
+    estimatedMinutes: s.hours * 60,
+    wizard: s,
+  };
+}
+
+/** A saved form is only trusted when it has the current shape. */
+export function isWizardState(v: unknown): v is WizardState {
+  return !!v && typeof v === 'object' && 'answers' in v && 'title' in v && 'eq' in v;
+}
+
+/**
+ * Rebuild the form from a published oppdrag that has no saved form (older
+ * oppdrag): category, text, place, price, photos, settings.
+ */
+export function wizardFromListing(l: Listing, privateEstimateMinor: number | null): WizardState {
+  const cat = categoryArtId(l.category.slug);
+  const base = { ...emptyWizard(l.location.municipality), ...applyCategory(emptyWizard(), cat) };
+  const budget = l.priceMode === 'BUDGET' || l.priceMode === 'FIXED';
+  const amountKr = budget ? (l.price?.amountMinor ?? 0) / 100 : (privateEstimateMinor ?? 0) / 100;
+  // Read the category answers back from the detail rows ("Hva skal males?: Gjerde").
+  const answers = { ...base.answers };
+  let helpers = base.helpers;
+  let urgent = false;
+  for (const row of l.task?.intake ?? []) {
+    if (row.label === 'Antall hjelpere') helpers = parseInt(row.value, 10) || helpers;
+    if (row.label === 'Haster') urgent = row.value === 'Ja';
+    const f = FORMS[cat].fields.find((x) => x.label === row.label);
+    if (!f) continue;
+    if (f.kind === 'number') {
+      const n = parseInt(row.value.replace(/\D+/g, ' ').trim(), 10);
+      if (n) answers[f.key] = Math.min(f.max, Math.max(f.min, n));
+    } else if (f.kind === 'choice') {
+      const picked = row.value.split(', ').filter((v) => f.options.includes(v));
+      if (picked.length) answers[f.key] = f.multi ? picked : picked[0];
+    } else {
+      answers[f.key] = row.value;
+    }
+  }
+  return {
+    ...base,
+    cat,
+    answers,
+    helpers,
+    urgent,
+    repeat: l.task?.recurrence,
+    title: l.title,
+    desc: l.task?.description ?? '',
+    keepWhen: l.task?.scheduledText,
+    kommune: l.location.municipality,
+    area: l.location.place,
+    photos: l.images.map((im) => im.url),
+    priceMode: budget ? 'budget' : 'offer',
+    amount: amountKr > 0 ? String(Math.round(amountKr)) : '',
+    practical: l.task?.meetingNote ?? '',
+    hours: l.estimatedMinutes ? Math.max(1, Math.round(l.estimatedMinutes / 60)) : base.hours,
+    who: l.offerAudience === 'VERIFIED' ? 'verif' : 'alle',
+    km: l.maxDistanceKm ?? base.km,
+  };
+}
+
 // ---------------------------------------------------------------- draft
 
-const DRAFT_KEY = 'minnabo.leggUt.draft.v2';
+const DRAFT_KEY = 'minnabo.leggUt.draft.v3';
 
 export const wizardDraft = {
   async load(): Promise<{ state: WizardState; step: number } | null> {
     try {
       const raw = await AsyncStorage.getItem(DRAFT_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const d = raw ? (JSON.parse(raw) as { state: unknown; step: number }) : null;
+      return d && isWizardState(d.state) ? { state: { ...emptyWizard(), ...d.state }, step: d.step } : null;
     } catch {
       return null;
     }

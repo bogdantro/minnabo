@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Listing } from '@/domain/types';
+import type { Listing, Proposal } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
-import { chatKeys, useProfile, useStartConversation } from '@/api/queries';
+import { chatKeys, usePriceGuidance, useProfile, useStartConversation } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { shortDate } from '@/lib/datetime';
@@ -37,6 +37,7 @@ import {
 } from '@/components/ui';
 
 const TIMES = ['kl. 10:00', 'kl. 12:00', 'kl. 14:00', 'kl. 17:00'];
+const DURATIONS = ['ca. 1 t', 'ca. 2 t', 'ca. 3 t', 'ca. 5 t', 'Hel dag'];
 const MSG_MAX = 500;
 const kr = (n: number) => `${formatAmount(String(n))} kr`;
 
@@ -44,16 +45,18 @@ export type GiTilbudSheetProps = {
   listing: Listing;
   visible: boolean;
   onClose: () => void;
-  /** Called once the offer is sent (conversation id, or null under the mock login). */
+  /** Called once the offer is sent (conversation id). */
   onSent: (conversationId: string | null) => void;
   onOpenChat: (conversationId: string | null) => void;
+  /** Edit an open tilbud instead of sending a new one (prefilled; "Lagre endringene"). */
+  editing?: Proposal | null;
 };
 
 /**
  * Gi tilbud (Oppdragsdetaljer.dc.html sheet): form → preview → sent.
  * Sends through the existing conversation + proposal API.
  */
-export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }: GiTilbudSheetProps) {
+export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, editing }: GiTilbudSheetProps) {
   const qc = useQueryClient();
   const me = useCurrentUser();
   const { userId } = useSession();
@@ -65,22 +68,24 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
   const budget = listing.price && listing.priceMode !== 'BY_AGREEMENT' ? Math.round(listing.price.amountMinor / 100) : null;
   const place = listing.location.place || listing.location.municipality;
   const days = useMemo(() => {
-    const out: string[] = [];
+    const out: { label: string; date: Date }[] = [];
     const now = new Date();
     for (let i = 0; i < 7; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() + i);
-      out.push(shortDate(d.toISOString()));
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      out.push({ label: shortDate(d.toISOString()), date: d });
     }
     return out;
   }, []);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [amount, setAmount] = useState(budget ? String(budget) : '');
-  const [msg, setMsg] = useState('');
+  const [amount, setAmount] = useState(
+    editing ? String(Math.round(editing.price.amountMinor / 100)) : budget ? String(budget) : '',
+  );
+  const [msg, setMsg] = useState(editing?.message ?? '');
   const [day, setDay] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
-  const [caveats, setCaveats] = useState('');
+  const [duration, setDuration] = useState<string | null>(editing?.durationText ?? null);
+  const [caveats, setCaveats] = useState(editing?.caveats ?? '');
   const [errAmt, setErrAmt] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [tries, setTries] = useState(0);
@@ -89,7 +94,20 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
 
   const a = Number(amount) || 0;
   const diff = budget != null ? a - budget : null;
-  const when = [day, time].filter(Boolean).join(' · ');
+  // what earlier tilbud in this category landed on (nothing until there are enough of them)
+  const { data: guidance } = usePriceGuidance(listing.category.slug);
+  // Editing keeps the time already offered unless a new day/time is picked.
+  const when = [day, time].filter(Boolean).join(' · ') || (editing?.scheduledText ?? '');
+  // The same choice as a timestamp: a picked day (10:00 when no time is chosen),
+  // the time already offered when nothing new is picked, otherwise none.
+  const scheduledAt = (): string | null => {
+    const t = /(\d{1,2}):(\d{2})/.exec(time ?? '');
+    // no new day picked: keep the day already offered (with the new time, if one was picked)
+    const d = days.find((x) => x.label === day)?.date ?? (editing?.scheduledAt ? new Date(editing.scheduledAt) : undefined);
+    if (!d) return null;
+    if (!day && !t) return editing?.scheduledAt ?? null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), t ? Number(t[1]) : 10, t ? Number(t[2]) : 0).toISOString();
+  };
   const quick = budget ? [budget - 50, budget, budget + 50].filter((v) => v > 0) : [];
   const templates = nb.giTilbud.templates(first, day, place);
 
@@ -115,8 +133,22 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
     setSending(true);
     try {
       let id: string | null = null;
-      // Mock Vipps login: no account yet – run the flow without saving.
-      if (userId) {
+      if (editing) {
+        await apiClient.editProposal(editing.id, {
+          priceAmountMinor: a * 100,
+          message: msg.trim(),
+          scheduledText: when ? when.replace(' · ', ' ') : undefined,
+          scheduledAt: scheduledAt(),
+          durationText: duration ?? '',
+          caveats: caveats.trim() || undefined,
+        });
+        id = editing.conversationId;
+        qc.invalidateQueries({ queryKey: chatKeys.messages(id) });
+        qc.invalidateQueries({ queryKey: chatKeys.proposal(editing.id) });
+        qc.invalidateQueries({ queryKey: ['conversations'] });
+        qc.invalidateQueries({ queryKey: ['proposals'] });
+      } else {
+        if (!userId) throw new Error('not signed in');
         const conv = await startConversation.mutateAsync(listing.id);
         await apiClient.sendProposal({
           conversationId: conv.id,
@@ -124,6 +156,8 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
           priceAmountMinor: a * 100,
           message: msg.trim(),
           scheduledText: when ? when.replace(' · ', ' ') : undefined,
+          scheduledAt: scheduledAt(),
+          durationText: duration ?? '',
           caveats: caveats.trim() || undefined,
         });
         id = conv.id;
@@ -135,8 +169,8 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
       setConvId(id);
       setStep(3);
       onSent(id);
-    } catch {
-      toast.error(nb.giTilbud.sendFailed);
+    } catch (e) {
+      toast.error(editing && e instanceof Error && e.message ? e.message : nb.giTilbud.sendFailed);
     } finally {
       setSending(false);
     }
@@ -155,7 +189,7 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
             <View style={styles.headTitles}>
               <Steps n={1} />
               <Text style={text.h2} accessibilityRole="header">
-                {nb.giTilbud.title}
+                {editing ? nb.giTilbud.editTitle : nb.giTilbud.title}
               </Text>
             </View>
             <IconButton icon="x" iconSize={18} accessibilityLabel={nb.giTilbud.close} onPress={close} />
@@ -216,6 +250,14 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
               </View>
             ) : null}
           </Field>
+          {guidance ? (
+            <View style={styles.guide}>
+              <Icon name="chart" size={15} color={colors.mute} />
+              <Text style={[text.help, styles.guideText]}>
+                {nb.giTilbud.usualArea(formatAmount(String(guidance.low)), formatAmount(String(guidance.high)))}
+              </Text>
+            </View>
+          ) : null}
 
           <View style={styles.field22}>
             <View style={styles.labelRow}>
@@ -258,22 +300,35 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
             <View style={styles.labelRow}>
               <Text style={text.label}>{nb.giTilbud.day}</Text>
               {listing.task?.scheduledText ? (
-                <Text style={text.hint} numberOfLines={1}>
+                <Text style={[text.hint, styles.shrink]} numberOfLines={1}>
                   {nb.giTilbud.wishes(first, listing.task.scheduledText)}
                 </Text>
               ) : null}
             </View>
-            <ChipRow style={styles.bleed}>
+            <View style={styles.bleed}>
+            <ChipRow>
               {days.map((d) => (
-                <Chip key={d} label={d} size="sm" tone="lime" selected={day === d} onPress={() => setDay(day === d ? null : d)} />
+                <Chip key={d.label} label={d.label} size="sm" tone="lime" selected={day === d.label} onPress={() => setDay(day === d.label ? null : d.label)} />
               ))}
             </ChipRow>
+            </View>
             <Text style={[text.label, styles.mt8]}>{nb.giTilbud.time}</Text>
-            <ChipRow style={styles.bleed}>
+            <View style={styles.bleed}>
+            <ChipRow>
               {TIMES.map((t) => (
                 <Chip key={t} label={t} size="sm" tone="lime" selected={time === t} onPress={() => setTime(time === t ? null : t)} />
               ))}
             </ChipRow>
+            </View>
+            {/* not in the design's sheet – the offer's "Varighet" needs a source */}
+            <Text style={[text.label, styles.mt8]}>{nb.giTilbud.duration}</Text>
+            <View style={styles.bleed}>
+            <ChipRow>
+              {DURATIONS.map((d) => (
+                <Chip key={d} label={d} size="sm" tone="lime" selected={duration === d} onPress={() => setDuration(duration === d ? null : d)} />
+              ))}
+            </ChipRow>
+            </View>
           </View>
 
           <Field label={nb.giTilbud.caveats} style={styles.field22}>
@@ -337,7 +392,9 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
             </View>
             <View style={[styles.row8, styles.mt10]}>
               <VerifiedBadge label={nb.giTilbud.vipps} />
-              {me.place || me.municipality ? <Text style={text.meta}>{`· ${me.place || me.municipality}`}</Text> : null}
+              {me.place || me.municipality ? (
+                <Text style={[text.meta, styles.shrink]} numberOfLines={1}>{`· ${me.place || me.municipality}`}</Text>
+              ) : null}
             </View>
             <View style={styles.divider} />
             <View style={styles.priceRow}>
@@ -352,10 +409,10 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
                 />
               ) : null}
             </View>
-            {when ? (
+            {when || duration ? (
               <View style={[styles.row8, styles.mt14]}>
                 <Icon name="cal" size={18} color={colors.limeDeep} />
-                <Text style={[text.bodySemi, styles.f145]}>{when}</Text>
+                <Text style={[text.bodySemi, styles.f145, styles.flex]}>{[when, duration].filter(Boolean).join(' · ')}</Text>
               </View>
             ) : null}
             <View style={styles.quote}>
@@ -380,12 +437,12 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
           </View>
           <Note style={styles.mt14}>{nb.giTilbud.payNote}</Note>
           <Button
-            label={nb.giTilbud.send}
-            icon="send"
+            label={editing ? nb.giTilbud.saveEdit : nb.giTilbud.send}
+            icon={editing ? 'check' : 'send'}
             size="lg"
             onPress={send}
             loading={sending}
-            loadingLabel={nb.giTilbud.sending}
+            loadingLabel={editing ? nb.giTilbud.savingEdit : nb.giTilbud.sending}
             style={styles.mt16}
           />
           <Button label={nb.giTilbud.edit} variant="text" onPress={() => {
@@ -401,7 +458,7 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat }:
             <DrawnCheck size={108} bg={colors.lime} tickColor={colors.ink} ring={shadow.okRing} tickSize={56} />
           </ScaleIn>
           <FadeUp delay={150}>
-            <Text style={[text.h2, styles.center, styles.mt20]}>{nb.giTilbud.sentTitle(first)}</Text>
+            <Text style={[text.h2, styles.center, styles.mt20]}>{editing ? nb.giTilbud.editedTitle(first) : nb.giTilbud.sentTitle(first)}</Text>
           </FadeUp>
           <FadeUp delay={200}>
             <Text style={[text.meta, styles.center, styles.f15, styles.mt8]}>{nb.giTilbud.sentSub(first)}</Text>
@@ -488,6 +545,8 @@ const styles = StyleSheet.create({
   qchipText: { fontFamily: text.h3.fontFamily, fontSize: 14.5, color: colors.ink },
   qchipTextOn: { color: colors.limeDeep },
   amtHint: { marginLeft: 'auto' },
+  guide: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  guideText: { flex: 1 },
   field22: { marginTop: 22, gap: 8 },
   labelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
   ctr: { fontFamily: text.bodySemi.fontFamily, fontSize: 12.5, color: colors.mute },
@@ -510,7 +569,9 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   tchipText: { fontFamily: text.bodySemi.fontFamily, fontSize: 13, lineHeight: 17, color: colors.ink2, flexShrink: 1 },
-  bleed: { marginHorizontal: -20, paddingTop: 2 },
+  // the sheet has 20 px side padding; the chip scrollers go edge to edge
+  bleed: { marginHorizontal: -20 },
+  shrink: { flexShrink: 1 },
   seenAs: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, marginTop: 4 },
   pvcard: {
     borderRadius: radius.listingCard,
@@ -523,7 +584,7 @@ const styles = StyleSheet.create({
   starsVal: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink },
   starsMeta: { fontFamily: text.meta.fontFamily, fontSize: 13, color: colors.mute },
   divider: { height: 1, backgroundColor: colors.line2, marginVertical: 14 },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10 },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' },
   bigNum: { fontSize: 36, lineHeight: 38 },
   quote: { marginTop: 12, backgroundColor: colors.bg, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14 },
   quoteText: { ...text.body, fontSize: 14.5, lineHeight: 22 },

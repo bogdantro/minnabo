@@ -1,4 +1,6 @@
 import type {
+  PortfolioItem,
+  ReliabilityDetails,
   AppNotification,
   CompletionConfirmation,
   Listing,
@@ -28,6 +30,7 @@ const noShowSeed: Record<string, number> = { 'u-sara': 1 };
 
 let notifications: AppNotification[] = clone(notificationsSeed);
 let reviews: Review[] = clone(reviewsSeed);
+let portfolioItems: PortfolioItem[] = [];
 let completions: CompletionConfirmation[] = clone(completionsSeed);
 let noShows: Record<string, number> = clone(noShowSeed);
 const editableProfile: PublicProfile = clone(profiles.mb);
@@ -74,7 +77,7 @@ export const profileRepository = {
     editableProfile.paused = true;
   },
 
-  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'homeNotes' | 'portfolio'>> & {
+  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'availableForJobs' | 'categorySlugs' | 'languages' | 'hasCar' | 'availabilityText' | 'homeNotes' | 'portfolio'>> & {
     place?: string;
     municipality?: string;
     avatarPath?: string | null;
@@ -85,6 +88,11 @@ export const profileRepository = {
     if (patch.avatarPath !== undefined) editableProfile.avatarUrl = patch.avatarPath ?? undefined;
     if (patch.maxDistanceKm !== undefined) editableProfile.maxDistanceKm = patch.maxDistanceKm;
     if (patch.paused !== undefined) editableProfile.paused = patch.paused;
+    if (patch.availableForJobs !== undefined) editableProfile.availableForJobs = patch.availableForJobs;
+    if (patch.categorySlugs !== undefined) editableProfile.categorySlugs = patch.categorySlugs;
+    if (patch.languages !== undefined) editableProfile.languages = patch.languages;
+    if (patch.hasCar !== undefined) editableProfile.hasCar = patch.hasCar;
+    if (patch.availabilityText !== undefined) editableProfile.availabilityText = patch.availabilityText.trim() || undefined;
     if (patch.homeNotes !== undefined) editableProfile.homeNotes = patch.homeNotes || undefined;
     if (patch.portfolio !== undefined) editableProfile.portfolio = patch.portfolio;
     if (patch.place !== undefined) {
@@ -121,6 +129,51 @@ export const profileRepository = {
    * `noShows` is how often the other party reported them absent. The score
    * stays undefined until there's a handful of data points.
    */
+  replyToReview(reviewId: string, reply: string): Review {
+    const r = reviews.find((x) => x.id === reviewId);
+    if (!r || r.toProfileId !== CURRENT_USER_ID) throw new Error('Ikke tilgang.');
+    const next = { ...r, reply: reply.trim(), repliedAt: new Date().toISOString() };
+    reviews = reviews.map((x) => (x.id === reviewId ? next : x));
+    return next;
+  },
+
+  listPortfolio(profileId: string): PortfolioItem[] {
+    const own = portfolioItems.filter((i) => i.profileId === profileId);
+    if (own.length) return own;
+    return (profileRepository.getProfile(profileId)?.portfolio ?? []).map((url, i) => ({
+      id: `pf-seed-${profileId}-${i}`,
+      profileId,
+      afterUrl: url,
+      title: `Tidligere jobb ${i + 1}`,
+      createdAt: '2026-01-01T00:00:00Z',
+    }));
+  },
+  addPortfolioItem(input: { beforePath?: string; afterPath: string; title: string; place?: string; caption?: string; categorySlug?: string }): PortfolioItem {
+    const item: PortfolioItem = {
+      id: `pf-${Date.now()}-${portfolioItems.length}`,
+      profileId: CURRENT_USER_ID,
+      beforeUrl: input.beforePath,
+      afterUrl: input.afterPath,
+      title: input.title.trim(),
+      place: input.place?.trim() || undefined,
+      caption: input.caption?.trim() || undefined,
+      categorySlug: input.categorySlug,
+      doneAt: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+    };
+    portfolioItems = [item, ...portfolioItems];
+    return item;
+  },
+  removePortfolioItem(id: string): void {
+    portfolioItems = portfolioItems.filter((i) => i.id !== id);
+  },
+
+  /** Last-12-months percentages; the mock has no timer or cancel history, so only "Møter opp". */
+  reliabilityDetails(profileId: string): ReliabilityDetails {
+    const r = profileRepository.reliabilityFor(profileId);
+    return { completed: r.completed, showsUp: r.score };
+  },
+
   reliabilityFor(profileId: string): ReliabilityStats {
     const profile = profileRepository.getProfile(profileId);
     const completed = profile?.completedTasks ?? 0;
@@ -199,6 +252,7 @@ export const profileRepository = {
   },
 
   _reset(): void {
+    portfolioItems = [];
     notifications = clone(notificationsSeed);
     reviews = clone(reviewsSeed);
     completions = clone(completionsSeed);

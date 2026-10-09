@@ -1,10 +1,14 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { YouthAppScreen } from '@/screens/youth/YouthAppScreen';
-import { MOCK_YOUTH, mockVipps } from '@/auth/mockVipps';
+import { apiClient } from '@/api/client';
 import { renderWithProviders } from '../testUtils';
 
-beforeEach(() => mockVipps.signIn(MOCK_YOUTH));
-afterEach(() => mockVipps.signOut());
+beforeEach(() => {
+  jest
+    .spyOn(apiClient, 'getMyAccount')
+    .mockResolvedValue({ vipps: true, youth: true, age: 16, birthYear: 2010, fullName: 'Emil Nygård', phoneMasked: '+47 ••• •• 518' });
+});
+afterEach(() => jest.restoreAllMocks());
 
 test('youth app has four tabs and no Legg ut', async () => {
   await renderWithProviders(<YouthAppScreen />);
@@ -30,9 +34,9 @@ test('giving an offer validates, sends and shows it under Mine tilbud', async ()
   await fireEvent.press(screen.getByText('Send tilbud'));
   await waitFor(() => expect(screen.getByText(/Tilbudet er sendt til/)).toBeTruthy(), { timeout: 4000 });
   await fireEvent.press(screen.getByText('Se Mine tilbud'));
-  expect(screen.getByText('Sendt nå')).toBeTruthy();
+  await waitFor(() => expect(screen.getByText('Sendt nå')).toBeTruthy());
   await fireEvent.press(screen.getByText('Trekk'));
-  expect(screen.getByText('Trukket')).toBeTruthy();
+  await waitFor(() => expect(screen.getByText('Trukket')).toBeTruthy());
 });
 
 test('locked features open the "ikke tilgjengelig" sheet', async () => {

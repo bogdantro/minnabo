@@ -82,6 +82,13 @@ export function Sheet({
     }
   }, [visible]);
 
+  // The library has already dismissed the modal here (swipe, scrim, close button),
+  // so the effect above must not dismiss it a second time when `visible` turns false.
+  const handleDismiss = useCallback(() => {
+    presented.current = false;
+    onClose();
+  }, [onClose]);
+
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -104,10 +111,12 @@ export function Sheet({
   return (
     <BottomSheetModal
       ref={ref}
-      onDismiss={onClose}
+      onDismiss={handleDismiss}
       enableDynamicSizing={!heightRatio}
-      snapPoints={heightRatio ? [height * heightRatio] : undefined}
-      maxDynamicContentSize={height * 0.9}
+      // never taller than the space below the status bar, and never pushed under it by the keyboard
+      topInset={insets.top}
+      snapPoints={heightRatio ? [Math.min(height * heightRatio, height - insets.top - 8)] : undefined}
+      maxDynamicContentSize={Math.min(height * 0.9, height - insets.top - 8)}
       enablePanDownToClose={dismissible}
       backdropComponent={renderBackdrop}
       animationConfigs={animationConfigs}

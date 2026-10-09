@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { tokens } from '@/theme';
 import { pad2 } from '@/lib/calendar';
@@ -44,14 +44,6 @@ export function TimeField({
   const [hour, setHour] = useState(() => parse(value).h);
   const [minute, setMinute] = useState(() => parse(value).m);
 
-  useEffect(() => {
-    if (open) {
-      const p = parse(value);
-      setHour(p.h);
-      setMinute(p.m);
-    }
-  }, [open, value]);
-
   const draft = `${pad2(hour)}:${pad2(minute)}`;
 
   const confirm = () => {
@@ -71,7 +63,13 @@ export function TimeField({
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityValue={{ text: value ?? placeholder }}
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          // Start the wheels on the current value each time the picker opens.
+          const p = parse(value);
+          setHour(p.h);
+          setMinute(p.m);
+          setOpen(true);
+        }}
         style={styles.field}
       >
         <Icon name="clock" size={18} color="cyan" />

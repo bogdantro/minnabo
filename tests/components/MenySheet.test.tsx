@@ -19,7 +19,8 @@ test('shows the user header, Utforsk tiles and the menu sections', async () => {
   expect(screen.getByText('Mine oppdrag')).toBeTruthy();
   expect(screen.getByText('Lagrede oppføringer og søk')).toBeTruthy();
   expect(screen.getByText('Personvern')).toBeTruthy();
-  expect(screen.getByText('MinNabo håndterer ikke betaling.')).toBeTruthy();
+  // no payment note here – there is no price in the menu
+  expect(screen.queryByText('MinNabo håndterer ikke betaling.')).toBeNull();
 });
 
 test('tapping a row navigates and closes', async () => {

@@ -4,7 +4,10 @@ import { BedriftRegistreringScreen } from '@/screens/BedriftRegistreringScreen';
 import { AdminScreen } from '@/screens/AdminScreen';
 import { profileRepository } from '@mocks/data/profileRepository';
 import { safetyStore } from '@mocks/data/safetyStore';
+import { _resetFlagOverrides, setFlagOverride } from '@/config/featureFlags';
 import { renderWithProviders } from '../testUtils';
+
+afterEach(() => _resetFlagOverrides());
 
 const settle = () => new Promise((r) => setTimeout(r, 400));
 
@@ -28,7 +31,15 @@ test('Verifisering shows Vipps + verified methods, what was checked and the trus
   expect(screen.getByText('3 av 6 fullført')).toBeTruthy();
 });
 
+test('For bedrifter shows only the information card while the form is switched off', async () => {
+  await renderWithProviders(<BedriftRegistreringScreen />);
+  expect(await screen.findByText('For bedrifter')).toBeTruthy();
+  expect(screen.queryByText('Send til verifisering')).toBeNull();
+  expect(screen.queryByLabelText('Organisasjonsnummer')).toBeNull();
+});
+
 test('Bedrift: org.nr is checked (format + Enhetsregisteret), then the form submits as PENDING', async () => {
+  setFlagOverride('businessForm', true);
   const { businessStore } = require('@mocks/data/businessStore');
   const realFetch = global.fetch;
   global.fetch = jest.fn().mockResolvedValue({
@@ -88,7 +99,7 @@ test('Admin: report queue – Avvis resolves, Angre puts it back; tab counts fol
   expect(safetyStore.openReportCount()).toBe(2);
 });
 
-test('Admin: approving a business sets it verified; suspending a user; max 2 main partners', async () => {
+test('Admin: approving a business sets it verified; suspending a user; max 4 main partners', async () => {
   const { businessStore } = require('@mocks/data/businessStore');
   const { adminStore } = require('@mocks/data/adminStore');
   const realFetch = global.fetch;
@@ -110,9 +121,15 @@ test('Admin: approving a business sets it verified; suspending a user; max 2 mai
     expect(screen.queryByLabelText('Suspender Marius B.')).toBeNull(); // admins can't be suspended
 
     await fireEvent.press(screen.getByRole('tab', { name: /Partnere/ }));
-    expect(await screen.findByText('2 / 2')).toBeTruthy();
-    expect(screen.getByText('Maks 2 hovedpartnere. Slå av en av dem før du kan velge en ny.')).toBeTruthy();
-    expect(screen.getAllByText('Ikke tilgjengelig – 2 av 2 plasser brukt').length).toBeGreaterThan(0);
+    // two of the four hovedpartner places are taken in the seed
+    expect(await screen.findByText('2 / 4')).toBeTruthy();
+    expect(screen.queryByText('Maks 4 hovedpartnere. Slå av en av dem før du kan velge en ny.')).toBeNull();
+
+    // fill the last two places → the limit kicks in
+    adminStore.setMain(require('@mocks/data/seedCommunity').partners, 'p-local-1', true);
+    adminStore.setMain(require('@mocks/data/seedCommunity').partners, 'p-local-2', true);
+    expect(() => adminStore.setMain(require('@mocks/data/seedCommunity').partners, 'p-local-3', true)).toThrow('Maks 4 hovedpartnere.');
+    adminStore._reset();
   } finally {
     global.fetch = realFetch;
   }

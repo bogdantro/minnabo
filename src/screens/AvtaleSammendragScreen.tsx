@@ -4,14 +4,25 @@ import { useRouter } from 'expo-router';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
 import { formatPrice } from '@/domain/price';
-import { useAgreementByProposal, useCancelAgreement, useListing, useProfile, useProposal } from '@/api/queries';
+import {
+  useAgreementByProposal,
+  useAgreementTimeProposal,
+  useCancelAgreement,
+  useListing,
+  useProfile,
+  useProposal,
+  useProposeAgreementTime,
+  useRequestHelpAgain,
+  useRespondAgreementTime,
+} from '@/api/queries';
+import { TimeSheet } from '@/components/chat/ChatSheets';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatTime, shortDate } from '@/lib/datetime';
 import {
   addAgreementToCalendar,
   daysUntil,
   deviceCalendarSupported,
-  parseAgreedTime,
+  agreedDate,
   parseDurationHours,
   removeCalendarEvent,
 } from '@/lib/deviceCalendar';
@@ -25,16 +36,20 @@ import {
   Chip,
   Dialog,
   FadeUp,
+  Field,
   FooterRow,
   Icon,
   IconButton,
+  Input,
   KeyValueRow,
   PaymentNote,
   Pill,
   ScaleIn,
   Screen,
+  Sheet,
   StickyFooter,
   SubHeader,
+  TextLink,
   type IconKey,
 } from '@/components/ui';
 
@@ -52,6 +67,14 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const { data: helper } = useProfile(helperId);
   const { data: client } = useProfile(clientId);
   const cancel = useCancelAgreement(proposalId, proposal?.conversationId ?? '');
+  const { data: timeProposal } = useAgreementTimeProposal(proposalId);
+  const proposeTime = useProposeAgreementTime(proposalId, proposal?.conversationId ?? '');
+  const respondTime = useRespondAgreementTime(proposalId, proposal?.conversationId ?? '');
+  const helpAgain = useRequestHelpAgain(proposalId);
+  const [timeSheet, setTimeSheet] = useState(false);
+  const [againSheet, setAgainSheet] = useState(false);
+  const [againWhen, setAgainWhen] = useState('');
+  const [againNote, setAgainNote] = useState('');
 
   const [dialog, setDialog] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
@@ -69,11 +92,11 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const first = (other?.displayName ?? '').split(' ')[0];
   const price = agreement?.price ?? proposal.price;
   const when = agreement?.scheduledText ?? proposal.scheduledText;
-  const duration = listing?.task?.durationText;
+  const duration = agreement?.durationText ?? proposal.durationText ?? listing?.task?.durationText;
   const description = agreement?.description || listing?.task?.description || '';
   const caveats = agreement?.caveats ?? proposal.caveats;
   const place = listing?.location.place || listing?.location.municipality;
-  const start = parseAgreedTime(when);
+  const start = agreedDate({ scheduledAt: agreement?.scheduledAt ?? proposal.scheduledAt, scheduledText: when });
   const days = start ? daysUntil(start) : null;
   const countdown =
     days == null || days < 0 ? null : days === 0 ? nb.avtaleSum.today : days === 1 ? nb.avtaleSum.tomorrow : nb.avtaleSum.inDays(days);
@@ -96,6 +119,53 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
         { key: 'reviewed', icon: 'star', state: ls === 'REVIEWED' ? 'done' : ls === 'COMPLETED' ? 'cur' : '' },
       ];
   const lastDone = steps.reduce((n, s, i) => (s.state === 'done' ? i : n), 0);
+  const finished = ls === 'COMPLETED' || ls === 'REVIEWED';
+  // the time can be moved until the job is done
+  const canMoveTime = !cancelled && !finished && ls !== 'COMPLETION_SENT';
+  const pendingTime = canMoveTime && timeProposal?.status === 'PENDING' ? timeProposal : null;
+  const errorText = (e: unknown) => (e instanceof Error && e.message ? e.message : nb.toast.genericError);
+
+  const sendTime = (whenText: string, iso: string) => {
+    proposeTime.mutate(
+      { scheduledAt: iso, scheduledText: whenText },
+      {
+        onSuccess: () => {
+          setTimeSheet(false);
+          toast.success(nb.avtaleSum.newTimeSent(first), { icon: 'cal', bottom: 150 });
+        },
+        onError: (e) => toast.error(errorText(e), { bottom: 150 }),
+      },
+    );
+  };
+  const answerTime = (answer: 'ACCEPT' | 'DECLINE' | 'WITHDRAW') => {
+    if (!pendingTime || respondTime.isPending) return;
+    respondTime.mutate(
+      { id: pendingTime.id, answer },
+      {
+        onSuccess: (r) => {
+          if (answer === 'ACCEPT') toast.success(nb.avtaleSum.timeAccepted(r.scheduledText), { icon: 'cal', bottom: 150 });
+          else toast.info(answer === 'DECLINE' ? nb.avtaleSum.timeDeclined : nb.avtaleSum.timeWithdrawn, { icon: 'x', bottom: 150 });
+        },
+        onError: (e) => toast.error(errorText(e), { bottom: 150 }),
+      },
+    );
+  };
+  const sendAgain = () => {
+    if (helpAgain.isPending) return;
+    helpAgain.mutate(
+      { when: againWhen.trim() || undefined, note: againNote.trim() || undefined },
+      {
+        onSuccess: (newId) => {
+          setAgainSheet(false);
+          setAgainWhen('');
+          setAgainNote('');
+          toast.success(nb.avtaleSum.againSent(first), { icon: 'send', bottom: 150 });
+          safePush(`/oppdrag/${newId}`);
+        },
+        onError: (e) => toast.error(errorText(e), { bottom: 150 }),
+      },
+    );
+  };
 
   const toggleCalendar = async () => {
     if (eventId) {
@@ -181,6 +251,67 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
             {when ? <Pill label={when} tone="line" icon="cal" size="lg" /> : null}
           </View>
         </FadeUp>
+
+        {/* a proposed new time waits for the other person */}
+        {pendingTime ? (
+          <ScaleIn style={[styles.px, styles.mt14]}>
+            <View style={styles.timeCard}>
+              <View style={styles.row10}>
+                <View style={styles.timeIc}>
+                  <Icon name="cal" size={18} color={colors.cyanDeep} />
+                </View>
+                <View style={styles.flex1}>
+                  <Text style={[text.meta, { color: colors.cyanDeep }]}>
+                    {pendingTime.proposedBy === me.id ? nb.avtaleSum.timeFromMe : nb.avtaleSum.timeFromThem(first)}
+                  </Text>
+                  <Text style={styles.timeBig}>{pendingTime.scheduledText}</Text>
+                </View>
+              </View>
+              {pendingTime.proposedBy === me.id ? (
+                <>
+                  <Text style={styles.timeSub}>{nb.avtaleSum.timeWaiting(first)}</Text>
+                  <TextLink label={nb.avtaleSum.timeWithdraw} icon="x" onPress={() => answerTime('WITHDRAW')} />
+                </>
+              ) : (
+                <>
+                  {when ? <Text style={styles.timeSub}>{nb.avtaleSum.timeKeeps(when)}</Text> : null}
+                  <View style={styles.timeBtns}>
+                    <Button
+                      label={nb.avtaleSum.timeDecline}
+                      variant="ghost"
+                      size="sm"
+                      block={false}
+                      disabled={respondTime.isPending}
+                      onPress={() => answerTime('DECLINE')}
+                      style={styles.grow1}
+                    />
+                    <Button
+                      label={nb.avtaleSum.timeAccept}
+                      icon="check"
+                      variant="cyan"
+                      size="sm"
+                      block={false}
+                      loading={respondTime.isPending}
+                      onPress={() => answerTime('ACCEPT')}
+                      style={styles.grow135}
+                    />
+                  </View>
+                </>
+              )}
+            </View>
+          </ScaleIn>
+        ) : null}
+
+        {/* a finished job: the same helper again, with one tap */}
+        {finished && !cancelled && !iAmHelper ? (
+          <FadeUp delay={60} style={[styles.px, styles.mt14]}>
+            <View style={[styles.card, styles.againCard, shadow.card]}>
+              <Text style={text.label}>{nb.avtaleSum.againTitle(first)}</Text>
+              <Text style={[text.meta, styles.againBody]}>{nb.avtaleSum.againBody(first)}</Text>
+              <Button label={nb.avtaleSum.again} icon="repeat" variant="ink" size="sm" onPress={() => setAgainSheet(true)} />
+            </View>
+          </FadeUp>
+        ) : null}
 
         {/* document */}
         <FadeUp delay={100} style={[styles.px, styles.mt18]}>
@@ -283,6 +414,9 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
               onPress={() => void toggleCalendar()}
             />
           ) : null}
+          {canMoveTime ? (
+            <QuickAction icon="clock" bg={colors.cyanTint} fg={colors.cyanDeep} label={nb.avtaleSum.newTime} onPress={() => setTimeSheet(true)} />
+          ) : null}
           <QuickAction icon="msg" bg={colors.cyanTint} fg={colors.cyanDeep} label={nb.avtaleSum.openChat} onPress={openChat} />
           <QuickAction icon="shield" bg={colors.bg} fg={colors.ink} label={nb.avtaleSum.shareTrusted} onPress={() => safePush('/trygge-kontakter')} />
         </FadeUp>
@@ -312,6 +446,35 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
           )}
         </FooterRow>
       </StickyFooter>
+
+      <TimeSheet
+        visible={timeSheet}
+        onClose={() => !proposeTime.isPending && setTimeSheet(false)}
+        first={first}
+        title={nb.avtaleSum.newTime}
+        subtitle={nb.avtaleSum.newTimeSub(first)}
+        cta={nb.avtaleSum.newTimeSend}
+        busy={proposeTime.isPending}
+        onSend={sendTime}
+      />
+      <Sheet
+        visible={againSheet}
+        onClose={() => !helpAgain.isPending && setAgainSheet(false)}
+        title={nb.avtaleSum.again}
+        titleSize="h2"
+        subtitle={nb.avtaleSum.againSheetSub(first)}
+      >
+        <View style={styles.gap14}>
+          <Field label={nb.avtaleSum.againWhen} hint={nb.avtaleSum.optional}>
+            <Input value={againWhen} onChangeText={setAgainWhen} placeholder={nb.avtaleSum.againWhenPh} maxLength={80} accessibilityLabel={nb.avtaleSum.againWhen} />
+          </Field>
+          <Field label={nb.avtaleSum.againNote} hint={nb.avtaleSum.optional}>
+            <Input value={againNote} onChangeText={setAgainNote} placeholder={nb.avtaleSum.againNotePh} maxLength={500} accessibilityLabel={nb.avtaleSum.againNote} />
+          </Field>
+          <PaymentNote />
+          <Button label={nb.avtaleSum.againSend} icon="send" size="lg" loading={helpAgain.isPending} onPress={sendAgain} />
+        </View>
+      </Sheet>
 
       <Dialog
         visible={dialog}
@@ -433,6 +596,14 @@ function Progress({ steps, lastDone }: { steps: Step[]; lastDone: number }) {
 }
 
 const styles = StyleSheet.create({
+  timeCard: { borderRadius: 22, backgroundColor: colors.cyanTint, padding: 16, gap: 10 },
+  timeIc: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  timeBig: { fontFamily: text.h2.fontFamily, fontSize: 19, lineHeight: 24, color: colors.ink },
+  timeSub: { fontFamily: text.body.fontFamily, fontSize: 13.5, lineHeight: 19, color: colors.ink2 },
+  timeBtns: { flexDirection: 'row', gap: 10 },
+  againCard: { padding: 16, gap: 8 },
+  againBody: { color: colors.ink2, marginBottom: 4 },
+  gap14: { gap: 14 },
   flex: { flex: 1 },
   flex1: { flex: 1, gap: 2 },
   px: { paddingHorizontal: screenPadding },

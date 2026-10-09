@@ -1,6 +1,9 @@
 import type {
   AgendaItem,
   AgreementSnapshot,
+  AgreementTimeProposal,
+  GuardianLinks,
+  PriceRange,
   AppNotification,
   JobWorkspace,
   CompletionConfirmation,
@@ -15,6 +18,9 @@ import type {
   Donation,
   NoticeKind,
   PublicProfile,
+  NoticeComment,
+  PortfolioItem,
+  ReliabilityDetails,
   Review,
   SkillEndorsement,
   VerificationKind,
@@ -40,6 +46,10 @@ import { partners, documentedDonations } from '@mocks/data/seedCommunity';
 import type {
   ApiClient,
   ListConversationsParams,
+  AccountStatus,
+  EditProposalPatch,
+  ListingEditData,
+  ListingExtras,
   AdminBusiness,
   AdminDayStat,
   AdminListing,
@@ -56,6 +66,8 @@ import type {
   NeighbourhoodInfo,
   ReviseProposalPatch,
   RespondToProposalResult,
+  OfferCount,
+  MyAccount,
   SavedSearchRecord,
   SendProposalInput,
   SubmitReportInput,
@@ -72,6 +84,22 @@ const delay = (ms: number) =>
  * the runtime app uses `SupabaseApiClient`. Its method surface is the source of
  * truth for the `ApiClient` interface.
  */
+/** State for the newer features, kept here so tests can read and reset it. */
+export const extras = {
+  time: [] as AgreementTimeProposal[],
+  again: [] as { proposalId: string; when?: string; note?: string }[],
+  price: {} as Record<string, PriceRange>,
+  guardian: { youth: false, guardians: [], youths: [] } as GuardianLinks,
+  waitlist: [] as string[],
+  reset() {
+    this.time = [];
+    this.again = [];
+    this.price = {};
+    this.guardian = { youth: false, guardians: [], youths: [] };
+    this.waitlist = [];
+  },
+};
+
 export class MockApiClient implements ApiClient {
   async listListings(params: ListListingsParams = {}): Promise<Listing[]> {
     await delay(250);
@@ -85,10 +113,70 @@ export class MockApiClient implements ApiClient {
     return listing;
   }
 
-  async createListing(listing: Listing): Promise<Listing> {
+  async createListing(listing: Listing, extras?: ListingExtras): Promise<Listing> {
     await delay(300);
-    repositories.listings.add(listing);
-    return listing;
+    const full: Listing = {
+      ...listing,
+      offerAudience: extras?.offerAudience ?? 'ALL',
+      maxDistanceKm: extras?.maxDistanceKm,
+      estimatedMinutes: extras?.estimatedMinutes,
+    };
+    repositories.listings.add(full);
+    repositories.listings.setEditData(full.id, {
+      wizard: extras?.wizard ?? null,
+      privateEstimateMinor: extras?.privateEstimateMinor ?? null,
+    });
+    return full;
+  }
+
+  async updateListing(listingId: string, listing: Listing, extras: ListingExtras): Promise<Listing> {
+    await delay(250);
+    const cur = repositories.listings.get(listingId);
+    if (!cur || cur.owner.id !== profileRepository.currentUserId) throw new Error('Ikke tilgang.');
+    if (!['DRAFT', 'PUBLISHED', 'RECEIVING_OFFERS', 'ACTIVE', 'PAUSED', 'EXPIRED'].includes(cur.status)) {
+      throw new Error('Oppdraget kan ikke endres etter at et tilbud er godtatt.');
+    }
+    const next: Listing = {
+      ...cur,
+      title: listing.title,
+      category: listing.category,
+      price: listing.price,
+      priceMode: listing.priceMode,
+      location: { ...cur.location, municipality: listing.location.municipality, place: listing.location.place },
+      images: listing.images,
+      task: listing.task,
+      status: cur.status === 'EXPIRED' ? 'PUBLISHED' : cur.status,
+      offerAudience: extras.offerAudience,
+      maxDistanceKm: extras.maxDistanceKm,
+      estimatedMinutes: extras.estimatedMinutes,
+      editedAt: new Date().toISOString(),
+    };
+    repositories.listings.replace(next);
+    repositories.listings.setEditData(listingId, {
+      wizard: extras.wizard ?? null,
+      privateEstimateMinor: extras.privateEstimateMinor ?? null,
+    });
+    return next;
+  }
+
+  async getListingEditData(listingId: string): Promise<ListingEditData> {
+    await delay(60);
+    return repositories.listings.getEditData(listingId);
+  }
+
+  async getMyAccount(): Promise<MyAccount> {
+    await delay(40);
+    return { vipps: false, youth: false };
+  }
+
+  async listSentProposals(): Promise<Proposal[]> {
+    await delay(100);
+    return chatRepository.sentProposals();
+  }
+
+  async getMyAccountStatus(): Promise<AccountStatus> {
+    await delay(40);
+    return { suspended: adminStore.isSuspended(profileRepository.currentUserId), deleted: false };
   }
 
   async listMyListings(type?: ListingType): Promise<Listing[]> {
@@ -128,6 +216,10 @@ export class MockApiClient implements ApiClient {
     if (!conv) throw new Error('Fant ikke samtalen.');
     chatRepository.markRead(id);
     return conv;
+  }
+
+  async setConversationMuted(): Promise<void> {
+    await delay(20);
   }
 
   async markConversationsRead(conversationIds: string[]): Promise<void> {
@@ -192,6 +284,16 @@ export class MockApiClient implements ApiClient {
     return chatRepository.reviseProposal(proposalId, patch);
   }
 
+  async markProposalSeen(proposalId: string): Promise<void> {
+    await delay(40);
+    chatRepository.markProposalSeen(proposalId);
+  }
+
+  async editProposal(proposalId: string, patch: EditProposalPatch): Promise<Proposal> {
+    await delay(150);
+    return chatRepository.editProposal(proposalId, patch);
+  }
+
   async respondToProposal(
     proposalId: string,
     event: ProposalEvent,
@@ -209,6 +311,86 @@ export class MockApiClient implements ApiClient {
   async getAgreement(proposalId: string): Promise<AgreementSnapshot | null> {
     await delay(120);
     return chatRepository.getAgreement(proposalId) ?? null;
+  }
+
+  // --- nytt tidspunkt / be om hjelp igjen / prisveiledning / foresatt / venteliste (in memory) ---
+  async getAgreementTimeProposal(proposalId: string): Promise<AgreementTimeProposal | null> {
+    await delay(40);
+    return extras.time.find((t) => t.proposalId === proposalId && t.status === 'PENDING') ?? null;
+  }
+
+  async proposeAgreementTime(proposalId: string, scheduledAt: string, scheduledText: string): Promise<AgreementTimeProposal> {
+    await delay(60);
+    const me = chatRepository.currentUserId;
+    if (Date.parse(scheduledAt) <= Date.now()) throw new Error('Velg et tidspunkt fram i tid.');
+    extras.time.forEach((t) => {
+      if (t.proposalId === proposalId && t.status === 'PENDING') t.status = t.proposedBy === me ? 'WITHDRAWN' : 'DECLINED';
+    });
+    const row: AgreementTimeProposal = { id: `time-${extras.time.length + 1}`, proposalId, proposedBy: me, scheduledAt, scheduledText, status: 'PENDING' };
+    extras.time.push(row);
+    return row;
+  }
+
+  async respondAgreementTime(id: string, answer: 'ACCEPT' | 'DECLINE' | 'WITHDRAW'): Promise<AgreementTimeProposal> {
+    await delay(60);
+    const row = extras.time.find((t) => t.id === id);
+    if (!row || row.status !== 'PENDING') throw new Error('Forslaget er allerede besvart.');
+    const mine = row.proposedBy === chatRepository.currentUserId;
+    if (answer === 'WITHDRAW' ? !mine : mine) throw new Error('Den andre må svare på forslaget.');
+    row.status = answer === 'ACCEPT' ? 'ACCEPTED' : answer === 'DECLINE' ? 'DECLINED' : 'WITHDRAWN';
+    if (answer === 'ACCEPT') {
+      const a = chatRepository.getAgreement(row.proposalId);
+      if (a) {
+        a.scheduledAt = row.scheduledAt;
+        a.scheduledText = row.scheduledText;
+      }
+    }
+    return row;
+  }
+
+  async requestHelpAgain(proposalId: string, input?: { when?: string; note?: string }): Promise<string> {
+    await delay(60);
+    extras.again.push({ proposalId, ...input });
+    return `again-${extras.again.length}`;
+  }
+
+  async getPriceGuidance(categorySlug: string): Promise<PriceRange | null> {
+    await delay(20);
+    return extras.price[categorySlug] ?? null;
+  }
+
+  async getGuardianLinks(): Promise<GuardianLinks> {
+    await delay(20);
+    return { ...extras.guardian, guardians: [...extras.guardian.guardians], youths: [...extras.guardian.youths] };
+  }
+
+  async createGuardianCode(): Promise<string> {
+    await delay(20);
+    extras.guardian.code = { code: 'ABC234', expiresAt: new Date(Date.now() + 7 * 86400000).toISOString() };
+    return 'ABC234';
+  }
+
+  async linkGuardian(code: string): Promise<string> {
+    await delay(20);
+    if (code.replace(/\s/g, '').toUpperCase() !== 'ABC234') throw new Error('Koden er feil eller har utløpt. Be om en ny kode.');
+    extras.guardian.youths.push({ id: `link-${extras.guardian.youths.length + 1}`, name: 'Ola N.', age: 16 });
+    return 'Ola N.';
+  }
+
+  async unlinkGuardian(linkId: string): Promise<void> {
+    await delay(20);
+    extras.guardian.youths = extras.guardian.youths.filter((y) => y.id !== linkId);
+    extras.guardian.guardians = extras.guardian.guardians.filter((g) => g.id !== linkId);
+  }
+
+  async joinKommuneWaitlist(kommune: string): Promise<void> {
+    await delay(20);
+    if (!extras.waitlist.includes(kommune)) extras.waitlist.push(kommune);
+  }
+
+  async listKommuneWaitlist(): Promise<{ kommune: string; count: number }[]> {
+    await delay(20);
+    return extras.waitlist.map((kommune) => ({ kommune, count: 1 }));
   }
 
   async getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null> {
@@ -244,21 +426,25 @@ export class MockApiClient implements ApiClient {
     await delay(60);
     switch (action.kind) {
       case 'addChecklist':
-        return jobWorkspaceStore.addChecklistItem(proposalId, action.text);
+        return jobWorkspaceStore.addChecklistItem(proposalId, action.text, action.who);
+      case 'setChecklistWho':
+        return jobWorkspaceStore.setChecklistWho(proposalId, action.itemId, action.who);
       case 'toggleChecklist':
         return jobWorkspaceStore.toggleChecklistItem(proposalId, action.itemId);
       case 'removeChecklist':
         return jobWorkspaceStore.removeChecklistItem(proposalId, action.itemId);
       case 'addMaterial':
-        return jobWorkspaceStore.addMaterial(proposalId, action.label, action.amountKr);
+        return jobWorkspaceStore.addMaterial(proposalId, action.label, action.amountKr, action.payer);
       case 'removeMaterial':
         return jobWorkspaceStore.removeMaterial(proposalId, action.itemId);
       case 'addPhoto':
-        return jobWorkspaceStore.addPhoto(proposalId, action.url, action.phase);
+        return jobWorkspaceStore.addPhoto(proposalId, action.url, action.phase, action.caption);
       case 'removePhoto':
         return jobWorkspaceStore.removePhoto(proposalId, action.itemId);
       case 'toggleTimer':
         return jobWorkspaceStore.toggleTimer(proposalId);
+      case 'stopTimer':
+        return jobWorkspaceStore.stopTimer(proposalId);
     }
   }
 
@@ -275,6 +461,22 @@ export class MockApiClient implements ApiClient {
       phone: sharesContact ? profile.phone : undefined,
       reliability: profileRepository.reliabilityFor(id),
       endorsements: endorsementsStore.list(id),
+    };
+  }
+
+  async getReplyMinutes(profileId: string): Promise<number | null> {
+    await delay(60);
+    return profileId === profileRepository.currentUserId ? null : 60;
+  }
+
+  async getListingOfferCount(listingId: string): Promise<OfferCount> {
+    await delay(60);
+    const open = chatRepository
+      .proposalsForListing(listingId)
+      .filter((p) => p.status === 'SENT' || p.status === 'REVISION_PENDING' || p.status === 'ACCEPTED');
+    return {
+      count: new Set(open.map((p) => p.fromProfileId)).size,
+      mine: open.some((p) => p.fromProfileId === profileRepository.currentUserId),
     };
   }
 
@@ -306,6 +508,31 @@ export class MockApiClient implements ApiClient {
   async listReviews(profileId: string): Promise<Review[]> {
     await delay(150);
     return profileRepository.listReviewsForProfile(profileId);
+  }
+
+  async replyToReview(reviewId: string, reply: string): Promise<Review> {
+    await delay(60);
+    return profileRepository.replyToReview(reviewId, reply);
+  }
+
+  async getReliability(profileId: string): Promise<ReliabilityDetails> {
+    await delay(40);
+    return profileRepository.reliabilityDetails(profileId);
+  }
+
+  async listPortfolio(profileId: string): Promise<PortfolioItem[]> {
+    await delay(40);
+    return profileRepository.listPortfolio(profileId);
+  }
+
+  async addPortfolioItem(input: Parameters<ApiClient['addPortfolioItem']>[0]): Promise<PortfolioItem> {
+    await delay(60);
+    return profileRepository.addPortfolioItem(input);
+  }
+
+  async removePortfolioItem(id: string): Promise<void> {
+    await delay(40);
+    profileRepository.removePortfolioItem(id);
   }
 
   async getCompletion(agreementProposalId: string): Promise<CompletionConfirmation[]> {
@@ -379,6 +606,36 @@ export class MockApiClient implements ApiClient {
     return noticeboardStore.create(input);
   }
 
+  async updateNoticeboardPost(id: string, patch: Parameters<ApiClient['updateNoticeboardPost']>[1]): Promise<NoticeboardPost> {
+    await delay(60);
+    return noticeboardStore.update(id, patch);
+  }
+
+  async listNoticeComments(noticeId: string): Promise<NoticeComment[]> {
+    await delay(40);
+    return noticeboardStore.comments(noticeId);
+  }
+
+  async addNoticeComment(noticeId: string, body: string): Promise<NoticeComment> {
+    await delay(40);
+    return noticeboardStore.addComment(noticeId, body);
+  }
+
+  async deleteNoticeComment(id: string): Promise<void> {
+    await delay(40);
+    noticeboardStore.removeComment(id);
+  }
+
+  async listSavedNoticeIds(): Promise<string[]> {
+    await delay(40);
+    return noticeboardStore.savedIds();
+  }
+
+  async toggleSavedNotice(noticeId: string): Promise<string[]> {
+    await delay(40);
+    return noticeboardStore.toggleSaved(noticeId);
+  }
+
   async deleteNoticeboardPost(id: string): Promise<void> {
     await delay(80);
     noticeboardStore.remove(id);
@@ -401,6 +658,10 @@ export class MockApiClient implements ApiClient {
   async updateNotificationPrefs(prefs: NotificationPrefs): Promise<MySettings> {
     await delay(80);
     return settingsStore.setPrefs(prefs);
+  }
+
+  async unregisterPushToken(): Promise<void> {
+    await delay(10);
   }
 
   async registerPushToken(token: string): Promise<void> {
@@ -464,6 +725,16 @@ export class MockApiClient implements ApiClient {
     return savedSearchStore.add(input.name, input.filter, input.sort);
   }
 
+  async setSavedSearchAlert(id: string, alert: boolean): Promise<void> {
+    await delay(40);
+    savedSearchStore.setAlert(id, alert);
+  }
+
+  async markSavedSearchRun(id: string): Promise<void> {
+    await delay(40);
+    savedSearchStore.markRun(id);
+  }
+
   async removeSavedSearch(id: string): Promise<void> {
     await delay(60);
     savedSearchStore.remove(id);
@@ -479,6 +750,11 @@ export class MockApiClient implements ApiClient {
   async listAdminReports(): Promise<AdminReport[]> {
     await delay(100);
     return adminStore.reports();
+  }
+
+  async getReportAttachmentUrl(path: string): Promise<string> {
+    await delay(20);
+    return path;
   }
 
   async decideReport(reportId: string, outcome: ReportOutcome): Promise<void> {
@@ -530,6 +806,11 @@ export class MockApiClient implements ApiClient {
   async setMainPartner(partnerId: string, main: boolean): Promise<void> {
     await delay(80);
     adminStore.setMain(partners, partnerId, main);
+  }
+
+  async setPartnerHero(partnerId: string, hero: boolean): Promise<void> {
+    await delay(80);
+    adminStore.setHero(partnerId, hero);
   }
 
   async setPartnerActive(partnerId: string, active: boolean): Promise<void> {

@@ -131,7 +131,7 @@ export function ListingStrip({
   }, [open, rot]);
   const chev = useAnimatedStyle(() => ({ transform: [{ rotate: `${rot.value}deg` }] }));
   const cat = categoryArtId(listing?.category.slug ?? 'annet');
-  const price = listing ? listingPrice(listing).value : nb.chat.wantsOffers;
+  const price = c.notice ? '' : listing ? listingPrice(listing).value : nb.chat.wantsOffers;
   return (
     <View style={[styles.lst, shadow.card]}>
       <Pressable
@@ -143,7 +143,11 @@ export function ListingStrip({
       >
         <CategoryArt category={cat} uri={c.listing.imageUrl} width={42} height={42} radius={13} iconSize={20} />
         <View style={styles.lstT}>
-          <Pill label={nb.chat.needHelp} tone="need" dot size="sm" style={styles.selfStart} />
+          {c.notice ? (
+            <Pill label={nb.chat.notice} tone="offer" icon="pinned" size="sm" style={styles.selfStart} />
+          ) : (
+            <Pill label={nb.chat.needHelp} tone="need" dot size="sm" style={styles.selfStart} />
+          )}
           <Text style={[text.label, styles.f145]} numberOfLines={1}>
             {c.listing.title}
           </Text>

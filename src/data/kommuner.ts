@@ -14,6 +14,17 @@ export const INNLANDET_KOMMUNER = [
   'Ringebu', 'Tynset', 'Tolga',
 ] as const;
 
+/**
+ * Where MinNabo starts: Lillehammer and the kommuner within about 40 km of it
+ * (centre to centre), plus Hamar (48 km), which is included on purpose.
+ * These are the only choices when creating an account or an oppdrag, and the
+ * only kommuner "Bruk posisjonen min" will place you in.
+ */
+export const LAUNCH_KOMMUNER = ['Lillehammer', 'Øyer', 'Gausdal', 'Ringsaker', 'Gjøvik', 'Hamar', 'Nordre Land'] as const;
+
+export const isLaunchKommune = (kommune: string | null | undefined): boolean =>
+  !!kommune && (LAUNCH_KOMMUNER as readonly string[]).includes(kommune);
+
 /** Areas (bydeler/tettsteder) offered as quick picks in Oppsett. Approximate only – never an address. */
 export const KOMMUNE_AREAS: Partial<Record<string, readonly string[]>> = {
   Lillehammer: ['Nordre Ål', 'Søre Ål', 'Sentrum', 'Stampesletta', 'Fåberg', 'Vingrom', 'Kanten'],

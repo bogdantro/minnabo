@@ -14,9 +14,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
-import { useIsSaved, useProposalsForListing, useUnreadNotificationCount } from '@/api/queries';
+import { canEditListing, canEditProposal, editListingHref, isOpenListing, isTakenListing } from '@/domain/editing';
+import {
+  useIsSaved,
+  useListingOfferCount,
+  useProfile,
+  useProposalsForListing,
+  useReplyMinutes,
+  useUnreadNotificationCount,
+} from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { postedAgo } from '@/lib/datetime';
+import { postedAgo, replyTime } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { shareListing } from '@/lib/share';
 import { toast } from '@/lib/toast';
@@ -50,7 +58,11 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
   const unread = useUnreadNotificationCount();
   const [saved, toggleSaved] = useIsSaved(listing.id);
   const proposals = useProposalsForListing(listing.id);
+  const offerCount = useListingOfferCount(listing.id).data;
+  const replyMinutes = useReplyMinutes(listing.owner.id).data;
+  const invitedFirst = (useProfile(listing.invitedProfileId ?? '').data?.displayName ?? '').split(' ')[0] || nb.detail.aNeighbour;
   const [sheet, setSheet] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [sentConv, setSentConv] = useState<string | null | undefined>(undefined);
 
   const task = listing.task;
@@ -149,10 +161,23 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
             <Pill label={nb.detail.open} tone="need" dot size="lg" />
             <Pill label={categoryLabels[cat]} tone="neutral" icon={cat} size="lg" />
             {task?.isDugnad ? <Pill label={nb.card.dugnad} tone="neutral" icon="users" size="lg" /> : null}
+            {task?.recurrence ? <Pill label={nb.detail.repeats[task.recurrence]} tone="neutral" icon="repeat" size="lg" /> : null}
           </View>
           <Text style={text.h1} accessibilityRole="header">
             {listing.title}
           </Text>
+          {/* "Be om hjelp igjen": only the invited helper and the owner get here */}
+          {listing.invitedProfileId ? (
+            <View style={styles.invited}>
+              <Icon name="repeat" size={18} color={colors.cyanDeep} />
+              <View style={styles.flex1}>
+                <Text style={styles.invitedTitle}>
+                  {isOwner ? nb.detail.invitedOwner(invitedFirst) : nb.detail.invitedYou(first)}
+                </Text>
+                <Text style={text.meta}>{isOwner ? nb.detail.invitedOwnerSub(invitedFirst) : nb.detail.invitedYouSub}</Text>
+              </View>
+            </View>
+          ) : null}
         </FadeUp>
 
         {/* budget */}
@@ -268,8 +293,33 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
                 ),
               )}
             </View>
+            {replyMinutes != null ? (
+              <View style={styles.reply}>
+                <Icon name="zap" size={18} color={colors.limeDeep} />
+                <Text style={styles.replyText}>{nb.detail.replyWithin(replyTime(replyMinutes))}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
+
+        {/* offers count – a number only, never who */}
+        {offerCount && offerCount.count > 0 ? (
+          <View style={[styles.px, styles.mt14]}>
+            <View style={[styles.card, styles.offers, shadow.card]}>
+              <View style={styles.avst} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {Array.from({ length: Math.min(offerCount.count, 3) }, (_, i) => (
+                  <View key={i} style={[styles.anon, i > 0 && styles.anonNext]}>
+                    <Icon name="user" size={16} color={colors.mute} />
+                  </View>
+                ))}
+              </View>
+              <View style={styles.offersText}>
+                <Text style={styles.offersTitle}>{nb.detail.offerCount(offerCount.count, offerCount.mine || sent)}</Text>
+                <Text style={text.meta}>{nb.detail.offerCountSub}</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         <View style={[styles.px, styles.reportRow]}>
           <Pressable
@@ -287,18 +337,40 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
         <Note style={styles.footNote}>{nb.detail.payNote}</Note>
         {isOwner ? (
           <FooterRow>
-            <Button label={nb.detail.receivedOffers} iconRight="arrow" onPress={() => safePush('/tilbud')} />
+            {canEditListing(listing.status) ? (
+              <Button
+                label={nb.detail.edit}
+                icon="edit"
+                variant="ghost"
+                onPress={() => safePush(editListingHref(listing.id))}
+                block={false}
+                style={styles.flex1}
+              />
+            ) : null}
+            <Button label={nb.detail.receivedOffers} iconRight="arrow" onPress={() => safePush('/tilbud')} block={false} style={styles.flex115} />
           </FooterRow>
         ) : sent ? (
           <FadeUp>
             <FooterRow>
               <Button label={nb.detail.seeChat} icon="msg" variant="ghost" onPress={() => openChat(chatId)} block={false} style={styles.flex1} />
-              <View style={styles.sentbtn} accessibilityRole="text" accessibilityState={{ disabled: true }}>
-                <Icon name="checks" size={18} color={colors.mute} />
-                <Text style={styles.sentText}>{nb.detail.offerSent}</Text>
-              </View>
+              {mine && canEditProposal(mine.status) ? (
+                <Button label={nb.giTilbud.editOffer} icon="edit" onPress={() => setEditOpen(true)} block={false} style={styles.flex115} />
+              ) : (
+                <View style={styles.sentbtn} accessibilityRole="text" accessibilityState={{ disabled: true }}>
+                  <Icon name="checks" size={18} color={colors.mute} />
+                  <Text style={styles.sentText}>{nb.detail.offerSent}</Text>
+                </View>
+              )}
             </FooterRow>
           </FadeUp>
+        ) : !isOpenListing(listing.status) ? (
+          <View style={styles.taken} accessibilityRole="text">
+            <Icon name="hand" size={18} color={colors.mute} />
+            <View style={styles.flex1}>
+              <Text style={styles.sentText}>{isTakenListing(listing.status) ? nb.detail.taken : nb.detail.unavailable}</Text>
+              <Text style={text.meta}>{isTakenListing(listing.status) ? nb.detail.takenSub : nb.detail.unavailableSub}</Text>
+            </View>
+          </View>
         ) : (
           <FooterRow>
             <Button
@@ -320,6 +392,17 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
           visible={sheet}
           onClose={() => setSheet(false)}
           onSent={(id) => setSentConv(id)}
+          onOpenChat={openChat}
+        />
+      ) : null}
+      {!isOwner && mine && editOpen ? (
+        <GiTilbudSheet
+          key={`edit-${mine.id}`}
+          listing={listing}
+          editing={mine}
+          visible={editOpen}
+          onClose={() => setEditOpen(false)}
+          onSent={() => undefined}
           onOpenChat={openChat}
         />
       ) : null}
@@ -522,6 +605,31 @@ const styles = StyleSheet.create({
   },
   eqText: { fontFamily: text.bodySemi.fontFamily, fontSize: 13.5, color: colors.ink },
   ownerCard: { padding: 18, gap: 14 },
+  reply: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.m,
+    backgroundColor: colors.bg,
+  },
+  replyText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.ink },
+  offers: { paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avst: { flexDirection: 'row' },
+  anon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.track,
+    borderWidth: 2,
+    borderColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  anonNext: { marginLeft: -9 },
+  offersText: { flex: 1, gap: 2 },
+  offersTitle: { fontFamily: fonts.bodyBold, fontSize: 14.5, lineHeight: 19, color: colors.ink },
   ownerText: { flex: 1, minWidth: 0, gap: 4 },
   starsRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   starsVal: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink },
@@ -529,6 +637,18 @@ const styles = StyleSheet.create({
   reportRow: { marginTop: 18, alignItems: 'center' },
   report: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   footNote: { marginBottom: 10 },
+  invited: { flexDirection: 'row', gap: 10, alignItems: 'center', padding: 12, borderRadius: radius.m, backgroundColor: colors.cyanTint },
+  invitedTitle: { fontFamily: text.label.fontFamily, fontSize: 14.5, color: colors.ink },
+  taken: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 52,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radius.m,
+    backgroundColor: colors.neutralPill,
+  },
   sentbtn: {
     flex: 1,
     height: 52,

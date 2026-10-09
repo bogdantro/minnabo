@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode, type RefObject } from 'react';
 import {
   Image,
   Pressable,
@@ -11,7 +11,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsOffline } from '@/lib/offline';
 import { colors, safeTopExtra, screenPadding, sizes, text } from '@/theme/theme';
 import { Avatar } from './Avatar';
 import { IconButton } from './IconButton';
@@ -31,9 +33,26 @@ export type ScreenProps = {
   /** Absolute footer (StickyFooter) rendered over the content. */
   footer?: ReactNode;
   scrollProps?: ScrollViewProps;
+  /** Ref to the ScrollView (with `scroll`), e.g. to jump back to the top. */
+  scrollRef?: RefObject<ScrollView | null>;
   contentStyle?: StyleProp<ViewStyle>;
   testID?: string;
 };
+
+/**
+ * `.gray` in design/screens/Tilstander.dc.html: while the phone is offline the
+ * content is what was last saved, so it is shown greyed out (the header and
+ * footer stay as they are). Fades over .5 s both ways.
+ */
+function CachedContent({ children }: { children: ReactNode }) {
+  const offline = useIsOffline();
+  const p = useSharedValue(offline ? 1 : 0);
+  useEffect(() => {
+    p.set(withTiming(offline ? 1 : 0, { duration: 500 }));
+  }, [offline, p]);
+  const dim = useAnimatedStyle(() => ({ opacity: 1 - 0.45 * p.value }));
+  return <Animated.View style={[styles.flex, dim, offline && styles.gray]}>{children}</Animated.View>;
+}
 
 /** `.phone` + `.scroll` – screen container. Headers handle the top safe area. */
 export function Screen({
@@ -44,6 +63,7 @@ export function Screen({
   header,
   footer,
   scrollProps,
+  scrollRef,
   contentStyle,
   testID,
 }: ScreenProps) {
@@ -53,8 +73,10 @@ export function Screen({
   return (
     <View testID={testID} style={[styles.screen, { backgroundColor: white ? colors.white : colors.bg }]}>
       {header}
+      <CachedContent>
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           // iOS: keep the focused field (e.g. the price) above the keyboard.
@@ -67,6 +89,7 @@ export function Screen({
       ) : (
         <View style={[styles.flex, contentStyle, bottom ? { paddingBottom: bottom } : null]}>{children}</View>
       )}
+      </CachedContent>
       {footer}
     </View>
   );
@@ -165,6 +188,7 @@ export function FooterRow({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
+  gray: { filter: [{ grayscale: 1 }] },
   topbar: {
     flexDirection: 'row',
     alignItems: 'center',

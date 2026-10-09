@@ -32,6 +32,27 @@ test('Fellesskap shows MAIN partners always but hides out-of-kommune LOCAL partn
   ).toBeTruthy();
 });
 
+test('a hovedpartner opens its own page; a lokal helt opens the short sheet', async () => {
+  const { adminStore } = require('@mocks/data/adminStore');
+  const { router } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
+  router.push.mockClear();
+  // Fjellbygg AS is the Lillehammer demo user's local hovedpartner; make it a lokal helt instead
+  adminStore.setMain([], 'p-main-2', false);
+  adminStore.setHero('p-main-2', true);
+  try {
+    await renderWithProviders(<FellesskapScreen />);
+    await fireEvent.press(await screen.findByLabelText('Les om Innlandet Sparebank'));
+    expect(router.push).toHaveBeenCalledWith('/partner/p-main-1');
+
+    expect(screen.getByText('Lokale helter')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Les om Fjellbygg AS'));
+    expect(await screen.findByText('Takk for støtten')).toBeTruthy();
+    expect(router.push).toHaveBeenCalledTimes(1);
+  } finally {
+    adminStore._reset();
+  }
+});
+
 test('blocking a user hides their conversations', () => {
   const before = chatRepository.listConversations().length;
   safetyStore.toggleBlock('u-emma');

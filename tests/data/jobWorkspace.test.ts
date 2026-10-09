@@ -34,3 +34,26 @@ test('materials log keeps a running total', () => {
   const ws = jobWorkspaceStore.addMaterial('p-3', 'Maling', 340);
   expect(ws.materials.reduce((s, m) => s + m.amountKr, 0)).toBe(400);
 });
+
+test('who, payer, caption and a saved stop are kept on the workspace', () => {
+  jobWorkspaceStore._reset();
+  const withItem = jobWorkspaceStore.addChecklistItem('p9', 'Vaske gjerdet');
+  const item = withItem.checklist[0];
+  expect(item.who).toBeUndefined();
+  expect(jobWorkspaceStore.setChecklistWho('p9', item.id, 'HELPER').checklist[0].who).toBe('HELPER');
+  expect(jobWorkspaceStore.addMaterial('p9', 'Gjerdevask', 119, 'HELPER_OUTLAY').materials[0].payer).toBe('HELPER_OUTLAY');
+  const photo = jobWorkspaceStore.addPhoto('p9', 'file:///a.jpg', 'DURING', ' Første strøk ').photos[0];
+  expect(photo).toMatchObject({ phase: 'DURING', caption: 'Første strøk' });
+
+  const started = jobWorkspaceStore.toggleTimer('p9');
+  expect(started.firstStartedAt).not.toBeNull();
+  const paused = jobWorkspaceStore.toggleTimer('p9');
+  expect(paused.pausedAt).not.toBeNull();
+  const stopped = jobWorkspaceStore.stopTimer('p9');
+  expect(stopped.timerStoppedAt).not.toBeNull();
+  expect(stopped.pausedAt).toBeNull();
+  // starting again clears the stop but keeps the first start
+  const again = jobWorkspaceStore.toggleTimer('p9');
+  expect(again.timerStoppedAt).toBeNull();
+  expect(again.firstStartedAt).toBe(started.firstStartedAt);
+});

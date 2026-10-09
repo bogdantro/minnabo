@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
-import { useCreateListing } from '@/api/queries';
-import { useSession } from '@/auth/session';
+import { useCreateListing, useUpdateListing } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { categoryArtId } from '@/domain/categories';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
-import { ENV } from '@/lib/env';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
 import {
@@ -38,10 +37,12 @@ type Phase = 'idle' | 'busy';
 /** Leg ut · Forhåndsvisning (design/screens/Forhandsvisning.dc.html). */
 export function PreviewScreen() {
   const router = useRouter();
-  const { session } = useSession();
   const me = useCurrentUser();
   const listing = draftStore.get();
+  const meta = draftStore.meta();
+  const editId = meta.editId;
   const create = useCreateListing();
+  const update = useUpdateListing();
   const [tab, setTab] = useState<'card' | 'detail'>('card');
   const [phase, setPhase] = useState<Phase>('idle');
 
@@ -76,21 +77,29 @@ export function PreviewScreen() {
 
   const publish = async () => {
     setPhase('busy');
-    try {
-      let id = 'lokal';
-      if (session || ENV.useMocks) {
-        id = (await create.mutateAsync(listing)).id;
-      } else {
-        // Mock Vipps login without a backend session: nothing to save to – show the flow.
-        await new Promise((r) => setTimeout(r, 900));
+    if (editId) {
+      try {
+        await update.mutateAsync({ id: editId, listing, extras: meta.extras ?? { offerAudience: 'ALL' } });
+        draftStore.clear();
+        haptics.success();
+        toast.success(nb.preview.saved, { icon: 'check' });
+        router.dismissTo((meta.back ?? `/oppdrag/${editId}`) as never);
+      } catch (e) {
+        setPhase('idle');
+        toast.error(e instanceof Error && e.message ? e.message : nb.preview.saveFailed, { bottom: 130 });
       }
+      return;
+    }
+    try {
+      const id = (await create.mutateAsync({ listing, extras: meta.extras })).id;
       await wizardDraft.clear();
       haptics.success();
       // Straight to the success page – no extra "Fortsett" tap.
       router.replace(`/legg-ut/publisert?id=${id}`);
-    } catch {
+    } catch (e) {
       setPhase('idle');
-      toast.error(nb.preview.publishFailed, { bottom: 130 });
+      // the word filter and the spam limit explain themselves
+      toast.error(serverMessage(e, nb.preview.publishFailed), { bottom: 130 });
     }
   };
 
@@ -104,10 +113,15 @@ export function PreviewScreen() {
           {phase === 'idle' ? (
             <FooterRow>
               <Button label={nb.preview.edit} icon="edit" variant="ghost" onPress={back} style={styles.flex} />
-              <Button label={nb.preview.publish} onPress={publish} style={styles.flex14} />
+              <Button label={editId ? nb.preview.saveChanges : nb.preview.publish} onPress={publish} style={styles.flex14} />
             </FooterRow>
           ) : (
-            <Button label={nb.preview.publishing} loading loadingLabel={nb.preview.publishing} onPress={() => undefined} />
+            <Button
+              label={editId ? nb.preview.saving : nb.preview.publishing}
+              loading
+              loadingLabel={editId ? nb.preview.saving : nb.preview.publishing}
+              onPress={() => undefined}
+            />
           )}
         </StickyFooter>
       }

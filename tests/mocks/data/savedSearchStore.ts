@@ -10,6 +10,8 @@ export type SavedSearch = {
   filter: ListingFilter;
   sort: ListingSort;
   createdAt: string;
+  alert?: boolean;
+  lastRunAt?: string;
 };
 
 let searches: SavedSearch[] = [];
@@ -47,6 +49,16 @@ export const savedSearchStore = {
     persist();
     emit();
     return item;
+  },
+  setAlert: (id: string, alert: boolean) => {
+    searches = searches.map((s) => (s.id === id ? { ...s, alert } : s));
+    persist();
+    emit();
+  },
+  markRun: (id: string) => {
+    searches = searches.map((s) => (s.id === id ? { ...s, lastRunAt: new Date().toISOString() } : s));
+    persist();
+    emit();
   },
   remove: (id: string) => {
     searches = searches.filter((s) => s.id !== id);

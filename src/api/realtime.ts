@@ -2,17 +2,38 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/auth/session';
+import { apiClient } from './client';
 import { chatKeys, profileKeys } from './queries';
 
 /**
  * Live updates for one open conversation: any new message or proposal change
  * refetches the messages / conversation / agreement / proposal queries.
+ * While the chat is open everything in it counts as read, so Innboks never
+ * shows it as unread when you go back.
  */
-export function useConversationChannel(conversationId: string): void {
+export function useConversationChannel(conversationId: string, visible = true): void {
   const qc = useQueryClient();
+  // `visible` = the chat is the screen on top; behind Avtale / Jobbdag it is not being read
+  const visibleRef = useRef(visible);
+  useEffect(() => {
+    visibleRef.current = visible;
+    if (!conversationId || !visible) return;
+    // opened, or come back to: everything in it is read now
+    apiClient
+      .markConversationsRead([conversationId])
+      .catch(() => undefined)
+      .finally(() => qc.invalidateQueries({ queryKey: ['conversations'] }));
+  }, [conversationId, visible, qc]);
 
   useEffect(() => {
     if (!conversationId) return;
+    const markRead = () => {
+      if (!visibleRef.current) return qc.invalidateQueries({ queryKey: ['conversations'] });
+      return apiClient
+        .markConversationsRead([conversationId])
+        .catch(() => undefined)
+        .finally(() => qc.invalidateQueries({ queryKey: ['conversations'] }));
+    };
     const channel = supabase
       .channel(`conv:${conversationId}`)
       .on(
@@ -27,8 +48,19 @@ export function useConversationChannel(conversationId: string): void {
           qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
           qc.invalidateQueries({ queryKey: chatKeys.conversation(conversationId) });
           qc.invalidateQueries({ queryKey: chatKeys.agreement(conversationId) });
-          qc.invalidateQueries({ queryKey: ['conversations'] });
+          void markRead();
         },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversation_participants',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        // the other person read the chat → my ticks turn to "Lest"
+        () => qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) }),
       )
       .on(
         'postgres_changes',
@@ -112,6 +144,12 @@ export function useInboxRealtime(): void {
 
   useEffect(() => {
     if (!userId) return;
+    // several changes in quick succession (a conversation row + its message) → one refetch
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refreshInbox = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void qc.invalidateQueries({ queryKey: ['conversations'] }), 350);
+    };
     const channel = supabase
       .channel(`inbox:${userId}`)
       .on(
@@ -122,16 +160,33 @@ export function useInboxRealtime(): void {
           table: 'notifications',
           filter: `profile_id=eq.${userId}`,
         },
-        () => qc.invalidateQueries({ queryKey: profileKeys.notifications }),
+        () => {
+          qc.invalidateQueries({ queryKey: profileKeys.notifications });
+          // a new time proposed / answered on an avtale arrives as a notification
+          qc.invalidateQueries({ queryKey: ['agreement'] });
+        },
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversations' },
-        () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+        refreshInbox,
+      )
+      // a new message in any of my conversations (row-level security limits this to mine)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        refreshInbox,
+      )
+      // the other person got or read my message → the tick on the row changes
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'conversation_participants' },
+        refreshInbox,
       )
       .subscribe();
 
     return () => {
+      clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [userId, qc]);

@@ -3,6 +3,9 @@ import { reportError } from '@/lib/reporting';
 import type {
   AgendaItem,
   AgreementSnapshot,
+  AgreementTimeProposal,
+  GuardianLinks,
+  PriceRange,
   AppNotification,
   JobWorkspace,
   CompletionConfirmation,
@@ -14,9 +17,12 @@ import type {
   Proposal,
   PublicProfile,
   NoticeboardPost,
+  NoticeComment,
   Partner,
   Donation,
   NoticeKind,
+  PortfolioItem,
+  ReliabilityDetails,
   Report,
   Review,
   SkillEndorsement,
@@ -33,6 +39,7 @@ import type {
   ListListingsParams,
   NeighbourhoodInfo,
   ReviseProposalPatch,
+  OfferCount,
   RespondToProposalResult,
   SavedSearchRecord,
   SendProposalInput,
@@ -42,6 +49,11 @@ import type {
 } from './ApiClient';
 import { withDefaultPrefs } from './ApiClient';
 import type {
+  MyAccount,
+  AccountStatus,
+  EditProposalPatch,
+  ListingEditData,
+  ListingExtras,
   AdminBusiness,
   AdminDayStat,
   AdminListing,
@@ -51,9 +63,12 @@ import type {
   AdminUser,
   ReportOutcome,
 } from './ApiClient';
+import { OPEN_LISTING_STATUSES } from '@/domain/editing';
 import { publicUrl } from '@/lib/storage';
 import {
   toAgreement,
+  toTimeProposal,
+  type TimeProposalRow,
   toConversation,
   toListing,
   toMessage,
@@ -64,7 +79,11 @@ import {
   toProfile,
   toProposal,
   toReview,
+  withReadState,
+  toPortfolioItem,
+  type PortfolioRow,
   type AgreementRow,
+  type ConversationMetaRow,
   type ConversationRow,
   type ListingRow,
   type MessageRow,
@@ -88,10 +107,22 @@ const LISTING_SELECT = `
 const CONVERSATION_SELECT = `
   *,
   listing:listings(id,title,type,place,listing_images(storage_path,ord)),
-  conversation_participants(profile:profiles(${PROFILE_SELECT})),
+  conversation_participants(*,profile:profiles(${PROFILE_SELECT})),
   message_reads(profile_id,last_read_at),
-  proposals(status,created_at)
+  proposals(status,created_at),
+  messages(author_id,kind,created_at,text)
 `;
+/** Only the newest message per conversation is embedded (who wrote last). */
+const LAST_MESSAGE = { referencedTable: 'messages' } as const;
+
+type CommentRow = { id: string; notice_id: string; author_id: string; body: string; created_at: string };
+const toComment = (r: CommentRow): NoticeComment => ({
+  id: r.id,
+  noticeId: r.notice_id,
+  authorProfileId: r.author_id,
+  body: r.body,
+  createdAt: r.created_at,
+});
 
 function fail(message: string | undefined): never {
   throw new Error(message || 'Noe gikk galt. Prøv igjen.');
@@ -110,8 +141,9 @@ export class SupabaseApiClient implements ApiClient {
 
   async listListings(params: ListListingsParams = {}): Promise<Listing[]> {
     const { filter, sort } = params;
-    // Paused / archived / removed listings are only visible to their owner (Mine oppføringer).
-    let q = supabase.from('listings').select(LISTING_SELECT).not('status', 'in', '(REMOVED,PAUSED,ARCHIVED)');
+    // Only open oppdrag: one with an accepted tilbud is taken and leaves the feed and searches;
+    // paused / archived / removed ones are only visible to their owner (Mine oppføringer).
+    let q = supabase.from('listings').select(LISTING_SELECT).in('status', OPEN_LISTING_STATUSES);
 
     if (filter?.type) q = q.eq('type', filter.type);
     if (filter?.categorySlug && filter.categorySlug !== 'alle') {
@@ -126,9 +158,11 @@ export class SupabaseApiClient implements ApiClient {
     if (sort === 'PRICE') q = q.order('price_amount_minor', { ascending: true, nullsFirst: false });
     else q = q.order('created_at', { ascending: false });
 
-    const { data, error } = await q;
+    // People I have blocked don't show up in my lists (not fatal when signed out).
+    const [{ data, error }, blocked] = await Promise.all([q, this.blockedIds()]);
     if (error) fail(error.message);
     let listings = (data as unknown as ListingRow[]).map(toListing);
+    if (blocked.length) listings = listings.filter((l) => !blocked.includes(l.owner.id));
     if (filter?.verifiedOnly) {
       listings = listings.filter((l) => l.owner.verifications.some((v) => v.verified));
     }
@@ -145,7 +179,7 @@ export class SupabaseApiClient implements ApiClient {
     return toListing(data as unknown as ListingRow);
   }
 
-  async createListing(listing: Listing): Promise<Listing> {
+  async createListing(listing: Listing, extras?: ListingExtras): Promise<Listing> {
     const owner = await myId();
     const { data: row, error } = await supabase
       .from('listings')
@@ -160,6 +194,9 @@ export class SupabaseApiClient implements ApiClient {
         municipality: listing.location.municipality,
         place: listing.location.place,
         status: listing.status,
+        offer_audience: extras?.offerAudience ?? 'ALL',
+        max_distance_km: extras?.maxDistanceKm ?? null,
+        estimated_minutes: extras?.estimatedMinutes ?? null,
       })
       .select('id')
       .single();
@@ -184,7 +221,14 @@ export class SupabaseApiClient implements ApiClient {
         is_dugnad: listing.task.isDugnad ?? false,
         recurrence: listing.task.recurrence ?? null,
         intake: listing.task.intake ?? [],
+        wizard: extras?.wizard ?? null,
       });
+      if (e) await rollback(e.message);
+    }
+    if (extras?.privateEstimateMinor != null) {
+      const { error: e } = await supabase
+        .from('listing_private')
+        .insert({ listing_id: listingId, private_estimate_minor: extras.privateEstimateMinor });
       if (e) await rollback(e.message);
     }
     if (listing.offer) {
@@ -215,6 +259,78 @@ export class SupabaseApiClient implements ApiClient {
     return this.getListing(listingId);
   }
 
+  async updateListing(listingId: string, listing: Listing, extras: ListingExtras): Promise<Listing> {
+    const { error } = await supabase.rpc('update_listing', {
+      p_listing_id: listingId,
+      p_title: listing.title,
+      p_category_slug: listing.category.slug,
+      p_price_mode: listing.priceMode,
+      p_price_minor: listing.price?.amountMinor ?? null,
+      p_municipality: listing.location.municipality,
+      p_place: listing.location.place,
+      p_description: listing.task?.description ?? '',
+      p_equipment: listing.task?.equipment ?? '',
+      p_meeting_note: listing.task?.meetingNote ?? '',
+      p_duration_text: listing.task?.durationText ?? '',
+      p_scheduled_text: listing.task?.scheduledText ?? '',
+      p_intake: listing.task?.intake ?? [],
+      p_images: listing.images.map((im) => im.url),
+      p_offer_audience: extras.offerAudience,
+      p_max_distance_km: extras.maxDistanceKm ?? null,
+      p_private_estimate_minor: extras.privateEstimateMinor ?? null,
+      p_estimated_minutes: extras.estimatedMinutes ?? null,
+      p_wizard: extras.wizard ?? null,
+    });
+    if (error) fail(error.message);
+    return this.getListing(listingId);
+  }
+
+  async getListingEditData(listingId: string): Promise<ListingEditData> {
+    const [{ data: td, error: e1 }, { data: priv, error: e2 }] = await Promise.all([
+      supabase.from('task_details').select('wizard').eq('listing_id', listingId).maybeSingle(),
+      supabase.from('listing_private').select('private_estimate_minor').eq('listing_id', listingId).maybeSingle(),
+    ]);
+    if (e1) fail(e1.message);
+    if (e2) fail(e2.message);
+    return {
+      wizard: (td as { wizard: unknown } | null)?.wizard ?? null,
+      privateEstimateMinor: (priv as { private_estimate_minor: number | null } | null)?.private_estimate_minor ?? null,
+    };
+  }
+
+  async getMyAccountStatus(): Promise<AccountStatus> {
+    const { data, error } = await supabase.rpc('my_account_status');
+    if (error) fail(error.message);
+    const r = data as { suspended: boolean; deleted: boolean };
+    return { suspended: !!r.suspended, deleted: !!r.deleted };
+  }
+
+  async getMyAccount(): Promise<MyAccount> {
+    const { data, error } = await supabase.rpc('my_account');
+    if (error) fail(error.message);
+    const r = (data ?? {}) as Partial<Record<keyof MyAccount, unknown>>;
+    return {
+      vipps: !!r.vipps,
+      youth: !!r.youth,
+      age: (r.age as number | null) ?? undefined,
+      birthYear: (r.birthYear as number | null) ?? undefined,
+      fullName: (r.fullName as string | null) ?? undefined,
+      phoneMasked: (r.phoneMasked as string | null) ?? undefined,
+      emailMasked: (r.emailMasked as string | null) ?? undefined,
+    };
+  }
+
+  async listSentProposals(): Promise<Proposal[]> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('proposals')
+      .select('*')
+      .eq('from_profile_id', me)
+      .order('created_at', { ascending: false });
+    if (error) fail(error.message);
+    return (data as unknown as ProposalRow[]).map(toProposal);
+  }
+
   async listMyListings(type?: ListingType): Promise<Listing[]> {
     const me = await myId();
     let q = supabase.from('listings').select(LISTING_SELECT).eq('owner_id', me).neq('status', 'REMOVED');
@@ -232,15 +348,35 @@ export class SupabaseApiClient implements ApiClient {
 
   // --- conversations & messages ----------------------------------------
 
+  /** Unread counts + last author per conversation. Empty when the RPC isn't there yet (before 0036). */
+  private async conversationMeta(): Promise<Map<string, ConversationMetaRow>> {
+    const { data, error } = await supabase.rpc('my_conversation_meta');
+    if (error) return new Map();
+    return new Map((data as ConversationMetaRow[]).map((m) => [m.conversation_id, m]));
+  }
+
   async listConversations(params: ListConversationsParams = {}): Promise<Conversation[]> {
     const me = await myId();
-    const { data, error } = await supabase
-      .from('conversations')
-      .select(CONVERSATION_SELECT)
-      .order('last_message_at', { ascending: false });
+    const [{ data, error }, meta] = await Promise.all([
+      supabase
+        .from('conversations')
+        .select(CONVERSATION_SELECT)
+        .order('last_message_at', { ascending: false })
+        .order('created_at', { ...LAST_MESSAGE, ascending: false })
+        .limit(1, LAST_MESSAGE),
+      this.conversationMeta(),
+    ]);
     if (error) fail(error.message);
 
-    let convs = (data as unknown as ConversationRow[]).map((r) => toConversation(r, me));
+    // My app now has everything sent to me → the senders see "Levert" (0051). Not awaited.
+    void supabase.rpc('mark_conversations_delivered').then(() => undefined);
+    // People I have blocked don't show up in Innboks.
+    const blocked = await this.blockedIds();
+    let convs = (data as unknown as ConversationRow[])
+      .map((r) => toConversation(r, me, meta.get(r.id)))
+      .filter((c) => !blocked.includes(c.counterpart.id))
+      // newest real message first (the row's own timestamp can lag)
+      .sort((a, b) => Date.parse(b.lastMessageAt) - Date.parse(a.lastMessageAt));
     if (params.unreadOnly) convs = convs.filter((c) => c.unread);
     if (params.query?.trim()) {
       const needle = params.query.trim().toLowerCase();
@@ -251,6 +387,11 @@ export class SupabaseApiClient implements ApiClient {
       );
     }
     return convs;
+  }
+
+  async setConversationMuted(conversationId: string, muted: boolean): Promise<void> {
+    const { error } = await supabase.rpc('set_conversation_muted', { p_conversation_id: conversationId, p_muted: muted });
+    if (error) fail(error.message);
   }
 
   async markConversationsRead(conversationIds: string[]): Promise<void> {
@@ -267,6 +408,8 @@ export class SupabaseApiClient implements ApiClient {
       .from('conversations')
       .select(CONVERSATION_SELECT)
       .eq('id', id)
+      .order('created_at', { ...LAST_MESSAGE, ascending: false })
+      .limit(1, LAST_MESSAGE)
       .single();
     if (error) fail(error.code === 'PGRST116' ? 'Fant ikke samtalen.' : error.message);
     await supabase.rpc('mark_conversation_read', { p_conversation_id: id });
@@ -283,13 +426,23 @@ export class SupabaseApiClient implements ApiClient {
   }
 
   async listMessages(conversationId: string): Promise<Message[]> {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
+    const me = await myId();
+    const [{ data, error }, parts] = await Promise.all([
+      supabase.from('messages').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true }),
+      // how far the other person has read → "Lest" on my messages
+      supabase.from('conversation_participants').select('*').eq('conversation_id', conversationId),
+    ]);
     if (error) fail(error.message);
-    return (data as unknown as MessageRow[]).map(toMessage);
+    const others = ((parts.error ? [] : parts.data) as { profile_id: string; last_read_at: string | null; last_delivered_at?: string | null }[]).filter(
+      (p) => p.profile_id !== me,
+    );
+    const latest = (key: 'last_read_at' | 'last_delivered_at') =>
+      others
+        .map((p) => p[key])
+        .filter((t): t is string => !!t)
+        .sort()
+        .pop();
+    return withReadState((data as unknown as MessageRow[]).map(toMessage), me, latest('last_read_at'), latest('last_delivered_at'));
   }
 
   async sendMessage(conversationId: string, text: string): Promise<Message> {
@@ -363,6 +516,19 @@ export class SupabaseApiClient implements ApiClient {
     return { proposalId: data as string };
   }
 
+  async getListingOfferCount(listingId: string): Promise<OfferCount> {
+    const { data, error } = await supabase.rpc('listing_offer_count', { p_listing_id: listingId });
+    if (error) fail(error.message);
+    const r = (data ?? {}) as { count?: number; mine?: boolean };
+    return { count: r.count ?? 0, mine: !!r.mine };
+  }
+
+  async getReplyMinutes(profileId: string): Promise<number | null> {
+    const { data, error } = await supabase.rpc('profile_reply_minutes', { p_profile_id: profileId });
+    if (error) fail(error.message);
+    return (data as number | null) ?? null;
+  }
+
   async notifyMatchingHelpers(listingId: string): Promise<number> {
     const { data, error } = await supabase.rpc('notify_matching_helpers', {
       p_listing_id: listingId,
@@ -412,7 +578,29 @@ export class SupabaseApiClient implements ApiClient {
       p_client_token: token(),
     });
     if (error) fail(error.message);
+    const sent = toProposal(data as unknown as ProposalRow);
+    return this.withExtras(sent, input.scheduledAt, input.durationText);
+  }
+
+  /** Store the structured day/time + duration next to a tilbud just sent or edited (0037). */
+  private async withExtras(p: Proposal, scheduledAt?: string | null, durationText?: string): Promise<Proposal> {
+    if (scheduledAt === undefined && durationText === undefined) return p;
+    const { data, error } = await supabase.rpc('set_proposal_extras', {
+      p_proposal_id: p.id,
+      p_scheduled_at: scheduledAt ?? null,
+      p_duration_text: durationText ?? '',
+    });
+    // The tilbud itself is sent; a missing extra must not turn that into a failure.
+    if (error) {
+      reportError(error, { scope: 'set_proposal_extras' });
+      return p;
+    }
     return toProposal(data as unknown as ProposalRow);
+  }
+
+  async markProposalSeen(proposalId: string): Promise<void> {
+    const { error } = await supabase.rpc('mark_proposal_seen', { p_proposal_id: proposalId });
+    if (error) fail(error.message);
   }
 
   async reviseProposal(proposalId: string, patch: ReviseProposalPatch): Promise<Proposal> {
@@ -425,6 +613,19 @@ export class SupabaseApiClient implements ApiClient {
     });
     if (error) fail(error.message);
     return toProposal(data as unknown as ProposalRow);
+  }
+
+  async editProposal(proposalId: string, patch: EditProposalPatch): Promise<Proposal> {
+    const { data, error } = await supabase.rpc('edit_proposal', {
+      p_proposal_id: proposalId,
+      p_price_minor: patch.priceAmountMinor,
+      p_scheduled_text: patch.scheduledText ?? '',
+      p_message: patch.message ?? '',
+      p_caveats: patch.caveats ?? '',
+    });
+    if (error) fail(error.message);
+    const edited = toProposal(data as unknown as ProposalRow);
+    return this.withExtras(edited, patch.scheduledAt, patch.durationText);
   }
 
   async respondToProposal(
@@ -461,6 +662,100 @@ export class SupabaseApiClient implements ApiClient {
       .maybeSingle();
     if (error) fail(error.message);
     return data ? toAgreement(data as unknown as AgreementRow) : null;
+  }
+
+  async getAgreementTimeProposal(proposalId: string): Promise<AgreementTimeProposal | null> {
+    const { data, error } = await supabase
+      .from('agreement_time_proposals')
+      .select('*')
+      .eq('proposal_id', proposalId)
+      .eq('status', 'PENDING')
+      .maybeSingle();
+    // the table arrives with migration 0053 – until then there is simply nothing proposed
+    if (error) return null;
+    return data ? toTimeProposal(data as unknown as TimeProposalRow) : null;
+  }
+
+  async proposeAgreementTime(proposalId: string, scheduledAt: string, scheduledText: string): Promise<AgreementTimeProposal> {
+    const { data, error } = await supabase.rpc('propose_agreement_time', {
+      p_proposal_id: proposalId,
+      p_scheduled_at: scheduledAt,
+      p_scheduled_text: scheduledText,
+    });
+    if (error) fail(error.message);
+    return toTimeProposal(data as unknown as TimeProposalRow);
+  }
+
+  async respondAgreementTime(id: string, answer: 'ACCEPT' | 'DECLINE' | 'WITHDRAW'): Promise<AgreementTimeProposal> {
+    const { data, error } = await supabase.rpc('respond_agreement_time', { p_id: id, p_answer: answer });
+    if (error) fail(error.message);
+    return toTimeProposal(data as unknown as TimeProposalRow);
+  }
+
+  async requestHelpAgain(proposalId: string, input?: { when?: string; note?: string }): Promise<string> {
+    const { data, error } = await supabase.rpc('request_help_again', {
+      p_proposal_id: proposalId,
+      p_when: input?.when ?? null,
+      p_note: input?.note ?? null,
+    });
+    if (error) fail(error.message);
+    return data as unknown as string;
+  }
+
+  async getPriceGuidance(categorySlug: string): Promise<PriceRange | null> {
+    const { data, error } = await supabase.rpc('price_guidance', { p_category_slug: categorySlug });
+    // guidance is a nicety: without it the screens fall back to the fixed range
+    if (error || !data) return null;
+    const r = data as unknown as PriceRange;
+    return r.low > 0 && r.high >= r.low ? r : null;
+  }
+
+  async getGuardianLinks(): Promise<GuardianLinks> {
+    const { data, error } = await supabase.rpc('my_guardian_links');
+    if (error || !data) return { youth: false, guardians: [], youths: [] };
+    const d = data as unknown as {
+      youth: boolean;
+      code: { code: string; expiresAt: string } | null;
+      guardians: { id: string; name: string }[];
+      youths: { id: string; name: string; age: number | null }[];
+    };
+    return {
+      youth: !!d.youth,
+      code: d.code ?? undefined,
+      guardians: d.guardians ?? [],
+      youths: (d.youths ?? []).map((y) => ({ id: y.id, name: y.name, age: y.age ?? undefined })),
+    };
+  }
+
+  async createGuardianCode(): Promise<string> {
+    const { data, error } = await supabase.rpc('guardian_invite_code');
+    if (error) fail(error.message);
+    return data as unknown as string;
+  }
+
+  async linkGuardian(code: string): Promise<string> {
+    const { data, error } = await supabase.rpc('guardian_link', { p_code: code });
+    if (error) fail(error.message);
+    return (data as unknown as string) ?? '';
+  }
+
+  async unlinkGuardian(linkId: string): Promise<void> {
+    const { error } = await supabase.rpc('guardian_unlink', { p_id: linkId });
+    if (error) fail(error.message);
+  }
+
+  async joinKommuneWaitlist(kommune: string): Promise<void> {
+    const me = await myId();
+    const { error } = await supabase
+      .from('kommune_waitlist')
+      .upsert({ profile_id: me, kommune: kommune.trim() }, { onConflict: 'profile_id,kommune', ignoreDuplicates: true });
+    if (error) fail(error.message);
+  }
+
+  async listKommuneWaitlist(): Promise<{ kommune: string; count: number }[]> {
+    const { data, error } = await supabase.rpc('admin_waitlist');
+    if (error) return [];
+    return (data as unknown as { kommune: string; count: number }[]) ?? [];
   }
 
   async getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null> {
@@ -501,6 +796,8 @@ export class SupabaseApiClient implements ApiClient {
               : r.proposals.from_profile_id,
           price: a.price,
           scheduledText: a.scheduledText,
+          scheduledAt: a.scheduledAt,
+          durationText: a.durationText,
           agreedAt: a.agreedAt,
           fullyCompleted: (r.completion_confirmations ?? []).length >= 2,
           role: r.proposals.from_profile_id === me ? ('HELPER' as const) : ('CLIENT' as const),
@@ -523,7 +820,12 @@ export class SupabaseApiClient implements ApiClient {
       materials: JobWorkspace['materials'] | null;
       timer_started_at: string | null;
       timer_accum_ms: number | null;
+      first_started_at?: string | null;
+      paused_at?: string | null;
+      paused_ms?: number | null;
+      timer_stopped_at?: string | null;
     } | null;
+    const ms = (t?: string | null) => (t ? Date.parse(t) : null);
     return {
       proposalId,
       checklist: row?.checklist ?? [],
@@ -531,6 +833,10 @@ export class SupabaseApiClient implements ApiClient {
       photos: (row as { photos?: JobWorkspace['photos'] } | null)?.photos ?? [],
       timerStartedAt: row?.timer_started_at ? Date.parse(row.timer_started_at) : null,
       timerAccumMs: row?.timer_accum_ms ?? 0,
+      firstStartedAt: ms(row?.first_started_at),
+      pausedMs: row?.paused_ms ?? 0,
+      pausedAt: ms(row?.paused_at),
+      timerStoppedAt: ms(row?.timer_stopped_at),
     };
   }
 
@@ -568,6 +874,11 @@ export class SupabaseApiClient implements ApiClient {
     if (patch.avatarPath !== undefined) row.avatar_path = patch.avatarPath;
     if (patch.maxDistanceKm !== undefined) row.max_distance_km = patch.maxDistanceKm;
     if (patch.paused !== undefined) row.paused = patch.paused;
+    if (patch.availableForJobs !== undefined) row.available_for_jobs = patch.availableForJobs;
+    if (patch.categorySlugs !== undefined) row.category_slugs = patch.categorySlugs;
+    if (patch.languages !== undefined) row.languages = patch.languages;
+    if (patch.hasCar !== undefined) row.has_car = patch.hasCar;
+    if (patch.availabilityText !== undefined) row.availability_text = patch.availabilityText.trim() || null;
     if (patch.homeNotes !== undefined) row.home_notes = patch.homeNotes || null;
     if (patch.portfolio !== undefined) row.portfolio = patch.portfolio;
 
@@ -621,6 +932,60 @@ export class SupabaseApiClient implements ApiClient {
       .order('created_at', { ascending: false });
     if (error) fail(error.message);
     return (data as unknown as ReviewRow[]).map(toReview);
+  }
+
+  async replyToReview(reviewId: string, reply: string): Promise<Review> {
+    const { data, error } = await supabase.rpc('reply_to_review', { p_review_id: reviewId, p_text: reply });
+    if (error) fail(error.message);
+    return toReview(data as unknown as ReviewRow);
+  }
+
+  async getReliability(profileId: string): Promise<ReliabilityDetails> {
+    const { data, error } = await supabase.rpc('profile_reliability', { p_profile_id: profileId });
+    if (error) fail(error.message);
+    const r = (data ?? {}) as { completed?: number; showsUp?: number | null; onTime?: number | null; completes?: number | null };
+    return {
+      completed: r.completed ?? 0,
+      showsUp: r.showsUp ?? undefined,
+      onTime: r.onTime ?? undefined,
+      completes: r.completes ?? undefined,
+    };
+  }
+
+  async listPortfolio(profileId: string): Promise<PortfolioItem[]> {
+    const { data, error } = await supabase
+      .from('portfolio_items')
+      .select('*')
+      .eq('profile_id', profileId)
+      .order('created_at', { ascending: false });
+    if (error) fail(error.message);
+    return (data as PortfolioRow[]).map(toPortfolioItem);
+  }
+
+  async addPortfolioItem(input: Parameters<ApiClient['addPortfolioItem']>[0]): Promise<PortfolioItem> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('portfolio_items')
+      .insert({
+        profile_id: me,
+        before_path: input.beforePath ?? null,
+        after_path: input.afterPath,
+        title: input.title.trim(),
+        place: input.place?.trim() || null,
+        caption: input.caption?.trim() || null,
+        category_slug: input.categorySlug ?? null,
+        done_at: new Date().toISOString().slice(0, 10),
+      })
+      .select('*')
+      .single();
+    if (error) fail(error.message);
+    return toPortfolioItem(data as PortfolioRow);
+  }
+
+  async removePortfolioItem(id: string): Promise<void> {
+    const me = await myId();
+    const { error } = await supabase.from('portfolio_items').delete().eq('id', id).eq('profile_id', me);
+    if (error) fail(error.message);
   }
 
   // --- completion & review ------------------------------------------
@@ -722,7 +1087,7 @@ export class SupabaseApiClient implements ApiClient {
   async listPartners(): Promise<Partner[]> {
     const { data, error } = await supabase
       .from('partners')
-      .select('id, name, blurb, url, municipality, partner_placements(surface, active)')
+      .select('*, partner_placements(surface, active)')
       .order('name');
     if (error) fail(error.message);
     return (data as PartnerRow[]).map(toPartner);
@@ -740,9 +1105,83 @@ export class SupabaseApiClient implements ApiClient {
   async listNoticeboard(kind?: NoticeKind): Promise<NoticeboardPost[]> {
     let q = supabase.from('noticeboard_posts').select('*').order('created_at', { ascending: false });
     if (kind) q = q.eq('kind', kind);
-    const { data, error } = await q;
+    // "N svar" comes from an RPC (0041); without it the posts simply show no count.
+    const [{ data, error }, counts] = await Promise.all([q, supabase.rpc('noticeboard_reply_counts')]);
     if (error) fail(error.message);
-    return (data as NoticeRow[]).map(toNoticeboardPost);
+    const replies = new Map(
+      ((counts.error ? [] : counts.data) as { notice_id: string; replies: number }[]).map((r) => [r.notice_id, r.replies]),
+    );
+    return (data as NoticeRow[]).map((r) => ({ ...toNoticeboardPost(r), replies: replies.get(r.id) ?? 0 }));
+  }
+
+  async updateNoticeboardPost(
+    id: string,
+    patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; done?: boolean },
+  ): Promise<NoticeboardPost> {
+    const me = await myId();
+    const row: Record<string, unknown> = {};
+    if (patch.kind !== undefined) row.kind = patch.kind;
+    if (patch.title !== undefined) row.title = patch.title;
+    if (patch.body !== undefined) row.body = patch.body;
+    if (patch.imagePath !== undefined) row.image_path = patch.imagePath;
+    if (patch.done !== undefined) row.done_at = patch.done ? new Date().toISOString() : null;
+    const { data, error } = await supabase
+      .from('noticeboard_posts')
+      .update(row)
+      .eq('id', id)
+      .eq('author_id', me)
+      .select('*')
+      .single();
+    if (error) fail(error.message);
+    return toNoticeboardPost(data as NoticeRow);
+  }
+
+  async listNoticeComments(noticeId: string): Promise<NoticeComment[]> {
+    const { data, error } = await supabase
+      .from('notice_comments')
+      .select('*')
+      .eq('notice_id', noticeId)
+      .order('created_at', { ascending: true });
+    if (error) fail(error.message);
+    return (data as CommentRow[]).map(toComment);
+  }
+
+  async addNoticeComment(noticeId: string, body: string): Promise<NoticeComment> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('notice_comments')
+      .insert({ notice_id: noticeId, author_id: me, body: body.trim() })
+      .select('*')
+      .single();
+    if (error) fail(error.message);
+    return toComment(data as CommentRow);
+  }
+
+  async deleteNoticeComment(id: string): Promise<void> {
+    const { error } = await supabase.from('notice_comments').delete().eq('id', id);
+    if (error) fail(error.message);
+  }
+
+  async listSavedNoticeIds(): Promise<string[]> {
+    const me = await myId();
+    const { data, error } = await supabase.from('saved_notices').select('notice_id').eq('profile_id', me);
+    if (error) fail(error.message);
+    return (data as { notice_id: string }[]).map((r) => r.notice_id);
+  }
+
+  async toggleSavedNotice(noticeId: string): Promise<string[]> {
+    const me = await myId();
+    const { data: existing } = await supabase
+      .from('saved_notices')
+      .select('notice_id')
+      .eq('profile_id', me)
+      .eq('notice_id', noticeId)
+      .maybeSingle();
+    const { error } = existing
+      ? await supabase.from('saved_notices').delete().eq('profile_id', me).eq('notice_id', noticeId)
+      : await supabase.from('saved_notices').insert({ profile_id: me, notice_id: noticeId });
+    if (error) fail(error.message);
+    return this.listSavedNoticeIds();
   }
 
   async createNoticeboardPost(input: {
@@ -807,10 +1246,19 @@ export class SupabaseApiClient implements ApiClient {
   }
 
   async registerPushToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<void> {
+    // The RPC lets this phone's token move to whoever is signed in now (0050).
+    const { error: rpcError } = await supabase.rpc('register_push_token', { p_token: token, p_platform: platform });
+    if (!rpcError) return;
+    // before 0050 is pushed: the old direct write
     const me = await myId();
     const { error } = await supabase
       .from('push_tokens')
       .upsert({ token, profile_id: me, platform, updated_at: new Date().toISOString() }, { onConflict: 'token' });
+    if (error) fail(error.message);
+  }
+
+  async unregisterPushToken(token: string): Promise<void> {
+    const { error } = await supabase.rpc('unregister_push_token', { p_token: token });
     if (error) fail(error.message);
   }
 
@@ -918,15 +1366,28 @@ export class SupabaseApiClient implements ApiClient {
       .eq('profile_id', me)
       .order('created_at', { ascending: false });
     if (error) fail(error.message);
-    return (data as { id: string; name: string; filter: unknown; sort: string; created_at: string }[]).map(
-      (r) => ({
-        id: r.id,
-        name: r.name,
-        filter: r.filter as SavedSearchRecord['filter'],
-        sort: r.sort as SavedSearchRecord['sort'],
-        createdAt: r.created_at,
-      }),
-    );
+    return (
+      data as { id: string; name: string; filter: unknown; sort: string; created_at: string; alert?: boolean | null; last_run_at?: string | null }[]
+    ).map((r) => ({
+      id: r.id,
+      name: r.name,
+      filter: r.filter as SavedSearchRecord['filter'],
+      sort: r.sort as SavedSearchRecord['sort'],
+      createdAt: r.created_at,
+      alert: r.alert ?? false,
+      lastRunAt: r.last_run_at ?? undefined,
+    }));
+  }
+
+  async setSavedSearchAlert(id: string, alert: boolean): Promise<void> {
+    const me = await myId();
+    const { error } = await supabase.from('saved_searches').update({ alert }).eq('id', id).eq('profile_id', me);
+    if (error) fail(error.message);
+  }
+
+  async markSavedSearchRun(id: string): Promise<void> {
+    const { error } = await supabase.rpc('mark_saved_search_run', { p_id: id });
+    if (error) fail(error.message);
   }
 
   async addSavedSearch(
@@ -935,7 +1396,7 @@ export class SupabaseApiClient implements ApiClient {
     const me = await myId();
     const { data, error } = await supabase
       .from('saved_searches')
-      .insert({ profile_id: me, name: input.name, filter: input.filter, sort: input.sort })
+      .insert({ profile_id: me, name: input.name, filter: input.filter, sort: input.sort, ...(input.alert ? { alert: true } : {}) })
       .select('*')
       .single();
     if (error) fail(error.message);
@@ -969,8 +1430,11 @@ export class SupabaseApiClient implements ApiClient {
   }
 
   async listAdminReports(): Promise<AdminReport[]> {
-    const { data, error } = await supabase.rpc('admin_reports');
+    const [{ data, error }, att] = await Promise.all([supabase.rpc('admin_reports'), supabase.rpc('admin_report_attachments')]);
     if (error) fail(error.message);
+    const attachments = new Map(
+      ((att.error ? [] : att.data) as { report_id: string; path: string }[]).map((a) => [a.report_id, a.path]),
+    );
     return (data as {
       id: string; target_type: AdminReport['targetType']; target_id: string; reason: string; details: string | null;
       target_text: string; by_name: string; created_at: string; status: AdminReport['status'];
@@ -987,7 +1451,14 @@ export class SupabaseApiClient implements ApiClient {
       status: r.status,
       outcome: r.outcome,
       resolvedAt: r.resolved_at,
+      attachmentPath: attachments.get(r.id),
     }));
+  }
+
+  async getReportAttachmentUrl(path: string): Promise<string> {
+    const { data, error } = await supabase.storage.from('report-attachments').createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) fail(error?.message);
+    return data.signedUrl;
   }
 
   async decideReport(reportId: string, outcome: ReportOutcome): Promise<void> {
@@ -1083,6 +1554,11 @@ export class SupabaseApiClient implements ApiClient {
     if (error) fail(error.message);
   }
 
+  async setPartnerHero(partnerId: string, hero: boolean): Promise<void> {
+    const { error } = await supabase.rpc('admin_set_partner_hero', { p_partner_id: partnerId, p_hero: hero });
+    if (error) fail(error.message);
+  }
+
   async setPartnerActive(partnerId: string, active: boolean): Promise<void> {
     const { error } = await supabase.rpc('admin_set_partner_active', { p_partner_id: partnerId, p_active: active });
     if (error) fail(error.message);
@@ -1136,6 +1612,14 @@ export class SupabaseApiClient implements ApiClient {
       p_details: input.details ?? '',
     });
     if (error) fail(error.message);
+    if (input.attachmentPath) {
+      // The report itself is in; a failed attachment must not look like a failed report.
+      const { error: attErr } = await supabase.rpc('set_report_attachment', {
+        p_report_id: (data as { id: string }).id,
+        p_path: input.attachmentPath,
+      });
+      if (attErr) reportError(attErr, { scope: 'set_report_attachment' });
+    }
     const r = data as {
       id: string;
       target_type: Report['targetType'];
@@ -1172,7 +1656,22 @@ export class SupabaseApiClient implements ApiClient {
       .select('blocked_profile_id')
       .eq('by_profile_id', me);
     if (error) fail(error.message);
-    return (data as { blocked_profile_id: string }[]).map((r) => r.blocked_profile_id);
+    const ids = (data as { blocked_profile_id: string }[]).map((r) => r.blocked_profile_id);
+    this.blockedCache = { me, ids, at: Date.now() };
+    return ids;
+  }
+
+  /** My block list for filtering lists: kept for a minute so every list doesn't fetch it again. */
+  private blockedCache: { me: string; ids: string[]; at: number } | null = null;
+  private async blockedIds(): Promise<string[]> {
+    try {
+      const me = await myId();
+      const c = this.blockedCache;
+      if (c && c.me === me && Date.now() - c.at < 60_000) return c.ids;
+      return await this.listBlockedProfileIds();
+    } catch {
+      return [];
+    }
   }
 
   async toggleBlock(profileId: string): Promise<string[]> {
@@ -1192,6 +1691,7 @@ export class SupabaseApiClient implements ApiClient {
     } else {
       await supabase.from('blocks').insert({ by_profile_id: me, blocked_profile_id: profileId });
     }
+    this.blockedCache = null;
     return this.listBlockedProfileIds();
   }
 

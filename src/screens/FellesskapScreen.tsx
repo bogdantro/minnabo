@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
-import type { NoticeKind, Partner } from '@/domain/types';
+import { MAX_MAIN_PARTNERS, type NoticeKind, type Partner } from '@/domain/types';
 import { formatPrice, nok } from '@/domain/price';
 import { useDonations, useNeighbourhoodInfo, useNoticeboard, usePartners } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -30,7 +30,6 @@ import {
   KeyValueRow,
   ListGroup,
   ListRow,
-  Note,
   Pill,
   PressableScale,
   ScaleIn,
@@ -106,10 +105,18 @@ function HeroArt() {
   );
 }
 
-/** Dashed logo placeholder (`.logoph`) until partners deliver their logo. */
-function LogoPlaceholder({ size = 68 }: { size?: number }) {
+/** Partner logo on a white tile; dashed placeholder (`.logoph`) until partners deliver their logo. */
+function PartnerLogo({ uri, size = 68 }: { uri?: string | null; size?: number }) {
+  const radiusFor = { width: size, height: size, borderRadius: size * 0.29 };
+  if (uri) {
+    return (
+      <View style={[styles.logo, radiusFor]}>
+        <Image source={{ uri }} resizeMode="contain" style={styles.logoImg} accessibilityIgnoresInvertColors />
+      </View>
+    );
+  }
   return (
-    <View style={[styles.logoph, { width: size, height: size, borderRadius: size * 0.29 }]}>
+    <View style={[styles.logoph, radiusFor]}>
       <Icon name="building" size={size > 70 ? 32 : 24} color={colors.faint} />
       <Text style={styles.logoText}>{nb.fellesskap.logo}</Text>
     </View>
@@ -123,20 +130,24 @@ export function FellesskapScreen() {
   const partners = usePartners().data ?? [];
   const donations = useDonations().data ?? [];
   const postsData = useNoticeboard().data;
-  const [car, setCar] = useState(0);
+  const [carRaw, setCar] = useState(0);
   const [donAll, setDonAll] = useState(false);
   const [sheet, setSheet] = useState<Partner | null>(null);
   const [openedAt] = useState(() => Date.now());
 
-  const main = partners.filter((p) => p.featured).slice(0, 2);
-  // Local supporters are scoped to the user's kommune; wait for the profile
-  // so we never flash supporters from other kommuner.
-  const supporters = !ready
+  const main = partners.filter((p) => p.featured).slice(0, MAX_MAIN_PARTNERS);
+  // Lokale helter and støttespillere are scoped to the user's kommune; wait for
+  // the profile so we never flash partners from other kommuner.
+  const local = !ready
     ? []
     : partners.filter(
         (p) => !p.featured && (municipalities.length === 0 || (p.municipality !== null && municipalities.includes(p.municipality))),
       );
+  const heroes = local.filter((p) => p.localHero);
+  const supporters = local.filter((p) => !p.localHero);
   const maxCar = Math.max(0, supporters.length - 2);
+  // the list can get shorter (kommune change, a partner switched off) – never past the end
+  const car = Math.min(carRaw, maxCar);
   const trackX = useSharedValue(0);
   useEffect(() => {
     trackX.set(withTiming(-car * CARD_STEP, { duration: 550, easing: Easing.bezier(...motion.ease) }));
@@ -250,25 +261,77 @@ export function FellesskapScreen() {
           main.map((p, i) => (
             <FadeUp key={p.id} delay={i * 50}>
               <PressableScale
-                accessibilityRole="button"
+                accessibilityRole="link"
                 accessibilityLabel={nb.fellesskap.readAbout(p.name)}
-                onPress={() => setSheet(p)}
+                onPress={() => safePush(`/partner/${p.id}`)}
                 scaleTo={0.985}
-                style={[styles.pcard, shadow.medium]}
+                style={[styles.mcard, shadow.medium]}
               >
-                <View style={styles.pglow} />
-                <LogoPlaceholder />
-                <View style={styles.pbody}>
-                  <Pill label={nb.fellesskap.mainBadge} tone="accent" icon="award" size="sm" style={styles.pill22} />
-                  <Text style={styles.pname}>{p.name}</Text>
-                  <Text style={text.meta}>{p.tagline}</Text>
+                <View style={styles.mcover}>
+                  {p.coverUrl ? (
+                    <Image source={{ uri: p.coverUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+                  ) : (
+                    <>
+                      <View style={styles.mglow1} />
+                      <View style={styles.mglow2} />
+                    </>
+                  )}
+                  <Pill label={nb.fellesskap.mainBadge} tone="accent" icon="award" size="sm" style={styles.mbadge} />
                 </View>
-                <Icon name="right" size={20} color={colors.faint} />
+                <View style={styles.mbody}>
+                  <View style={styles.mlogo}>
+                    <PartnerLogo uri={p.logoUrl} size={76} />
+                  </View>
+                  <Text style={styles.mname}>{p.name}</Text>
+                  <Text style={[text.body, styles.ink2]}>{p.tagline}</Text>
+                  {p.about ? (
+                    <Text style={[text.meta, styles.mabout]} numberOfLines={3}>
+                      {p.about}
+                    </Text>
+                  ) : null}
+                  <View style={styles.mmore}>
+                    <Text style={styles.mmoreText}>{nb.fellesskap.readMore}</Text>
+                    <Icon name="arrow" size={16} color={colors.cyanDeep} />
+                  </View>
+                </View>
               </PressableScale>
             </FadeUp>
           ))
         )}
       </View>
+
+      <SectionHeader
+        icon="heart"
+        iconBg={colors.limeTint}
+        iconColor={colors.limeDeep}
+        title={nb.fellesskap.heroTitle}
+        subtitle={nb.fellesskap.heroSub(municipality ?? '')}
+      />
+      {heroes.length === 0 ? (
+        <Text style={[text.meta, styles.px, styles.empty]}>{nb.fellesskap.heroNone(municipality ?? '')}</Text>
+      ) : (
+          <View style={[styles.px, styles.gap12]}>
+            {heroes.map((p, i) => (
+              <FadeUp key={p.id} delay={i * 50}>
+                <PressableScale
+                  accessibilityRole="button"
+                  accessibilityLabel={nb.fellesskap.readAbout(p.name)}
+                  onPress={() => setSheet(p)}
+                  scaleTo={0.985}
+                  style={[styles.pcard, shadow.card]}
+                >
+                  <PartnerLogo uri={p.logoUrl} />
+                  <View style={styles.pbody}>
+                    <Pill label={nb.fellesskap.heroBadge} tone="need" icon="heart" size="sm" style={styles.pill22} />
+                    <Text style={styles.pname}>{p.name}</Text>
+                    <Text style={text.meta}>{p.tagline}</Text>
+                  </View>
+                  <Icon name="right" size={20} color={colors.faint} />
+                </PressableScale>
+              </FadeUp>
+            ))}
+          </View>
+      )}
 
       <View style={[styles.supHead, styles.mt34]}>
         <SectionHeader
@@ -400,11 +463,11 @@ export function FellesskapScreen() {
         {sheet ? (
           <View>
             <View style={styles.sheetHead}>
-              <Pill label={nb.fellesskap.mainBadge} tone="accent" icon="award" />
+              <Pill label={nb.fellesskap.heroBadge} tone="need" icon="heart" />
             </View>
             <View style={styles.sheetTop}>
               <ScaleIn>
-                <LogoPlaceholder size={84} />
+                <PartnerLogo uri={sheet.logoUrl} size={84} />
               </ScaleIn>
               <View style={[styles.flex, { gap: 6 }]}>
                 <Text style={text.h2}>{sheet.name}</Text>
@@ -424,7 +487,6 @@ export function FellesskapScreen() {
               ) : null}
               <KeyValueRow label={nb.fellesskap.area} value={sheet.municipality ?? 'Innlandet'} last />
             </Card>
-            <Note style={styles.mt16}>{nb.fellesskap.partnerSheetNote}</Note>
             <Button
               label={nb.fellesskap.thanks}
               icon="heart"
@@ -537,7 +599,29 @@ const styles = StyleSheet.create({
     opacity: 0.14,
   },
   pbody: { flex: 1, minWidth: 0, gap: 6 },
+  ink2: { color: colors.ink2 },
+  // hovedpartner: one large card each
+  mcard: { borderRadius: radius.listingCard, backgroundColor: colors.white, overflow: 'hidden' },
+  mcover: { height: 132, backgroundColor: colors.ink, overflow: 'hidden' },
+  mglow1: { position: 'absolute', right: -50, top: -70, width: 200, height: 200, borderRadius: 100, backgroundColor: colors.lime, opacity: 0.35 },
+  mglow2: { position: 'absolute', left: -40, bottom: -90, width: 170, height: 170, borderRadius: 85, backgroundColor: colors.cyan, opacity: 0.2 },
+  mbadge: { position: 'absolute', right: 14, top: 14, height: 24 },
+  mbody: { paddingHorizontal: 18, paddingBottom: 18, gap: 6 },
+  mlogo: { marginTop: -38, marginBottom: 6, alignSelf: 'flex-start' },
+  mname: { fontFamily: text.h2.fontFamily, fontSize: 23, lineHeight: 27, letterSpacing: -0.5, color: colors.ink },
+  mabout: { marginTop: 4, fontSize: 14, lineHeight: 20 },
+  mmore: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 28 },
+  mmoreText: { fontFamily: text.label.fontFamily, fontSize: 14.5, color: colors.cyanDeep },
   pname: { fontFamily: text.h3.fontFamily, fontSize: 18, lineHeight: 21.6, letterSpacing: -0.36, color: colors.ink },
+  logo: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+  },
+  logoImg: { width: '100%', height: '100%' },
   logoph: {
     borderWidth: 1.5,
     borderStyle: 'dashed',

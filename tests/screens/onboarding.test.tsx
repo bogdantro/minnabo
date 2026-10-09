@@ -4,45 +4,47 @@ import { SetupScreen } from '@/screens/Onboarding/SetupScreen';
 import { LoginScreen } from '@/screens/Onboarding/LoginScreen';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { MOCK_YOUTH, mockVipps } from '@/auth/mockVipps';
+import { apiClient } from '@/api/client';
 import { YouthAccountScreen } from '@/screens/Onboarding/YouthAccountScreen';
 import nb from '@/i18n/nb';
 import { renderWithProviders } from '../testUtils';
 
+const YOUTH = { vipps: true, youth: true, age: 16, birthYear: 2010, fullName: 'Emil Nygård', phoneMasked: '+47 ••• •• 518' };
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockVipps.signOut();
 });
+afterEach(() => jest.restoreAllMocks());
 
-test('Vipps login: sheet goes Åpner → Bekreft → Identitet bekreftet, then on to Samtykke', async () => {
+test('without a Vipps client, "Fortsett med Vipps" opens the temporary test login', async () => {
   await renderWithProviders(<LoginScreen />);
   expect(screen.getByText('Logg inn eller opprett konto')).toBeTruthy();
   expect(screen.getAllByText('Vipps brukes kun til innlogging – aldri til betaling.').length).toBeGreaterThan(0);
 
   await fireEvent.press(screen.getByText('Fortsett med Vipps'));
-  expect(screen.getByText('Åpner Vipps …')).toBeTruthy();
-  await waitFor(() => expect(screen.getByText('Bekreft i Vipps-appen')).toBeTruthy(), { timeout: 4000 });
-  await waitFor(() => expect(screen.getByText('Identitet bekreftet')).toBeTruthy(), { timeout: 4000 });
-  expect(screen.getByText('Mari Haugen · født 1991')).toBeTruthy();
-
-  await fireEvent.press(screen.getByText('Fortsett'));
-  expect(router.replace).toHaveBeenCalledWith('/samtykker');
-  expect(mockVipps.get()?.youth).toBe(false);
+  expect(await screen.findByText('Opprett testbruker')).toBeTruthy();
 });
 
-test('Vipps login: under 18 goes to Ungdomskonto', async () => {
+test('test login: a name creates a real account and goes on to Samtykke', async () => {
   await renderWithProviders(<LoginScreen />);
-  await fireEvent.press(screen.getByText('Fortsett med Vipps'));
-  await waitFor(() => expect(screen.getByText('Identitet bekreftet')).toBeTruthy(), { timeout: 6000 });
-  await fireEvent.press(screen.getByText('Under 18 år? Se ungdomskonto'));
-  expect(router.replace).toHaveBeenCalledWith('/ungdomskonto');
-  expect(mockVipps.get()?.youth).toBe(true);
+  await fireEvent.press(screen.getByText('Fortsett uten Vipps (test)'));
+  // too short → nothing happens
+  await fireEvent.changeText(await screen.findByLabelText('Navn'), 'O');
+  await fireEvent.press(screen.getByText('Opprett testbruker'));
+  expect(supabase.auth.signInAnonymously).not.toHaveBeenCalled();
+
+  await fireEvent.changeText(screen.getByLabelText('Navn'), ' Ola Nordmann ');
+  await fireEvent.press(screen.getByText('Opprett testbruker'));
+  await waitFor(() =>
+    expect(supabase.auth.signInAnonymously).toHaveBeenCalledWith({ options: { data: { display_name: 'Ola Nordmann' } } }),
+  );
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/samtykker'));
 });
 
 test('Ungdomskonto unlocks only after all three boxes are ticked', async () => {
-  mockVipps.signIn(MOCK_YOUTH);
+  jest.spyOn(apiClient, 'getMyAccount').mockResolvedValue(YOUTH);
   await renderWithProviders(<YouthAccountScreen />);
-  expect(screen.getByText('Hei, Emil!')).toBeTruthy();
+  expect(await screen.findByText('Hei, Emil!')).toBeTruthy();
   await fireEvent.press(screen.getByText('Opprett ungdomskonto'));
   expect(router.replace).not.toHaveBeenCalledWith('/ung');
   for (const l of nb.youth.checks) await fireEvent.press(screen.getByLabelText(l));

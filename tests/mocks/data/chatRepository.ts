@@ -33,6 +33,10 @@ export const chatRepository = {
 
   listConversations(opts?: { unreadOnly?: boolean; query?: string }): Conversation[] {
     let result = [...conversations]
+      .map((c) => {
+        const last = [...(messages[c.id] ?? [])].reverse().find((m) => m.kind !== 'SYSTEM');
+        return { ...c, lastMessageDelivery: last && last.authorProfileId === CURRENT_USER_ID ? last.delivery : undefined };
+      })
       .filter((c) => !safetyStore.isBlocked(c.counterpart.id))
       .sort((a, b) => Date.parse(b.lastMessageAt) - Date.parse(a.lastMessageAt));
     if (opts?.unreadOnly) result = result.filter((c) => c.unread);
@@ -143,6 +147,53 @@ export const chatRepository = {
     return updated;
   },
 
+  /** Tilbud the current user has sent, newest first. */
+  sentProposals(): Proposal[] {
+    return proposals
+      .filter((p) => p.fromProfileId === CURRENT_USER_ID)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  },
+
+  markProposalSeen(proposalId: string): void {
+    proposals = proposals.map((p) =>
+      p.id === proposalId && p.toProfileId === CURRENT_USER_ID && !p.seenAt
+        ? { ...p, seenAt: new Date().toISOString() }
+        : p,
+    );
+  },
+
+  /** The sender changes an open tilbud; it goes back to SENT. */
+  editProposal(
+    proposalId: string,
+    patch: {
+      priceAmountMinor: number;
+      scheduledText?: string;
+      scheduledAt?: string | null;
+      durationText?: string;
+      message?: string;
+      caveats?: string;
+    },
+  ): Proposal {
+    const existing = chatRepository.getProposal(proposalId);
+    if (!existing) throw new Error('Fant ikke tilbudet.');
+    if (existing.fromProfileId !== CURRENT_USER_ID) throw new Error('Ikke tilgang.');
+    if (existing.status !== 'SENT' && existing.status !== 'REVISION_PENDING') throw new Error('Tilbudet kan ikke endres nå.');
+    const updated: Proposal = {
+      ...existing,
+      status: 'SENT',
+      price: { amountMinor: patch.priceAmountMinor, currency: 'NOK' },
+      scheduledText: patch.scheduledText?.trim() || undefined,
+      scheduledAt: patch.scheduledAt === undefined ? existing.scheduledAt : patch.scheduledAt ?? undefined,
+      durationText: patch.durationText === undefined ? existing.durationText : patch.durationText || undefined,
+      seenAt: undefined,
+      message: patch.message?.trim() || undefined,
+      caveats: patch.caveats?.trim() || undefined,
+    };
+    proposals = proposals.map((p) => (p.id === proposalId ? updated : p));
+    pushSystem(updated.conversationId, nb.tilbud.edited);
+    return updated;
+  },
+
   toggleReaction(conversationId: string, messageId: string, emoji: string): Message[] {
     const list = messages[conversationId] ?? [];
     messages[conversationId] = list.map((m) => {
@@ -192,7 +243,7 @@ export const chatRepository = {
       delivery: 'SENT',
     };
     messages[conversationId] = [...(messages[conversationId] ?? []), msg];
-    touchConversation(conversationId, text);
+    touchConversation(conversationId, text, true);
     return msg;
   },
 
@@ -208,7 +259,7 @@ export const chatRepository = {
       delivery: 'READ',
     };
     messages[conversationId] = [...(messages[conversationId] ?? []), msg];
-    touchConversation(conversationId, text);
+    touchConversation(conversationId, text, false);
     return msg;
   },
 
@@ -224,7 +275,7 @@ export const chatRepository = {
       delivery: 'SENT',
     };
     messages[conversationId] = [...(messages[conversationId] ?? []), msg];
-    touchConversation(conversationId, '📷 Bilde');
+    touchConversation(conversationId, '📷 Bilde', true);
     return msg;
   },
 
@@ -234,6 +285,8 @@ export const chatRepository = {
     priceAmountMinor: number;
     message?: string;
     scheduledText?: string;
+    scheduledAt?: string | null;
+    durationText?: string;
     caveats?: string;
   }): Proposal {
     const conv = chatRepository.getConversation(input.conversationId);
@@ -246,9 +299,12 @@ export const chatRepository = {
       price: { amountMinor: input.priceAmountMinor, currency: 'NOK' },
       message: input.message,
       scheduledText: input.scheduledText,
+      scheduledAt: input.scheduledAt ?? undefined,
+      durationText: input.durationText || undefined,
       caveats: input.caveats,
       status: 'SENT',
       createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
     };
     proposals = [...proposals, proposal];
     const msg: Message = {
@@ -302,13 +358,19 @@ export const chatRepository = {
     if (!existing) throw new Error('Fant ikke tilbudet.');
 
     const nextStatus = transition(existing.status, event, actor);
-    const updated: Proposal = { ...existing, status: nextStatus };
+    const updated: Proposal = {
+      ...existing,
+      status: nextStatus,
+      respondedAt: nextStatus === 'ACCEPTED' || nextStatus === 'DECLINED' ? new Date().toISOString() : existing.respondedAt,
+    };
     proposals = proposals.map((p) => (p.id === proposalId ? updated : p));
 
     let systemText: string | null = null;
     let agreement: AgreementSnapshot | undefined;
 
     if (nextStatus === 'ACCEPTED') {
+      // the oppdrag is taken: out of the feed and searches (0047)
+      repositories.listings.setStatus(updated.listingId, 'AGREED');
       systemText = nb.chat.offerAccepted;
       const listing = repositories.listings.get(updated.listingId);
       agreement = {
@@ -316,6 +378,8 @@ export const chatRepository = {
         listingId: updated.listingId,
         price: updated.price,
         scheduledText: updated.scheduledText,
+        scheduledAt: updated.scheduledAt,
+        durationText: updated.durationText,
         description:
           listing?.task?.description ?? listing?.offer?.about ?? updated.message ?? '',
         caveats: updated.caveats,
@@ -362,6 +426,8 @@ export const chatRepository = {
     if (!existing) throw new Error('Fant ikke tilbudet.');
     const actor = existing.fromProfileId === CURRENT_USER_ID ? 'PROPOSER' : 'RECIPIENT';
     const updated: Proposal = { ...existing, status: transition(existing.status, 'CANCEL', actor) };
+    // the avtale is off: the oppdrag is looking for help again
+    repositories.listings.setStatus(updated.listingId, 'RECEIVING_OFFERS');
     proposals = proposals.map((p) => (p.id === proposalId ? updated : p));
     const why = reason?.trim() || undefined;
     agreements = agreements.map((a) =>
@@ -396,6 +462,8 @@ export const chatRepository = {
     counterpartId: string;
     price: AgreementSnapshot['price'];
     scheduledText?: string;
+    scheduledAt?: string;
+    durationText?: string;
     agreedAt: string;
     role: 'HELPER' | 'CLIENT';
     cancelled: boolean;
@@ -421,6 +489,8 @@ export const chatRepository = {
               : proposal.fromProfileId,
           price: a.price,
           scheduledText: a.scheduledText,
+          scheduledAt: a.scheduledAt,
+          durationText: a.durationText,
           agreedAt: a.agreedAt,
           role: proposal.fromProfileId === CURRENT_USER_ID ? ('HELPER' as const) : ('CLIENT' as const),
           cancelled: proposal.status === 'CANCELLED' || !!a.cancelledAt,
@@ -438,10 +508,17 @@ export const chatRepository = {
   },
 };
 
-function touchConversation(conversationId: string, preview: string): void {
+/** `mine`: I wrote it (never unread, "Du: …"); false: the other person did; undefined: a system line. */
+function touchConversation(conversationId: string, preview: string, mine?: boolean): void {
   conversations = conversations.map((c) =>
     c.id === conversationId
-      ? { ...c, lastMessagePreview: preview, lastMessageAt: new Date().toISOString() }
+      ? {
+          ...c,
+          lastMessagePreview: preview,
+          lastMessageAt: new Date().toISOString(),
+          lastMessageMine: mine ?? false,
+          unread: mine === true ? false : mine === false ? true : c.unread,
+        }
       : c,
   );
 }

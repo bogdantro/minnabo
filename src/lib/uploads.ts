@@ -3,7 +3,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from './supabase';
 import { publicUrl } from './storage';
 
-export type UploadBucket = 'avatars' | 'listing-images' | 'chat-attachments';
+/** `report-attachments` is private (reporter + admins only); the others are public-read. */
+export type UploadBucket = 'avatars' | 'listing-images' | 'chat-attachments' | 'report-attachments';
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const OK_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -36,7 +37,7 @@ async function uploadUri(
   bucket: UploadBucket,
   folder: string,
   uri: string,
-): Promise<{ path: string; publicUrl: string }> {
+): Promise<PickResult> {
   const compressed = await compress(uri);
   const res = await fetch(compressed);
   const bytes = await res.arrayBuffer();
@@ -45,10 +46,16 @@ async function uploadUri(
     .from(bucket)
     .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
   if (error) throw new Error(error.message);
-  return { path, publicUrl: publicUrl(bucket, path)! };
+  return {
+    path,
+    publicUrl: bucket === 'report-attachments' ? '' : publicUrl(bucket, path)!,
+    localUri: compressed,
+    bytes: bytes.byteLength,
+  };
 }
 
-export type PickResult = { path: string; publicUrl: string };
+/** `publicUrl` is empty for the private bucket; `localUri` / `bytes` describe the uploaded file. */
+export type PickResult = { path: string; publicUrl: string; localUri?: string; bytes?: number };
 
 /**
  * Ask for permission, open the camera or library, validate + compress, and
@@ -84,4 +91,34 @@ export async function pickAndUpload(opts: {
   const err = validateImage(asset);
   if (err) throw new Error(err);
   return uploadUri(bucket, folder, asset.uri);
+}
+
+/**
+ * Pick several images at once from the library (up to `max`), validate, and
+ * upload them in parallel. `onStart(n)` reports how many are uploading so the
+ * UI can show placeholders. Invalid files are skipped with an error if none are left.
+ */
+export async function pickAndUploadMany(opts: {
+  bucket: UploadBucket;
+  folder: string;
+  max: number;
+  onStart?: (n: number) => void;
+}): Promise<PickResult[]> {
+  const { bucket, folder, max, onStart } = opts;
+  if (max <= 0) return [];
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) throw new Error('MinNabo trenger tilgang til bildene dine.');
+  const r = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 0.9,
+    allowsMultipleSelection: max > 1,
+    selectionLimit: max,
+    orderedSelection: true,
+  });
+  if (r.canceled) return [];
+  const assets = r.assets.slice(0, max);
+  const ok = assets.filter((a) => validateImage(a) == null);
+  if (!ok.length) throw new Error(validateImage(assets[0]) ?? 'Kunne ikke bruke bildene.');
+  onStart?.(ok.length);
+  return Promise.all(ok.map((a) => uploadUri(bucket, folder, a.uri)));
 }

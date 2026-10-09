@@ -6,7 +6,9 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import type { ProposalStatus } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
+import { isTakenListing } from '@/domain/editing';
 import nb from '@/i18n/nb';
+import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import { apiClient } from '@/api/client';
 import {
   useListing,
@@ -16,8 +18,10 @@ import {
   useRespondToProposal,
   useReviseProposal,
 } from '@/api/queries';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatTime, shortDate } from '@/lib/datetime';
+import { agreedDate, daysUntil } from '@/lib/deviceCalendar';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
@@ -74,9 +78,22 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
   const { data: helper } = useProfile(proposal?.fromProfileId ?? '');
   const respond = useRespondToProposal(proposal?.conversationId ?? '');
   const revise = useReviseProposal();
+  const qc = useQueryClient();
+
+  // Opening a tilbud I received marks it as seen ("Sett av …" for both sides).
+  const unseenId = proposal && !isSender && !proposal.seenAt ? proposal.id : null;
+  useEffect(() => {
+    if (!unseenId) return;
+    apiClient
+      .markProposalSeen(unseenId)
+      .then(() => qc.invalidateQueries({ queryKey: ['proposal', unseenId] }))
+      .catch(() => undefined);
+  }, [unseenId, qc]);
 
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [openedAt] = useState(() => Date.now());
+  const [editOpen, setEditOpen] = useState(false);
   const [success, setSuccess] = useState(false);
   // A decline is held for the toast's "Angre" window before it is sent (DECLINED is final).
   const [pendingDecline, setPendingDecline] = useState<string[] | null>(null);
@@ -112,13 +129,17 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
   const budgetKr = listing?.price && listing.priceMode !== 'BY_AGREEMENT' ? Math.round(listing.price.amountMinor / 100) : null;
   const diff = budgetKr != null ? priceKr - budgetKr : null;
   const [whenMain, whenTime] = (proposal.scheduledText ?? '').split(/ (?=kl\. )/);
-  const duration = listing?.task?.durationText;
+  const duration = proposal.durationText ?? listing?.task?.durationText;
   const place = listing?.location.place || listing?.location.municipality;
   const cat = categoryArtId(listing?.category.slug ?? 'annet');
   const openOthers = (siblings.data ?? []).filter(
     (p) => p.id !== proposal.id && (p.status === 'SENT' || p.status === 'REVISION_PENDING'),
   );
-  const canRespond = !isSender && (status === 'SENT' || status === 'REVISION_PENDING');
+  const expired = !!proposal.expiresAt && Date.parse(proposal.expiresAt) < openedAt;
+  // an expired tilbud can't be accepted (the database refuses it too)
+  // another tilbud on this oppdrag is accepted → this one waits (it counts again if that avtale is called off)
+  const onHold = !!listing && isTakenListing(listing.status) && (status === 'SENT' || status === 'REVISION_PENDING');
+  const canRespond = !isSender && !expired && !onHold && (status === 'SENT' || status === 'REVISION_PENDING');
   const caveats = (proposal.caveats ?? '')
     .split(/(?<=\.)\s+|\n+/)
     .map((s) => s.trim())
@@ -210,7 +231,11 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
 
   // status banner
   const banner: { bg: string; fg: string; icon: IconKey; text: string; link?: boolean } | null =
-    status === 'REVISION_PENDING'
+    onHold
+      ? { bg: colors.neutralPill, fg: colors.ink2, icon: 'hourglass', text: isSender ? nb.tilbudDetalj.bannerOnHoldThem : nb.tilbudDetalj.bannerOnHoldMe }
+      : expired && (status === 'SENT' || status === 'REVISION_PENDING')
+        ? { bg: colors.neutralPill, fg: colors.ink2, icon: 'hourglass', text: nb.tilbudDetalj.expiredNote }
+        : status === 'REVISION_PENDING'
       ? { bg: colors.warnTint, fg: colors.warn, icon: 'edit', text: isSender ? nb.tilbudDetalj.bannerChangeThem(first) : nb.tilbudDetalj.bannerChangeMe(first) }
       : status === 'ACCEPTED'
         ? { bg: colors.okTint, fg: colors.okText, icon: 'check', text: nb.tilbudDetalj.bannerAccepted, link: true }
@@ -224,18 +249,45 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
   const steps: { title: string; sub?: string; tone: 'done' | 'now' | 'warn' | 'next' | 'danger' | 'mute'; icon: IconKey }[] = [
     { title: nb.tilbudDetalj.tlSent, sub: stamp(proposal.createdAt), tone: 'done', icon: 'check' },
   ];
+  if (proposal.seenAt)
+    steps.push({
+      title: isSender ? nb.tilbudDetalj.tlSeenThem(first) : nb.tilbudDetalj.tlSeenMe,
+      sub: stamp(proposal.seenAt),
+      tone: 'done',
+      icon: 'check',
+    });
   if (status === 'SENT')
     steps.push({
       title: isSender ? nb.tilbudDetalj.tlWaitingThem(first) : nb.tilbudDetalj.tlWaitingMe,
-      sub: isSender ? nb.tilbudDetalj.tlWaitingSubThem : nb.tilbudDetalj.tlWaitingSub,
+      sub: expired
+        ? nb.tilbudDetalj.tlExpired
+        : proposal.expiresAt
+          ? nb.tilbudDetalj.tlExpires(shortDate(proposal.expiresAt))
+          : isSender
+            ? nb.tilbudDetalj.tlWaitingSubThem
+            : nb.tilbudDetalj.tlWaitingSub,
       tone: 'now',
       icon: 'hourglass',
     });
   if (status === 'REVISION_PENDING')
     steps.push({ title: nb.tilbudDetalj.tlChange, sub: nb.tilbudDetalj.tlChangeSub(helperFirst), tone: 'warn', icon: 'edit' });
   if (status === 'ACCEPTED') {
-    steps.push({ title: nb.tilbudDetalj.tlAccepted, tone: 'done', icon: 'check' });
-    if (proposal.scheduledText) steps.push({ title: nb.tilbudDetalj.tlJobDay, sub: proposal.scheduledText, tone: 'next', icon: 'cal' });
+    steps.push({
+      title: nb.tilbudDetalj.tlAccepted,
+      sub: proposal.respondedAt ? stamp(proposal.respondedAt) : undefined,
+      tone: 'done',
+      icon: 'check',
+    });
+    if (proposal.scheduledText) {
+      const jobDay = agreedDate(proposal);
+      const inDays = jobDay ? daysUntil(jobDay) : -1;
+      steps.push({
+        title: nb.tilbudDetalj.tlJobDay,
+        sub: jobDay && inDays >= 0 ? nb.tilbudDetalj.tlJobDayIn(shortDate(jobDay.toISOString()), inDays) : proposal.scheduledText,
+        tone: 'next',
+        icon: 'cal',
+      });
+    }
   }
   if (status === 'DECLINED')
     steps.push({ title: nb.tilbudDetalj.tlDeclined, sub: isSender ? undefined : nb.tilbudDetalj.tlDeclinedSub(first), tone: 'danger', icon: 'x' });
@@ -297,6 +349,9 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
                 <Text style={text.eyebrow}>
                   {isSender ? nb.tilbudDetalj.eyebrowMine(other?.displayName ?? '') : nb.tilbudDetalj.eyebrowFrom}
                 </Text>
+                {other?.youthAge != null ? (
+                  <Pill label={nb.youth.marker(other.youthAge)} tone="dark" icon="shield" size="sm" style={styles.youthPill} />
+                ) : null}
                 <Text style={text.h3} numberOfLines={1}>
                   {other?.displayName ?? ' '}
                 </Text>
@@ -510,9 +565,32 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
         </StickyFooter>
       ) : isSender ? (
         <StickyFooter>
-          <Text style={[text.meta, styles.center]}>{nb.tilbudDetalj.senderWaiting(first)}</Text>
-          <Button label={nb.tilbudDetalj.withdraw} icon="undo" variant="dangerGhost" onPress={() => setWithdrawOpen(true)} style={styles.mt10} />
+          <Text style={[text.meta, styles.center]}>
+            {status === 'REVISION_PENDING' ? nb.tilbudDetalj.senderChangeAsked(first) : nb.tilbudDetalj.senderWaiting(first)}
+          </Text>
+          <View style={styles.mt10} />
+          <FooterRow>
+            <Button label={nb.tilbudDetalj.withdraw} icon="undo" variant="dangerGhost" block={false} onPress={() => setWithdrawOpen(true)} style={styles.grow1} />
+            {listing ? (
+              <Button label={nb.giTilbud.editOffer} icon="edit" block={false} onPress={() => setEditOpen(true)} style={styles.grow13} />
+            ) : null}
+          </FooterRow>
         </StickyFooter>
+      ) : null}
+
+      {isSender && listing && editOpen && proposal ? (
+        <GiTilbudSheet
+          key={`edit-${proposal.id}`}
+          listing={listing}
+          editing={proposal}
+          visible={editOpen}
+          onClose={() => setEditOpen(false)}
+          onSent={() => void refetch()}
+          onOpenChat={() => {
+            setEditOpen(false);
+            openChat();
+          }}
+        />
       ) : null}
 
       {!isSender ? (
@@ -696,6 +774,7 @@ const styles = StyleSheet.create({
   pad18: { padding: 18 },
   pad20: { padding: 20 },
   helperText: { flex: 1, minWidth: 0, gap: 6 },
+  youthPill: { alignSelf: 'flex-start' },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   starsVal: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink },
   starsMeta: { fontFamily: text.meta.fontFamily, fontSize: 13, color: colors.mute },

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import type { Conversation } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { useConversations, useMarkConversationsRead } from '@/api/queries';
@@ -41,6 +41,12 @@ export function InnboksScreen() {
   const router = useRouter();
   const me = useCurrentUser();
   const { data, isLoading, isError, isFetching, refetch } = useConversations();
+  // The tab stays mounted: coming back from a chat must show its newest message.
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
   const markRead = useMarkConversationsRead();
   const [filter, setFilter] = useState<Filter>('alle');
   const [q, setQ] = useState('');
@@ -64,6 +70,8 @@ export function InnboksScreen() {
   const convs = useMemo(() => data ?? [], [data]);
   const isUnread = (c: Conversation) => c.unread && !readHere?.has(c.id);
   const unreadN = convs.filter(isUnread).length;
+  // messages, when the backend counts them; otherwise one per unread conversation
+  const unreadMsgs = convs.filter(isUnread).reduce((n, c) => n + Math.max(c.unreadCount ?? 1, 1), 0);
   const needle = q.trim().toLowerCase();
   const list = convs.filter((c) => {
     if (filter === 'uleste' && !isUnread(c)) return false;
@@ -122,7 +130,7 @@ export function InnboksScreen() {
             {nb.inbox.title}
           </Text>
           <Text style={text.meta} accessibilityLiveRegion="polite">
-            {nb.inbox.sub(unreadN)}
+            {nb.inbox.sub(unreadMsgs, unreadN)}
           </Text>
         </View>
         <Button
@@ -248,7 +256,9 @@ function ConvCard({ c, unread, onPress }: { c: Conversation; unread: boolean; on
       ? { label: nb.inbox.tagNewOffer, tone: 'need' as const, icon: 'sparkle' as const }
       : c.statusTag === 'OFFER_ACCEPTED'
         ? { label: nb.inbox.tagOfferAccepted, tone: 'ok' as const, icon: 'check' as const }
-        : null;
+        : c.statusTag === 'REVISION_PENDING'
+          ? { label: nb.inbox.tagRevision, tone: 'warn' as const, icon: 'edit' as const }
+          : null;
   return (
     <Pressable
       accessibilityRole="link"
@@ -271,13 +281,28 @@ function ConvCard({ c, unread, onPress }: { c: Conversation; unread: boolean; on
           </Text>
         </View>
         <View style={styles.msgRow}>
+          {/* my last message: one tick = sendt, two = levert, two in colour = lest */}
+          {c.lastMessageDelivery ? (
+            <View accessible accessibilityLabel={nb.inbox.receipt[c.lastMessageDelivery]} style={styles.tick}>
+              <Icon
+                name={c.lastMessageDelivery === 'SENT' ? 'check' : 'checks'}
+                size={15}
+                color={c.lastMessageDelivery === 'READ' ? colors.cyanDeep : colors.faint}
+              />
+            </View>
+          ) : null}
           <Text style={[styles.msg, unread && styles.msgUnread]} numberOfLines={1}>
+            {c.lastMessageMine ? nb.inbox.you : ''}
             {c.lastMessagePreview}
           </Text>
           {unread ? (
             <ScaleIn>
               <View style={styles.bubN}>
-                <View style={styles.bubDot} />
+                {c.unreadCount ? (
+                  <Text style={styles.bubText}>{c.unreadCount > 99 ? '99+' : c.unreadCount}</Text>
+                ) : (
+                  <View style={styles.bubDot} />
+                )}
               </View>
             </ScaleIn>
           ) : null}
@@ -337,9 +362,11 @@ const styles = StyleSheet.create({
   td: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.limeDot },
   lstText: { flexShrink: 1, fontFamily: text.bodySemi.fontFamily, fontSize: 12.5, lineHeight: 15, color: colors.ink2 },
   msgRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tick: { marginRight: -5 },
   msg: { flex: 1, minWidth: 0, fontFamily: text.body.fontFamily, fontSize: 14, lineHeight: 19, color: colors.mute },
   msgUnread: { fontFamily: text.label.fontFamily, color: colors.ink },
-  bubN: { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  bubN: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  bubText: { fontFamily: fonts.bodyHeavy, fontSize: 12, lineHeight: 22, color: colors.lime },
   bubDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.lime },
   tag: { alignSelf: 'flex-start', marginTop: 3 },
   dash: {

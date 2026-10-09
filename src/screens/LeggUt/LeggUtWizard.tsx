@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import * as ImagePicker from 'expo-image-picker';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -15,9 +14,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
-import { INNLANDET_KOMMUNER, KOMMUNE_AREAS, KOMMUNE_NEIGHBOURS } from '@/data/kommuner';
-import { detectKommune } from '@/lib/geo';
-import { pickAndUpload } from '@/lib/uploads';
+import { KOMMUNE_AREAS, LAUNCH_KOMMUNER } from '@/data/kommuner';
+import { detectKommune, locationErrorText } from '@/lib/geo';
+import { pickAndUploadMany } from '@/lib/uploads';
+import { slugForArtId } from '@/domain/categories';
+import { useListing, useListingEditData, usePriceGuidance } from '@/api/queries';
+import { formatAmount } from '@/components/ui/Field';
 import { toast } from '@/lib/toast';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -59,14 +61,21 @@ import {
   Shake,
   Sheet,
   SlideIn,
+  Spinner,
   StickyFooter,
   Toggle,
   type IconKey,
 } from '@/components/ui';
-import { EQUIPMENT, INTAKE, QUICK_AMOUNTS, STEP_NAMES, TIMES_OF_DAY, TITLE_SUGGESTIONS } from './wizardConfig';
+import { EQUIPMENT, FORMS, MAX_HELPERS, QUICK_AMOUNTS, STEP_NAMES, TIMES_OF_DAY, type IntakeField } from './wizardConfig';
 import {
+  applyCategory,
   buildListing,
   emptyWizard,
+  extrasFor,
+  isApprox,
+  isWizardState,
+  wizardFromListing,
+  type Answer,
   fmtKr,
   hoursLabel,
   placeLine,
@@ -79,8 +88,10 @@ import {
   type WizardState,
 } from './wizardModel';
 
-const CATS = Object.keys(categoryLabels) as CategoryId[];
+// "Annet" first, so nobody has to scroll past every category to find it
+const CATS: CategoryId[] = ['annet', ...(Object.keys(categoryLabels) as CategoryId[]).filter((c) => c !== 'annet')];
 const LAST = 9;
+const MAX_PHOTOS = 6;
 
 /** "/" and long words wrap nicely in the 3-column grid. */
 const tileLabel = (l: string) => l.replace('/', '/​').replace('Arrangementshjelp', 'Arrangements­hjelp');
@@ -152,8 +163,20 @@ export function LeggUtWizard() {
   const insets = useSafeAreaInsets();
   const { userId } = useSession();
   const me = useCurrentUser();
+  // Edit mode: /legg-ut?rediger=<id>[&tilbake=<path>] reopens a published oppdrag.
+  const params = useLocalSearchParams<{ rediger?: string; tilbake?: string }>();
+  const editId = typeof params.rediger === 'string' && params.rediger ? params.rediger : undefined;
+  const editing = !!editId;
+  const editListing = useListing(editId ?? '');
+  const editData = useListingEditData(editId);
+  const [editSeeded, setEditSeeded] = useState(false);
   const [s, setS] = useState<WizardState>(() => emptyWizard(me.municipality ?? ''));
   const [step, setStep] = useState(1);
+  // every step starts at its top, however far down the previous one was scrolled
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [step]);
   const [dir, setDir] = useState<'forward' | 'back'>('forward');
   const [ret, setRet] = useState(false);
   const [err, setErr] = useState<WizardError | null>(null);
@@ -165,8 +188,17 @@ export function LeggUtWizard() {
   const [today] = useState(() => new Date());
   const days = useMemo(() => upcomingDays(today), [today]);
 
-  // Continue a saved draft ("fortsette der du slapp").
+  // Edit mode: fill the form from the saved form (or rebuild it from the oppdrag) and open the summary.
+  if (editing && !editSeeded && editListing.data && editData.data) {
+    setEditSeeded(true);
+    const w = editData.data.wizard;
+    setS(isWizardState(w) ? { ...emptyWizard(), ...w, photos: editListing.data.images.map((im) => im.url) } : wizardFromListing(editListing.data, editData.data.privateEstimateMinor));
+    setStep(LAST);
+  }
+
+  // Continue a saved draft ("fortsette der du slapp") – not when editing a published oppdrag.
   useEffect(() => {
+    if (editing) return;
     let alive = true;
     wizardDraft.load().then((d) => {
       if (alive && d) {
@@ -177,7 +209,7 @@ export function LeggUtWizard() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [editing]);
 
   // Profile kommune may arrive after the first render.
   const [kommuneSeeded, setKommuneSeeded] = useState(false);
@@ -215,17 +247,31 @@ export function LeggUtWizard() {
     toast.success(nb.wizard.draftSaved, { icon: 'bookmark', bottom: 130 });
   };
   const preview = () => {
-    draftStore.set(buildListing(s, days));
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      const v = validateStep(n, s);
+      if (v) {
+        go(n, 'back', true);
+        setErr(v);
+        setErrN((x) => x + 1);
+        return;
+      }
+    }
+    draftStore.set(buildListing(s, days), {
+      extras: extrasFor(s),
+      editId,
+      back: typeof params.tilbake === 'string' && params.tilbake ? params.tilbake : editId ? `/oppdrag/${editId}` : undefined,
+    });
     router.push('/legg-ut/forhandsvisning');
   };
 
-  const I = INTAKE[s.cat ?? 'annet'];
+  const form = FORMS[s.cat ?? 'annet'];
+  const { data: guidance } = usePriceGuidance(s.cat ? slugForArtId(s.cat) : undefined);
+  const setAnswer = (key: string, a: Answer) => edit({ answers: { ...s.answers, [key]: a } });
   const amt = Number(s.amount) || 0;
   const errOn = (f: WizardError['field']) => err?.field === f;
   const when = whenLabel(s, days);
-  const kommuneList = [
-    ...new Set([s.kommune || 'Lillehammer', ...(KOMMUNE_NEIGHBOURS[s.kommune || 'Lillehammer'] ?? []), ...INNLANDET_KOMMUNER]),
-  ].filter(Boolean).slice(0, 8);
+  // Only the launch kommuner; an oppdrag being edited keeps the kommune it already has.
+  const kommuneList = [...new Set([...(s.kommune ? [s.kommune] : []), ...LAUNCH_KOMMUNER])];
   const areaChips = KOMMUNE_AREAS[s.kommune] ?? [];
   const sum = summary(s, days);
 
@@ -240,26 +286,25 @@ export function LeggUtWizard() {
       edit({ kommune: res.municipality, area });
       setLocated(area ? `${area}, ${res.municipality}` : res.municipality);
     } else {
-      toast.error(res.error === 'denied' ? nb.location.permissionDenied : nb.location.locationUnavailable, { bottom: 130 });
+      toast.error(locationErrorText(res.error), { bottom: 130 });
     }
   };
 
+  const [uploading, setUploading] = useState(0);
   const addPhoto = async () => {
+    const room = MAX_PHOTOS - s.photos.length;
+    if (room <= 0) return;
     try {
-      let url: string | null = null;
-      if (userId) {
-        const r = await pickAndUpload({ bucket: 'listing-images', folder: userId, source: 'library' });
-        url = r?.publicUrl ?? null;
-      } else {
-        // Mock login: show locally, nothing is uploaded.
-        const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
-        url = r.canceled ? null : r.assets[0].uri;
-      }
-      if (!url) return;
-      const n = s.photos.length + 1;
-      edit({ photos: [...s.photos, url] });
-      toast.success(n === 6 ? nb.wizard.photoAddedMax : nb.wizard.photoAdded, { icon: 'image', bottom: 130 });
+      // Pick several at once; uploads run in parallel.
+      if (!userId) throw new Error(nb.wizard.photoFailed);
+      const urls = (await pickAndUploadMany({ bucket: 'listing-images', folder: userId, max: room, onStart: setUploading })).map((r) => r.publicUrl);
+      setUploading(0);
+      if (!urls.length) return;
+      setS((p) => ({ ...p, photos: [...p.photos, ...urls].slice(0, MAX_PHOTOS) }));
+      const n = s.photos.length + urls.length;
+      toast.success(n >= MAX_PHOTOS ? nb.wizard.photoAddedMax : nb.wizard.photosAdded(urls.length), { icon: 'image', bottom: 130 });
     } catch (e) {
+      setUploading(0);
       toast.error(e instanceof Error ? e.message : nb.wizard.photoFailed, { bottom: 130 });
     }
   };
@@ -277,7 +322,7 @@ export function LeggUtWizard() {
       <View style={styles.subbar}>
         <IconButton icon="back" accessibilityLabel={step === 1 ? nb.wizard.close : nb.wizard.prev} onPress={back} />
         <Text style={[text.subbarTitle, styles.flex, styles.center]} numberOfLines={1} accessibilityRole="header">
-          {nb.wizard.title}
+          {editing ? nb.wizard.editTitle : nb.wizard.title}
         </Text>
         <IconButton icon="x" accessibilityLabel={nb.wizard.close} onPress={() => setCloseOpen(true)} />
       </View>
@@ -286,10 +331,12 @@ export function LeggUtWizard() {
           <Text style={text.eyebrow}>{nb.wizard.stepOf(step, LAST)}</Text>
           <Text style={[text.label, styles.stepName]}>{STEP_NAMES[step - 1]}</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={saveDraft} style={styles.draftbtn}>
-          <Icon name="bookmark" size={16} />
-          <Text style={[text.metaBold, { fontSize: 13 }]}>{nb.wizard.saveDraft}</Text>
-        </Pressable>
+        {editing ? null : (
+          <Pressable accessibilityRole="button" onPress={saveDraft} style={styles.draftbtn}>
+            <Icon name="bookmark" size={16} />
+            <Text style={[text.metaBold, { fontSize: 13 }]}>{nb.wizard.saveDraft}</Text>
+          </Pressable>
+        )}
       </View>
       <View style={styles.progWrap}>
         <ProgressBar value={step / LAST} />
@@ -302,6 +349,7 @@ export function LeggUtWizard() {
       <Screen
         scroll
         spacer="foot"
+        scrollRef={scrollRef}
         scrollProps={{ keyboardDismissMode: 'on-drag' }}
         contentStyle={{ paddingTop: insets.top + 160 }}
         footer={
@@ -329,7 +377,7 @@ export function LeggUtWizard() {
                 />
               ) : (
                 <ScaleIn style={styles.flex}>
-                  <Button label={nb.wizard.preview} size="lg" icon="eye" onPress={preview} />
+                  <Button label={editing ? nb.wizard.previewChanges : nb.wizard.preview} size="lg" icon="eye" onPress={preview} />
                 </ScaleIn>
               )}
             </FooterRow>
@@ -350,7 +398,7 @@ export function LeggUtWizard() {
                         accessibilityRole="button"
                         accessibilityLabel={categoryLabels[c]}
                         accessibilityState={{ selected: on }}
-                        onPress={() => edit(on ? {} : { cat: c, q1: null, size: INTAKE[c].def, q3: 'Ja' })}
+                        onPress={() => edit(on ? {} : applyCategory(s, c))}
                         style={({ pressed }) => [styles.ct, on && [styles.ctOn, shadow.selected], pressed && styles.ctPressed]}
                       >
                         <CategoryArt category={c} width={58} height={58} radius={19} iconSize={26} />
@@ -399,7 +447,7 @@ export function LeggUtWizard() {
                   <Text style={text.label}>{nb.wizard.s2.suggest(s.cat ? categoryLabels[s.cat] : nb.wizard.s2.task)}</Text>
                 </View>
                 <View style={styles.sug}>
-                  {TITLE_SUGGESTIONS[s.cat ?? 'annet'].map((t) => {
+                  {form.titles.map((t) => {
                     const on = s.title === t;
                     return (
                       <Pressable
@@ -445,7 +493,7 @@ export function LeggUtWizard() {
                     value={s.desc}
                     onChangeText={(v) => edit({ desc: v.slice(0, 600) })}
                     maxLength={600}
-                    placeholder={nb.wizard.s3.ph}
+                    placeholder={s.cat ? form.descPh : nb.wizard.s3.ph}
                     accessibilityLabel={nb.wizard.s3.label}
                     error={errOn('desc')}
                   />
@@ -454,53 +502,50 @@ export function LeggUtWizard() {
               </Field>
               <Text style={[text.eyebrow, styles.eyebrowGap]}>{nb.wizard.s3.quick}</Text>
               <View style={[styles.qcard, shadow.card]}>
-                <View>
-                  <QLabel icon="maling">{I.q1}</QLabel>
-                  <View style={styles.optrow}>
-                    {I.o1.map((o) => {
-                      const on = s.q1 === o;
-                      return (
-                        <Pressable
-                          key={o}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: on }}
-                          onPress={() => edit({ q1: o })}
-                          style={[styles.ochip, on && styles.ochipOn]}
-                        >
-                          <Text style={[text.segment, { color: on ? colors.okText : colors.ink2 }]}>{o}</Text>
-                        </Pressable>
-                      );
-                    })}
+                {form.fields.map((f, i) => (
+                  <View key={`${s.cat}-${f.key}`}>
+                    {i > 0 ? <View style={[styles.divider, styles.mb16]} /> : null}
+                    <IntakeQuestion
+                      field={f}
+                      value={s.answers[f.key]}
+                      onChange={(a) => setAnswer(f.key, a)}
+                      error={err?.field === `q:${f.key}`}
+                      shakeKey={errN}
+                    />
                   </View>
-                </View>
+                ))}
                 <View style={styles.divider} />
                 <View>
-                  <QLabel icon="sliders">{I.sz}</QLabel>
+                  <QLabel icon="users">{nb.wizard.s3.helpers}</QLabel>
                   <Stepper
-                    minusLabel={nb.wizard.s3.smaller}
-                    plusLabel={nb.wizard.s3.bigger}
-                    onMinus={() => edit({ size: Math.max(I.inc, s.size - I.inc) })}
-                    onPlus={() => edit({ size: Math.min(I.inc * 200, s.size + I.inc) })}
+                    minusLabel={nb.wizard.s3.fewerHelpers}
+                    plusLabel={nb.wizard.s3.moreHelpers}
+                    onMinus={() => edit({ helpers: Math.max(1, s.helpers - 1) })}
+                    onPlus={() => edit({ helpers: Math.min(MAX_HELPERS, s.helpers + 1) })}
                     value={
                       <Text style={styles.sv}>
-                        ca. {s.size}
-                        <Text style={styles.svSmall}> {I.unit}</Text>
+                        {s.helpers}
+                        <Text style={styles.svSmall}> {s.helpers === 1 ? nb.wizard.s3.person : nb.wizard.s3.persons}</Text>
                       </Text>
                     }
                   />
                 </View>
                 <View style={styles.divider} />
-                <View>
-                  <QLabel icon="info">{I.q3}</QLabel>
-                  <Segmented
-                    value={s.q3}
-                    onChange={(v) => edit({ q3: v })}
-                    options={[
-                      { value: 'Ja', label: 'Ja' },
-                      { value: 'Nei', label: 'Nei' },
-                    ]}
-                  />
-                </View>
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityLabel={nb.wizard.s3.urgent}
+                  accessibilityState={{ checked: s.urgent }}
+                  onPress={() => edit({ urgent: !s.urgent })}
+                  style={styles.urgentRow}
+                >
+                  <View style={styles.flex}>
+                    <QLabel icon="zap">{nb.wizard.s3.urgent}</QLabel>
+                    <Text style={text.meta}>{nb.wizard.s3.urgentSub}</Text>
+                  </View>
+                  <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                    <Toggle value={s.urgent} onValueChange={() => undefined} accessibilityLabel={nb.wizard.s3.urgent} />
+                  </View>
+                </Pressable>
               </View>
               <View style={[styles.labelRow, styles.mt26]}>
                 <Text style={text.label}>{nb.wizard.s3.photos}</Text>
@@ -528,7 +573,14 @@ export function LeggUtWizard() {
                     </Pressable>
                   </ScaleIn>
                 ))}
-                {s.photos.length < 6 ? (
+                {uploading > 0
+                  ? Array.from({ length: uploading }).map((_, i) => (
+                      <View key={`up${i}`} style={[styles.phCell, styles.phUploading]}>
+                        <Spinner />
+                      </View>
+                    ))
+                  : null}
+                {s.photos.length + uploading < MAX_PHOTOS ? (
                   <View style={styles.phCell}>
                     <PhotoAddTile onPress={addPhoto} />
                   </View>
@@ -640,6 +692,7 @@ export function LeggUtWizard() {
                         onPress={() =>
                           edit({
                             days: s.whenMode === 'flex' ? (on ? s.days.filter((x) => x !== d.iso) : [...s.days, d.iso]) : [d.iso],
+                            keepWhen: undefined,
                           })
                         }
                         style={[
@@ -708,6 +761,28 @@ export function LeggUtWizard() {
                 value={<Text style={styles.sv}>{hoursLabel(s.hours)}</Text>}
               />
               <Note style={styles.mt12}>{nb.wizard.s5.note}</Note>
+              <View style={[styles.labelRow, styles.mt26]}>
+                <Text style={text.label}>{nb.wizard.s5.repeat}</Text>
+                <Text style={text.hint}>{nb.wizard.s5.repeatHint}</Text>
+              </View>
+              <View style={styles.repeatRow} accessibilityRole="radiogroup" accessibilityLabel={nb.wizard.s5.repeat}>
+                {(['ONCE', 'WEEKLY', 'BIWEEKLY', 'MONTHLY'] as const).map((r) => (
+                  <Chip
+                    key={r}
+                    label={nb.wizard.s5.repeatOptions[r]}
+                    size="sm"
+                    selected={(s.repeat ?? 'ONCE') === r}
+                    onPress={() => edit({ repeat: r === 'ONCE' ? undefined : r })}
+                  />
+                ))}
+              </View>
+              {s.repeat ? (
+                <FadeUp>
+                  <Note icon="repeat" style={styles.mt12}>
+                    {nb.wizard.s5.repeatNote}
+                  </Note>
+                </FadeUp>
+              ) : null}
             </>
           ) : null}
 
@@ -761,6 +836,14 @@ export function LeggUtWizard() {
                 </FadeUp>
               )}
               <View style={styles.priceNotes}>
+                {s.cat ? (
+                  <Note icon="chart">
+                    {/* real numbers from earlier tilbud when there are enough; otherwise the fixed range */}
+                    {guidance
+                      ? nb.wizard.s6.usualArea(categoryLabels[s.cat].toLowerCase(), formatAmount(String(guidance.low)), formatAmount(String(guidance.high)))
+                      : nb.wizard.s6.usual(categoryLabels[s.cat].toLowerCase(), formatAmount(String(form.price[0])), formatAmount(String(form.price[1])))}
+                  </Note>
+                ) : null}
                 <Note icon="tag">
                   <Text style={{ fontFamily: text.label.fontFamily, color: colors.ink2 }}>{nb.wizard.s6.guiding}</Text>
                 </Note>
@@ -774,7 +857,7 @@ export function LeggUtWizard() {
               <Text style={styles.q} accessibilityRole="header">{nb.wizard.s7.q}</Text>
               <Text style={styles.qs}>{nb.wizard.s7.sub}</Text>
               <ListGroup style={styles.mt20}>
-                {EQUIPMENT.map((e) => (
+                {EQUIPMENT.filter((e) => form.equipment.includes(e.id)).map((e) => (
                   <ListRow
                     key={e.id}
                     icon={e.icon}
@@ -934,11 +1017,25 @@ export function LeggUtWizard() {
       <Dialog
         visible={closeOpen}
         onClose={() => setCloseOpen(false)}
-        icon="bookmark"
-        tone="ok"
-        title={nb.wizard.closeTitle}
-        body={nb.wizard.closeBody}
+        icon={editing ? 'edit' : 'bookmark'}
+        tone={editing ? 'neutral' : 'ok'}
+        title={editing ? nb.wizard.editCloseTitle : nb.wizard.closeTitle}
+        body={editing ? nb.wizard.editCloseBody : nb.wizard.closeBody}
         actions={
+          editing ? (
+            <>
+              <Button label={nb.wizard.keepEditing} variant="ink" onPress={() => setCloseOpen(false)} />
+              <Button
+                label={nb.wizard.discardChanges}
+                variant="dangerGhost"
+                onPress={() => {
+                  setCloseOpen(false);
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/mine');
+                }}
+              />
+            </>
+          ) : (
           <>
             <Button
               label={nb.wizard.saveAndClose}
@@ -964,7 +1061,100 @@ export function LeggUtWizard() {
               <Text style={[text.bodySemi, { color: colors.danger, textDecorationLine: 'underline' }]}>{nb.wizard.discard}</Text>
             </Pressable>
           </>
+          )
         }
+      />
+    </View>
+  );
+}
+
+/** One category question: chips (single/multi), a stepper, Ja/Nei or a short text. */
+function IntakeQuestion({
+  field: f,
+  value,
+  onChange,
+  error,
+  shakeKey,
+}: {
+  field: IntakeField;
+  value: Answer | undefined;
+  onChange: (a: Answer) => void;
+  error: boolean;
+  shakeKey: number;
+}) {
+  const icon = f.icon ?? 'info';
+  if (f.kind === 'choice') {
+    const sel = Array.isArray(value) ? value : typeof value === 'string' && value ? [value] : [];
+    return (
+      <Shake shakeKey={error ? shakeKey : 0}>
+        <QLabel icon={icon}>{f.multi ? `${f.label} ${nb.wizard.s3.pickMany}` : f.label}</QLabel>
+        <View style={styles.optrow} accessibilityRole={f.multi ? undefined : 'radiogroup'}>
+          {f.options.map((o) => {
+            const on = sel.includes(o);
+            return (
+              <Pressable
+                key={o}
+                accessibilityRole={f.multi ? 'checkbox' : 'radio'}
+                accessibilityState={f.multi ? { checked: on } : { selected: on }}
+                onPress={() => onChange(f.multi ? (on ? sel.filter((x) => x !== o) : [...sel, o]) : on ? '' : o)}
+                style={[styles.ochip, on && styles.ochipOn, error && !on && styles.ochipErr]}
+              >
+                {f.multi && on ? <Icon name="check" size={13} color={colors.okText} /> : null}
+                <Text style={[text.segment, { color: on ? colors.okText : colors.ink2 }]}>{o}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {error ? <ErrorText shakeKey={shakeKey}>{nb.wizard.s3.answerThis}</ErrorText> : null}
+      </Shake>
+    );
+  }
+  if (f.kind === 'number') {
+    const n = typeof value === 'number' ? value : f.def;
+    return (
+      <View>
+        <QLabel icon={icon}>{f.label}</QLabel>
+        <Stepper
+          minusLabel={`${nb.wizard.s3.less}: ${f.label}`}
+          plusLabel={`${nb.wizard.s3.more}: ${f.label}`}
+          onMinus={() => onChange(Math.max(f.min, n - f.step))}
+          onPlus={() => onChange(Math.min(f.max, n + f.step))}
+          value={
+            <Text style={styles.sv}>
+              {isApprox(f) ? 'ca. ' : ''}
+              {n}
+              <Text style={styles.svSmall}> {f.unit}</Text>
+            </Text>
+          }
+        />
+      </View>
+    );
+  }
+  if (f.kind === 'yesno') {
+    return (
+      <View>
+        <QLabel icon={icon}>{f.label}</QLabel>
+        <Segmented
+          value={value === 'Nei' ? 'Nei' : 'Ja'}
+          onChange={(v) => onChange(v)}
+          accessibilityLabel={f.label}
+          options={[
+            { value: 'Ja', label: 'Ja' },
+            { value: 'Nei', label: 'Nei' },
+          ]}
+        />
+      </View>
+    );
+  }
+  return (
+    <View>
+      <QLabel icon={icon}>{`${f.label} ${nb.wizard.s3.optional}`}</QLabel>
+      <Input
+        value={typeof value === 'string' ? value : ''}
+        onChangeText={(v) => onChange(v.slice(0, f.max ?? 80))}
+        placeholder={f.placeholder}
+        maxLength={f.max ?? 80}
+        accessibilityLabel={f.label}
       />
     </View>
   );
@@ -1028,6 +1218,7 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 const styles = StyleSheet.create({
+  repeatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
   px: { paddingHorizontal: screenPadding },
@@ -1112,6 +1303,9 @@ const styles = StyleSheet.create({
   qcard: { backgroundColor: colors.white, borderRadius: radius.card, padding: 16, gap: 16 },
   optrow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   ochip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     height: 42,
     paddingHorizontal: 16,
     borderRadius: radius.pill,
@@ -1121,6 +1315,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ochipOn: { backgroundColor: colors.limeTint, borderColor: colors.lime2 },
+  ochipErr: { borderColor: colors.dateErrBorder },
+  mb16: { marginBottom: 16 },
+  urgentRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
+  phUploading: { borderRadius: radius.thumb, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   divider: { height: 1, backgroundColor: colors.line },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface2, borderRadius: 18, padding: 6 },
   stepperCard: { backgroundColor: colors.white },

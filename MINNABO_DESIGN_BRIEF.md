@@ -1,33 +1,33 @@
 # MinNabo — Design Brief
 
-A brief for redesigning the MinNabo app's visual design. It describes what the
-app is, how it is structured, every screen and its content, the current design
-system, and which things a new design must keep vs. is free to change.
+A brief describing the MinNabo app's design as it is **now**: what the app is, how it is
+structured, every screen and its content, the design system ("Nabolys"), and the rules any
+further design work (new screens, the website, marketing) must keep.
 
-The app is built (React Native / Expo, ~50 screens, working). This is a
-**re-skin / visual redesign** — the screens, flows and content below are fixed;
-the look is what's being redesigned.
+The app is built (React Native / Expo, ~50 screens, working) and has been re-skinned 1:1 to the
+designs in `design/screens/*.dc.html`. Those files are the source of truth; this brief summarises them.
+For a fuller reference (every token, component, screen and copy string) see
+[docs/MINNABO_APP_FOR_WEBSITE.md](docs/MINNABO_APP_FOR_WEBSITE.md).
 
 ---
 
 ## 1. What MinNabo is
 
-MinNabo ("My Neighbour") is a mobile app for **småjobber** (small local jobs) in
-the Innlandet region of Norway. People post a job they need help with, or offer a
-service they can do, and neighbours connect, agree a price in chat, and get it
-done. MinNabo never handles payment — money is arranged directly between the two
-people.
+MinNabo ("My Neighbour") is a mobile app for **småjobber** (small local jobs) in the **Innlandet**
+region of Norway (launch: Lillehammer, Hamar, Gjøvik og omegn). People post an **oppdrag** (a job they
+need help with), neighbours send a **tilbud** (offer), they agree the details in chat, and get it done.
+MinNabo never handles payment — money is arranged directly between the two people.
 
-**Tagline:** *Småjobber nær deg. Enkelt, trygt og lokalt.*
-("Small jobs near you. Simple, safe and local.")
+**Taglines (welcome screen):**
+- *Småjobber nær deg.* — "Få hjelp med plenen, flyttelasset eller datamaskinen — av folk som bor i nærheten."
+- *Ta en småjobb i nabolaget.* — "Finn oppdrag i din egen kommune, gi et tilbud og avtal resten i chatten."
+- *Enkelt, trygt og lokalt.* — "Verifiserte profiler, ærlige vurderinger og avtaler i chatten. Pris og betaling avtaler dere direkte."
 
-**Personality:** local, trustworthy, energetic, inclusive, simple, modern. It
-should feel like a friendly community tool, not a gig-economy marketplace or a
-classifieds board. Warm and calm, not loud.
+**Personality:** local, trustworthy, warm, calm, inclusive, simple, modern. A friendly community tool,
+not a gig-economy marketplace or a classifieds board.
 
-**Language:** the entire app is in **norsk bokmål** — every label, button, error,
-notification. No language switcher. (Sample copy is given throughout this doc so
-the designer can typeset real strings.)
+**Language:** the entire app is in **norsk bokmål** — every label, button, error, notification.
+No language switcher. Copy is exactly as in the design files.
 
 ---
 
@@ -35,50 +35,44 @@ the designer can typeset real strings.)
 
 | Role | What they do |
 | --- | --- |
-| **Oppdragsgiver** (job poster) | Posts a task, receives offers, picks one, chats, confirms completion, leaves a review |
-| **Oppdragstaker** (helper) | Browses tasks or posts a service offer, sends offers, does the job |
-| Both | One account does both — a person is often both poster and helper |
-| **Bedrift** (business) | A verified local trade business; same app, org number + verification |
-| **Partner / sponsor** | Local businesses shown in the Fellesskap (community) section |
-| **Admin / moderator** | Handles reports, verifications, users, listings, partners, stats |
+| **Oppdragsgiver** (job poster) | Posts an oppdrag, receives tilbud, compares, accepts, chats, confirms completion, leaves a review |
+| **Oppdragstaker / hjelper** (helper) | Browses oppdrag, sends tilbud, does the job, confirms, leaves a review |
+| Both | One account does both. Agreements show "Du hjelper" / "Du får hjelp" |
+| **Ungdomskonto** (under 18) | Limited account: browse oppdrag, give/withdraw tilbud, chat only in conversations their tilbud created (§9) |
+| **Bedrift** | Verified local business, borettslag, lag or forening; org.nr checked against Enhetsregisteret |
+| **Partner / sponsor** | Local businesses shown in Fellesskap on three levels: Hovedpartner (max 4, own page), Lokal helt, Lokal støttespiller |
+| **Admin / moderator** | Handles reports, business verification, users, flagged oppdrag, partners, stats |
 
-Most users are private individuals. The design should center the private-person
-experience.
+Most users are private individuals. The design centres the private-person experience.
 
 ---
 
-## 3. The core concept — two listing types
+## 3. The core concept — one listing type: oppdrag
 
-This is the single most important thing to get right. There are **two kinds of
-listing** and they must never be confused:
+There is **only one kind of listing: the oppdrag** ("Trenger hjelp" — "I need help with X").
+There are **no service offers**: no "Tilbyr hjelp" listings, no "Folk som tilbyr hjelp", no provider
+directory. Helpers respond to oppdrag with a tilbud; they do not advertise services.
 
-| | **A · Oppdrag** (task request) | **B · Tjenestetilbud** (service offer) |
-| --- | --- | --- |
-| Meaning | "I need help with X" | "I can do X for you" |
-| Owner | The person who needs help | The person offering to help |
-| Badge | **Trenger hjelp** / **Åpent oppdrag** (lime green) | **Tilbyr hjelp** (cyan) |
-| Others tap | **Gi tilbud** (give an offer) · **Send melding** | **Ta kontakt** (get in touch) · **Be om tilbud** (request an offer) |
-| Example | "Klippe plen" (Mow lawn) | "Jeg kan klippe plenen din" (I can mow your lawn) |
-
-Both types use the **same card layout** (so a search for "lawn" shows both in one
-list) but with **different badge colour, different terminology, different primary
-button**. A searcher must be able to tell at a glance which is which.
+- Badge: **"Trenger hjelp"** on cards, **"Åpent oppdrag"** on the detail page (lime tint pill with a dot).
+- Others tap: **"Gi tilbud"** (primary) · **"Send melding"** (secondary).
+- Budget shown as "Budsjett 400 kr", or **"Ønsker tilbud"** when the poster wants price suggestions.
 
 ### The transaction flow
 
-1. Helper sends a **tilbud** (offer): proposed price in NOK, short message,
-   date/time, caveats. Price is informational only.
-2. A **conversation** opens, tied to that listing.
-3. Poster can compare offers, ask for changes, **godta** (accept) or **avslå**
-   (decline). Helper can withdraw before acceptance.
-4. On acceptance: price, date, description, caveats are frozen as an
-   **avtalegrunnlag** (agreement). Chat shows **"Tilbud godtatt"**.
-5. On the job day: an optional shared **job workspace** (checklist, materials,
-   before/after photos, a time tracker).
-6. Both parties **confirm completion**. Then each can leave **one review**
-   (1–5 stars + quick tags like "Punktlig", "Ryddig").
+1. Helper sends a **tilbud**: price in kr, message, day and time, optional **forbehold** (caveats).
+   Price is informational only.
+2. A **conversation** opens, tied to that oppdrag.
+3. Poster sees **Mottatte tilbud**, can **Sammenlign** offers side by side, **Godta** (accept),
+   **Avslå** (decline, with reasons + Angre) or **Be om endring**. Helper can **Trekk tilbudet** before acceptance.
+4. On acceptance price, date, description and caveats are frozen as an **avtale** ("Låst avtale",
+   "Avtalt 30. sep kl. 19:42"). Chat shows **"Tilbud godtatt"** / "Avtalegrunnlaget er låst".
+   Changes must be agreed again in chat. The avtale can be cancelled ("Avlys avtalen").
+5. On the job day: **Jobbdag** — shared live timer, checklist, materials, before/during/after photos,
+   safety tools (Trygg tur, call/SMS).
+6. **Both parties confirm completion** (Fullføring). Then each can leave **one review**
+   (1–5 stars + tags "Punktlig", "Ryddig", "Vennlig", "Grundig", "God kommunikasjon", "Anbefales").
 
-> Always visible near the offer: *"Pris og betaling avtales direkte mellom dere.
+> Always visible near every price and offer: *"Pris og betaling avtales direkte mellom dere.
 > MinNabo håndterer ikke betaling."*
 
 ---
@@ -87,272 +81,274 @@ button**. A searcher must be able to tell at a glance which is which.
 
 ### Bottom navigation (main screens only)
 
-Five slots, fixed:
+A floating white bar (radius 30, slight blur, large soft shadow), five slots:
 
-1. **Oppdrag** — clipboard icon — *this is the home screen, the default route.
-   There is no separate "Home" tab.*
-2. **Fellesskap** — people/group icon
-3. **Legg ut** — large raised **lime-green gradient + button** (a FAB that sits
-   above the bar), opens the post-a-listing choice
-4. **Innboks** — speech-bubble icon — shows an unread-count badge
+1. **Oppdrag** — clipboard icon — *the home screen and default route. There is no separate "Home" tab.*
+2. **Fellesskap** — people icon
+3. **Legg ut** — a 62px **flat lime circle with a navy +**, 5px white ring, raised 30px above the bar.
+   Opens the post-oppdrag wizard **directly** (no type choice)
+4. **Innboks** — speech-bubble icon — unread-count badge
 5. **Meny** — hamburger icon — opens a bottom sheet listing every other page
 
-Active tab = lime green icon + label. The bottom nav hides on detail screens and
-chat.
+Active tab = lime-tint bubble behind the icon, icon + label in deep lime. Hidden on detail screens, chat and wizards.
 
 ### Top bar
 
-- **Main screens:** MinNabo **logo + wordmark** top-left; **notification bell**
-  (with unread dot) and **circular profile avatar** top-right. The avatar is a
-  permanent shortcut — tapping it opens the profile. Accessibility label "Åpne
-  profil".
-- **Sub screens:** back arrow + MinNabo logo icon left; optional centered title;
-  optional right-side node.
-- **Detail screens** (listing / offer detail): back + logo + title + bell +
-  avatar.
+- **Main screens:** MinNabo logo + wordmark top-left; **notification bell** (red dot when unread) and the
+  **circular profile avatar** top-right (accessibility label "Åpne profil").
+- **Sub screens:** back button (44px circle) left; centred title; optional right action.
 
 ### Menu sheet (from "Meny")
 
-A bottom sheet, sectioned:
-
-- **Utforsk:** Oppdrag · Fellesskap · Innboks · Legg ut
-- **Mitt:** Min profil · Mine avtaler · Mine oppdrag og tjenester · Mottatte
-  tilbud · Lagrede oppføringer og søk · Varsler
-- **Tillit og trygghet:** Vurderinger og verifisering · Sikkerhet, rapportering
-  og blokkering
-- **Innstillinger:** Innstillinger · Personvern · Vilkår · Varslinger · For
-  bedrifter · Adminpanel
+- Header card: avatar, name, rating, jobs, place, "Se profilen din", toggle **"Tilgjengelig for småjobber"**
+- **Utforsk** (tiles): Oppdrag · Fellesskap · Innboks · Legg ut ("Nytt oppdrag")
+- **Mitt:** Min profil · Mine avtaler · Mine oppdrag · Mottatte tilbud · Lagrede oppføringer og søk · Varsler
+- **Tillit og trygghet:** Vurderinger og verifisering · Sikkerhet, rapportering og blokkering
+- **Innstillinger:** Innstillinger · Personvern · Vilkår · Varslinger · For bedrifter · Adminpanel (admins only)
+- Logg ut (confirm dialog) · "MinNabo · versjon 1.0 · Innlandet"
 
 ---
 
 ## 5. Screen inventory
 
-Every screen the design needs to cover, grouped. Each has states (see §7).
+Every screen, grouped. Each has the universal states (§5 end). Design file in brackets.
 
 ### Onboarding & auth
 | Screen | Content |
 | --- | --- |
-| **Velkommen / intro** | Brand, tagline, value proposition, "Kom i gang" |
-| **Logg inn / opprett konto** | Phone or email + one-time code (OTP). Architecture supports BankID later |
-| **Verifisering og samtykker** | Consent checkboxes: terms, privacy, age. GDPR consent log |
-| **Oppsett** (role + place) | Name, purpose choice ("Jeg trenger hjelp" / "Jeg ønsker småjobber" / "Begge deler"), **kommune** (municipality) picker + free-text place, a "Bruk posisjonen min" button that detects the kommune from GPS |
+| **Velkommen** (`Main`) | Centred logo, 3 auto-advancing slides (4.2 s, tappable dots) with an animated phone mock, "Kom i gang" |
+| **Logg inn** (`LoggInn`) | **Vipps only.** "Logg inn eller opprett konto", orange **"Fortsett med Vipps"** → sheet: Åpner Vipps → Bekreft i Vipps-appen → Identitet bekreftet (name, birth year, phone). "Vipps brukes kun til innlogging – aldri til betaling." Link "Under 18 år? Se ungdomskonto" |
+| **Samtykker** (`Samtykke`) | Verified identity card, required checkboxes (vilkår, personvern, alder) + optional tips, "Godta alle", expandable explanations, timestamped consent log |
+| **Oppsett** (`Oppsett`) | 3 steps: navn (from Vipps, optional photo) → formål ("Jeg trenger hjelp" / "Jeg ønsker småjobber" / "Begge deler") → kommune (GPS with radar animation, or list, optional område) → confetti celebration |
+| **Ungdomskonto** (`Ungdomskonto`) | "Dette kan du gjøre" / "Låst til du fyller 18" lists, required checkboxes |
 
-### Home — Oppdrag (front page)
+### Home — Oppdrag
 | Screen | Content |
 | --- | --- |
-| **Oppdrag** | Heading *"Finn hjelp eller en småjobb nær deg"*; a **kommune + reach** row ("Lillehammer kommune · Bare min kommune", opens a sheet with GPS detect / kommune picker / a 3-step reach control); a search bar; a horizontal **category chip** row; then two sections — **"Folk som tilbyr hjelp"** (service offers, with a horizontal row of active provider avatars) and **"Folk som trenger hjelp"** (task requests), each showing ~4 listing cards + a "Se alle" button; a link to the personal lead board; a footer note |
-| **Søk** | Full search: query field, type filter (Alle / Oppdrag / Tilbud), category, verified-only, sort (Relevans / Avstand / Nyeste / Pris); results as listing cards; recent searches; "Lagre søk" |
-| **Oppdrag-liste / Tilbydere** ("Se alle") | A filtered full list of one type — sort dropdown, category chips, cards |
-| **Oppdrag for meg** (lead board) | For helpers: a swipeable stack / list of task requests matched to them, each dismissable ("Ikke aktuelt") |
+| **Oppdrag** (`Oppdrag`) | "Hei, {navn}" + **"Finn hjelp eller en småjobb nær deg"**; kommune + reach row ("Lillehammer kommune · Bare min kommune" → sheet "Hvor vil du se oppdrag?": GPS, kommune list, reach Min kommune / Nabokommuner / Innlandet with animated rings); search bar; category chips; **"Folk som trenger hjelp"** (6 listing cards, save heart + Angre); "Se alle oppdrag"; dark **"Oppdrag for meg"** card; payment note footer |
+| **Søk** (`Sok`) | Live search, filter sheet (multiple categories, kun verifiserte, distance, sort Relevans / Avstand / Nyeste / Pris), removable filter chips, recent + popular searches, "Lagre søk" |
+| **Se alle** (`SeAlle`) | Full oppdrag list, sort (Nærmest / Nyeste / Pris), category chips, count |
+| **Oppdrag for meg** (`ForMeg`) | Swipeable card stack matched to the helper: "Ikke aktuelt" (Angre), save, "Se og gi tilbud", counter, stack/list toggle, finished state |
 
-### Listing content
+### Oppdrag detail & contact
 | Screen | Content |
 | --- | --- |
-| **Oppdragsdetaljer** (task request detail) | Image gallery + counter, save (heart) button, title, category, **"Åpent oppdrag"** badge, price/budget, approximate place + distance, date, expected duration, description, practical info, equipment, an **owner card** (avatar, name, rating, verifications, member-since). Sticky actions: primary **"Gi tilbud"**, secondary **"Send melding"**, text *"Pris og betaling avtales mellom dere."* Never shows exact address |
-| **Tilbyderdetaljer** (service offer detail) | One large image, **"Tilbyr hjelp"** badge, title, category, from-price or "Pris avtales", ratings, **explained verifications**, service area + max travel distance, availability, equipment, "Om tilbudet", experience, list of services, provider card. Sticky actions: primary **"Ta kontakt"**, secondary **"Be om tilbud"** |
+| **Oppdragsdetaljer** (`Oppdragsdetaljer`) | Photo gallery (counter, dots), save, share, **"Åpent oppdrag"**, budget card, info grid, **stylised approximate-area map (circle, never a pin)**, description, practical info, owner card → profile, report link. Sticky footer: payment note + **"Send melding"** + **"Gi tilbud"**. Never shows an exact address |
+| **Gi tilbud** (sheet) | Amount with quick chips, message + templates + counter, day & time chips, forbehold, validation, preview, send → success → chat. Footer then reads "Tilbud sendt" |
+| **Ny samtale** (`StartSamtale`) | Pinned oppdrag card, opener chips; conversation created on first message |
 
-### Posting a listing
+### Posting — Legg ut
 | Screen | Content |
 | --- | --- |
-| **Legg ut** (choice) | Always first: two big choices — **"Jeg trenger en jobb utført"** and **"Jeg ønsker å utføre en jobb"** |
-| **Trenger jobb** form | Multi-step wizard: category → title → description + category-specific intake questions → place + kommune → date/time + duration → budget or "Ønsker tilbud" → equipment / materials / practical info → who can offer → confirm |
-| **Tilby jobb** form | Multi-step wizard: category → title → services → presentation → area + max distance → availability (weekdays, time of day) → transport / equipment → experience → price ("Fra" / "Pris avtales") → who can contact → confirm |
-| **Forhåndsvisning** | Full preview of the card + detail as others will see it, before publishing |
-| **Publisert** | Success screen — confirmation, "Del", "Se oppføringen", tip about notifying matching helpers |
+| **Veiviser** (`LeggUt`) | 9 steps with progress bar ("Steg 3 av 9"): Kategori → Tittel (suggestions) → Beskrivelse + category questions + photos → Sted (GPS, "Vi viser bare et omtrentlig område til andre.") → Når → Pris (budsjett / "Ønsker tilbud", private estimate) → Utstyr og praktisk → Hvem kan gi tilbud (max distance) → Bekreft ("Endre" per section). "Lagre utkast", per-step validation with shake, slide transitions |
+| **Forhåndsvisning** (`Forhandsvisning`) | Kortet / Detaljsiden toggle, readiness checklist, Rediger, Publiser |
+| **Publisert** (`Publisert`) | Drawn check + confetti, live card, Del sheet (copy link, SMS, e-post, share), "Se oppføringen", "Til forsiden" |
 
-### Offers & agreements
+### Tilbud & avtaler
 | Screen | Content |
 | --- | --- |
-| **Mottatte tilbud** | List of offers received across your listings, grouped by listing, with status |
-| **Send / be om tilbud** | Form: amount (NOK), message, proposed date/time, caveats |
-| **Tilbudsdetaljer** | One offer: amount, schedule, message, caveats, status; actions to accept / decline / request revision / withdraw |
-| **Sammenlign tilbud** | Side-by-side comparison of multiple offers on one listing — price, schedule, rating, "Lavest pris" marker |
-| **Avtalesammendrag** (agreement summary) | The frozen agreement: price, date, description, caveats, both parties, "avtalt" timestamp |
+| **Mottatte tilbud** (`MottatteTilbud`) | Alle / Nye / Besvart, grouped by own oppdrag, status pills, "Sammenlign" |
+| **Tilbudsdetaljer** (`TilbudDetaljer`) | Godta (summary + required checkbox → confetti), Avslå (reasons + Angre), Be om endring; sender: Trekk tilbudet. Youth offers marked "Ungdomskonto · 16 år" |
+| **Sammenlign** (`Sammenlign`) | Columns, animated price bars, "Lavest pris" / "Best vurdert", sort, "Gå videre med …" |
+| **Avtalesammendrag** (`Avtale`) | Frozen agreement with AVTALT / AVLYST stamp, countdown, parties, price, date, duration, place ("adressen er delt i chatten"), description, forbehold, timeline, Åpne chat, Legg i kalender, Åpne jobbdag, Avlys |
+| **Mine avtaler** (`MineAvtaler`) | Kommende / Fullført, week strip, role pills "Du hjelper" / "Du får hjelp" |
 
-### Inbox & chat
+### Inbox, chat & job day
 | Screen | Content |
 | --- | --- |
-| **Innboks** | Title "Innboks", search field "Søk i meldinger", filters **Alle / Uleste**, conversation rows: avatar, name, the listing it's about, last message, time, unread dot, status tags **"Nytt tilbud"** / **"Tilbud godtatt"** |
-| **Chat** | Back + counterpart avatar/name + optional online status + report menu; a compact listing card pinned at top; chat bubbles (outgoing = filled, incoming = light grey/blue) with timestamps and sent/delivered/read ticks; image attachments; message reactions; a pinned message; composer with attach + **"Send tilbud"** (when the role allows); **offer cards** inline showing price/date/description/caveats with **"Godta tilbud" / "Avslå"** for the right recipient; quick replies; a time-proposal sheet |
-| **Start samtale** | Entry when messaging about a listing with no existing thread |
-
-### Job execution
-| Screen | Content |
-| --- | --- |
-| **Job workspace** (in chat, day of job) | Shared checklist, materials list with kr amounts, before/after photo pairs, a start/stop time tracker |
-| **Fullføring** | Both parties confirm completion; shows who has confirmed |
-| **Vurdering** (review) | 1–5 stars, optional comment, quick tags ("Punktlig", "Ryddig", "Vennlig" …). One review per agreement |
+| **Innboks** (`Innboks`) | Live search, Alle / Uleste, status tags, unread markers, read ticks, "Merk alle som lest" |
+| **Chat** (`Chat`) | Header menu (profil, oppføring, demp, rapporter, blokker); pinned oppdrag card + pinned message; ink outgoing / white incoming bubbles with Sendt → Levert → Lest; reactions; quick replies; attach sheet (Bilde, Kamera, Foreslå tid, Send tilbud for helper); inline **offer card** with "Avslå" / "Godta tilbud" → "Avtale inngått" banner |
+| **Jobbdag** (`Jobbdag`) | Dark timer hero (start / pause / stop), tabs Sjekkliste / Materialer / Bilder (before/after slider), Trygghet og kontakt, "Marker jobben som ferdig" |
+| **Fullføring** (`Fullforing`) | Two-party confirm, drawn check + confetti, "Noe er ikke i orden?" |
+| **Vurdering** (`Vurdering`) | 5 stars with labels (Dårlig → Fantastisk!), tags, comment, recommend Ja/Nei, success + preview |
 
 ### Profile & personal
 | Screen | Content |
 | --- | --- |
-| **Min profil / Offentlig profil** | Avatar, name, area, "medlem siden", presentation, services & categories, verification badges (each explains what was checked), completed-jobs count, star rating + review list, reliability stats (shows-up / on-time / completes), skill endorsements from neighbours, portfolio (before/after photos), holiday-mode toggle |
-| **Rediger profil** | Edit name, photo, presentation, place, home notes, portfolio |
-| **Mine oppdrag og tjenester** | Your own listings, by type and status, with edit/pause/archive |
-| **Mine avtaler** (agenda) | Accepted agreements you're part of — upcoming and done |
-| **Lagrede** | Saved listings + saved searches (each saved search shows its filter summary and re-runs) |
-| **Varsler** | Notification list: new message, new/changed/withdrawn offer, offer accepted/declined, agreed time, completion requested, review received, moderation. Each deep-links |
+| **Profil** (`Profil`) | Own / public view, "Verifisert med Vipps", stats, tabs Om / Vurderinger / Portefølje, verification sheets, reliability bars, "Anbefalt av naboer", feriemodus banner; others: Ta kontakt, Følg, Rapporter |
+| **Rediger profil** (`RedigerProfil`) | Photo, name locked "Fra Vipps", visningsnavn, kommune/område, presentation, private home notes, portfolio |
+| **Mine oppdrag** (`MineOppforinger`) | Aktive / Pauset / Arkivert; Rediger, Pause/Aktiver, Arkiver, Slett (Angre) |
+| **Lagrede** (`Lagrede`) | Saved oppdrag + saved searches (new hits badge, alert bell, Kjør søk) |
+| **Varsler** (`Varsler`) | Filters Alle / Tilbud / Meldinger / Avtaler / Annet, grouped I dag / I går / Tidligere, deep links |
 
 ### Trust & safety
 | Screen | Content |
 | --- | --- |
-| **Vurderinger og verifisering** | Your verifications (phone / email / business) with explanations; how to verify |
-| **Sikkerhet, rapportering og blokkering** | Report a user/listing/offer/message/review; blocked-users list; trusted contacts; "safe trip" sharing |
-| **Trygge kontakter** | Add contacts who can be notified when you go to a job |
-| **Personvern / samtykker** | Consent log, data export, account deletion, retention info |
+| **Vurderinger og verifisering** (`Verifisering`) | "Fullt verifisert med Vipps" (Vipps-ID, Telefon, E-post), "Hva ble sjekket?", review rules, "Bygg tillit" checklist |
+| **Sikkerhet** (`Sikkerhet`) | Trygg tur (SMS to trusted contacts, stop/extend), Rapporter, Trygge kontakter, blocked users, tips, "Er du i akutt fare? Ring 112." |
+| **Rapporter** (`Rapporter`) | What → reason (Svindel eller krav om forhåndsbetaling, Trakassering, Upassende innhold, Falsk profil, Farlig oppdrag, Annet) → details + screenshot + block → status timeline |
+| **Trygge kontakter** (`TryggeKontakter`) | List (max 5), add sheet with phone validation + relation chips, remove |
+| **Personvern** (`Personvern`) | Consent log, tips toggle, data export, retention accordion, Vilkår, Slett konto |
 
 ### Community — Fellesskap
 | Screen | Content |
 | --- | --- |
-| **Fellesskap** | Hero *"Sammen gjør vi en forskjell"*; links to Nabolag and Oppslagstavle; a partner note; **up to 2 main partners** with premium placement (cards); **local supporters** in a calm horizontal carousel; a list of **documented donations** actually transferred (amount + recipient + period + "Overført"); a pending note about Røde Kors (behind a feature flag). No cluttered logo wall, no flashing banners, no auto audio |
-| **Nabolag** (neighbourhood group) | Join/leave a named neighbourhood group; member count; local tasks and local noticeboard posts scoped to your kommune |
-| **Oppslagstavle** (noticeboard) | Community posts: giveaways, lost & found, tool lending, general — kind filter chips, a compose form, post rows scoped to your kommune |
+| **Fellesskap** (`Fellesskap`) | Hero *"Sammen gjør vi en forskjell"*; Nabolag + Oppslagstavle cards; partner note ("De betaler for synlighet her – aldri for plass i søket."); then three partner levels: **Hovedpartnere** (max 4, large cover cards → own page), **Lokale helter** (cards → info sheet, scoped to your kommune), **Lokale støttespillere** (logo + name in a quiet carousel, no autoplay, scoped to your kommune); **Donasjoner** with "Overført"; Røde Kors "Kommer". *Changed from the design file on request (2026-10-06): the design had max 2 main partners and no Lokal helt level* |
+| **Hovedpartner** (`/partner/<id>`, no design file) | Cover photo, logo tile, "Hovedpartner" badge, name, tagline, "Om oss", "Til naboene", "Kontakt" (nettside, telefon, e-post, adresse, åpningstider, område), gallery, "Besøk nettsiden", "Takk for støtten". Empty fields are hidden |
+| **Nabolag** (`Nabolag`) | Join/leave a named area group, member count, tabs Oppdrag / Oppslag |
+| **Oppslagstavle** (`Oppslagstavle`) | Kinds Gis bort / Mistet og funnet / Utlån av verktøy / Generelt; cards, compose sheet, comments, "Avsluttet" |
 
-### Settings & business
+### Youth app
 | Screen | Content |
 | --- | --- |
-| **Innstillinger** | Account, location, notifications toggles, holiday mode, dev switch |
-| **Vilkår / Personvern (docs)** | Long-form legal text screens |
-| **Varslinger** | Fine-grained push/email notification preferences |
-| **Slett konto** | Account deletion flow with confirmation |
-| **Bedriftsregistrering** | Org number, company name, contact person, email, phone, categories → verification pending |
-| **Adminpanel** | Moderation queues, reports, verification approvals, partner management, stats. Admin-only |
+| **OppdragUng** (`OppdragUng`) | 4 tabs only: Oppdrag · Mine tilbud · Innboks · Profil. **No Legg ut button.** Locked features show a "… er ikke tilgjengelig" sheet |
 
-### Universal states
-Every important screen also needs: **loading**, **empty**, **error**,
-**offline / frakoblet**, **success**, **no-access**.
+### Settings, business & admin
+| Screen | Content |
+| --- | --- |
+| **Innstillinger** (`Innstillinger`) | Account (from Vipps), location, push / e-post, feriemodus, text size, Logg ut, Slett konto |
+| **Varslinger** (`Varslinger`) | Master pause, Push / E-post per type, quiet hours, test notification |
+| **Vilkår** (`Vilkar`) | TOC chips, reading progress, "Kort fortalt" boxes, "Til toppen" |
+| **Slett konto** (`SlettKonto`) | What is deleted → active-agreement warning → type SLETT → goodbye |
+| **Bedrift** (`Bedrift`) | Org.nr with live Enhetsregisteret lookup, contact fields, categories → Sendt / Til verifisering / Verifisert |
+| **Adminpanel** (`Admin`) | KPIs, reports queue, business verification, users (suspend), flagged oppdrag, partners (hovedpartner slots max 4, "Lokal helt" toggle, carousel on/off), weekly stats. Admin only |
+
+### Universal states (`Tilstander`)
+Every important screen has: **loading** (pulsing skeleton), **empty**, **error** (Prøv igjen),
+**offline / frakoblet** (banner, greyed cache, "Tilkoblet igjen"), **success**, **no-access**.
+Reversible actions show a toast with **"Angre"**.
 
 ---
 
-## 6. Key components (anatomy to redesign)
+## 6. Key components
+
+Full spec: [docs/COMPONENTS.md](docs/COMPONENTS.md); live reference: `design/screens/Komponenter.dc.html`.
 
 | Component | Notes |
 | --- | --- |
-| **Listing card** (row) | 96px thumbnail (with a small online dot), title (1 line), a badge row (type badge + optional "Dugnad" / "Gjentakende"), owner name + ★ rating, a place + distance meta row (pin icon), an availability/schedule meta row (clock icon), a large price line, a heart/save button top-right. One layout for both listing types |
-| **Buttons** | Primary = lime-green (a subtle lime gradient is allowed, used on primary CTAs and "Legg ut"); secondary = white with a coloured border; ghost = text only. Large tap targets |
-| **Status pills** | Calm, textual, rounded. Tones: lime (positive / needs-help), cyan (offer / links), neutral grey. A "soft" variant with tint background |
-| **Category chips** | Icon + label, horizontally scrolling, active state filled |
-| **Avatar** | Circular, with a **cyan ring**; falls back to initials on a tinted background |
-| **Fields** | Rounded text fields with a label above; select fields, date/time fields, amount field (NOK), image-picker field, tag input, chip-select, toggle rows, a wheel picker, a distance slider |
-| **Bottom sheets** | Used for the location picker, menu, attach, share, send-offer, time-proposal, message actions |
-| **Section headers** | Icon + title + optional "Se alle" link. A "rich" variant with a subtitle |
-| **Wizard** | Step progress indicator + per-step validation + a sticky footer button |
-| **Screen states** | Shared loading skeletons, empty/error/offline illustrations + retry |
-| **Toast** | Transient confirmation messages |
-| **Verification badge** | Small, tappable, explains what was checked |
+| **Listing card** | White, radius 24, padding 12, soft shadow. 96px category-art thumbnail (or photo), "Trenger hjelp" pill (+ optional "Dugnad" / "Gjentakende"), bold one-line title, owner + ★ rating, pin row (place · distance), clock row (schedule), "Budsjett" + price in display font. Round heart save top-right (pops when saved) |
+| **Buttons** | Pill-shaped, 52px. Primary = **flat lime** `#B8EE3C` with navy text; cyan `#0A74B4` white text; ink; ghost (white + border); soft; danger; Vipps orange (login only); text link `#065C8F` |
+| **Pills** | 26px, Figtree 700 12. Tones: need (lime tint), neutral, dark, warn, ok, danger |
+| **Chips** | White pill + border, optional coloured category icon circle; selected = ink fill, white text |
+| **Avatar** | Circle, cyan ring (2px white + 2px cyan), initials on tinted fallback, online dot |
+| **Fields** | 56px inputs, radius 17; focus = cyan border + soft ring; errors red with shake; big amount input with "kr"; toggles, checkboxes, radios, option cards, segmented control, tabs, range slider, day chips, photo picker, wheel picker |
+| **Bottom sheets** | Radius 32 top, grabber, scrim. Location, menu, filters, Gi tilbud, attach, share, time proposal |
+| **Dialog** | Centred, radius 28, spring scale-in, two buttons |
+| **Toast** | Ink bg, lime icon circle, optional lime "Angre", 2.6 s |
+| **Section header** | Optional 34px icon tile + display title + subtitle + "Se alle" |
+| **Wizard** | 6px lime progress bar, per-step validation, sticky footer button |
+| **Chat** | Bubbles, system pills, typing dots, inline offer card, payment note |
+| **Celebrations** | SVG check drawn in a lime circle, confetti (lime, cyan, ink, star) |
+| **Category art** | Flat category colour tile + centred Lucide icon (used where there is no photo) |
 
 ---
 
-## 7. Current design system (what's being replaced — open to change)
+## 7. Design system — "Nabolys" (current)
 
-The current tokens, for reference. **The new design is free to change all of
-this** — palette, type, spacing, the lot — as long as it respects the product
-rules in §8.
+Source: `design/screens/mn.css` → `src/theme/theme.ts`. Never hard-code values in screens.
+**No gradients anywhere** — flat colours only.
 
-### Colour (current)
+### Colour
 | Token | Hex | Use |
 | --- | --- | --- |
-| navy | `#0B2E4E` | primary text, icons, headings |
-| navyMuted | `#7A8794` | secondary text |
-| lime | `#8CC63F` | primary action, active state, positive status |
-| limeGradientEnd | `#A5D638` | end stop of the primary-button / FAB gradient |
-| limeTint | `#F4F9EC` | lime backgrounds |
-| cyan | `#22A9E0` | secondary accent, links, avatar ring |
-| cyanTint | `#EAF7FD` | cyan backgrounds |
-| bg | `#FDFBFA` | warm-white page background |
-| surface | `#FFFFFF` | cards, action bars |
-| line | `#ECEFF2` | dividers |
-| bubbleIn | `#EDEFF2` | incoming chat bubble |
-| bubbleOut | `#DBF1FB` | outgoing chat bubble |
-| star | `#F5B301` | rating stars |
-| shieldGreen | `#3AAE5C` | verification shield |
-| dangerText | `#C0392B` | errors |
+| ink | `#0A1740` | Primary text, dark buttons, selected chips, outgoing bubbles |
+| ink2 | `#34405F` | Secondary text |
+| mute | `#5F6983` | Meta text (4.5:1 on white) |
+| faint | `#8A93A8` | Meta icons, chevrons (not text) |
+| line / line2 | `#E4E8EE` / `#EEF1F4` | Borders / inner dividers |
+| bg | `#F3F5F1` | Screen background |
+| surface / surface2 | `#FFFFFF` / `#F7F8FA` | Cards, sheets / quiet info boxes |
+| lime | `#B8EE3C` | Primary action, FAB, progress |
+| limeDeep | `#3B7300` | Lime text/icons on light bg, active tab |
+| limeTint | `#EDF8D6` | "Trenger hjelp" pill, active tab bubble |
+| cyan | `#19B8EE` | Avatar ring, accent dots |
+| cyan2 | `#0A74B4` | Cyan button, focus border |
+| cyanDeep | `#065C8F` | Links |
+| cyanTint | `#DFF2FB` | Info backgrounds |
+| star | `#F0A500` | Ratings |
+| danger / tint | `#C23029` / `#FDEBE9` | Errors, destructive |
+| warn / tint | `#9A5B00` / `#FFF2D9` | Warnings, pending |
+| ok / okText / tint | `#2B8F4E` / `#1D6E3A` / `#E3F5E8` | Success, accepted |
+| notifDot | `#F2542D` | Unread badges |
+| online | `#2FBF62` | Online dot |
+| vipps | `#FF5B24` | **Only** the Vipps login button |
 
-### Type (current)
-- **Mulish** — Regular 400, Medium 500, Bold 700, ExtraBold 800.
-- Scale: h1 26 · screen-title 24 · section 19 · card-title 17 · body 15 · meta 13.
-- Headings are bold navy.
+Plus 23 category colour pairs (tile bg + icon colour) and 7 avatar colour pairs — see `theme.ts`.
 
-### Shape & depth (current)
-- Radius: 8 / 12 / 16 (tiles) / 18 (cards) / 999 (pills).
-- Cards: white, 1px `line` border, a very soft shadow.
-- The "Legg ut" FAB: 62px circle, lime gradient, white 4px ring, raised above the
-  bar.
+### Type
+- **Bricolage Grotesque** (display/headings; 500, 700, 800) — tight negative tracking.
+- **Figtree** (body/UI; 400–800).
+- Scale: display 42 · h1 31 · h2 24 · section 21 · h3 20 · h4 16.5 · card title 16 · body 15 · label 14 · meta 13 · note 12.5 · eyebrow 12 uppercase · tab 11. Prices in display font (19, large 34–38).
 
-### Spacing (current)
-- 4 / 8 / 12 / 16 / 20 / 28 / 40. Screen padding is 20 horizontal.
+### Shape & depth
+- Radius: 10 · 16 · cards 22 · listing card 24 · tiles 18 · inputs 17 · dialog 28 · sheet 32 · nav 30 · pills/buttons 999.
+- Shadows soft and navy-tinted: card `0 1px 2px rgba(10,23,64,.04), 0 8px 24px -10px rgba(10,23,64,.14)`;
+  medium and large variants; coloured soft shadows under lime/cyan/ink buttons.
+- Floating nav and sticky footers use white at 93–94 % with blur.
 
----
+### Spacing & sizes
+- 4 / 8 / 12 / 16 / 20 / 28 / 40. Screen padding 20 horizontal.
+- Button 52 (40 / 58), input 56, chip 42, pill 26, icon button 44, min touch 44.
 
-## 8. Constraints — what a new design must NOT break
+### Motion
+- Ease `cubic-bezier(.2,.8,.2,1)`, spring overshoot `cubic-bezier(.3,1.45,.5,1)`.
+- Lists fade up 16px over 550 ms, staggered 50 ms. Press scale .97 / .985.
+- Sheets 450 ms, dialogs 350 ms spring, toasts visible 2.6 s, skeleton pulse 1.3 s, drawn check 600 ms, confetti 2.4 s.
 
-These are **product rules**, not visual preferences. Keep them.
-
-1. **"Oppdrag" is the home screen.** No "Home" tab. Five bottom-nav slots as
-   listed (§4), with "Legg ut" as the raised centre button.
-2. **The profile avatar is a permanent top-right shortcut** on every logged-in
-   main screen, opening the profile.
-3. **The two listing types must be visually unmistakable** — distinct badge,
-   terminology, and primary button (§3).
-4. **No payment UI, ever.** No "Betal nå", no Vipps, no card fields, no wallet /
-   balance / checkout. Always show the "payment happens between you two" line
-   near offers.
-5. **Norsk bokmål only.** No language switcher. Design with real Norwegian string
-   lengths (they run ~15–30% longer than English).
-6. **"Legg ut" always opens the two-way choice screen first.**
-7. **Approximate location only** in public views — never an exact address or a
-   precise map pin.
-8. **Calm community section** — max 2 premium partners, local supporters in a
-   quiet carousel, no logo wall, no flashing, no auto-audio.
-9. **Accessibility is mandatory:** WCAG contrast, large text support, every
-   interactive element has an accessibility label, large tap targets, safe-area
-   aware on iOS and Android.
-10. **Cross-platform** — one design that works on iOS and Android (React Native,
-    so: flexbox layout, no CSS grid, be mindful of platform shadow/blur
-    differences).
-
-## 9. Open design decisions — things you CAN change
-
-- The **entire palette** — navy / lime / cyan is the current identity, not a
-  requirement. A new colour direction is welcome as long as contrast + the
-  lime-ish "positive / needs-help" vs "offer" distinction still reads.
-- **Typeface** (currently Mulish).
-- **Dark mode** — the app is light-only today. Adding a dark theme is a valid
-  redesign goal (would need a full token set for both).
-- **Card layout, information density, illustration style, iconography, motion.**
-- How the **kommune / reach** control looks and where it sits.
-- The **onboarding** visual treatment and number of steps (content is fixed).
-- Empty / error / loading **illustration** style.
+### Icons
+**Lucide**, stroke 2, 20px default. Line icons only (except the filled saved heart).
 
 ---
 
-## 10. Suggested deliverable order
+## 8. Constraints — what any design must NOT break
 
-If producing screens in priority order:
+These are **product rules**, not visual preferences.
 
-1. **Oppdrag** (home) — sets the whole system: cards, chips, top bar, bottom nav, location row
-2. **Oppdragsdetaljer** + **Tilbyderdetaljer** — the two detail screens side by side (prove the type distinction)
-3. **Chat** — bubbles + inline offer card + "Tilbud godtatt" state
-4. **Innboks** — conversation rows + status tags
-5. **Legg ut** choice + one wizard step + preview + success
-6. **Søk** with filters + results
-7. **Min profil** (public) — ratings, verifications, reliability
-8. **Fellesskap** — partners + donations
-9. **Onboarding** flow (welcome → login → consent → setup)
-10. Component sheet: buttons, pills, fields, avatars, badges, sheets, all states
-11. Secondary screens: offers/comparison/agreement, review, saved, notifications, settings, admin
+1. **Only one listing type: oppdrag.** No service offers / "Tilbyr hjelp" / "Folk som tilbyr hjelp" anywhere.
+2. **"Legg ut" opens the post-oppdrag wizard directly** — no type-choice screen.
+3. **Login is Vipps only.** No phone / e-mail / OTP / BankID login. Vipps is never used for payment.
+4. **No payment UI, ever.** No "Betal nå", card fields, wallet, balance, checkout or fees.
+   Show the payment note near every price and offer.
+5. **Under 18 = youth account** with limited rights, enforced on the backend; the UI only reflects it.
+6. **Approximate location only** in public views — never an exact address or a precise map pin.
+7. **No gradients anywhere.** Flat colours only.
+8. **Norsk bokmål only**, copy exactly as in the design files. Real Norwegian strings run ~15–30 % longer than English.
+9. **"Oppdrag" is the home screen.** No "Home" tab. **The profile avatar is top-right on every main screen.**
+10. **Calm community section** — three partner levels only (max 4 hovedpartnere, lokale helter, lokale støttespillere
+    in a quiet carousel), no logo wall, no flashing, no autoplay, no auto-audio. Partners pay for visibility on
+    Fellesskap, never for search placement. Sponsor deals are made outside the app.
+11. **Accessibility:** 44px touch targets, labels on icon-only buttons, contrast as designed, large text, safe-area aware.
+12. **Cross-platform** (React Native): flex layouts, no CSS grid; shadows via `boxShadow`, blur via `expo-blur`.
 
 ---
 
-## 11. Sample copy (for typesetting real strings)
+## 9. Youth account (under 18)
+
+**Can:** browse oppdrag, give and withdraw tilbud, chat inside conversations their tilbud created,
+receive reviews, view profile, safety / report / block, privacy, log out.
+
+**Locked until 18:** posting oppdrag, messaging without a tilbud, Fellesskap / Nabolag / Oppslagstavle,
+giving reviews, saved searches, business account, admin.
+
+Posters see "Ungdomskonto · 16 år" on youth offers. The account becomes a normal account automatically
+at 18. Minimum age is an open legal question (`[minstealder]` in the design).
+
+---
+
+## 10. Open design questions / still to come
+
+- **Dark mode** — the app is light-only today.
+- **Partner logos and texts** — placeholders until partners deliver them.
+- **Minimum age** for youth accounts — pending legal decision.
+- Data the designs show but the API doesn't have yet (offer counts on a listing, reply-time stats,
+  per-offer duration) — see [docs/SCREENS.md](docs/SCREENS.md) and [docs/LEFT_OUT.md](docs/LEFT_OUT.md).
+
+---
+
+## 11. Sample copy (real strings)
 
 - Home heading: **"Finn hjelp eller en småjobb nær deg"**
 - Location row: **"Lillehammer kommune · Bare min kommune"**
-- Section titles: **"Folk som tilbyr hjelp"**, **"Folk som trenger hjelp"**
-- Badges: **"Trenger hjelp"**, **"Tilbyr hjelp"**, **"Åpent oppdrag"**, **"Dugnad"**
-- Buttons: **"Gi tilbud"**, **"Send melding"**, **"Ta kontakt"**, **"Be om tilbud"**, **"Legg ut"**, **"Godta tilbud"**, **"Avslå"**, **"Se alle"**, **"Bruk posisjonen min"**
-- Offer disclaimer: **"Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling."**
-- Inbox: **"Innboks"**, **"Søk i meldinger"**, filters **"Alle" / "Uleste"**, tags **"Nytt tilbud" / "Tilbud godtatt"**
+- Section title: **"Folk som trenger hjelp"** — "Småjobber du kan ta i nærheten"
+- Badges: **"Trenger hjelp"**, **"Åpent oppdrag"**, **"Dugnad"**, **"Gjentakende"**, **"Tilbud sendt"**, **"Tilbud godtatt"**
+- Buttons: **"Gi tilbud"**, **"Send melding"**, **"Legg ut oppdrag"**, **"Godta tilbud"**, **"Avslå"**, **"Se alle oppdrag"**, **"Bruk posisjonen min"**, **"Fortsett med Vipps"**, **"Kom i gang"**
+- Payment note: **"Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling."**
+- Vipps note: **"Vipps brukes kun til innlogging – aldri til betaling."**
+- Location note: **"Vi viser bare et omtrentlig område til andre."**
 - Community hero: **"Sammen gjør vi en forskjell"**
-- Empty state example: **"Ingen oppdrag i Lillehammer akkurat nå. Prøv å utvide rekkevidden."**
-- Categories: Hage · Rengjøring · Flytting/bæring · Transport/levering · Montering · Snømåking · Maling/vedlikehold · Dyrepass · Datahjelp · Arrangementshjelp · Annet
+- Empty state: **"Ingen oppdrag i Lillehammer akkurat nå. Prøv å utvide rekkevidden."**
+- Toasts: **"Lagret i Lagrede"** + **"Angre"**
+- Categories (23): Hage · Rengjøring · Flytting/bæring · Transport/levering · Montering · Snømåking ·
+  Maling/vedlikehold · Dyrepass · Datahjelp · Arrangementshjelp · Snekring/småreparasjoner · Vinduspuss ·
+  Bilpleie · Handling og ærender · Leksehjelp · Hus- og plantevakt · Ved og fyring · Bortkjøring og rydding ·
+  Sykkelreparasjon · Matlaging og baking · Selskap og følge · Barnevakt · Annet

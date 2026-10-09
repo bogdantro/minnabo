@@ -1,5 +1,6 @@
 import {
   toAgreement,
+  toConversation,
   toListing,
   toMessage,
   toNoticeboardPost,
@@ -139,7 +140,7 @@ test('toMessage maps kind + attachment', () => {
     authorProfileId: 'u1',
     kind: 'IMAGE',
     attachmentUrl: 'https://img/a.jpg',
-    delivery: 'DELIVERED',
+    delivery: 'SENT', // stored on the server; Levert / Lest come from the receipts
   });
 });
 
@@ -195,4 +196,114 @@ test('toAgreement + toReview + toNotification', () => {
       created_at: '2026-08-03T10:00:00Z',
     }),
   ).toMatchObject({ id: 'n1', kind: 'NEW_OFFER', read: false, route: '/tilbud/p1' });
+});
+
+// --- Innboks: my own message must not make the conversation unread ---------
+const convRow = (over: Record<string, unknown> = {}) =>
+  ({
+    id: 'c1',
+    listing: { id: 'l1', title: 'Klippe plen', type: 'TASK_REQUEST', place: 'Nordre Ål' },
+    last_message_preview: 'Hei',
+    last_message_at: '2026-10-05T12:00:00Z',
+    conversation_participants: [],
+    message_reads: [{ profile_id: 'me', last_read_at: '2026-10-05T11:00:00Z' }],
+    proposals: [],
+    ...over,
+  }) as never;
+
+test('a conversation whose last message I wrote is not unread and is marked as mine', () => {
+  const c = toConversation(convRow({ messages: [{ author_id: 'me', kind: 'TEXT', created_at: '2026-10-05T12:00:00Z' }] }), 'me');
+  expect(c.unread).toBe(false);
+  expect(c.lastMessageMine).toBe(true);
+});
+
+test('a newer message from the other person is unread', () => {
+  const c = toConversation(convRow({ messages: [{ author_id: 'other', kind: 'TEXT', created_at: '2026-10-05T12:00:00Z' }] }), 'me');
+  expect(c.unread).toBe(true);
+  expect(c.lastMessageMine).toBe(false);
+});
+
+test('the read time on the participant row counts too (0007 wrote it there)', () => {
+  const c = toConversation(
+    convRow({
+      message_reads: [],
+      conversation_participants: [{ profile_id: 'me', last_read_at: '2026-10-05T12:30:00Z', profile: { id: 'me', display_name: 'Meg', avatar_path: null, initials: 'M', presentation: null, member_since: '2026', municipality: null, place: null, is_business: false } }],
+      messages: [{ author_id: 'other', kind: 'TEXT', created_at: '2026-10-05T12:00:00Z' }],
+    }),
+    'me',
+  );
+  expect(c.unread).toBe(false);
+});
+
+test('the preview and time come from the real last message, not a stale conversation row', () => {
+  const c = toConversation(
+    convRow({
+      last_message_preview: 'Gammel melding',
+      last_message_at: '2026-10-05T10:00:00Z',
+      messages: [{ author_id: 'other', kind: 'TEXT', text: 'Ny melding', created_at: '2026-10-05T12:00:00Z' }],
+    }),
+    'me',
+  );
+  expect(c.lastMessagePreview).toBe('Ny melding');
+  expect(c.lastMessageAt).toBe('2026-10-05T12:00:00Z');
+  expect(c.unread).toBe(true);
+});
+
+test('an image or a tilbud as the last message gets a readable preview', () => {
+  const img = toConversation(convRow({ messages: [{ author_id: 'other', kind: 'IMAGE', text: '', created_at: '2026-10-05T12:00:00Z' }] }), 'me');
+  expect(img.lastMessagePreview).toBe('📷 Bilde');
+  const offer = toConversation(convRow({ messages: [{ author_id: 'me', kind: 'PROPOSAL', text: '', created_at: '2026-10-05T12:00:00Z' }] }), 'me');
+  // mine reads "Du sendte et tilbud" – and gets no extra "Du: " in front
+  expect(offer.lastMessagePreview).toBe('Du sendte et tilbud');
+  expect(offer.lastMessageMine).toBe(false);
+  const theirs = toConversation(convRow({ messages: [{ author_id: 'other', kind: 'PROPOSAL', text: '', created_at: '2026-10-05T12:00:00Z' }] }), 'me');
+  expect(theirs.lastMessagePreview).toBe('Sendte et tilbud');
+});
+
+// --- chat read receipts ------------------------------------------------------
+test('my messages are "Lest" up to the other person\'s read time, "Levert" after it', () => {
+  const { withReadState } = require('@/api/mappers');
+  const msg = (id: string, author: string, at: string) =>
+    ({ id, conversationId: 'c1', authorProfileId: author, text: 'x', kind: 'TEXT', createdAt: at, delivery: 'DELIVERED' }) as never;
+  const out = withReadState(
+    [msg('a', 'me', '2026-10-06T10:00:00Z'), msg('b', 'other', '2026-10-06T10:01:00Z'), msg('c', 'me', '2026-10-06T10:05:00Z')],
+    'me',
+    '2026-10-06T10:02:00Z',
+  );
+  expect(out.map((m: { delivery: string }) => m.delivery)).toEqual(['READ', 'DELIVERED', 'DELIVERED']);
+  // never read by the other person → nothing is "Lest"
+  expect(withReadState([msg('a', 'me', '2026-10-06T10:00:00Z')], 'me', null)[0].delivery).toBe('DELIVERED');
+});
+
+test('"Sendt" → "Levert" → "Lest" on my messages', () => {
+  const { withReadState } = require('@/api/mappers');
+  const msg = (id: string, at: string) =>
+    ({ id, conversationId: 'c1', authorProfileId: 'me', text: 'x', kind: 'TEXT', createdAt: at, delivery: 'SENT' }) as never;
+  const out = withReadState(
+    [msg('a', '2026-10-06T10:00:00Z'), msg('b', '2026-10-06T10:05:00Z'), msg('c', '2026-10-06T10:10:00Z')],
+    'me',
+    '2026-10-06T10:01:00Z', // read up to here
+    '2026-10-06T10:06:00Z', // their app has fetched up to here
+  );
+  expect(out.map((m: { delivery: string }) => m.delivery)).toEqual(['READ', 'DELIVERED', 'SENT']);
+});
+
+// --- Innboks: receipt on my last message ------------------------------------
+test('Innboks knows whether my last message is sent, delivered or read', () => {
+  const me = { id: 'me', display_name: 'Meg', avatar_path: null, initials: 'M', presentation: null, member_since: '2026', municipality: null, place: null, is_business: false };
+  const other = { ...me, id: 'other', display_name: 'Kari' };
+  const row = (o: { last_read_at?: string; last_delivered_at?: string }, author = 'me') =>
+    convRow({
+      message_reads: [],
+      conversation_participants: [
+        { profile_id: 'me', last_read_at: '2026-10-05T12:00:00Z', profile: me },
+        { profile_id: 'other', last_read_at: '1970-01-01T00:00:00Z', ...o, profile: other },
+      ],
+      messages: [{ author_id: author, kind: 'TEXT', text: 'Hei', created_at: '2026-10-05T12:00:00Z' }],
+    });
+  expect(toConversation(row({}), 'me').lastMessageDelivery).toBe('SENT');
+  expect(toConversation(row({ last_delivered_at: '2026-10-05T12:01:00Z' }), 'me').lastMessageDelivery).toBe('DELIVERED');
+  expect(toConversation(row({ last_read_at: '2026-10-05T12:02:00Z' }), 'me').lastMessageDelivery).toBe('READ');
+  // their message last → no receipt to show
+  expect(toConversation(row({ last_read_at: '2026-10-05T12:02:00Z' }, 'other'), 'me').lastMessageDelivery).toBeUndefined();
 });

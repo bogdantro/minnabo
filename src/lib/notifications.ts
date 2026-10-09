@@ -13,6 +13,9 @@ import { reportError } from './reporting';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const N = () => require('expo-notifications') as typeof import('expo-notifications');
 
+/** This phone's push token once registered – needed to release it on sign-out. */
+let registeredToken: string | null = null;
+
 let handlerSet = false;
 function ensureHandler() {
   if (handlerSet) return;
@@ -69,7 +72,20 @@ export async function registerForPush(): Promise<void> {
       (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ?? Constants.easConfig?.projectId;
     const { data: token } = await N().getExpoPushTokenAsync(projectId ? { projectId } : undefined);
     await apiClient.registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android');
+    registeredToken = token;
   } catch (e) {
     reportError(e, { where: 'registerForPush' });
+  }
+}
+
+/** Before signing out: stop sending this account's notifications to this phone. */
+export async function unregisterPush(): Promise<void> {
+  const token = registeredToken;
+  registeredToken = null;
+  if (!token) return;
+  try {
+    await apiClient.unregisterPushToken(token);
+  } catch (e) {
+    reportError(e, { where: 'unregisterPush' });
   }
 }

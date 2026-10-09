@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { BusinessProfile } from '@/api/ApiClient';
 import nb from '@/i18n/nb';
+import { useFeatureFlags } from '@/config/featureFlags';
 import { useMyBusinessProfile, useSubmitBusinessProfile } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { categoryLabels, colors, fonts, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
@@ -152,22 +153,26 @@ function Form({ back, prefill, onSent }: { back: () => void; prefill?: BusinessP
     );
   };
 
+  const formOpen = useFeatureFlags().businessForm;
+
   return (
     <Screen
       scroll
-      spacer="foot"
       header={<SubHeader title={nb.bedrift.title} onBack={back} />}
+      spacer={formOpen ? 'foot' : 'none'}
       footer={
-        <StickyFooter>
-          <Button
-            label={submit.isPending ? nb.bedrift.sending : nb.bedrift.submit}
-            variant="cyan"
-            size="lg"
-            icon="send"
-            loading={submit.isPending}
-            onPress={send}
-          />
-        </StickyFooter>
+        formOpen ? (
+          <StickyFooter>
+            <Button
+              label={submit.isPending ? nb.bedrift.sending : nb.bedrift.submit}
+              variant="cyan"
+              size="lg"
+              icon="send"
+              loading={submit.isPending}
+              onPress={send}
+            />
+          </StickyFooter>
+        ) : undefined
       }
     >
       <FadeUp style={[styles.px, styles.mt8]}>
@@ -196,6 +201,8 @@ function Form({ back, prefill, onSent }: { back: () => void; prefill?: BusinessP
         </View>
       </FadeUp>
 
+      {/* the registration form is switched off for now (flag `businessForm`) – only the card shows */}
+      {formOpen ? (
       <View style={[styles.px, styles.form]}>
         <Text style={text.eyebrow}>{nb.bedrift.about}</Text>
         <Field label={nb.bedrift.orgNr} hint={nb.bedrift.orgNrHint} error={orgErr} help={lookup.state === 'looking' ? undefined : nb.bedrift.orgNrHelp}>
@@ -320,6 +327,12 @@ function Form({ back, prefill, onSent }: { back: () => void; prefill?: BusinessP
         {tried && !consent ? <ErrorText>{nb.bedrift.errConsent}</ErrorText> : null}
         <TextLink label={nb.bedrift.readTerms} icon="arrowur" onPress={() => safePush('/vilkar')} />
       </View>
+      ) : (
+        <View style={[styles.px, styles.mt20, styles.bottomGap]}>
+          {/* no action yet – the registration flow comes later */}
+          <Button label={nb.bedrift.register} variant="cyan" size="lg" icon="building" onPress={() => undefined} />
+        </View>
+      )}
     </Screen>
   );
 }
@@ -394,6 +407,7 @@ function TlRow({ state, icon, title, sub, last }: { state: 'done' | 'now' | 'tod
 }
 
 const styles = StyleSheet.create({
+  bottomGap: { marginBottom: 40 },
   flex: { flex: 1, minWidth: 0 },
   px: { paddingHorizontal: screenPadding },
   mt3: { marginTop: 3 },
