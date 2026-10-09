@@ -37,8 +37,22 @@ export async function startVippsLogin(): Promise<void> {
   await Linking.openURL(data.url);
 }
 
+// One exchange per code. iOS can hand the same minnabo://vipps/callback link to the app
+// twice (from the Vipps app and from the browser tab); both screens then share this
+// result instead of the second one failing on an already-used code.
+const inflight = new Map<string, Promise<VippsLoginResult>>();
+
 /** Finish the login with what Vipps sent back. Throws an Error with a message for the user. */
-export async function completeVippsLogin(params: { code?: string; state?: string; error?: string }): Promise<VippsLoginResult> {
+export function completeVippsLogin(params: { code?: string; state?: string; error?: string }): Promise<VippsLoginResult> {
+  if (!params.code) return exchange(params);
+  const running = inflight.get(params.code);
+  if (running) return running;
+  const p = exchange(params);
+  inflight.set(params.code, p);
+  return p;
+}
+
+async function exchange(params: { code?: string; state?: string; error?: string }): Promise<VippsLoginResult> {
   if (params.error || !params.code) throw new Error('Innloggingen ble avbrutt.');
   const expected = await AsyncStorage.getItem(STATE_KEY);
   const codeVerifier = await AsyncStorage.getItem(VERIFIER_KEY);

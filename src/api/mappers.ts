@@ -237,6 +237,8 @@ export function toProfile(row: ProfileRow): PublicProfile {
     homeNotes: row.home_notes ?? undefined,
     portfolio: row.portfolio ?? undefined,
     phone: row.phone ?? undefined,
+    // fully confirmed agreements, counted by the database (0055_jobs_and_reviews)
+    completedTasks: row.reliability_completed ?? 0,
     reliability: toReliability(row),
     verifications: (row.verifications ?? []).map(
       (v): Verification => ({

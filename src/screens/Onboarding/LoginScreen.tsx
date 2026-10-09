@@ -17,8 +17,10 @@ import { useVippsIdentity } from '@/auth/identity';
 import { completeVippsLogin, startVippsLogin, vippsConfigured } from '@/auth/vipps';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/lib/toast';
+import { openWebsite } from '@/config/links';
 import { VippsIcon, VippsWordmark } from '@/components/VippsLogo';
 import { signOut } from '@/auth/session';
+import { supabase } from '@/lib/supabase';
 import { colors, radius, safeTopExtra, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Avatar,
@@ -39,7 +41,7 @@ import {
 
 const logo = require('../../../assets/logo-icon.png');
 
-type VippsStep = 'opening' | 'confirm' | 'done';
+type VippsStep = 'opening' | 'confirm' | 'signing' | 'done';
 
 /** `.float` – gentle vertical drift. */
 function useFloat(period: number) {
@@ -146,7 +148,7 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
-  const [vipps, setVipps] = useState<VippsStep | null>(callback ? 'confirm' : null);
+  const [vipps, setVipps] = useState<VippsStep | null>(callback ? 'signing' : null);
   const [result, setResult] = useState<{ isNew: boolean; youth: boolean } | null>(null);
   const logoFloat = useFloat(5000);
   const id = useVippsIdentity();
@@ -161,7 +163,15 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
         setResult(r);
         setVipps('done');
       })
-      .catch((e: unknown) => {
+      .catch(async (e: unknown) => {
+        // If the session got created anyway, the login worked – go on instead of
+        // telling the person it failed. The tabs route youth / onboarding correctly.
+        const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        if (data.session) {
+          setVipps(null);
+          router.replace('/');
+          return;
+        }
         setVipps(null);
         toast.error(e instanceof Error ? e.message : nb.login.failed);
         router.replace('/logg-inn');
@@ -203,7 +213,7 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
     void signOut().then(() => router.replace('/logg-inn'));
   };
 
-  const step = vipps === 'opening' ? 1 : vipps === 'confirm' ? 2 : 3;
+  const step = vipps === 'opening' ? 1 : vipps === 'confirm' ? 2 : 3; // signing + done = 3
 
   return (
     <Screen white scroll contentStyle={styles.scroll}>
@@ -242,11 +252,11 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
         <FadeUp delay={350}>
           <Text style={[text.note, styles.legal]}>
             {nb.login.legalPre}
-            <Text style={styles.legalLink} accessibilityRole="link" onPress={() => router.push('/vilkar')}>
+            <Text style={styles.legalLink} accessibilityRole="link" onPress={() => openWebsite('vilkar')}>
               {nb.login.legalTerms}
             </Text>
             {nb.login.legalMid}
-            <Text style={styles.legalLink} accessibilityRole="link" onPress={() => router.push('/personvern')}>
+            <Text style={styles.legalLink} accessibilityRole="link" onPress={() => openWebsite('personvern')}>
               {nb.login.legalPrivacy}
             </Text>
             .
@@ -254,7 +264,7 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
         </FadeUp>
       </View>
 
-      <Sheet visible={!!vipps} onClose={cancel} dismissible={vipps !== 'done'}>
+      <Sheet visible={!!vipps} onClose={cancel} dismissible={vipps === 'opening' || vipps === 'confirm'}>
         <View style={styles.sheetHead}>
           <Pill label={nb.login.sheetPill} tone="line" leading={<VippsIcon size={18} />} style={styles.sheetPill} />
           <Steps n={step} />
@@ -288,6 +298,23 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
               <Text style={[text.pillLg, { color: colors.vippsDeep }]}>{nb.login.waiting}</Text>
               <WaitDots />
             </View>
+          </FadeUp>
+        ) : null}
+
+        {vipps === 'signing' ? (
+          <FadeUp key="signing" style={styles.stage}>
+            <View style={styles.spinWrap}>
+              <Spinner size={72} thickness={4} color={colors.vipps} trackColor={colors.vippsTrack} />
+              <View style={styles.spinMark}>
+                <View style={styles.spinMarkBg}>
+                  <VippsIcon size={34} />
+                </View>
+              </View>
+            </View>
+            <Text style={[text.h2, styles.stageTitle]} accessibilityLiveRegion="polite">
+              {nb.login.signing}
+            </Text>
+            <Text style={[text.body, styles.stageBody]}>{nb.login.signingBody}</Text>
           </FadeUp>
         ) : null}
 

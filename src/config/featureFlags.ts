@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
  */
 export const featureFlags = {
   redCross: false,
-  businessRegistration: true,
+  /** "For bedrifter" (Meny, Innstillinger, Verifisering, /bedrift). Hidden until it is ready. */
+  businessRegistration: false,
   /** The registration form on "For bedrifter". Off = only the information card. */
   businessForm: false,
   adminPanel: true,

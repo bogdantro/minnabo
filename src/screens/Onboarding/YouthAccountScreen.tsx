@@ -1,8 +1,15 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import nb from '@/i18n/nb';
+import { openWebsite } from '@/config/links';
 import { useVippsIdentity } from '@/auth/identity';
+import { consentKeys } from '@/api/queries';
+import { TERMS } from '@/content/terms';
+import { supabase } from '@/lib/supabase';
+import { reportError } from '@/lib/reporting';
+import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Avatar,
@@ -35,8 +42,32 @@ function Row({ ok, label }: { ok: boolean; label: string }) {
 export function YouthAccountScreen() {
   const router = useRouter();
   const id = useVippsIdentity();
+  const qc = useQueryClient();
   const [checks, setChecks] = useState([false, false, false]);
+  const [busy, setBusy] = useState(false);
   const ready = checks.every(Boolean);
+
+  // The three boxes are the youth's consent: stored with a timestamp like an adult's
+  // (Samtykke), and /ung does not open without it.
+  const create = async () => {
+    if (!ready || busy) return;
+    setBusy(true);
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) throw new Error('not signed in');
+      const { error } = await supabase
+        .from('consent_records')
+        .insert({ profile_id: data.user.id, terms: true, privacy: true, age: true, tips: false });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: consentKeys.log });
+      router.replace('/ung');
+    } catch (e) {
+      reportError(e, { where: 'YouthAccountScreen.create' });
+      toast.error(nb.consent.saveFailed, { bottom: 150 });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Only reached right after a Vipps login; the identity is still loading for a moment.
   if (!id) return <View style={styles.blank} />;
@@ -56,12 +87,12 @@ export function YouthAccountScreen() {
         <StickyFooter>
           {ready ? (
             <ScaleIn>
-              <Button label={nb.youth.create} size="lg" iconRight="arrow" onPress={() => router.replace('/ung')} />
+              <Button label={nb.youth.create} size="lg" iconRight="arrow" loading={busy} onPress={() => void create()} />
             </ScaleIn>
           ) : (
             <Button label={nb.youth.create} size="lg" disabled onPress={() => undefined} />
           )}
-          <Text style={[text.meta, styles.minAge]}>{nb.youth.minAge}</Text>
+          <Text style={[text.meta, styles.minAge]}>{nb.youth.minAge(TERMS.minAge)}</Text>
         </StickyFooter>
       }
     >
@@ -129,8 +160,8 @@ export function YouthAccountScreen() {
           </Pressable>
         ))}
         <View style={styles.links}>
-          <TextLink label={nb.youth.readTerms} icon={null} onPress={() => router.push('/vilkar')} />
-          <TextLink label={nb.youth.readPrivacy} icon={null} onPress={() => router.push('/personvern')} />
+          <TextLink label={nb.youth.readTerms} icon={null} onPress={() => openWebsite('vilkar')} />
+          <TextLink label={nb.youth.readPrivacy} icon={null} onPress={() => openWebsite('personvern')} />
         </View>
       </FadeUp>
     </Screen>

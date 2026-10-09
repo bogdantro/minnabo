@@ -18,12 +18,12 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `Forhandsvisning.dc.html` | `/legg-ut/forhandsvisning` | `src/screens/LeggUt/PreviewScreen.tsx` | ✅ done | "Publiser" always saves to the backend |
 | `Fullforing.dc.html` | `/fullfor/[id]` | `src/screens/CompletionScreen.tsx` | ✅ done | Two-party state from real confirmations (none / other / mine / both). Stats from the job workspace (timer, checklist, photos). "Gi vurdering" hidden once I've reviewed. |
 | `Innboks.dc.html` | `/(tabs)/innboks` | `src/screens/InnboksScreen.tsx` | ✅ done | Tab. Live client-side search on name/oppdrag/message. "Merk alle som lest" uses the existing `mark_conversation_read` RPC per conversation, held for Angre. Unread bubble shows a dot (no per-conversation count in the API). |
-| `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | ✅ done | Profile card, Konto (phone + e-mail from `profile_settings`), Sted → location sheet, push/e-post channel switches, feriemodus with hidden count, text-size preview, Personvern/Vilkår/Bedrift, Utvikler (dev/admin only) with real flag overrides, logout dialog, Slett konto. |
+| `Innstillinger.dc.html` | `/innstillinger` | `src/screens/SettingsScreen.tsx` | ✅ done | Profile card, Konto (phone + e-mail from `profile_settings`), Sted → location sheet, push/e-post channel switches, feriemodus with hidden count, text-size preview, Personvern/Vilkår/Bedrift, logout dialog, Slett konto. The design's Utvikler panel (feature-flag switches) was removed for release on request (2026-10-09); flags are fixed per build in `src/config/featureFlags.ts`. |
 | `Jobbdag.dc.html` | `/jobbdag/[id]` | `src/screens/JobbdagScreen.tsx` | ✅ done | Timer on the workspace (start / pause / stop are saved, with first start and total pause). Tasks show who does them, materials who sorts them out, photos have captions and an Underveis phase (0040). Before/after slider pairs Før[i] with Etter[i]. Kept the existing job-day tools (på vei/framme, ring/SMS, trygg tur, no-show) in a "Trygghet og kontakt" section below the tabs. |
 | `Komponenter.dc.html` | – (reference) | `src/components/ui/*` | n/a | Visual reference for COMPONENTS.md |
 | `Lagrede.dc.html` | `/lagrede` | `src/screens/SavedScreen.tsx` | ✅ done | Oppføringer (unsave collapses + Angre) / Søk (filter chips, "nye treff" since saved, Kjør søk, delete + Angre). Alert bell per search with real notifications (0042). Extra "Hjelpere" segment only when you follow someone. |
 | `LeggUt.dc.html` | `/legg-ut` | `src/screens/LeggUt/LeggUtWizard.tsx` | ✅ done | Opens directly (rule 2); draft saved locally ("Lagre utkast"). **API gap:** "Hvem kan gi tilbud", "Maks avstand" and the private estimate have no columns for oppdrag – shown in the summary, not saved |
-| `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | ✅ done | Real Vipps OIDC (`src/auth/vipps.ts` → `vipps-login` edge function → `/vipps`). Needs the Vipps client id/secret (LEFT_OUT A3). Until then: temporary name-only test login behind `EXPO_PUBLIC_TEST_LOGIN` (LEFT_OUT A11) |
+| `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | ✅ done | Real Vipps OIDC (`src/auth/vipps.ts` → `vipps-login` edge function → `/vipps`). Vipps only – the temporary test login was removed 2026-10-09 |
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
 | `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. "Tilgjengelig for småjobber" saves `profiles.available_for_jobs` (0036). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag, Admin row for admins only |
 | `MineAvtaler.dc.html` | `/avtaler` | `src/screens/MineAvtalerScreen.tsx` | ✅ done | Role (Du hjelper / Du får hjelp), cancelled and my rating added to the agenda item. Agreements whose time has no date go under "Uten dato". Cancelled ones show under Fullført as "Avlyst". |
@@ -83,7 +83,7 @@ Legend: → = navigates to. [S] = bottom sheet. [D] = dialog. [T] = toast.
 ## 0 · Global (build first)
 
 - [x] `theme.ts` in place, fonts loaded (Bricolage Grotesque + Figtree), splash waits for fonts
-- [x] All components in COMPONENTS.md (preview: `/komponenter`, dev builds only)
+- [x] All components in COMPONENTS.md (reference: `Komponenter.dc.html`)
 - [x] Tab bar: Oppdrag · Fellesskap · (Legg ut FAB) · Innboks (badge) · Meny. Hidden on detail, chat, wizards
 - [x] Main header: logo left, bell (dot) → Varsler, avatar → Profil on every main screen
 - [x] No gradients anywhere. No payment UI anywhere. Payment note near every price (audited 2026-10-05)

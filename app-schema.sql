@@ -4,8 +4,8 @@
 --
 -- What this is
 --   The state of the database after every migration in supabase/migrations
---   (0001_schema.sql … 0053_more_features.sql) has run, in one file.
---   It was produced by replaying all 53 migrations, in order, on a scratch
+--   (0001_schema.sql … 0055_jobs_and_reviews.sql) has run, in one file.
+--   It was produced by replaying all 55 migrations, in order, on a scratch
 --   Postgres and dumping the result (pg_dump --schema-only --schema=public),
 --   then adding the parts that live outside `public` (auth trigger, storage
 --   buckets + policies, realtime publication, pg_cron job) and the category
@@ -18,8 +18,10 @@
 --   this file. supabase/migrations stays the source of truth.
 --
 -- Live project status (from docs/LEFT_OUT.md, A14, checked 2026-10-06)
---   0001–0046 are applied to the hosted project; 0047–0053 still have to be
---   pushed. This file already includes 0047–0053.
+--   0001–0046 are applied to the hosted project; 0047–0055 still have to be
+--   pushed. This file already includes them. 0054_website.sql comes from the
+--   website repo (minnabo-web) and adds the website's tables (schema `web`
+--   is not dumped here – only `public`).
 --
 -- Supabase-managed parts this schema relies on (not defined here)
 --   * schemas auth, storage, extensions, net, cron, realtime
@@ -38,9 +40,9 @@
 --
 -- Contents
 --   1. Extensions
---   2. public schema: 13 enums, 49 tables, 4 views, 124 functions,
---      56 triggers, 25 indexes (plus primary/unique keys),
---      foreign keys, row level security + 64 policies, grants
+--   2. public schema: 13 enums, 63 tables, 6 views, 138 functions,
+--      62 triggers, 34 indexes (plus primary/unique keys),
+--      foreign keys, row level security + 67 policies, grants
 --   3. Trigger on auth.users
 --   4. Storage buckets and storage.objects policies
 --   5. Realtime publication
@@ -52,19 +54,24 @@
 --   price_mode, proposal_status, purpose, report_status, report_target, task_recurrence,
 --   verification_kind
 --
--- Tables (49):
---   account_deletions, agreement_reminders, agreement_snapshots, agreement_time_proposals,
---   app_secrets, banned_words, blocks, business_profiles, categories, completion_confirmations,
---   consent_records, conversation_participants, conversations, donation_records, follows,
---   guardian_links, job_workspaces, kommune_waitlist, listing_images, listing_private, listings,
---   message_reads, messages, neighbourhood_members, neighbourhoods, no_show_reports,
---   notice_comments, noticeboard_posts, notifications, partner_placements, partners,
---   portfolio_items, profile_private, profile_settings, profiles, proposal_revisions, proposals,
---   push_tokens, reports, reviews, safe_trips, saved_listings, saved_notices, saved_searches,
---   service_offer_details, skill_endorsements, task_details, trusted_contacts, verifications
+-- Tables (63):
+--   account_deletions, admin_audit_log, agreement_reminders, agreement_snapshots,
+--   agreement_time_proposals, app_secrets, app_settings, banned_words, blocks, business_profiles,
+--   categories, clubs, completion_confirmations, consent_records, contact_messages,
+--   conversation_participants, conversations, donation_records, follows, guardian_links,
+--   job_workspaces, kommune_waitlist, kommuner, listing_images, listing_private, listings,
+--   message_reads, messages, neighbourhood_members, neighbourhoods, news_articles,
+--   newsletter_subscribers, no_show_reports, notice_comments, noticeboard_posts, notifications,
+--   partner_accounts, partner_events, partner_invoices, partner_placements,
+--   partner_profile_changes, partner_reminders, partners, portfolio_items, profile_moderation,
+--   profile_private, profile_settings, profiles, proposal_revisions, proposals, push_tokens,
+--   reports, reviews, safe_trips, saved_listings, saved_notices, saved_searches,
+--   service_offer_details, skill_endorsements, stripe_events, task_details, trusted_contacts,
+--   verifications
 --
--- Views (4):
---   profile_ratings, public_listings, shared_contacts, visible_reviews
+-- Views (6):
+--   news_public, partners_public, profile_ratings, public_listings, shared_contacts,
+--   visible_reviews
 -- =============================================================================
 
 
@@ -299,29 +306,9 @@ CREATE FUNCTION public.admin_decide_business(p_profile_id uuid, p_approve boolea
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare b business_profiles;
 begin
   perform admin_guard();
-  update business_profiles
-     set status = case when p_approve then 'APPROVED' else 'REJECTED' end::business_status,
-         decided_at = now()
-   where profile_id = p_profile_id returning * into b;
-  if not found then raise exception 'Fant ikke bedriften.'; end if;
-  update profiles set is_business = p_approve where id = p_profile_id;
-  insert into verifications (profile_id, kind, verified, explanation, verified_at)
-    values (p_profile_id, 'BUSINESS', p_approve,
-      case when p_approve then 'Organisasjonsnummeret er sjekket mot Enhetsregisteret.'
-           else 'Bedriften ble ikke godkjent.' end,
-      case when p_approve then now() end)
-  on conflict (profile_id, kind) do update
-    set verified = excluded.verified, explanation = excluded.explanation, verified_at = excluded.verified_at;
-  if p_approve then
-    perform notify_moderation(p_profile_id, 'Bedriften er verifisert',
-      b.company_name || ' er verifisert. Verifisert-merket vises nå på profilen din.', '/bedrift');
-  else
-    perform notify_moderation(p_profile_id, 'Bedriften ble ikke godkjent',
-      'Sjekk opplysningene om ' || b.company_name || ' og send inn på nytt.', '/bedrift');
-  end if;
+  perform moderation_decide_business(p_profile_id, p_approve);
 end $$;
 
 
@@ -333,52 +320,9 @@ CREATE FUNCTION public.admin_decide_report(p_report_id uuid, p_outcome text) RET
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare r reports; v_owner uuid; v_undo jsonb := null;
 begin
   perform admin_guard();
-  if p_outcome not in ('dismiss','remove','warn') then raise exception 'Ukjent utfall.'; end if;
-  select * into r from reports where id = p_report_id for update;
-  if not found then raise exception 'Fant ikke rapporten.'; end if;
-  if r.status = 'RESOLVED' then return; end if;
-  v_owner := report_target_owner(r.target_type, r.target_id);
-
-  if p_outcome = 'remove' then
-    case r.target_type::text
-      when 'LISTING' then
-        update listings set admin_hidden = true where id::text = r.target_id;
-      when 'NOTICE' then
-        update noticeboard_posts set hidden_at = now() where id::text = r.target_id;
-      when 'MESSAGE' then
-        select jsonb_build_object('text', messages.text) into v_undo from messages where id::text = r.target_id;
-        update messages set text = 'Meldingen er fjernet av MinNabo.' where id::text = r.target_id;
-      when 'COMMENT' then
-        select jsonb_build_object('body', body) into v_undo from notice_comments where id::text = r.target_id;
-        update notice_comments set body = 'Svaret er fjernet av MinNabo.' where id::text = r.target_id;
-      when 'REVIEW' then
-        select jsonb_build_object('comment', comment) into v_undo from reviews where id::text = r.target_id;
-        update reviews set comment = null where id::text = r.target_id;
-      when 'PROPOSAL' then
-        select jsonb_build_object('status', status) into v_undo from proposals where id::text = r.target_id;
-        update proposals set status = 'WITHDRAWN', updated_at = now()
-         where id::text = r.target_id and status in ('SENT','REVISION_PENDING');
-      when 'USER' then
-        select jsonb_build_object('suspended_at', suspended_at) into v_undo from profiles where id = v_owner;
-        update profiles set suspended_at = coalesce(suspended_at, now()) where id = v_owner;
-      else null;
-    end case;
-    perform notify_moderation(v_owner, 'Innhold er fjernet',
-      'Noe du har lagt ut bryter med reglene for MinNabo og er fjernet. Grunn: ' || r.reason || '.', '/vilkar');
-  elsif p_outcome = 'warn' then
-    perform notify_moderation(v_owner, 'Du har fått en advarsel',
-      'Vi har fått en rapport om deg: ' || r.reason || '. Gjentatte brudd på reglene kan føre til at kontoen blir suspendert.', '/vilkar');
-  end if;
-
-  update reports set status = 'RESOLVED', outcome = p_outcome, undo = v_undo,
-         resolved_by = auth.uid(), resolved_at = now()
-   where id = p_report_id;
-
-  perform notify_moderation(r.by_profile_id, 'Rapporten din er behandlet',
-    'Takk for at du sa fra. Vi har sett på rapporten om «' || r.reason || '».', null);
+  perform moderation_decide_report(p_report_id, p_outcome, auth.uid());
 end $$;
 
 
@@ -467,33 +411,9 @@ CREATE FUNCTION public.admin_reopen_report(p_report_id uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare r reports; v_owner uuid;
 begin
   perform admin_guard();
-  select * into r from reports where id = p_report_id for update;
-  if not found or r.status = 'OPEN' then return; end if;
-  if r.outcome = 'remove' then
-    v_owner := report_target_owner(r.target_type, r.target_id);
-    case r.target_type::text
-      when 'LISTING' then update listings set admin_hidden = false where id::text = r.target_id;
-      when 'NOTICE' then update noticeboard_posts set hidden_at = null where id::text = r.target_id;
-      when 'MESSAGE' then
-        if r.undo ? 'text' then update messages set text = r.undo->>'text' where id::text = r.target_id; end if;
-      when 'COMMENT' then
-        if r.undo ? 'body' then update notice_comments set body = r.undo->>'body' where id::text = r.target_id; end if;
-      when 'REVIEW' then
-        if r.undo ? 'comment' then update reviews set comment = r.undo->>'comment' where id::text = r.target_id; end if;
-      when 'PROPOSAL' then
-        if r.undo ? 'status' then
-          update proposals set status = (r.undo->>'status')::proposal_status where id::text = r.target_id;
-        end if;
-      when 'USER' then
-        update profiles set suspended_at = (r.undo->>'suspended_at')::timestamptz where id = v_owner;
-      else null;
-    end case;
-  end if;
-  update reports set status = 'OPEN', outcome = null, undo = null, resolved_by = null, resolved_at = null
-   where id = p_report_id;
+  perform moderation_reopen_report(p_report_id);
 end $$;
 
 
@@ -540,14 +460,9 @@ CREATE FUNCTION public.admin_set_listing_hidden(p_listing_id uuid, p_hidden bool
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare v_owner uuid; v_title text;
 begin
   perform admin_guard();
-  update listings set admin_hidden = p_hidden where id = p_listing_id returning owner_id, title into v_owner, v_title;
-  if p_hidden then
-    perform notify_moderation(v_owner, 'Oppdraget ditt er skjult',
-      '«' || v_title || '» bryter med reglene for MinNabo og vises ikke for andre.', '/mine');
-  end if;
+  perform moderation_set_listing_hidden(p_listing_id, p_hidden);
 end $$;
 
 
@@ -559,13 +474,13 @@ CREATE FUNCTION public.admin_set_main_partner(p_partner_id uuid, p_main boolean)
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare v_n int;
 begin
   perform admin_guard();
   if p_main then
-    select count(distinct partner_id) into v_n from partner_placements
-     where surface = 'fellesskap' and active and partner_id <> p_partner_id;
-    if v_n >= 4 then raise exception 'Maks 4 hovedpartnere.'; end if;
+    perform pg_advisory_xact_lock(hashtext('minnabo.hovedpartner_slots'));
+    if hovedpartner_taken(p_partner_id) >= setting_int('partners.max_hovedpartnere', 4) then
+      raise exception 'Maks % hovedpartnere.', setting_int('partners.max_hovedpartnere', 4);
+    end if;
     update partner_placements set active = true where partner_id = p_partner_id and surface = 'fellesskap';
     if not found then
       insert into partner_placements (partner_id, surface, headline, active)
@@ -618,14 +533,7 @@ CREATE FUNCTION public.admin_set_suspended(p_profile_id uuid, p_suspended boolea
 begin
   perform admin_guard();
   if p_profile_id = auth.uid() then raise exception 'Du kan ikke suspendere deg selv.'; end if;
-  update profiles set suspended_at = case when p_suspended then coalesce(suspended_at, now()) end
-   where id = p_profile_id;
-  if p_suspended then
-    perform notify_moderation(p_profile_id, 'Kontoen din er suspendert',
-      'Du kan ikke legge ut, gi tilbud eller sende meldinger før saken er behandlet. Kontakt MinNabo hvis du mener dette er feil.', '/vilkar');
-  else
-    perform notify_moderation(p_profile_id, 'Kontoen din er aktiv igjen', 'Du kan bruke MinNabo som vanlig.', null);
-  end if;
+  perform moderation_set_suspended(p_profile_id, p_suspended);
 end $$;
 
 
@@ -815,6 +723,29 @@ end $$;
 
 
 --
+-- Name: bump_completed_counter(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bump_completed_counter() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_from uuid; v_to uuid;
+begin
+  -- exactly when the second party confirms (both have confirmed now)
+  if (select count(*) from completion_confirmations
+       where agreement_proposal_id = new.agreement_proposal_id) <> 2 then
+    return new;
+  end if;
+  select from_profile_id, to_profile_id into v_from, v_to
+    from proposals where id = new.agreement_proposal_id;
+  update profiles set reliability_completed = reliability_completed + 1
+   where id in (v_from, v_to);
+  return new;
+end $$;
+
+
+--
 -- Name: bump_conversation(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -852,6 +783,21 @@ begin
   return new;
 end;
 $$;
+
+
+--
+-- Name: bump_partners_version(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bump_partners_version() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  insert into app_settings(key, value, updated_at) values ('partners.version', to_jsonb(now()::text), now())
+  on conflict (key) do update set value = excluded.value, updated_at = excluded.updated_at;
+  return null;
+end $$;
 
 
 --
@@ -967,7 +913,7 @@ CREATE FUNCTION public.confirm_completion(p_agreement_proposal_id uuid) RETURNS 
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare v_me uuid := auth.uid(); p proposals; v_both int;
+declare v_me uuid := auth.uid(); p proposals; v_both int; v_party uuid; v_new int;
 begin
   select * into p from proposals where id = p_agreement_proposal_id;
   if not found then raise exception 'Fant ikke avtalen.'; end if;
@@ -976,15 +922,28 @@ begin
   insert into completion_confirmations (agreement_proposal_id, by_profile_id)
     values (p_agreement_proposal_id, v_me)
   on conflict do nothing;
+  get diagnostics v_new = row_count;
+
+  -- confirming twice changes nothing and sends nothing again
+  if v_new = 0 then
+    return query select * from completion_confirmations
+      where agreement_proposal_id = p_agreement_proposal_id;
+    return;
+  end if;
 
   select count(*) into v_both from completion_confirmations
    where agreement_proposal_id = p_agreement_proposal_id;
   if v_both >= 2 then
     update listings set status = 'COMPLETED' where id = p.listing_id;
-    perform notify(p.from_profile_id,'REVIEW_RECEIVED','Oppdrag fullført',
-      'Oppdraget er markert som fullført. Legg gjerne igjen en vurdering.','/vurder/'||p.id);
-    perform notify(p.to_profile_id,'REVIEW_RECEIVED','Oppdrag fullført',
-      'Oppdraget er markert som fullført. Legg gjerne igjen en vurdering.','/vurder/'||p.id);
+    foreach v_party in array array[p.from_profile_id, p.to_profile_id] loop
+      if is_youth(v_party) then
+        perform notify(v_party,'REVIEW_RECEIVED','Oppdrag fullført',
+          'Oppdraget er markert som fullført. Bra jobbet!','/ung');
+      else
+        perform notify(v_party,'REVIEW_RECEIVED','Oppdrag fullført',
+          'Oppdraget er markert som fullført. Legg gjerne igjen en vurdering.','/vurder/'||p.id);
+      end if;
+    end loop;
   else
     perform notify(case when v_me = p.from_profile_id then p.to_profile_id else p.from_profile_id end,
       'COMPLETION_REQUESTED','Bekreft fullføring',
@@ -1129,7 +1088,10 @@ CREATE FUNCTION public.guard_listing_hidden() RETURNS trigger
     AS $$
 begin
   if not is_admin() and current_user = 'authenticated' then
-    new.admin_hidden := old.admin_hidden;
+    new.admin_hidden  := old.admin_hidden;
+    new.hidden_reason := old.hidden_reason;
+    new.hidden_at     := old.hidden_at;
+    new.hidden_by     := old.hidden_by;
   end if;
   return new;
 end $$;
@@ -1148,6 +1110,8 @@ begin
     new.role := old.role;
     new.is_business := old.is_business;
     new.youth_age := old.youth_age;
+    new.reliability_completed := old.reliability_completed;
+    new.reliability_no_shows := old.reliability_no_shows;
   end if;
   return new;
 end $$;
@@ -1277,6 +1241,37 @@ CREATE FUNCTION public.has_banned_word(p_text text) RETURNS boolean
     select 1 from banned_words b
      where lower(p_text) ~ ('(^|[^a-zæøå0-9])' || b.word || '($|[^a-zæøå0-9])'));
 $_$;
+
+
+--
+-- Name: hovedpartner_slots(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.hovedpartner_slots() RETURNS TABLE(max_slots integer, taken integer, free integer)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select setting_int('partners.max_hovedpartnere', 4), hovedpartner_taken(),
+         greatest(setting_int('partners.max_hovedpartnere', 4) - hovedpartner_taken(), 0)
+$$;
+
+
+--
+-- Name: hovedpartner_taken(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.hovedpartner_taken(p_exclude uuid DEFAULT NULL::uuid) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select ((select count(*) from partner_accounts a
+            where a.package = 'hoved' and a.partner_id is distinct from p_exclude
+              and (a.status in ('pending_approval','active','paused')
+                   or (a.status = 'pending_payment' and a.hold_expires_at > now())))
+        + (select count(distinct pp.partner_id) from partner_placements pp
+            where pp.surface = 'fellesskap' and pp.active and pp.partner_id is distinct from p_exclude
+              and not exists (select 1 from partner_accounts a where a.partner_id = pp.partner_id)))::int
+$$;
 
 
 --
@@ -1428,6 +1423,27 @@ $$;
 
 
 --
+-- Name: lift_expired_suspensions(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lift_expired_suspensions() RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_id uuid; v_n int := 0;
+begin
+  for v_id in
+    select m.profile_id from profile_moderation m join profiles p on p.id = m.profile_id
+     where p.suspended_at is not null and m.suspended_until is not null and m.suspended_until <= now()
+  loop
+    perform moderation_set_suspended(v_id, false, null, null, 'system');
+    v_n := v_n + 1;
+  end loop;
+  return v_n;
+end $$;
+
+
+--
 -- Name: listing_offer_count(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1502,6 +1518,20 @@ begin
     coalesce(new.title,'') || ' ' || coalesce(new.place,'') || ' ' || coalesce(new.category_slug,''));
   return new;
 end $$;
+
+
+--
+-- Name: log_partner_event(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.log_partner_event(p_partner uuid, p_kind text, p_kommune text DEFAULT NULL::text) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  insert into partner_events(partner_id, kind, source, kommune)
+  select p_partner, p_kind, 'app', p_kommune
+   where p_kind in ('impression','click') and partner_is_visible(p_partner)
+$$;
 
 
 --
@@ -1620,6 +1650,192 @@ begin
     raise exception 'Du kan ikke sende meldinger til denne personen.' using errcode = '42501';
   end if;
   return new;
+end $$;
+
+
+--
+-- Name: moderation_decide_business(uuid, boolean, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.moderation_decide_business(p_profile_id uuid, p_approve boolean, p_reason text DEFAULT NULL::text, p_by text DEFAULT NULL::text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare b business_profiles;
+begin
+  update business_profiles
+     set status = case when p_approve then 'APPROVED' else 'REJECTED' end::business_status,
+         decided_at = now(),
+         rejection_reason = case when p_approve then null else p_reason end,
+         decided_by_staff = p_by
+   where profile_id = p_profile_id returning * into b;
+  if not found then raise exception 'Fant ikke bedriften.'; end if;
+  update profiles set is_business = p_approve where id = p_profile_id;
+  insert into verifications (profile_id, kind, verified, explanation, verified_at)
+    values (p_profile_id, 'BUSINESS', p_approve,
+      case when p_approve then 'Organisasjonsnummeret er sjekket mot Enhetsregisteret.'
+           else 'Bedriften ble ikke godkjent.' end,
+      case when p_approve then now() end)
+  on conflict (profile_id, kind) do update
+    set verified = excluded.verified, explanation = excluded.explanation, verified_at = excluded.verified_at;
+  if p_approve then
+    perform notify_moderation(p_profile_id, 'Bedriften er verifisert',
+      b.company_name || ' er verifisert. Verifisert-merket vises nå på profilen din.', '/bedrift');
+  else
+    perform notify_moderation(p_profile_id, 'Bedriften ble ikke godkjent',
+      'Sjekk opplysningene om ' || b.company_name || ' og send inn på nytt.'
+      || coalesce(' Grunn: ' || nullif(btrim(p_reason), '') || '.', ''), '/bedrift');
+  end if;
+end $$;
+
+
+--
+-- Name: moderation_decide_report(uuid, text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.moderation_decide_report(p_report_id uuid, p_outcome text, p_resolved_by uuid DEFAULT NULL::uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare r reports; v_owner uuid; v_undo jsonb := null;
+begin
+  if p_outcome not in ('dismiss','remove','warn') then raise exception 'Ukjent utfall.'; end if;
+  select * into r from reports where id = p_report_id for update;
+  if not found then raise exception 'Fant ikke rapporten.'; end if;
+  if r.status = 'RESOLVED' then return; end if;
+  v_owner := report_target_owner(r.target_type, r.target_id);
+
+  if p_outcome = 'remove' then
+    case r.target_type::text
+      when 'LISTING' then
+        -- added: hidden_reason / hidden_at
+        update listings set admin_hidden = true, hidden_reason = r.reason, hidden_at = now() where id::text = r.target_id;
+      when 'NOTICE' then
+        update noticeboard_posts set hidden_at = now() where id::text = r.target_id;
+      when 'MESSAGE' then
+        select jsonb_build_object('text', messages.text) into v_undo from messages where id::text = r.target_id;
+        update messages set text = 'Meldingen er fjernet av MinNabo.' where id::text = r.target_id;
+      when 'COMMENT' then
+        select jsonb_build_object('body', body) into v_undo from notice_comments where id::text = r.target_id;
+        update notice_comments set body = 'Svaret er fjernet av MinNabo.' where id::text = r.target_id;
+      when 'REVIEW' then
+        select jsonb_build_object('comment', comment) into v_undo from reviews where id::text = r.target_id;
+        update reviews set comment = null where id::text = r.target_id;
+      when 'PROPOSAL' then
+        select jsonb_build_object('status', status) into v_undo from proposals where id::text = r.target_id;
+        update proposals set status = 'WITHDRAWN', updated_at = now()
+         where id::text = r.target_id and status in ('SENT','REVISION_PENDING');
+      when 'USER' then
+        select jsonb_build_object('suspended_at', suspended_at) into v_undo from profiles where id = v_owner;
+        update profiles set suspended_at = coalesce(suspended_at, now()) where id = v_owner;
+      else null;
+    end case;
+    perform notify_moderation(v_owner, 'Innhold er fjernet',
+      'Noe du har lagt ut bryter med reglene for MinNabo og er fjernet. Grunn: ' || r.reason || '.', '/vilkar');
+  elsif p_outcome = 'warn' then
+    perform notify_moderation(v_owner, 'Du har fått en advarsel',
+      'Vi har fått en rapport om deg: ' || r.reason || '. Gjentatte brudd på reglene kan føre til at kontoen blir suspendert.', '/vilkar');
+    -- added: count warnings for Admin › Brukere («Advart»)
+    if v_owner is not null then
+      insert into profile_moderation (profile_id, warning_count, last_warned_at) values (v_owner, 1, now())
+      on conflict (profile_id) do update
+        set warning_count = profile_moderation.warning_count + 1, last_warned_at = now(), updated_at = now();
+    end if;
+  end if;
+
+  update reports set status = 'RESOLVED', outcome = p_outcome, undo = v_undo,
+         resolved_by = p_resolved_by, resolved_at = now()
+   where id = p_report_id;
+
+  perform notify_moderation(r.by_profile_id, 'Rapporten din er behandlet',
+    'Takk for at du sa fra. Vi har sett på rapporten om «' || r.reason || '».', null);
+end $$;
+
+
+--
+-- Name: moderation_reopen_report(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.moderation_reopen_report(p_report_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare r reports; v_owner uuid;
+begin
+  select * into r from reports where id = p_report_id for update;
+  if not found or r.status = 'OPEN' then return; end if;
+  if r.outcome = 'remove' then
+    v_owner := report_target_owner(r.target_type, r.target_id);
+    case r.target_type::text
+      when 'LISTING' then
+        update listings set admin_hidden = false, hidden_reason = null, hidden_at = null, hidden_by = null
+         where id::text = r.target_id;
+      when 'NOTICE' then update noticeboard_posts set hidden_at = null where id::text = r.target_id;
+      when 'MESSAGE' then
+        if r.undo ? 'text' then update messages set text = r.undo->>'text' where id::text = r.target_id; end if;
+      when 'COMMENT' then
+        if r.undo ? 'body' then update notice_comments set body = r.undo->>'body' where id::text = r.target_id; end if;
+      when 'REVIEW' then
+        if r.undo ? 'comment' then update reviews set comment = r.undo->>'comment' where id::text = r.target_id; end if;
+      when 'PROPOSAL' then
+        if r.undo ? 'status' then
+          update proposals set status = (r.undo->>'status')::proposal_status where id::text = r.target_id;
+        end if;
+      when 'USER' then
+        update profiles set suspended_at = (r.undo->>'suspended_at')::timestamptz where id = v_owner;
+      else null;
+    end case;
+  end if;
+  update reports set status = 'OPEN', outcome = null, undo = null, resolved_by = null, resolved_at = null,
+         resolved_by_staff = null, resolution_note = null
+   where id = p_report_id;
+end $$;
+
+
+--
+-- Name: moderation_set_listing_hidden(uuid, boolean, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.moderation_set_listing_hidden(p_listing_id uuid, p_hidden boolean, p_reason text DEFAULT NULL::text, p_by text DEFAULT NULL::text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_owner uuid; v_title text;
+begin
+  update listings set admin_hidden = p_hidden,
+         hidden_reason = case when p_hidden then p_reason end,
+         hidden_at     = case when p_hidden then now() end,
+         hidden_by     = case when p_hidden then p_by end
+   where id = p_listing_id returning owner_id, title into v_owner, v_title;
+  if p_hidden then
+    perform notify_moderation(v_owner, 'Oppdraget ditt er skjult',
+      '«' || v_title || '» bryter med reglene for MinNabo og vises ikke for andre.', '/mine');
+  end if;
+end $$;
+
+
+--
+-- Name: moderation_set_suspended(uuid, boolean, timestamp with time zone, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.moderation_set_suspended(p_profile_id uuid, p_suspended boolean, p_until timestamp with time zone DEFAULT NULL::timestamp with time zone, p_reason text DEFAULT NULL::text, p_by text DEFAULT NULL::text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  update profiles set suspended_at = case when p_suspended then coalesce(suspended_at, now()) end
+   where id = p_profile_id;
+  insert into profile_moderation (profile_id, suspended_until, suspension_reason, updated_by)
+    values (p_profile_id, case when p_suspended then p_until end, case when p_suspended then p_reason end, p_by)
+  on conflict (profile_id) do update
+    set suspended_until = excluded.suspended_until, suspension_reason = excluded.suspension_reason,
+        updated_by = excluded.updated_by, updated_at = now();
+  if p_suspended then
+    perform notify_moderation(p_profile_id, 'Kontoen din er suspendert',
+      'Du kan ikke legge ut, gi tilbud eller sende meldinger før saken er behandlet. Kontakt MinNabo hvis du mener dette er feil.', '/vilkar');
+  else
+    perform notify_moderation(p_profile_id, 'Kontoen din er aktiv igjen', 'Du kan bruke MinNabo som vanlig.', null);
+  end if;
 end $$;
 
 
@@ -1963,6 +2179,83 @@ CREATE FUNCTION public.owns_listing(l uuid) RETURNS boolean
     SET search_path TO 'public'
     AS $$
   select exists (select 1 from listings where id = l and owner_id = auth.uid());
+$$;
+
+
+--
+-- Name: partner_accounts_before(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.partner_accounts_before() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_holding boolean := new.package = 'hoved' and (new.status in ('pending_approval','active','paused')
+                       or (new.status = 'pending_payment' and new.hold_expires_at > now()));
+  v_was     boolean := tg_op = 'UPDATE' and old.package = 'hoved' and (old.status in ('pending_approval','active','paused')
+                       or (old.status = 'pending_payment' and old.hold_expires_at > now()));
+begin
+  -- only check when the row starts holding a slot, so lowering the max never blocks existing partners
+  if v_holding and not v_was then
+    perform pg_advisory_xact_lock(hashtext('minnabo.hovedpartner_slots'));
+    if hovedpartner_taken(new.partner_id) >= setting_int('partners.max_hovedpartnere', 4) then
+      raise exception 'HOVEDPARTNER_FULL' using errcode = 'P0001';
+    end if;
+  end if;
+  new.updated_at := now();
+  return new;
+end $$;
+
+
+--
+-- Name: partner_accounts_sync(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.partner_accounts_sync() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  update partners set
+    local_hero    = (new.package = 'helt'),
+    active        = (new.status = 'active'),
+    partner_since = case when new.status = 'active' then coalesce(partner_since, (now() at time zone 'Europe/Oslo')::date)
+                         else partner_since end,
+    updated_at    = now()
+   where id = new.partner_id;
+  if new.package = 'hoved' then
+    update partner_placements set active = true where partner_id = new.partner_id and surface = 'fellesskap';
+    if not found then
+      insert into partner_placements (partner_id, surface, headline, active)
+        values (new.partner_id, 'fellesskap', 'Hovedpartner', true);
+    end if;
+  else
+    update partner_placements set active = false where partner_id = new.partner_id and surface = 'fellesskap';
+  end if;
+  return new;
+end $$;
+
+
+--
+-- Name: partner_is_visible(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.partner_is_visible(p_partner_id uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select coalesce((
+    select p.active and (
+             a.partner_id is null
+             or (a.status = 'active' and not a.admin_hidden and (
+                   a.billing_mode = 'free'
+                   or a.admin_force_visible
+                   or a.payment_state in ('paid','upcoming')
+                   or (a.payment_state in ('failed','overdue')
+                       and a.payment_due_since > now() - make_interval(days => setting_int('billing.grace_days', 7))))))
+      from partners p left join partner_accounts a on a.partner_id = p.id
+     where p.id = p_partner_id), false)
 $$;
 
 
@@ -2695,6 +2988,10 @@ CREATE TABLE public.reports (
     outcome text,
     undo jsonb,
     attachment_path text,
+    claimed_at timestamp with time zone,
+    claimed_by text,
+    resolved_by_staff text,
+    resolution_note text,
     CONSTRAINT reports_outcome_check CHECK ((outcome = ANY (ARRAY['dismiss'::text, 'remove'::text, 'warn'::text])))
 );
 
@@ -3071,6 +3368,18 @@ end $$;
 
 
 --
+-- Name: setting_int(text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.setting_int(p_key text, p_default integer) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select coalesce((select (value #>> '{}')::int from public.app_settings where key = p_key), p_default)
+$$;
+
+
+--
 -- Name: conversations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3165,7 +3474,9 @@ CREATE TABLE public.business_profiles (
     status public.business_status DEFAULT 'PENDING'::public.business_status NOT NULL,
     category_slugs text[] DEFAULT '{}'::text[] NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    decided_at timestamp with time zone
+    decided_at timestamp with time zone,
+    rejection_reason text,
+    decided_by_staff text
 );
 
 
@@ -3215,37 +3526,6 @@ end $$;
 
 
 --
--- Name: submit_review(uuid, integer, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text) RETURNS public.reviews
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare v_me uuid := auth.uid(); p proposals; v_to uuid; v_done int; r reviews;
-begin
-  select * into p from proposals where id = p_agreement_proposal_id;
-  if not found then raise exception 'Fant ikke avtalen.'; end if;
-  if v_me not in (p.from_profile_id, p.to_profile_id) then raise exception 'Ikke tilgang.'; end if;
-
-  select count(*) into v_done from completion_confirmations
-   where agreement_proposal_id = p_agreement_proposal_id;
-  if v_done < 2 then raise exception 'Oppdraget er ikke fullført ennå.'; end if;
-
-  v_to := case when v_me = p.from_profile_id then p.to_profile_id else p.from_profile_id end;
-  insert into reviews (agreement_proposal_id, listing_id, from_profile_id, to_profile_id, rating, comment)
-    values (p_agreement_proposal_id, p.listing_id, v_me, v_to, p_rating, nullif(p_comment,''))
-  on conflict (agreement_proposal_id, from_profile_id)
-    do update set rating = excluded.rating, comment = excluded.comment
-  returning * into r;
-
-  update listings set status = 'REVIEWED' where id = p.listing_id;
-  perform notify(v_to,'REVIEW_RECEIVED','Ny vurdering','Du har fått en ny vurdering.','/profil/'||v_to);
-  return r;
-end $$;
-
-
---
 -- Name: submit_review(uuid, integer, text, text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3253,23 +3533,30 @@ CREATE FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating inte
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare
-  v_row reviews;
-  v_listing uuid;
-  v_to uuid;
+declare v_me uuid := auth.uid(); p proposals; v_to uuid; v_done int; v_row reviews;
 begin
-  select listing_id,
-         case when from_profile_id = auth.uid() then to_profile_id else from_profile_id end
-    into v_listing, v_to
-  from proposals where id = p_agreement_proposal_id;
+  select * into p from proposals where id = p_agreement_proposal_id;
+  if not found then raise exception 'Fant ikke avtalen.'; end if;
+  if v_me is null or v_me not in (p.from_profile_id, p.to_profile_id) then raise exception 'Ikke tilgang.'; end if;
+  if p_rating is null or p_rating not between 1 and 5 then raise exception 'Velg mellom 1 og 5 stjerner.'; end if;
 
+  select count(*) into v_done from completion_confirmations
+   where agreement_proposal_id = p_agreement_proposal_id;
+  if v_done < 2 then raise exception 'Oppdraget er ikke fullført ennå.'; end if;
+
+  if exists (select 1 from reviews
+              where agreement_proposal_id = p_agreement_proposal_id and from_profile_id = v_me) then
+    raise exception 'Du har allerede vurdert denne avtalen.';
+  end if;
+
+  v_to := case when v_me = p.from_profile_id then p.to_profile_id else p.from_profile_id end;
   insert into reviews (agreement_proposal_id, listing_id, from_profile_id, to_profile_id, rating, comment, tags)
-  values (p_agreement_proposal_id, v_listing, auth.uid(), v_to, p_rating, nullif(p_comment, ''), p_tags)
+  values (p_agreement_proposal_id, p.listing_id, v_me, v_to, p_rating, nullif(p_comment, ''), coalesce(p_tags, '{}'))
   returning * into v_row;
 
+  update listings set status = 'REVIEWED' where id = p.listing_id and status = 'COMPLETED';
   return v_row;
-end;
-$$;
+end $$;
 
 
 --
@@ -3629,6 +3916,45 @@ CREATE TABLE public.account_deletions (
 
 
 --
+-- Name: admin_audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.admin_audit_log (
+    id bigint NOT NULL,
+    at timestamp with time zone DEFAULT now() NOT NULL,
+    actor_id text,
+    actor_email text,
+    actor_role text,
+    action text NOT NULL,
+    target_type text,
+    target_id text,
+    before jsonb,
+    after jsonb,
+    ip inet,
+    user_agent text
+);
+
+
+--
+-- Name: admin_audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.admin_audit_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: admin_audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.admin_audit_log_id_seq OWNED BY public.admin_audit_log.id;
+
+
+--
 -- Name: agreement_reminders; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3673,6 +3999,18 @@ CREATE TABLE public.app_secrets (
 
 
 --
+-- Name: app_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.app_settings (
+    key text NOT NULL,
+    value jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_by text
+);
+
+
+--
 -- Name: banned_words; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3700,7 +4038,30 @@ CREATE TABLE public.blocks (
 CREATE TABLE public.categories (
     slug text NOT NULL,
     label text NOT NULL,
-    icon text NOT NULL
+    icon text NOT NULL,
+    web_icon text,
+    tile_bg text,
+    icon_color text,
+    active boolean DEFAULT true NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: clubs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.clubs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL,
+    type text,
+    kommune text NOT NULL,
+    org_nr text,
+    active boolean DEFAULT true NOT NULL,
+    suggested boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT clubs_org_nr_check CHECK ((org_nr ~ '^[0-9]{9}$'::text))
 );
 
 
@@ -3716,6 +4077,27 @@ CREATE TABLE public.consent_records (
     age boolean NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     tips boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: contact_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contact_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    kind text NOT NULL,
+    name text,
+    company text,
+    email text NOT NULL,
+    subject text,
+    message text,
+    meta jsonb DEFAULT '{}'::jsonb NOT NULL,
+    handled boolean DEFAULT false NOT NULL,
+    handled_by text,
+    handled_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT contact_messages_kind_check CHECK ((kind = ANY (ARRAY['hjelp'::text, 'bedrift'::text, 'presse'::text, 'lag_forslag'::text])))
 );
 
 
@@ -3741,7 +4123,13 @@ CREATE TABLE public.donation_records (
     recipient text NOT NULL,
     amount_kr integer NOT NULL,
     period text NOT NULL,
-    transferred_at timestamp with time zone DEFAULT now() NOT NULL
+    transferred_at timestamp with time zone DEFAULT now(),
+    club_id uuid,
+    status text DEFAULT 'transferred'::text NOT NULL,
+    note text,
+    reference text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT donation_records_status_check CHECK (((status = ANY (ARRAY['planned'::text, 'transferred'::text])) AND ((status = 'transferred'::text) = (transferred_at IS NOT NULL))))
 );
 
 
@@ -3804,6 +4192,39 @@ CREATE TABLE public.kommune_waitlist (
 
 
 --
+-- Name: kommuner; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.kommuner (
+    id integer NOT NULL,
+    name text NOT NULL,
+    region text NOT NULL,
+    active boolean DEFAULT false NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: kommuner_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.kommuner_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: kommuner_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.kommuner_id_seq OWNED BY public.kommuner.id;
+
+
+--
 -- Name: listing_images; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3852,6 +4273,9 @@ CREATE TABLE public.listings (
     edited_at timestamp with time zone,
     invited_profile_id uuid,
     repeat_of uuid,
+    hidden_reason text,
+    hidden_at timestamp with time zone,
+    hidden_by text,
     CONSTRAINT listings_estimated_minutes_check CHECK ((estimated_minutes > 0)),
     CONSTRAINT listings_max_distance_km_check CHECK (((max_distance_km >= 1) AND (max_distance_km <= 200))),
     CONSTRAINT listings_offer_audience_check CHECK ((offer_audience = ANY (ARRAY['ALL'::text, 'VERIFIED'::text])))
@@ -3910,6 +4334,73 @@ CREATE TABLE public.neighbourhoods (
     created_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     municipality text
+);
+
+
+--
+-- Name: news_articles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.news_articles (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    slug text NOT NULL,
+    title text NOT NULL,
+    excerpt text,
+    body_html text DEFAULT ''::text NOT NULL,
+    category text NOT NULL,
+    cover_color text DEFAULT '#EDF8D6'::text NOT NULL,
+    cover_icon text,
+    cover_image text,
+    author_name text DEFAULT 'MinNabo-teamet'::text NOT NULL,
+    reading_min integer,
+    status text DEFAULT 'draft'::text NOT NULL,
+    publish_at timestamp with time zone,
+    published_at timestamp with time zone,
+    show_in_app boolean DEFAULT false NOT NULL,
+    partner_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    views integer DEFAULT 0 NOT NULL,
+    helpful_yes integer DEFAULT 0 NOT NULL,
+    helpful_no integer DEFAULT 0 NOT NULL,
+    created_by text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT news_articles_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'scheduled'::text, 'published'::text, 'archived'::text])))
+);
+
+
+--
+-- Name: news_public; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.news_public AS
+ SELECT id,
+    slug,
+    title,
+    excerpt,
+    body_html,
+    category,
+    cover_color,
+    cover_icon,
+    cover_image,
+    author_name,
+    reading_min,
+    published_at
+   FROM public.news_articles
+  WHERE ((status = 'published'::text) AND show_in_app);
+
+
+--
+-- Name: newsletter_subscribers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.newsletter_subscribers (
+    email text NOT NULL,
+    topics text[] DEFAULT '{}'::text[] NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    token text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    confirmed_at timestamp with time zone,
+    CONSTRAINT newsletter_subscribers_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'unsubscribed'::text])))
 );
 
 
@@ -3977,6 +4468,113 @@ CREATE TABLE public.notifications (
 
 
 --
+-- Name: partner_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.partner_accounts (
+    partner_id uuid NOT NULL,
+    billing_mode text DEFAULT 'stripe'::text NOT NULL,
+    org_nr text,
+    legal_name text,
+    org_form text,
+    business_address text,
+    contact_name text,
+    contact_phone text,
+    contact_email text,
+    billing_email text,
+    invoice_reference text,
+    package text NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    payment_method text,
+    payment_state text DEFAULT 'none'::text NOT NULL,
+    payment_due_since timestamp with time zone,
+    admin_hidden boolean DEFAULT false NOT NULL,
+    admin_hidden_reason text,
+    admin_force_visible boolean DEFAULT false NOT NULL,
+    paused_at timestamp with time zone,
+    approved_at timestamp with time zone,
+    approved_by text,
+    rejected_reason text,
+    stripe_customer_id text,
+    stripe_subscription_id text,
+    current_period_end timestamp with time zone,
+    cancel_at_period_end boolean DEFAULT false NOT NULL,
+    hold_expires_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT partner_accounts_billing_mode_check CHECK ((billing_mode = ANY (ARRAY['stripe'::text, 'free'::text]))),
+    CONSTRAINT partner_accounts_check CHECK (((billing_mode = 'free'::text) OR ((org_nr IS NOT NULL) AND (legal_name IS NOT NULL) AND (contact_name IS NOT NULL) AND (contact_email IS NOT NULL)))),
+    CONSTRAINT partner_accounts_org_nr_check CHECK ((org_nr ~ '^[0-9]{9}$'::text)),
+    CONSTRAINT partner_accounts_package_check CHECK ((package = ANY (ARRAY['stottespiller'::text, 'helt'::text, 'hoved'::text]))),
+    CONSTRAINT partner_accounts_payment_method_check CHECK ((payment_method = ANY (ARRAY['card'::text, 'invoice'::text]))),
+    CONSTRAINT partner_accounts_payment_state_check CHECK ((payment_state = ANY (ARRAY['none'::text, 'paid'::text, 'upcoming'::text, 'failed'::text, 'overdue'::text, 'cancelled'::text]))),
+    CONSTRAINT partner_accounts_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'pending_payment'::text, 'pending_approval'::text, 'active'::text, 'paused'::text, 'cancelled'::text, 'rejected'::text])))
+);
+
+
+--
+-- Name: partner_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.partner_events (
+    id bigint NOT NULL,
+    partner_id uuid NOT NULL,
+    kind text NOT NULL,
+    source text NOT NULL,
+    kommune text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT partner_events_kind_check CHECK ((kind = ANY (ARRAY['impression'::text, 'click'::text]))),
+    CONSTRAINT partner_events_source_check CHECK ((source = ANY (ARRAY['app'::text, 'web'::text])))
+);
+
+
+--
+-- Name: partner_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.partner_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: partner_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.partner_events_id_seq OWNED BY public.partner_events.id;
+
+
+--
+-- Name: partner_invoices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.partner_invoices (
+    stripe_invoice_id text NOT NULL,
+    partner_id uuid,
+    number text,
+    status text NOT NULL,
+    collection_method text,
+    amount_excl integer NOT NULL,
+    vat integer NOT NULL,
+    amount_incl integer NOT NULL,
+    amount_remaining integer DEFAULT 0 NOT NULL,
+    currency text DEFAULT 'nok'::text NOT NULL,
+    period_start timestamp with time zone,
+    period_end timestamp with time zone,
+    due_date timestamp with time zone,
+    paid_at timestamp with time zone,
+    hosted_invoice_url text,
+    invoice_pdf text,
+    last_payment_error text,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: partner_placements; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3987,6 +4585,55 @@ CREATE TABLE public.partner_placements (
     headline text NOT NULL,
     active boolean DEFAULT true NOT NULL
 );
+
+
+--
+-- Name: partner_profile_changes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.partner_profile_changes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    partner_id uuid NOT NULL,
+    changes jsonb NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    reviewed_at timestamp with time zone,
+    reviewed_by text,
+    CONSTRAINT partner_profile_changes_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))
+);
+
+
+--
+-- Name: partner_reminders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.partner_reminders (
+    id bigint NOT NULL,
+    partner_id uuid NOT NULL,
+    invoice_id text,
+    step text NOT NULL,
+    sent_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: partner_reminders_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.partner_reminders_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: partner_reminders_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.partner_reminders_id_seq OWNED BY public.partner_reminders.id;
 
 
 --
@@ -4009,8 +4656,50 @@ CREATE TABLE public.partners (
     email text,
     opening_hours text,
     cover_path text,
-    gallery text[] DEFAULT '{}'::text[] NOT NULL
+    gallery text[] DEFAULT '{}'::text[] NOT NULL,
+    category_slug text,
+    sort_order integer DEFAULT 0 NOT NULL,
+    partner_since date,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: partners_public; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.partners_public AS
+ SELECT p.id,
+    p.name,
+    p.blurb,
+    p.url,
+    p.logo_path,
+    p.cover_path,
+    p.municipality,
+    k.region,
+    p.category_slug,
+        CASE
+            WHEN (a.partner_id IS NOT NULL) THEN a.package
+            WHEN (EXISTS ( SELECT 1
+               FROM public.partner_placements pp
+              WHERE ((pp.partner_id = p.id) AND (pp.surface = 'fellesskap'::text) AND pp.active))) THEN 'hoved'::text
+            WHEN p.local_hero THEN 'helt'::text
+            ELSE 'stottespiller'::text
+        END AS package,
+    p.about,
+    p.offer,
+    p.address,
+    p.phone,
+    p.email,
+    p.opening_hours,
+    p.gallery,
+    p.partner_since,
+    p.sort_order
+   FROM ((public.partners p
+     LEFT JOIN public.partner_accounts a ON ((a.partner_id = p.id)))
+     LEFT JOIN public.kommuner k ON ((k.name = p.municipality)))
+  WHERE public.partner_is_visible(p.id);
 
 
 --
@@ -4028,6 +4717,21 @@ CREATE TABLE public.portfolio_items (
     category_slug text,
     done_at date,
     created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: profile_moderation; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.profile_moderation (
+    profile_id uuid NOT NULL,
+    suspended_until timestamp with time zone,
+    suspension_reason text,
+    warning_count integer DEFAULT 0 NOT NULL,
+    last_warned_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_by text
 );
 
 
@@ -4260,6 +4964,20 @@ CREATE TABLE public.skill_endorsements (
 
 
 --
+-- Name: stripe_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stripe_events (
+    id text NOT NULL,
+    type text NOT NULL,
+    payload jsonb,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    processed_at timestamp with time zone,
+    error text
+);
+
+
+--
 -- Name: task_details; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4311,11 +5029,47 @@ CREATE VIEW public.visible_reviews AS
 
 
 --
+-- Name: admin_audit_log id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.admin_audit_log ALTER COLUMN id SET DEFAULT nextval('public.admin_audit_log_id_seq'::regclass);
+
+
+--
+-- Name: kommuner id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kommuner ALTER COLUMN id SET DEFAULT nextval('public.kommuner_id_seq'::regclass);
+
+
+--
+-- Name: partner_events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_events ALTER COLUMN id SET DEFAULT nextval('public.partner_events_id_seq'::regclass);
+
+
+--
+-- Name: partner_reminders id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_reminders ALTER COLUMN id SET DEFAULT nextval('public.partner_reminders_id_seq'::regclass);
+
+
+--
 -- Name: account_deletions account_deletions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.account_deletions
     ADD CONSTRAINT account_deletions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: admin_audit_log admin_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.admin_audit_log
+    ADD CONSTRAINT admin_audit_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -4351,6 +5105,14 @@ ALTER TABLE ONLY public.app_secrets
 
 
 --
+-- Name: app_settings app_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.app_settings
+    ADD CONSTRAINT app_settings_pkey PRIMARY KEY (key);
+
+
+--
 -- Name: banned_words banned_words_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4383,6 +5145,14 @@ ALTER TABLE ONLY public.categories
 
 
 --
+-- Name: clubs clubs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clubs
+    ADD CONSTRAINT clubs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: completion_confirmations completion_confirmations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4396,6 +5166,14 @@ ALTER TABLE ONLY public.completion_confirmations
 
 ALTER TABLE ONLY public.consent_records
     ADD CONSTRAINT consent_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: contact_messages contact_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contact_messages
+    ADD CONSTRAINT contact_messages_pkey PRIMARY KEY (id);
 
 
 --
@@ -4463,6 +5241,22 @@ ALTER TABLE ONLY public.kommune_waitlist
 
 
 --
+-- Name: kommuner kommuner_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kommuner
+    ADD CONSTRAINT kommuner_name_key UNIQUE (name);
+
+
+--
+-- Name: kommuner kommuner_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kommuner
+    ADD CONSTRAINT kommuner_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: listing_images listing_images_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4527,6 +5321,30 @@ ALTER TABLE ONLY public.neighbourhoods
 
 
 --
+-- Name: news_articles news_articles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.news_articles
+    ADD CONSTRAINT news_articles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: news_articles news_articles_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.news_articles
+    ADD CONSTRAINT news_articles_slug_key UNIQUE (slug);
+
+
+--
+-- Name: newsletter_subscribers newsletter_subscribers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.newsletter_subscribers
+    ADD CONSTRAINT newsletter_subscribers_pkey PRIMARY KEY (email);
+
+
+--
 -- Name: no_show_reports no_show_reports_agreement_proposal_id_reporter_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4567,11 +5385,83 @@ ALTER TABLE ONLY public.notifications
 
 
 --
+-- Name: partner_accounts partner_accounts_org_nr_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_accounts
+    ADD CONSTRAINT partner_accounts_org_nr_key UNIQUE (org_nr);
+
+
+--
+-- Name: partner_accounts partner_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_accounts
+    ADD CONSTRAINT partner_accounts_pkey PRIMARY KEY (partner_id);
+
+
+--
+-- Name: partner_accounts partner_accounts_stripe_customer_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_accounts
+    ADD CONSTRAINT partner_accounts_stripe_customer_id_key UNIQUE (stripe_customer_id);
+
+
+--
+-- Name: partner_accounts partner_accounts_stripe_subscription_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_accounts
+    ADD CONSTRAINT partner_accounts_stripe_subscription_id_key UNIQUE (stripe_subscription_id);
+
+
+--
+-- Name: partner_events partner_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_events
+    ADD CONSTRAINT partner_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: partner_invoices partner_invoices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_invoices
+    ADD CONSTRAINT partner_invoices_pkey PRIMARY KEY (stripe_invoice_id);
+
+
+--
 -- Name: partner_placements partner_placements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.partner_placements
     ADD CONSTRAINT partner_placements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: partner_profile_changes partner_profile_changes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_profile_changes
+    ADD CONSTRAINT partner_profile_changes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: partner_reminders partner_reminders_invoice_id_step_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_reminders
+    ADD CONSTRAINT partner_reminders_invoice_id_step_key UNIQUE (invoice_id, step);
+
+
+--
+-- Name: partner_reminders partner_reminders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_reminders
+    ADD CONSTRAINT partner_reminders_pkey PRIMARY KEY (id);
 
 
 --
@@ -4588,6 +5478,14 @@ ALTER TABLE ONLY public.partners
 
 ALTER TABLE ONLY public.portfolio_items
     ADD CONSTRAINT portfolio_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profile_moderation profile_moderation_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profile_moderation
+    ADD CONSTRAINT profile_moderation_pkey PRIMARY KEY (profile_id);
 
 
 --
@@ -4727,6 +5625,14 @@ ALTER TABLE ONLY public.skill_endorsements
 
 
 --
+-- Name: stripe_events stripe_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stripe_events
+    ADD CONSTRAINT stripe_events_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: task_details task_details_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4751,10 +5657,31 @@ ALTER TABLE ONLY public.verifications
 
 
 --
+-- Name: admin_audit_log_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX admin_audit_log_at_idx ON public.admin_audit_log USING btree (at DESC);
+
+
+--
+-- Name: admin_audit_log_target_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX admin_audit_log_target_idx ON public.admin_audit_log USING btree (target_type, target_id);
+
+
+--
 -- Name: agreement_time_one_pending; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX agreement_time_one_pending ON public.agreement_time_proposals USING btree (proposal_id) WHERE (status = 'PENDING'::text);
+
+
+--
+-- Name: contact_messages_kind_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX contact_messages_kind_idx ON public.contact_messages USING btree (kind, handled, created_at DESC);
 
 
 --
@@ -4856,6 +5783,13 @@ CREATE UNIQUE INDEX neighbourhoods_area_uidx ON public.neighbourhoods USING btre
 
 
 --
+-- Name: news_articles_published_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX news_articles_published_idx ON public.news_articles USING btree (status, published_at DESC);
+
+
+--
 -- Name: notice_comments_notice_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4874,6 +5808,34 @@ CREATE INDEX noticeboard_posts_created_idx ON public.noticeboard_posts USING btr
 --
 
 CREATE INDEX notifications_profile_idx ON public.notifications USING btree (profile_id, created_at DESC);
+
+
+--
+-- Name: partner_accounts_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX partner_accounts_status_idx ON public.partner_accounts USING btree (status, package);
+
+
+--
+-- Name: partner_events_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX partner_events_idx ON public.partner_events USING btree (partner_id, created_at);
+
+
+--
+-- Name: partner_invoices_partner_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX partner_invoices_partner_idx ON public.partner_invoices USING btree (partner_id, created_at DESC);
+
+
+--
+-- Name: partner_profile_changes_one_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX partner_profile_changes_one_pending ON public.partner_profile_changes USING btree (partner_id) WHERE (status = 'pending'::text);
 
 
 --
@@ -4909,6 +5871,13 @@ CREATE INDEX proposals_to_idx ON public.proposals USING btree (to_profile_id);
 --
 
 CREATE INDEX push_tokens_profile_idx ON public.push_tokens USING btree (profile_id);
+
+
+--
+-- Name: reports_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX reports_status_idx ON public.reports USING btree (status, created_at DESC);
 
 
 --
@@ -5031,6 +6000,41 @@ CREATE TRIGGER noticeboard_posts_block_youth BEFORE INSERT ON public.noticeboard
 
 
 --
+-- Name: partner_accounts partner_accounts_before; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER partner_accounts_before BEFORE INSERT OR UPDATE ON public.partner_accounts FOR EACH ROW EXECUTE FUNCTION public.partner_accounts_before();
+
+
+--
+-- Name: partner_accounts partner_accounts_bump_version; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER partner_accounts_bump_version AFTER INSERT OR DELETE OR UPDATE ON public.partner_accounts FOR EACH STATEMENT EXECUTE FUNCTION public.bump_partners_version();
+
+
+--
+-- Name: partner_accounts partner_accounts_sync; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER partner_accounts_sync AFTER INSERT OR UPDATE OF package, status ON public.partner_accounts FOR EACH ROW EXECUTE FUNCTION public.partner_accounts_sync();
+
+
+--
+-- Name: partner_placements partner_placements_bump_version; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER partner_placements_bump_version AFTER INSERT OR DELETE OR UPDATE ON public.partner_placements FOR EACH STATEMENT EXECUTE FUNCTION public.bump_partners_version();
+
+
+--
+-- Name: partners partners_bump_version; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER partners_bump_version AFTER INSERT OR DELETE OR UPDATE ON public.partners FOR EACH STATEMENT EXECUTE FUNCTION public.bump_partners_version();
+
+
+--
 -- Name: profiles profiles_deleted_cleanup; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -5119,6 +6123,13 @@ CREATE TRIGGER t_agreement_cancelled_by BEFORE UPDATE OF cancelled_at ON public.
 --
 
 CREATE TRIGGER t_agreement_copy_schedule BEFORE INSERT ON public.agreement_snapshots FOR EACH ROW EXECUTE FUNCTION public.agreement_copy_schedule();
+
+
+--
+-- Name: completion_confirmations t_completed_counter; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER t_completed_counter AFTER INSERT ON public.completion_confirmations FOR EACH ROW EXECUTE FUNCTION public.bump_completed_counter();
 
 
 --
@@ -5446,6 +6457,14 @@ ALTER TABLE ONLY public.conversations
 
 
 --
+-- Name: donation_records donation_records_club_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.donation_records
+    ADD CONSTRAINT donation_records_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(id) ON DELETE SET NULL;
+
+
+--
 -- Name: follows follows_followed_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5662,6 +6681,30 @@ ALTER TABLE ONLY public.notifications
 
 
 --
+-- Name: partner_accounts partner_accounts_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_accounts
+    ADD CONSTRAINT partner_accounts_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id) ON DELETE CASCADE;
+
+
+--
+-- Name: partner_events partner_events_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_events
+    ADD CONSTRAINT partner_events_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id) ON DELETE CASCADE;
+
+
+--
+-- Name: partner_invoices partner_invoices_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_invoices
+    ADD CONSTRAINT partner_invoices_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id) ON DELETE SET NULL;
+
+
+--
 -- Name: partner_placements partner_placements_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5670,11 +6713,43 @@ ALTER TABLE ONLY public.partner_placements
 
 
 --
+-- Name: partner_profile_changes partner_profile_changes_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_profile_changes
+    ADD CONSTRAINT partner_profile_changes_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id) ON DELETE CASCADE;
+
+
+--
+-- Name: partner_reminders partner_reminders_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_reminders
+    ADD CONSTRAINT partner_reminders_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id) ON DELETE CASCADE;
+
+
+--
+-- Name: partners partners_category_slug_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partners
+    ADD CONSTRAINT partners_category_slug_fkey FOREIGN KEY (category_slug) REFERENCES public.categories(slug);
+
+
+--
 -- Name: portfolio_items portfolio_items_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.portfolio_items
     ADD CONSTRAINT portfolio_items_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: profile_moderation profile_moderation_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profile_moderation
+    ADD CONSTRAINT profile_moderation_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 
 --
@@ -5916,6 +6991,12 @@ ALTER TABLE ONLY public.verifications
 ALTER TABLE public.account_deletions ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: admin_audit_log; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.admin_audit_log ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: agreement_reminders; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -5938,6 +7019,19 @@ ALTER TABLE public.agreement_time_proposals ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.app_secrets ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: app_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: app_settings app_settings_read; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY app_settings_read ON public.app_settings FOR SELECT TO anon, authenticated USING (((key ~~ 'platform.%'::text) OR (key = ANY (ARRAY['partners.version'::text, 'partners.max_hovedpartnere'::text]))));
+
 
 --
 -- Name: banned_words; Type: ROW SECURITY; Schema: public; Owner: -
@@ -5964,6 +7058,12 @@ ALTER TABLE public.business_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: clubs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.clubs ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: completion_confirmations; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -5974,6 +7074,12 @@ ALTER TABLE public.completion_confirmations ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.consent_records ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: contact_messages; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: conversation_participants; Type: ROW SECURITY; Schema: public; Owner: -
@@ -6043,6 +7149,19 @@ CREATE POLICY job_workspaces_participants ON public.job_workspaces TO authentica
 ALTER TABLE public.kommune_waitlist ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: kommuner; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.kommuner ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: kommuner kommuner_read; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY kommuner_read ON public.kommuner FOR SELECT TO anon, authenticated USING (true);
+
+
+--
 -- Name: listing_images; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -6104,6 +7223,18 @@ CREATE POLICY neighbourhoods_create ON public.neighbourhoods FOR INSERT TO authe
 
 CREATE POLICY neighbourhoods_read_all ON public.neighbourhoods FOR SELECT TO authenticated USING (true);
 
+
+--
+-- Name: news_articles; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.news_articles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: newsletter_subscribers; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: no_show_reports no_show_insert_own; Type: POLICY; Schema: public; Owner: -
@@ -6228,7 +7359,7 @@ CREATE POLICY p_convpart_read ON public.conversation_participants FOR SELECT TO 
 -- Name: donation_records p_donations_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY p_donations_read ON public.donation_records FOR SELECT TO authenticated USING (true);
+CREATE POLICY p_donations_read ON public.donation_records FOR SELECT TO authenticated USING ((status = 'transferred'::text));
 
 
 --
@@ -6330,7 +7461,7 @@ CREATE POLICY p_notif_all ON public.notifications TO authenticated USING ((profi
 -- Name: partners p_partners_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY p_partners_read ON public.partners FOR SELECT TO authenticated USING ((active OR public.is_admin()));
+CREATE POLICY p_partners_read ON public.partners FOR SELECT TO authenticated USING ((public.partner_is_visible(id) OR public.is_admin()));
 
 
 --
@@ -6520,10 +7651,40 @@ CREATE POLICY p_waitlist_own ON public.kommune_waitlist TO authenticated USING (
 
 
 --
+-- Name: partner_accounts; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.partner_accounts ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: partner_events; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.partner_events ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: partner_invoices; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.partner_invoices ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: partner_placements; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.partner_placements ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: partner_profile_changes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.partner_profile_changes ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: partner_reminders; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.partner_reminders ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: partners; Type: ROW SECURITY; Schema: public; Owner: -
@@ -6536,6 +7697,19 @@ ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.portfolio_items ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: profile_moderation; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.profile_moderation ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: profile_moderation profile_moderation_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY profile_moderation_own ON public.profile_moderation FOR SELECT TO authenticated USING ((profile_id = auth.uid()));
+
 
 --
 -- Name: profile_private; Type: ROW SECURITY; Schema: public; Owner: -
@@ -6641,6 +7815,12 @@ CREATE POLICY skill_endorsements_read ON public.skill_endorsements FOR SELECT TO
 
 CREATE POLICY skill_endorsements_write_own ON public.skill_endorsements TO authenticated USING ((endorser_id = auth.uid())) WITH CHECK ((endorser_id = auth.uid()));
 
+
+--
+-- Name: stripe_events; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.stripe_events ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: task_details; Type: ROW SECURITY; Schema: public; Owner: -
@@ -6810,6 +7990,20 @@ GRANT ALL ON FUNCTION public.badge_count(p_profile uuid) TO service_role;
 
 
 --
+-- Name: FUNCTION bump_completed_counter(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.bump_completed_counter() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION bump_partners_version(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.bump_partners_version() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION call_send_push(p_body jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -6853,6 +8047,21 @@ GRANT ALL ON FUNCTION public.guardian_unlink(p_id uuid) TO authenticated;
 
 
 --
+-- Name: FUNCTION hovedpartner_slots(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.hovedpartner_slots() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.hovedpartner_slots() TO authenticated;
+
+
+--
+-- Name: FUNCTION hovedpartner_taken(p_exclude uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.hovedpartner_taken(p_exclude uuid) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION instant_book(p_listing_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -6876,10 +8085,25 @@ GRANT ALL ON FUNCTION public.leave_neighbourhood(p_id uuid) TO authenticated;
 
 
 --
+-- Name: FUNCTION lift_expired_suspensions(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lift_expired_suspensions() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION listing_offer_count(p_listing_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
 GRANT ALL ON FUNCTION public.listing_offer_count(p_listing_id uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION log_partner_event(p_partner uuid, p_kind text, p_kommune text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.log_partner_event(p_partner uuid, p_kind text, p_kommune text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.log_partner_event(p_partner uuid, p_kind text, p_kommune text) TO authenticated;
 
 
 --
@@ -6908,6 +8132,41 @@ GRANT ALL ON FUNCTION public.mark_proposal_seen(p_proposal_id uuid) TO authentic
 --
 
 GRANT ALL ON FUNCTION public.mark_saved_search_run(p_id uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION moderation_decide_business(p_profile_id uuid, p_approve boolean, p_reason text, p_by text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.moderation_decide_business(p_profile_id uuid, p_approve boolean, p_reason text, p_by text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION moderation_decide_report(p_report_id uuid, p_outcome text, p_resolved_by uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.moderation_decide_report(p_report_id uuid, p_outcome text, p_resolved_by uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION moderation_reopen_report(p_report_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.moderation_reopen_report(p_report_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION moderation_set_listing_hidden(p_listing_id uuid, p_hidden boolean, p_reason text, p_by text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.moderation_set_listing_hidden(p_listing_id uuid, p_hidden boolean, p_reason text, p_by text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION moderation_set_suspended(p_profile_id uuid, p_suspended boolean, p_until timestamp with time zone, p_reason text, p_by text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.moderation_set_suspended(p_profile_id uuid, p_suspended boolean, p_until timestamp with time zone, p_reason text, p_by text) FROM PUBLIC;
 
 
 --
@@ -6965,6 +8224,14 @@ GRANT ALL ON FUNCTION public.notify_matching_helpers(p_listing_id uuid) TO authe
 --
 
 REVOKE ALL ON FUNCTION public.notify_moderation(p_profile uuid, p_title text, p_body text, p_route text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION partner_is_visible(p_partner_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.partner_is_visible(p_partner_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.partner_is_visible(p_partner_id uuid) TO authenticated;
 
 
 --
@@ -7066,6 +8333,13 @@ GRANT ALL ON FUNCTION public.set_report_attachment(p_report_id uuid, p_path text
 
 
 --
+-- Name: FUNCTION setting_int(p_key text, p_default integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.setting_int(p_key text, p_default integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION start_conversation_for_notice(p_notice_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -7076,6 +8350,7 @@ GRANT ALL ON FUNCTION public.start_conversation_for_notice(p_notice_id uuid) TO 
 -- Name: FUNCTION submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[]); Type: ACL; Schema: public; Owner: -
 --
 
+REVOKE ALL ON FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[]) TO authenticated;
 
 
@@ -7122,6 +8397,21 @@ GRANT ALL ON FUNCTION public.update_listing(p_listing_id uuid, p_title text, p_c
 
 
 --
+-- Name: TABLE news_public; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.news_public TO authenticated;
+
+
+--
+-- Name: TABLE partners_public; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.partners_public TO anon;
+GRANT SELECT ON TABLE public.partners_public TO authenticated;
+
+
+--
 
 
 -- -----------------------------------------------------------------------------
@@ -7143,6 +8433,8 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('chat-attachments', 'chat-attachments', true, NULL, NULL)
   ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('listing-images', 'listing-images', true, NULL, NULL)
+  ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('public-web', 'public-web', true, '2097152', '{image/png,image/jpeg,image/webp}')
   ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('report-attachments', 'report-attachments', false, NULL, NULL)
   ON CONFLICT (id) DO NOTHING;
@@ -7172,10 +8464,16 @@ CREATE POLICY "storage write own folder" ON storage.objects FOR INSERT TO authen
 -- -----------------------------------------------------------------------------
 -- 5. Realtime – tables streamed to the app (supabase_realtime publication)
 -- -----------------------------------------------------------------------------
+ALTER PUBLICATION supabase_realtime ADD TABLE public.app_settings;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.conversation_participants;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.donation_records;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.kommuner;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.partner_placements;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.partners;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.proposals;
 
 
@@ -7183,6 +8481,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.proposals;
 -- 6. Scheduled jobs (pg_cron)
 -- -----------------------------------------------------------------------------
 SELECT cron.schedule('minnabo-reminders', '*/10 * * * *', 'select public.send_agreement_reminders()');
+SELECT cron.schedule('minnabo-lift-suspensions', '*/10 * * * *', 'select public.lift_expired_suspensions()');
 
 
 -- -----------------------------------------------------------------------------

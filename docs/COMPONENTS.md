@@ -13,7 +13,7 @@ Global rules
 
 ## Where they live
 
-All in `src/components/ui/`, exported from `@/components/ui`. Live preview of every variant: `/komponenter` (dev builds only).
+All in `src/components/ui/`, exported from `@/components/ui`. Visual reference for every variant: `design/screens/Komponenter.dc.html`.
 
 | File | Components |
 |---|---|

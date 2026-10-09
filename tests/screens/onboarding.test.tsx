@@ -4,6 +4,7 @@ import { SetupScreen } from '@/screens/Onboarding/SetupScreen';
 import { LoginScreen } from '@/screens/Onboarding/LoginScreen';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 import { apiClient } from '@/api/client';
 import { YouthAccountScreen } from '@/screens/Onboarding/YouthAccountScreen';
 import nb from '@/i18n/nb';
@@ -16,29 +17,16 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-test('without a Vipps client, "Fortsett med Vipps" opens the temporary test login', async () => {
+test('login is Vipps only: no other way in, and without a Vipps client it says so', async () => {
+  const err = jest.spyOn(toast, 'error');
   await renderWithProviders(<LoginScreen />);
   expect(screen.getByText('Logg inn eller opprett konto')).toBeTruthy();
   expect(screen.getAllByText('Vipps brukes kun til innlogging – aldri til betaling.').length).toBeGreaterThan(0);
+  expect(screen.queryByText(/uten Vipps/)).toBeNull();
 
   await fireEvent.press(screen.getByText('Fortsett med Vipps'));
-  expect(await screen.findByText('Opprett testbruker')).toBeTruthy();
-});
-
-test('test login: a name creates a real account and goes on to Samtykke', async () => {
-  await renderWithProviders(<LoginScreen />);
-  await fireEvent.press(screen.getByText('Fortsett uten Vipps (test)'));
-  // too short → nothing happens
-  await fireEvent.changeText(await screen.findByLabelText('Navn'), 'O');
-  await fireEvent.press(screen.getByText('Opprett testbruker'));
+  await waitFor(() => expect(err).toHaveBeenCalledWith('Vipps-innlogging er ikke satt opp ennå.'));
   expect(supabase.auth.signInAnonymously).not.toHaveBeenCalled();
-
-  await fireEvent.changeText(screen.getByLabelText('Navn'), ' Ola Nordmann ');
-  await fireEvent.press(screen.getByText('Opprett testbruker'));
-  await waitFor(() =>
-    expect(supabase.auth.signInAnonymously).toHaveBeenCalledWith({ options: { data: { display_name: 'Ola Nordmann' } } }),
-  );
-  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/samtykker'));
 });
 
 test('Ungdomskonto unlocks only after all three boxes are ticked', async () => {

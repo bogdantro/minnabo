@@ -18,6 +18,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { longDate } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
+import { useFeatureFlags } from '@/config/featureFlags';
 import { toast } from '@/lib/toast';
 import { useTrustedContacts } from '@/lib/trustedContacts';
 import { categoryColors, colors, fonts, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -60,6 +61,7 @@ function maskPhone(phone: string): string {
 export function VerifiseringssenterScreen() {
   const router = useRouter();
   const me = useCurrentUser();
+  const businessOn = useFeatureFlags().businessRegistration;
   const { data: profile, isLoading, isError, refetch } = useProfile(me.id);
   const { data: reviews } = useReviews(me.id);
   const verify = useVerify();
@@ -203,7 +205,7 @@ export function VerifiseringssenterScreen() {
                       <Text style={styles.liText}>{l.t}</Text>
                     </View>
                   ))}
-                  {r.id === 'BUSINESS' && !ok ? (
+                  {r.id === 'BUSINESS' && !ok && businessOn ? (
                     <Button
                       label={nb.verificationCenter.registerBusiness}
                       variant="ghost"

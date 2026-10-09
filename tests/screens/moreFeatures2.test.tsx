@@ -79,6 +79,21 @@ test('a Vipps login swaps the code for a session and never sends a session token
   expect(invoke.mock.calls.at(-1)[1].body).toEqual({ code: 'c2', codeVerifier: 'ver-1', redirectUri: 'minnabo://vipps/callback' });
 });
 
+test('the same Vipps return handled twice logs in once – no error on the second screen', async () => {
+  vippsFunction({ data: { tokenHash: 'hash', isNew: false, youth: false }, error: null });
+  await startVippsLogin();
+  const state = (await stateFromStorage())!;
+  const exchanges = () => invoke.mock.calls.filter((c) => !(c[1].body as { action?: string }).action).length;
+  const before = exchanges();
+  const [a, b] = await Promise.all([
+    completeVippsLogin({ code: 'dup-1', state }),
+    completeVippsLogin({ code: 'dup-1', state }),
+  ]);
+  expect(a).toEqual({ isNew: false, youth: false });
+  expect(b).toEqual(a);
+  expect(exchanges() - before).toBe(1);
+});
+
 test('an error from the Vipps login reaches the person', async () => {
   vippsFunction({ data: { error: 'Kontoen din er suspendert. Kontakt MinNabo.' }, error: null });
   await startVippsLogin();

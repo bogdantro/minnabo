@@ -253,12 +253,12 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
       <StickyFooter>
         {done ? (
           <FadeUp style={styles.footCol}>
-            {myRating == null ? (
+            {me.isYouth ? null : myRating == null ? (
               <Button label={nb.completion.giveReview} icon="star" size="lg" onPress={() => router.replace(`/vurder/${proposalId}`)} />
             ) : (
               <Button label={nb.completion.reviewed} icon="check" variant="ghost" size="lg" disabled onPress={() => undefined} />
             )}
-            <Button label={nb.completion.toAgreements} variant="text" block={false} onPress={() => router.replace('/avtaler')} style={styles.selfCenter} />
+            <Button label={nb.completion.toAgreements} variant="text" block={false} onPress={() => router.replace(me.isYouth ? '/ung' : '/avtaler')} style={styles.selfCenter} />
           </FadeUp>
         ) : (
           <View style={styles.footCol}>

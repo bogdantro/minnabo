@@ -6,6 +6,7 @@ import nb from '@/i18n/nb';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
+import { openWebsite, type WebsitePage } from '@/config/links';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSession } from '@/auth/session';
 import { useVippsIdentity, type VippsIdentity } from '@/auth/identity';
@@ -31,13 +32,13 @@ type ConsentId = 'terms' | 'privacy' | 'age' | 'tips';
 type ConsentDef = {
   id: ConsentId;
   required: boolean;
-  /** Route opened by the inline link. */
-  href?: '/vilkar' | '/personvern';
+  /** minnabo.app page opened by the inline link. */
+  href?: WebsitePage;
 };
 
 const CONSENTS: ConsentDef[] = [
-  { id: 'terms', required: true, href: '/vilkar' },
-  { id: 'privacy', required: true, href: '/personvern' },
+  { id: 'terms', required: true, href: 'vilkar' },
+  { id: 'privacy', required: true, href: 'personvern' },
   { id: 'age', required: true },
   { id: 'tips', required: false },
 ];
@@ -256,7 +257,7 @@ export function ConsentScreen() {
                   <Text style={text.consent}>
                     {copy.pre}
                     {link && c.href ? (
-                      <Text style={styles.link} accessibilityRole="link" onPress={() => router.push(c.href!)}>
+                      <Text style={styles.link} accessibilityRole="link" onPress={() => openWebsite(c.href!)}>
                         {link}
                       </Text>
                     ) : null}
@@ -305,7 +306,7 @@ export function ConsentScreen() {
         <Icon name="lock" size={18} color={colors.cyanDeep} />
         <Text style={[text.infoBox, styles.flex]}>
           {nb.consent.gdprPre}
-          <Text style={styles.gdprLink} accessibilityRole="link" onPress={() => router.push('/personvern')}>
+          <Text style={styles.gdprLink} accessibilityRole="link" onPress={() => openWebsite('personvern')}>
             {nb.consent.gdprLink}
           </Text>
           .

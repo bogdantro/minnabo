@@ -8,7 +8,7 @@ import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
-import { useConversations, useListings, useListingsByIds, useSentProposals, useStartConversation } from '@/api/queries';
+import { useConversations, useListings, useListingsByIds, useProfile, useSentProposals, useStartConversation } from '@/api/queries';
 import { formatPrice } from '@/domain/price';
 import { safePush } from '@/lib/nav';
 import { useLocationScope } from '@/lib/locationScope';
@@ -114,6 +114,7 @@ export function YouthAppScreen() {
   const [guardian, setGuardian] = useState(false);
   const [cat, setCat] = useState<CategoryId | null>(null);
   const { userId } = useSession();
+  const { data: profile } = useProfile(userId ?? '');
   const qc = useQueryClient();
   const startConversation = useStartConversation();
   const sent = useSentProposals(!!userId);
@@ -409,8 +410,11 @@ export function YouthAppScreen() {
               <YouthBadge />
             </FadeUp>
             <FadeUp delay={100} style={styles.stats}>
-              <StatTile value="0" label={nb.youth.doneJobs} />
-              <StatTile value="–" label={nb.youth.fromReviews(0)} />
+              <StatTile value={String(profile?.completedTasks ?? 0)} label={nb.youth.doneJobs} />
+              <StatTile
+                value={profile?.rating?.count ? profile.rating.average.toFixed(1).replace('.', ',') : '–'}
+                label={nb.youth.fromReviews(profile?.rating?.count ?? 0)}
+              />
             </FadeUp>
             <FadeUp delay={150}>
               <Text style={[text.eyebrow, styles.mb8]}>{nb.youth.lockedTitle}</Text>
