@@ -107,8 +107,9 @@ test('endorsing a skill on another profile increments the count', async () => {
 
   // Hagearbeid is seeded with 3 endorsements, none from the current user.
   expect(screen.getByText('3 naboer anbefaler')).toBeTruthy();
-  await fireEvent.press(await screen.findByLabelText('Anbefal Hagearbeid'));
-  await waitFor(() => expect(screen.getByText('4 naboer anbefaler')).toBeTruthy());
+  // the button appears once the "completed avtale together" lookup has answered
+  await fireEvent.press(await screen.findByLabelText('Anbefal Hagearbeid', {}, { timeout: 5000 }));
+  await waitFor(() => expect(screen.getByText('4 naboer anbefaler')).toBeTruthy(), { timeout: 5000 });
 });
 
 test('a helper profile shows their portfolio gallery', async () => {

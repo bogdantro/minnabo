@@ -1,9 +1,10 @@
-import type { CategoryId } from '@/theme/theme';
+import { categoryColors, categoryLabels, type CategoryId } from '@/theme/theme';
 import type { Category } from './types';
 
 /**
- * The fixed category catalogue (spec §5). Single source of truth for the app;
- * `supabase/migrations/0023_seed_categories.sql` mirrors the rows into the DB.
+ * The built-in category catalogue: the app's icons and the offline fallback. The live
+ * list (order, on/off, labels, colours) comes from public.categories – see the bottom of
+ * this file.
  */
 export const CATEGORIES: Category[] = [
   { id: 'c-hage', slug: 'hage', label: 'Hage', icon: 'feather' },
@@ -34,17 +35,11 @@ export const CATEGORIES: Category[] = [
 const FALLBACK = CATEGORIES[CATEGORIES.length - 1];
 
 export function categoryBySlug(slug: string): Category {
-  return CATEGORIES.find((c) => c.slug === slug) ?? FALLBACK;
+  const c = CATEGORIES.find((x) => x.slug === slug) ?? FALLBACK;
+  // the label the admin set, when the live catalogue has one
+  const live = getCategoryCatalog().find((e) => e.slug === c.slug)?.label;
+  return live && live !== c.label ? { ...c, label: live } : c;
 }
-
-/** The 5 chips on the Oppdrag front page (homepage.png). */
-export const HOME_CATEGORIES: Category[] = [
-  { id: 'c-alle', slug: 'alle', label: 'Alle', icon: 'grid' },
-  categoryBySlug('hage'),
-  { id: 'c-renhold-home', slug: 'renhold', label: 'Renhold', icon: 'droplet' },
-  { id: 'c-transport-home', slug: 'transport', label: 'Transport', icon: 'truck' },
-  categoryBySlug('montering'),
-];
 
 /** Listing category slug → design category art id (`theme.categoryColors` / `theme.icons`). */
 const ART_BY_SLUG: Record<string, CategoryId> = {
@@ -81,3 +76,92 @@ export function categoryArtId(slug: string): CategoryId {
 export function slugForArtId(id: CategoryId): string {
   return Object.keys(ART_BY_SLUG).find((s) => ART_BY_SLUG[s] === id) ?? 'annet';
 }
+
+// ---------------------------------------------------------------------------
+// Live catalogue. The website's admin decides the order, which categories are on,
+// their labels and tile colours (public.categories). The app starts from the built-in
+// list above (also the offline fallback) and swaps in the database's version when it
+// arrives. Icons are the app's own, so a slug the app doesn't know is ignored until an
+// app update adds it.
+// ---------------------------------------------------------------------------
+
+/** One row of public.categories, as the app reads it. */
+export type CategoryRow = {
+  slug: string;
+  label: string;
+  tileBg?: string | null;
+  iconColor?: string | null;
+  active: boolean;
+  sortOrder: number;
+};
+
+export type CatalogEntry = { art: CategoryId; slug: string; label: string; bg: string; fg: string; active: boolean; sortOrder: number };
+
+const HEX = /^#[0-9a-f]{3,8}$/i;
+
+const builtIn = (): CatalogEntry[] =>
+  CATEGORIES.map((c, i) => {
+    const art = categoryArtId(c.slug);
+    return { art, slug: c.slug, label: categoryLabels[art] ?? c.label, ...staticColors(art), active: true, sortOrder: (i + 1) * 10 };
+  });
+
+function staticColors(art: CategoryId): { bg: string; fg: string } {
+  const c = categoryColors[art] ?? categoryColors.annet;
+  return { bg: c.bg, fg: c.fg };
+}
+
+let catalog: CatalogEntry[] = builtIn();
+const subscribers = new Set<() => void>();
+
+/** Replace the catalogue with the database's rows (unknown slugs are skipped; missing ones keep the built-in entry, switched off). */
+export function setCategoryCatalog(rows: CategoryRow[] | null | undefined): void {
+  if (!rows || rows.length === 0) return;
+  const known = new Map(builtIn().map((e) => [e.slug, e]));
+  const next: CatalogEntry[] = [];
+  for (const r of rows) {
+    const base = known.get(r.slug);
+    if (!base) continue;
+    known.delete(r.slug);
+    next.push({
+      ...base,
+      label: r.label?.trim() || base.label,
+      bg: r.tileBg && HEX.test(r.tileBg) ? r.tileBg : base.bg,
+      fg: r.iconColor && HEX.test(r.iconColor) ? r.iconColor : base.fg,
+      active: r.active !== false,
+      sortOrder: Number.isFinite(r.sortOrder) ? r.sortOrder : base.sortOrder,
+    });
+  }
+  // a built-in category the database doesn't have: still resolvable for old oppdrag, not offered
+  known.forEach((e) => next.push({ ...e, active: false }));
+  next.sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, 'nb'));
+  catalog = next;
+  subscribers.forEach((l) => l());
+}
+
+/** Tests only. */
+export function _resetCategoryCatalog(): void {
+  catalog = builtIn();
+  subscribers.forEach((l) => l());
+}
+
+export const subscribeCategoryCatalog = (l: () => void): (() => void) => {
+  subscribers.add(l);
+  return () => {
+    subscribers.delete(l);
+  };
+};
+export const getCategoryCatalog = (): CatalogEntry[] => catalog;
+
+/** Art ids of the categories that are switched on, in the admin's order (chips, Legg ut, filters). */
+export const activeCategoryArts = (): CategoryId[] => catalog.filter((e) => e.active).map((e) => e.art);
+
+const entry = (art: CategoryId): CatalogEntry | undefined => catalog.find((e) => e.art === art);
+
+/** The label for a category – also for one that has been switched off (old oppdrag keep showing it). */
+export const categoryLabel = (art: CategoryId): string => entry(art)?.label ?? categoryLabels[art] ?? categoryLabels.annet;
+
+/** Tile background + icon colour for a category. */
+export const categoryArtColors = (art: CategoryId): { bg: string; fg: string } => {
+  const e = entry(art);
+  return e ? { bg: e.bg, fg: e.fg } : staticColors(art);
+};

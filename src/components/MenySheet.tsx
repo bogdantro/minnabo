@@ -28,7 +28,6 @@ import {
   Icon,
   ListGroup,
   ListRow,
-  Pill,
   PressableScale,
   Sheet,
   Toggle,
@@ -388,17 +387,6 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
               onPress={() => go('/bedrift')}
             />
           ) : null}
-          {me.isAdmin ? (
-            <ListRow
-              icon="key"
-              iconBg={colors.ink}
-              iconColor={colors.lime}
-              title={nb.meny.admin.title}
-              subtitle={nb.meny.admin.sub}
-              right={<Pill label={nb.meny.admin.badge} tone="dark" size="sm" style={styles.adminPill} />}
-              onPress={() => go('/admin')}
-            />
-          ) : null}
         </Rows>
 
         <FadeUp delay={600} style={styles.mt14}>
@@ -514,6 +502,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rbadgeText: { fontSize: 12, lineHeight: 22 },
-  adminPill: { height: 22 },
   version: { textAlign: 'center', marginTop: 18 },
 });

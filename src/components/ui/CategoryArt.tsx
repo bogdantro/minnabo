@@ -1,5 +1,7 @@
 import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { categoryColors, type CategoryId } from '@/theme/theme';
+import { categoryArtColors } from '@/domain/categories';
+import { useCategoryCatalog } from '@/hooks/useCategories';
 import { Icon } from './Icon';
 
 export type CategoryArtProps = {
@@ -15,7 +17,8 @@ export type CategoryArtProps = {
 
 /** `.art` – flat category tile with a centred Lucide icon (stand-in for photos). */
 export function CategoryArt({ category, width, height, radius = 0, iconSize = 34, uri, style }: CategoryArtProps) {
-  const c = categoryColors[category] ?? categoryColors.annet;
+  useCategoryCatalog(); // tile colours follow the website's settings
+  const c = categoryArtColors(category in categoryColors ? category : 'annet');
   return (
     <View
       style={[styles.base, { backgroundColor: c.bg, width, height, borderRadius: radius }, style]}

@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/auth/session';
 import { apiClient } from './client';
-import { chatKeys, profileKeys } from './queries';
+import { appSettingsKeys, categoryKeys, chatKeys, communityKeys, profileKeys } from './queries';
 
 /**
  * Live updates for one open conversation: any new message or proposal change
@@ -190,6 +190,49 @@ export function useInboxRealtime(): void {
       supabase.removeChannel(channel);
     };
   }, [userId, qc]);
+}
+
+/**
+ * Things the website's admin changes in the shared database: platform settings, partners,
+ * categories and donations. Any change refetches the matching data, so an open screen
+ * updates within seconds. Runs before login too (app_settings is readable then – maintenance
+ * mode). A partner that becomes hidden sends no row event (row security), which is why the
+ * `partners.version` setting is the signal for partners.
+ */
+export function usePlatformRealtime(): void {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const timers: Record<string, ReturnType<typeof setTimeout>> = {};
+    // several rows change in one admin action → one refetch per kind
+    const soon = (name: string, run: () => void) => () => {
+      clearTimeout(timers[name]);
+      timers[name] = setTimeout(run, 300);
+    };
+    const partners = soon('partners', () => void qc.invalidateQueries({ queryKey: communityKeys.partners }));
+    const channel = supabase
+      .channel('platform')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, soon('settings', () => {
+        void qc.invalidateQueries({ queryKey: appSettingsKeys.app });
+        void qc.invalidateQueries({ queryKey: communityKeys.partners });
+      }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partners' }, partners)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partner_placements' }, partners)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, soon('categories', () => void qc.invalidateQueries({ queryKey: categoryKeys.all })))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'donation_records' }, soon('donations', () => void qc.invalidateQueries({ queryKey: communityKeys.donations })))
+      .subscribe();
+
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+}
+
+/** Renders nothing; keeps the platform realtime subscription alive. */
+export function PlatformRealtime(): null {
+  usePlatformRealtime();
+  return null;
 }
 
 /** Renders nothing; just keeps the inbox realtime subscription alive. */

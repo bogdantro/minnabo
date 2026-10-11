@@ -1,3 +1,4 @@
+import type { CategoryRow } from '@/domain/categories';
 import type {
   AgendaItem,
   AgreementSnapshot,
@@ -122,6 +123,25 @@ export type MyAccount = {
   emailMasked?: string;
 };
 
+/**
+ * Platform settings the website's admin controls (public.app_settings, readable before login too).
+ * Other keys in that table are website-only and ignored here.
+ */
+export type AppSettings = {
+  /** platform.maintenance_mode – the whole app shows "Vi oppdaterer MinNabo" */
+  maintenance: boolean;
+  /** platform.registration_open – false: new Vipps sign-ups are turned away, existing users log in */
+  registrationOpen: boolean;
+  /** platform.default_radius_km – starting value for "Maks avstand til hjelperen" in Legg ut */
+  defaultRadiusKm?: number;
+  /** partners.version – changes on every partner change on the website */
+  partnersVersion: string;
+  /** partners.max_hovedpartnere */
+  maxHovedpartnere: number;
+};
+
+export const DEFAULT_APP_SETTINGS: AppSettings = { maintenance: false, registrationOpen: true, partnersVersion: '', maxHovedpartnere: 4 };
+
 /** Phone and home notes of someone you have an accepted tilbud with (shared_contact, 0057). */
 export type SharedContact = { phone?: string; homeNotes?: string };
 
@@ -136,72 +156,10 @@ export type BusinessProfile = {
   categorySlugs: string[];
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
+  /** why MinNabo said no (shown with "Avvist") */
+  rejectionReason?: string;
 };
 
-// ---------------------------------------------------------------------------
-// Adminpanel (design/screens/Admin.dc.html) — every call is admin-only on the backend.
-// ---------------------------------------------------------------------------
-export type AdminOverview = {
-  openReports: number;
-  pendingBusinesses: number;
-  newUsersToday: number;
-  activeListings: number;
-};
-export type ReportOutcome = 'dismiss' | 'remove' | 'warn';
-export type AdminReport = {
-  id: string;
-  targetType: 'USER' | 'LISTING' | 'PROPOSAL' | 'MESSAGE' | 'REVIEW' | 'NOTICE' | 'COMMENT';
-  targetId: string;
-  reason: string;
-  details?: string;
-  /** what was reported, e.g. «Billig flyttehjelp» – «Vipps 500 kr først» */
-  targetText: string;
-  byName: string;
-  createdAt: string;
-  status: 'OPEN' | 'RESOLVED';
-  outcome: ReportOutcome | null;
-  resolvedAt: string | null;
-  /** storage path of the reporter's screenshot (private bucket) */
-  attachmentPath?: string;
-};
-export type AdminBusiness = BusinessProfile & { decidedAt: string | null };
-export type AdminUser = {
-  id: string;
-  displayName: string;
-  initials: string;
-  avatarUrl?: string;
-  place: string | null;
-  municipality: string | null;
-  memberSince: string;
-  rating: number | null;
-  ratingCount: number;
-  suspended: boolean;
-  isAdmin: boolean;
-};
-export type AdminListing = {
-  id: string;
-  title: string;
-  categorySlug: string;
-  reportCount: number;
-  lastReason: string | null;
-  hidden: boolean;
-};
-export type AdminPartner = {
-  id: string;
-  name: string;
-  blurb: string;
-  municipality: string | null;
-  /** one of the (max 2) hovedpartnere on Fellesskap */
-  main: boolean;
-  /** shown in the supporter carousel */
-  active: boolean;
-  /** "Lokal helt" */
-  hero?: boolean;
-};
-/** One day (yyyy-mm-dd, Oslo) of the weekly statistics. */
-export type AdminDayStat = { day: string; listings: number; offers: number; completed: number };
-
-/** One row in the consent log (consent_records). Each change is a new row. */
 export type ConsentRecord = {
   id: string;
   terms: boolean;
@@ -316,6 +274,11 @@ export interface ApiClient {
   updateListing(listingId: string, listing: Listing, extras: ListingExtras): Promise<Listing>;
   getListingEditData(listingId: string): Promise<ListingEditData>;
   /** Signed-in user's account state – suspended accounts are signed out. */
+  getAppSettings(): Promise<AppSettings>;
+  /** public.categories: order, on/off, labels and tile colours set on the website. */
+  listCategories(): Promise<CategoryRow[]>;
+  /** Partner statistics for the website: an 'impression' or a 'click' (log_partner_event). */
+  logPartnerEvent(partnerId: string, kind: 'impression' | 'click', kommune?: string): Promise<void>;
   getMyAccountStatus(): Promise<AccountStatus>;
   getMyAccount(): Promise<MyAccount>;
   /** Tilbud I have sent (youth app "Mine tilbud"), newest first. */
@@ -513,27 +476,4 @@ export interface ApiClient {
   }): Promise<void>;
   /** My own business registration, or null when I haven't registered. */
   getMyBusinessProfile(): Promise<BusinessProfile | null>;
-
-  // --- admin (role 'admin' only; the backend refuses everyone else) ---
-  getAdminOverview(): Promise<AdminOverview>;
-  listAdminReports(): Promise<AdminReport[]>;
-  decideReport(reportId: string, outcome: ReportOutcome): Promise<void>;
-  /** A short-lived link to a report's screenshot (admins only). */
-  getReportAttachmentUrl(path: string): Promise<string>;
-  reopenReport(reportId: string): Promise<void>;
-  listAdminBusinesses(): Promise<AdminBusiness[]>;
-  decideBusiness(profileId: string, approve: boolean): Promise<void>;
-  listAdminUsers(query?: string): Promise<AdminUser[]>;
-  setUserSuspended(profileId: string, suspended: boolean): Promise<void>;
-  listFlaggedListings(): Promise<AdminListing[]>;
-  setListingHidden(listingId: string, hidden: boolean): Promise<void>;
-  listAdminPartners(): Promise<AdminPartner[]>;
-  setMainPartner(partnerId: string, main: boolean): Promise<void>;
-  setPartnerActive(partnerId: string, active: boolean): Promise<void>;
-  /** Make a partner a "Lokal helt" (or a plain støttespiller again). */
-  setPartnerHero(partnerId: string, hero: boolean): Promise<void>;
-  /** Mon–Sun of the week containing `day` (default: this week). */
-  getWeekStats(day?: string): Promise<AdminDayStat[]>;
-  /** Kommuner people are waiting for, most wanted first. */
-  listKommuneWaitlist(): Promise<{ kommune: string; count: number }[]>;
 }

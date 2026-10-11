@@ -41,7 +41,7 @@ No language switcher. Copy is exactly as in the design files.
 | **Ungdomskonto** (under 18) | Limited account: browse oppdrag, give/withdraw tilbud, chat only in conversations their tilbud created (§9) |
 | **Bedrift** | Verified local business, borettslag, lag or forening; org.nr checked against Enhetsregisteret |
 | **Partner / sponsor** | Local businesses shown in Fellesskap on three levels: Hovedpartner (max 4, own page), Lokal helt, Lokal støttespiller |
-| **Admin / moderator** | Handles reports, business verification, users, flagged oppdrag, partners, stats |
+| **Admin / moderator** | Works on the website's admin, not in the app: reports, verification, users, oppdrag, partners, categories, platform switches |
 
 Most users are private individuals. The design centres the private-person experience.
 
@@ -104,7 +104,7 @@ Active tab = lime-tint bubble behind the icon, icon + label in deep lime. Hidden
 - **Utforsk** (tiles): Oppdrag · Fellesskap · Innboks · Legg ut ("Nytt oppdrag")
 - **Mitt:** Min profil · Mine avtaler · Mine oppdrag · Mottatte tilbud · Lagrede oppføringer og søk · Varsler
 - **Tillit og trygghet:** Vurderinger og verifisering · Sikkerhet, rapportering og blokkering
-- **Innstillinger:** Innstillinger · Personvern · Vilkår · Varslinger · For bedrifter · Adminpanel (admins only)
+- **Innstillinger:** Innstillinger · Personvern · Vilkår · Varslinger · For bedrifter
 - Logg ut (confirm dialog) · "MinNabo · versjon 1.0 · Innlandet"
 
 ---
@@ -201,7 +201,7 @@ Every screen, grouped. Each has the universal states (§5 end). Design file in b
 | **Vilkår** (`Vilkar`) | TOC chips, reading progress, "Kort fortalt" boxes, "Til toppen" |
 | **Slett konto** (`SlettKonto`) | What is deleted → active-agreement warning → type SLETT → goodbye |
 | **Bedrift** (`Bedrift`) | Org.nr with live Enhetsregisteret lookup, contact fields, categories → Sendt / Til verifisering / Verifisert |
-| **Adminpanel** (`Admin`) | KPIs, reports queue, business verification, users (suspend), flagged oppdrag, partners (hovedpartner slots max 4, "Lokal helt" toggle, carousel on/off), weekly stats. Admin only |
+| **Adminpanel** | Removed from the app (2026-10-11) – done on the website's admin, which shares the database |
 
 ### Universal states (`Tilstander`)
 Every important screen has: **loading** (pulsing skeleton), **empty**, **error** (Prøv igjen),

@@ -1,3 +1,4 @@
+import { CATEGORIES, type CategoryRow } from '@/domain/categories';
 import type {
   AgendaItem,
   AgreementSnapshot,
@@ -50,15 +51,7 @@ import type {
   EditProposalPatch,
   ListingEditData,
   ListingExtras,
-  AdminBusiness,
-  AdminDayStat,
-  AdminListing,
-  AdminOverview,
-  AdminPartner,
-  AdminReport,
-  AdminUser,
   BusinessProfile,
-  ReportOutcome,
   ConsentRecord,
   MySettings,
   NotificationPrefs,
@@ -70,11 +63,13 @@ import type {
   MyAccount,
   SavedSearchRecord,
   SendProposalInput,
+  AppSettings,
   SharedContact,
   SubmitReportInput,
   SubmitReviewInput,
   UpdateProfilePatch,
 } from '@/api/ApiClient';
+import { DEFAULT_APP_SETTINGS } from '@/api/ApiClient';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const delay = (ms: number) =>
@@ -92,7 +87,17 @@ export const extras = {
   price: {} as Record<string, PriceRange>,
   guardian: { youth: false, guardians: [], youths: [] } as GuardianLinks,
   waitlist: [] as string[],
+  settings: { ...DEFAULT_APP_SETTINGS } as AppSettings,
+  partnerEvents: [] as { partnerId: string; kind: 'impression' | 'click'; kommune?: string }[],
+  /** report id → when a moderator on the website picked it up ("Under behandling") */
+  claimedReports: {} as Record<string, string>,
+  /** null = the database has the same list as the app's built-in one */
+  categories: null as CategoryRow[] | null,
   reset() {
+    this.categories = null;
+    this.claimedReports = {};
+    this.partnerEvents = [];
+    this.settings = { ...DEFAULT_APP_SETTINGS };
     this.time = [];
     this.again = [];
     this.price = {};
@@ -389,11 +394,6 @@ export class MockApiClient implements ApiClient {
     if (!extras.waitlist.includes(kommune)) extras.waitlist.push(kommune);
   }
 
-  async listKommuneWaitlist(): Promise<{ kommune: string; count: number }[]> {
-    await delay(20);
-    return extras.waitlist.map((kommune) => ({ kommune, count: 1 }));
-  }
-
   async getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null> {
     await delay(100);
     return chatRepository.getAgreementForConversation(conversationId) ?? null;
@@ -469,6 +469,20 @@ export class MockApiClient implements ApiClient {
     await delay(40);
     if (profileId === profileRepository.currentUserId) return false;
     return chatRepository.listMyAgreements().some((a) => a.counterpartId === profileId && !a.cancelled);
+  }
+
+  async logPartnerEvent(partnerId: string, kind: 'impression' | 'click', kommune?: string): Promise<void> {
+    extras.partnerEvents.push({ partnerId, kind, kommune });
+  }
+
+  async listCategories(): Promise<CategoryRow[]> {
+    await delay(20);
+    return extras.categories ?? CATEGORIES.map((c, i) => ({ slug: c.slug, label: c.label, active: true, sortOrder: (i + 1) * 10 }));
+  }
+
+  async getAppSettings(): Promise<AppSettings> {
+    await delay(20);
+    return { ...extras.settings };
   }
 
   async getSharedContact(profileId: string): Promise<SharedContact> {
@@ -757,96 +771,15 @@ export class MockApiClient implements ApiClient {
     savedSearchStore.remove(id);
   }
 
-  // --- admin ---
-
-  async getAdminOverview(): Promise<AdminOverview> {
-    await delay(80);
-    return adminStore.overview();
-  }
-
-  async listAdminReports(): Promise<AdminReport[]> {
-    await delay(100);
-    return adminStore.reports();
-  }
-
-  async getReportAttachmentUrl(path: string): Promise<string> {
-    await delay(20);
-    return path;
-  }
-
-  async decideReport(reportId: string, outcome: ReportOutcome): Promise<void> {
-    await delay(120);
-    adminStore.decideReport(reportId, outcome);
-  }
-
-  async reopenReport(reportId: string): Promise<void> {
-    await delay(80);
-    adminStore.reopenReport(reportId);
-  }
-
-  async listAdminBusinesses(): Promise<AdminBusiness[]> {
-    await delay(100);
-    return businessStore.list();
-  }
-
-  async decideBusiness(profileId: string, approve: boolean): Promise<void> {
-    await delay(120);
-    businessStore.decide(profileId, approve);
-    if (approve && profileId === profileRepository.currentUserId) profileRepository.markVerified('BUSINESS');
-  }
-
-  async listAdminUsers(query = ''): Promise<AdminUser[]> {
-    await delay(100);
-    return adminStore.users(query);
-  }
-
-  async setUserSuspended(profileId: string, suspended: boolean): Promise<void> {
-    await delay(80);
-    adminStore.setSuspended(profileId, suspended);
-  }
-
-  async listFlaggedListings(): Promise<AdminListing[]> {
-    await delay(100);
-    return adminStore.flaggedListings();
-  }
-
-  async setListingHidden(listingId: string, hidden: boolean): Promise<void> {
-    await delay(80);
-    adminStore.setHidden(listingId, hidden);
-  }
-
-  async listAdminPartners(): Promise<AdminPartner[]> {
-    await delay(80);
-    return adminStore.partners(partners);
-  }
-
-  async setMainPartner(partnerId: string, main: boolean): Promise<void> {
-    await delay(80);
-    adminStore.setMain(partners, partnerId, main);
-  }
-
-  async setPartnerHero(partnerId: string, hero: boolean): Promise<void> {
-    await delay(80);
-    adminStore.setHero(partnerId, hero);
-  }
-
-  async setPartnerActive(partnerId: string, active: boolean): Promise<void> {
-    await delay(80);
-    adminStore.setActive(partnerId, active);
-  }
-
-  async getWeekStats(day?: string): Promise<AdminDayStat[]> {
-    await delay(100);
-    return adminStore.weekStats(day);
-  }
-
   // --- safety ---
 
   async listReports(): Promise<Report[]> {
     await delay(120);
+    // like the real client: only what I reported myself
     return safetyStore
       .listReports()
-      .map((r) => ({ ...r, status: safetyStore.isResolved(r.id) ? 'RESOLVED' : 'OPEN' }));
+      .filter((r) => r.byProfileId === profileRepository.currentUserId)
+      .map((r) => ({ ...r, status: safetyStore.isResolved(r.id) ? 'RESOLVED' : 'OPEN', claimedAt: extras.claimedReports[r.id] }));
   }
 
   async submitReport(input: SubmitReportInput): Promise<Report> {

@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import { ModerationBanner } from '@/components/ModerationBanner';
+import { useCategoryCatalog } from '@/hooks/useCategories';
 import {
   Image,
   Pressable,
@@ -12,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Listing } from '@/domain/types';
-import { categoryArtId } from '@/domain/categories';
+import { categoryArtId, categoryLabel, categoryArtColors } from '@/domain/categories';
 import nb from '@/i18n/nb';
 import { canEditListing, canEditProposal, editListingHref, isOpenListing, isTakenListing } from '@/domain/editing';
 import {
@@ -29,7 +31,7 @@ import { postedAgo, replyTime } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { shareListing } from '@/lib/share';
 import { toast } from '@/lib/toast';
-import { categoryColors, categoryLabels, colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
+import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import {
@@ -54,6 +56,7 @@ const km = (d: number) => d.toLocaleString('nb-NO', { maximumFractionDigits: 1 }
 
 /** Oppdragsdetaljer (design/screens/Oppdragsdetaljer.dc.html). */
 export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack: () => void }) {
+  useCategoryCatalog(); // labels and colours follow the website's settings
   const me = useCurrentUser();
   const insets = useSafeAreaInsets();
   const unread = useUnreadNotificationCount();
@@ -162,13 +165,14 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
         <FadeUp delay={100} style={[styles.px, styles.titleBlock]}>
           <View style={styles.row8}>
             <Pill label={nb.detail.open} tone="need" dot size="lg" />
-            <Pill label={categoryLabels[cat]} tone="neutral" icon={cat} size="lg" />
+            <Pill label={categoryLabel(cat)} tone="neutral" icon={cat} size="lg" />
             {task?.isDugnad ? <Pill label={nb.card.dugnad} tone="neutral" icon="users" size="lg" /> : null}
             {task?.recurrence ? <Pill label={nb.detail.repeats[task.recurrence]} tone="neutral" icon="repeat" size="lg" /> : null}
           </View>
           <Text style={text.h1} accessibilityRole="header">
             {listing.title}
           </Text>
+          {isOwner ? <ModerationBanner listing={listing} /> : null}
           {/* "Be om hjelp igjen": only the invited helper and the owner get here */}
           {listing.invitedProfileId ? (
             <View style={styles.invited}>
@@ -432,7 +436,7 @@ function Gallery({ listing, saved, onSave }: { listing: Listing; saved: boolean;
   const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => setI(Math.round(e.nativeEvent.contentOffset.x / w));
 
   return (
-    <View style={[styles.gal, shadow.medium, { backgroundColor: categoryColors[cat].bg }]} accessibilityLabel={nb.detail.galleryLabel}>
+    <View style={[styles.gal, shadow.medium, { backgroundColor: categoryArtColors(cat).bg }]} accessibilityLabel={nb.detail.galleryLabel}>
       {n ? (
         <ScrollView ref={ref} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onEnd}>
           {imgs.map((img) => (

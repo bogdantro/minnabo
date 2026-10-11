@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import type { CategoryId } from '@/theme/theme';
 import type { IconName } from '@/components/ui';
-import { CATEGORIES, categoryArtId } from '@/domain/categories';
+import { CATEGORIES, categoryArtId, categoryLabel } from '@/domain/categories';
 import { milestonesFor } from '@/domain/milestones';
 import nb from '@/i18n/nb';
 import {
@@ -59,7 +59,7 @@ type View_ = 'me' | 'public';
 function artForSkill(skill: string): CategoryId {
   const s = skill.toLowerCase();
   const hit = (Object.keys(categoryLabels) as CategoryId[]).find(
-    (id) => id !== 'annet' && s.includes(categoryLabels[id].split('/')[0].toLowerCase()),
+    (id) => id !== 'annet' && s.includes(categoryLabel(id).split('/')[0].toLowerCase()),
   );
   if (hit) return hit;
   const cat = CATEGORIES.find((c) => s.includes(c.label.split('/')[0].toLowerCase()));
@@ -163,7 +163,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   };
 
   const categories = (profile.categorySlugs ?? []).map((slug) => categoryArtId(slug));
-  const catLabels = new Set(categories.map((c) => categoryLabels[c].toLowerCase()));
+  const catLabels = new Set(categories.map((c) => categoryLabel(c).toLowerCase()));
   const extraServices = (profile.services ?? []).filter((s) => !catLabels.has(s.toLowerCase()));
 
   const endorseList = endorsements ?? profile.endorsements ?? [];
@@ -171,7 +171,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   const recSkills = Array.from(
     new Set([
       ...endorseList.filter((e) => e.count > 0).map((e) => e.skill),
-      ...(isSelf ? [] : categories.map((c) => categoryLabels[c])),
+      ...(isSelf ? [] : categories.map((c) => categoryLabel(c))),
     ]),
   );
 
@@ -397,7 +397,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
                 {categories.map((c) => (
                   <View key={c} style={styles.catChip}>
                     <CategoryArt category={c} width={26} height={26} radius={13} iconSize={14} />
-                    <Text style={styles.catText}>{categoryLabels[c]}</Text>
+                    <Text style={styles.catText}>{categoryLabel(c)}</Text>
                   </View>
                 ))}
                 {extraServices.map((s) => (

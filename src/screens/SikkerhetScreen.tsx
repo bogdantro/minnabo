@@ -6,7 +6,9 @@ import Animated, { FadeOutLeft, LinearTransition } from 'react-native-reanimated
 import type { PublicProfile } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
-import { profileKeys, useBlockedProfileIds, useListing, useMyAgreements, useProfile, useToggleBlock } from '@/api/queries';
+import { profileKeys, useBlockedProfileIds, useListing, useMyAgreements, useProfile, useReports, useToggleBlock } from '@/api/queries';
+import { reportStage, type ReportStage } from '@/domain/reports';
+import { dayMonth } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { useTrustedContacts } from '@/lib/trustedContacts';
@@ -24,13 +26,19 @@ import {
   SectionHeader,
   SubHeader,
   type IconName,
+  Pill,
 } from '@/components/ui';
 
 /** Sikkerhet (design/screens/Sikkerhet.dc.html). */
+
+const STAGE_TONE: Record<ReportStage, 'line' | 'warn' | 'ok'> = { received: 'line', processing: 'warn', resolved: 'ok' };
+const STAGE_ICON: Record<ReportStage, 'send' | 'hourglass' | 'check'> = { received: 'send', processing: 'hourglass', resolved: 'check' };
+
 export function SikkerhetScreen() {
   const router = useRouter();
   const { contacts } = useTrustedContacts();
   const { data: blockedIds = [] } = useBlockedProfileIds();
+  const { data: myReports = [] } = useReports();
   const toggleBlock = useToggleBlock();
   const [ask, setAsk] = useState<PublicProfile | null>(null);
   const [tip, setTip] = useState<number | null>(0);
@@ -105,6 +113,29 @@ export function SikkerhetScreen() {
           />
         </ListGroup>
       </FadeUp>
+
+      {myReports.length ? (
+        <>
+          <SectionHeader title={nb.sikkerhet.myReportsTitle} subtitle={nb.sikkerhet.myReportsSub} icon="flag" iconBg={colors.dangerTint} iconColor={colors.danger} />
+          <FadeUp style={styles.px}>
+            <ListGroup style={shadow.card}>
+              {myReports.map((r) => {
+                const stage = reportStage(r);
+                return (
+                  <ListRow
+                    key={r.id}
+                    icon={STAGE_ICON[stage]}
+                    title={r.reason}
+                    subtitle={`${nb.rapporter.types[r.targetType]} · ${nb.sikkerhet.reportSent(dayMonth(r.createdAt))}`}
+                    right={<Pill label={nb.sikkerhet.reportStage[stage]} tone={STAGE_TONE[stage]} size="sm" />}
+                    accessibilityLabel={`${r.reason}, ${nb.sikkerhet.reportStage[stage]}`}
+                  />
+                );
+              })}
+            </ListGroup>
+          </FadeUp>
+        </>
+      ) : null}
 
       <SectionHeader title={nb.sikkerhet.blockedTitle} subtitle={nb.sikkerhet.blockedSub} icon="ban" iconBg={colors.neutralPill} iconColor={colors.ink2} />
       <FadeUp style={styles.px}>

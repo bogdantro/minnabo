@@ -7,7 +7,8 @@ import {
 } from '@tanstack/react-query';
 import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
-import type { ConsentRecord, MySettings, NeighbourhoodInfo, NotificationPrefs, ReportOutcome } from './ApiClient';
+import { DEFAULT_APP_SETTINGS } from './ApiClient';
+import type { AppSettings, ConsentRecord, MySettings, NeighbourhoodInfo, NotificationPrefs } from './ApiClient';
 import { apiClient } from './client';
 
 export const listingKeys = {
@@ -657,6 +658,19 @@ export function useToggleFollow() {
   });
 }
 
+export const appSettingsKeys = { app: ['app-settings'] as const };
+/** The category catalogue from the database (order, colours, on/off set on the website). */
+export const categoryKeys = { all: ['categories'] as const };
+
+/**
+ * Platform settings from the website's admin. Falls back to the defaults (nothing closed)
+ * while loading or when they can't be read, so a hiccup never locks anyone out.
+ */
+export function useAppSettings(): AppSettings {
+  const { data } = useQuery({ queryKey: appSettingsKeys.app, queryFn: () => apiClient.getAppSettings(), staleTime: 60_000 });
+  return data ?? DEFAULT_APP_SETTINGS;
+}
+
 export const communityKeys = {
   partners: ['partners'] as const,
   donations: ['donations'] as const,
@@ -917,67 +931,7 @@ export const safetyKeys = {
   blocked: ['blocked'] as const,
 };
 
-// --- admin ---------------------------------------------------------------
-
-export const adminKeys = {
-  all: ['admin'] as const,
-  overview: ['admin', 'overview'] as const,
-  reports: ['admin', 'reports'] as const,
-  businesses: ['admin', 'businesses'] as const,
-  users: (q: string) => ['admin', 'users', q] as const,
-  listings: ['admin', 'listings'] as const,
-  partners: ['admin', 'partners'] as const,
-  stats: ['admin', 'stats'] as const,
-};
-
-export function useAdminOverview(enabled = true) {
-  return useQuery({ queryKey: adminKeys.overview, queryFn: () => apiClient.getAdminOverview(), enabled });
-}
-export function useAdminReports(enabled = true) {
-  return useQuery({ queryKey: adminKeys.reports, queryFn: () => apiClient.listAdminReports(), enabled });
-}
-export function useAdminBusinesses(enabled = true) {
-  return useQuery({ queryKey: adminKeys.businesses, queryFn: () => apiClient.listAdminBusinesses(), enabled });
-}
-export function useAdminUsers(query: string, enabled = true) {
-  return useQuery({ queryKey: adminKeys.users(query), queryFn: () => apiClient.listAdminUsers(query), enabled });
-}
-export function useFlaggedListings(enabled = true) {
-  return useQuery({ queryKey: adminKeys.listings, queryFn: () => apiClient.listFlaggedListings(), enabled });
-}
-export function useAdminPartners(enabled = true) {
-  return useQuery({ queryKey: adminKeys.partners, queryFn: () => apiClient.listAdminPartners(), enabled });
-}
-export function useWeekStats(enabled = true) {
-  return useQuery({ queryKey: adminKeys.stats, queryFn: () => apiClient.getWeekStats(), enabled });
-}
-
-/** Every admin action refreshes the admin queries (and partners for Fellesskap). */
-function useAdminMutation<V>(fn: (v: V) => Promise<void>) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: fn,
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: adminKeys.all });
-      void qc.invalidateQueries({ queryKey: communityKeys.partners });
-    },
-  });
-}
-export const useDecideReport = () =>
-  useAdminMutation((v: { id: string; outcome: ReportOutcome }) => apiClient.decideReport(v.id, v.outcome));
-export const useReopenReport = () => useAdminMutation((id: string) => apiClient.reopenReport(id));
-export const useDecideBusiness = () =>
-  useAdminMutation((v: { profileId: string; approve: boolean }) => apiClient.decideBusiness(v.profileId, v.approve));
-export const useSetUserSuspended = () =>
-  useAdminMutation((v: { id: string; suspended: boolean }) => apiClient.setUserSuspended(v.id, v.suspended));
-export const useSetListingHidden = () =>
-  useAdminMutation((v: { id: string; hidden: boolean }) => apiClient.setListingHidden(v.id, v.hidden));
-export const useSetMainPartner = () =>
-  useAdminMutation((v: { id: string; main: boolean }) => apiClient.setMainPartner(v.id, v.main));
-export const useSetPartnerHero = () =>
-  useAdminMutation((v: { id: string; hero: boolean }) => apiClient.setPartnerHero(v.id, v.hero));
-export const useSetPartnerActive = () =>
-  useAdminMutation((v: { id: string; active: boolean }) => apiClient.setPartnerActive(v.id, v.active));
+// --- reports ---------------------------------------------------------------
 
 export function useReports() {
   return useQuery({ queryKey: safetyKeys.reports, queryFn: () => apiClient.listReports() });
@@ -1107,6 +1061,3 @@ export function useJoinKommuneWaitlist() {
   return useMutation({ mutationFn: (kommune: string) => apiClient.joinKommuneWaitlist(kommune) });
 }
 
-export function useKommuneWaitlist() {
-  return useQuery({ queryKey: ['admin', 'waitlist'] as const, queryFn: () => apiClient.listKommuneWaitlist() });
-}

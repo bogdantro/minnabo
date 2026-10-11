@@ -1,3 +1,4 @@
+import type { CategoryRow } from '@/domain/categories';
 import { supabase } from '@/lib/supabase';
 import { reportError } from '@/lib/reporting';
 import type {
@@ -31,6 +32,7 @@ import type {
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type {
   ApiClient,
+  AppSettings,
   SharedContact,
   ListConversationsParams,
   BusinessProfile,
@@ -52,19 +54,10 @@ import type {
   AccountStatus,
   EditProposalPatch,
   ListingEditData,
-  ListingExtras,
-  AdminBusiness,
-  AdminDayStat,
-  AdminListing,
-  AdminOverview,
-  AdminPartner,
-  AdminReport,
-  AdminUser,
-  ReportOutcome} from './ApiClient';
-import { withDefaultPrefs } from './ApiClient';
+  ListingExtras} from './ApiClient';
+import { DEFAULT_APP_SETTINGS, withDefaultPrefs } from './ApiClient';
 
 import { OPEN_LISTING_STATUSES } from '@/domain/editing';
-import { publicUrl } from '@/lib/storage';
 import {
   toAgreement,
   toTimeProposal,
@@ -799,12 +792,6 @@ export class SupabaseApiClient implements ApiClient {
     if (error) fail(error.message);
   }
 
-  async listKommuneWaitlist(): Promise<{ kommune: string; count: number }[]> {
-    const { data, error } = await supabase.rpc('admin_waitlist');
-    if (error) return [];
-    return (data as unknown as { kommune: string; count: number }[]) ?? [];
-  }
-
   async getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null> {
     const { data, error } = await supabase
       .from('agreement_snapshots')
@@ -1169,6 +1156,40 @@ export class SupabaseApiClient implements ApiClient {
     return this.listFollowedProfileIds();
   }
 
+  async listCategories(): Promise<CategoryRow[]> {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('slug, label, tile_bg, icon_color, active, sort_order')
+      .order('sort_order');
+    if (error) fail(error.message);
+    return ((data ?? []) as { slug: string; label: string; tile_bg: string | null; icon_color: string | null; active: boolean | null; sort_order: number | null }[]).map(
+      (r, i) => ({ slug: r.slug, label: r.label, tileBg: r.tile_bg, iconColor: r.icon_color, active: r.active !== false, sortOrder: r.sort_order ?? (i + 1) * 10 }),
+    );
+  }
+
+  async getAppSettings(): Promise<AppSettings> {
+    const keys = ['platform.maintenance_mode', 'platform.registration_open', 'platform.default_radius_km', 'partners.version', 'partners.max_hovedpartnere'];
+    const { data, error } = await supabase.from('app_settings').select('key, value').in('key', keys);
+    if (error) fail(error.message);
+    const v = Object.fromEntries(((data ?? []) as { key: string; value: unknown }[]).map((r) => [r.key, r.value]));
+    const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : typeof x === 'string' && x.trim() && Number.isFinite(Number(x)) ? Number(x) : undefined);
+    const max = num(v['partners.max_hovedpartnere']);
+    const radius = num(v['platform.default_radius_km']);
+    return {
+      maintenance: v['platform.maintenance_mode'] === true,
+      // only an explicit `false` closes sign-ups
+      registrationOpen: v['platform.registration_open'] !== false,
+      defaultRadiusKm: radius && radius > 0 ? radius : undefined,
+      partnersVersion: v['partners.version'] == null ? '' : String(v['partners.version']),
+      maxHovedpartnere: max && max > 0 ? Math.round(max) : DEFAULT_APP_SETTINGS.maxHovedpartnere,
+    };
+  }
+
+  async logPartnerEvent(partnerId: string, kind: 'impression' | 'click', kommune?: string): Promise<void> {
+    const { error } = await supabase.rpc('log_partner_event', { p_partner: partnerId, p_kind: kind, p_kommune: kommune ?? null });
+    if (error) fail(error.message);
+  }
+
   async listPartners(): Promise<Partner[]> {
     const { data, error } = await supabase
       .from('partners')
@@ -1500,172 +1521,14 @@ export class SupabaseApiClient implements ApiClient {
     if (error) fail(error.message);
   }
 
-  // --- admin ---
-
-  async getAdminOverview(): Promise<AdminOverview> {
-    const { data, error } = await supabase.rpc('admin_overview');
-    if (error) fail(error.message);
-    const r = data as { open_reports: number; pending_businesses: number; new_users_today: number; active_listings: number };
-    return {
-      openReports: r.open_reports,
-      pendingBusinesses: r.pending_businesses,
-      newUsersToday: r.new_users_today,
-      activeListings: r.active_listings,
-    };
-  }
-
-  async listAdminReports(): Promise<AdminReport[]> {
-    const [{ data, error }, att] = await Promise.all([supabase.rpc('admin_reports'), supabase.rpc('admin_report_attachments')]);
-    if (error) fail(error.message);
-    const attachments = new Map(
-      ((att.error ? [] : att.data) as { report_id: string; path: string }[]).map((a) => [a.report_id, a.path]),
-    );
-    return (data as {
-      id: string; target_type: AdminReport['targetType']; target_id: string; reason: string; details: string | null;
-      target_text: string; by_name: string; created_at: string; status: AdminReport['status'];
-      outcome: ReportOutcome | null; resolved_at: string | null;
-    }[]).map((r) => ({
-      id: r.id,
-      targetType: r.target_type,
-      targetId: r.target_id,
-      reason: r.reason,
-      details: r.details ?? undefined,
-      targetText: r.target_text,
-      byName: r.by_name,
-      createdAt: r.created_at,
-      status: r.status,
-      outcome: r.outcome,
-      resolvedAt: r.resolved_at,
-      attachmentPath: attachments.get(r.id),
-    }));
-  }
-
-  async getReportAttachmentUrl(path: string): Promise<string> {
-    const { data, error } = await supabase.storage.from('report-attachments').createSignedUrl(path, 300);
-    if (error || !data?.signedUrl) fail(error?.message);
-    return data.signedUrl;
-  }
-
-  async decideReport(reportId: string, outcome: ReportOutcome): Promise<void> {
-    const { error } = await supabase.rpc('admin_decide_report', { p_report_id: reportId, p_outcome: outcome });
-    if (error) fail(error.message);
-  }
-
-  async reopenReport(reportId: string): Promise<void> {
-    const { error } = await supabase.rpc('admin_reopen_report', { p_report_id: reportId });
-    if (error) fail(error.message);
-  }
-
-  async listAdminBusinesses(): Promise<AdminBusiness[]> {
-    const { data, error } = await supabase.rpc('admin_businesses');
-    if (error) fail(error.message);
-    return (data as {
-      profile_id: string; org_nr: string; company_name: string; contact_person: string; email: string; phone: string;
-      category_slugs: string[] | null; status: AdminBusiness['status']; created_at: string; decided_at: string | null;
-    }[]).map((r) => ({
-      profileId: r.profile_id,
-      orgNr: r.org_nr,
-      companyName: r.company_name,
-      contactPerson: r.contact_person,
-      email: r.email,
-      phone: r.phone,
-      categorySlugs: r.category_slugs ?? [],
-      status: r.status,
-      createdAt: r.created_at,
-      decidedAt: r.decided_at,
-    }));
-  }
-
-  async decideBusiness(profileId: string, approve: boolean): Promise<void> {
-    const { error } = await supabase.rpc('admin_decide_business', { p_profile_id: profileId, p_approve: approve });
-    if (error) fail(error.message);
-  }
-
-  async listAdminUsers(query = ''): Promise<AdminUser[]> {
-    const { data, error } = await supabase.rpc('admin_users', { p_q: query });
-    if (error) fail(error.message);
-    return (data as {
-      id: string; display_name: string; initials: string; avatar_path: string | null; place: string | null;
-      municipality: string | null; member_since: string; rating: number | null; rating_count: number;
-      suspended: boolean; role: string;
-    }[]).map((r) => ({
-      id: r.id,
-      displayName: r.display_name,
-      initials: r.initials,
-      avatarUrl: publicUrl('avatars', r.avatar_path),
-      place: r.place,
-      municipality: r.municipality,
-      memberSince: r.member_since,
-      rating: r.rating === null ? null : Number(r.rating),
-      ratingCount: r.rating_count,
-      suspended: r.suspended,
-      isAdmin: r.role === 'admin',
-    }));
-  }
-
-  async setUserSuspended(profileId: string, suspended: boolean): Promise<void> {
-    const { error } = await supabase.rpc('admin_set_suspended', { p_profile_id: profileId, p_suspended: suspended });
-    if (error) fail(error.message);
-  }
-
-  async listFlaggedListings(): Promise<AdminListing[]> {
-    const { data, error } = await supabase.rpc('admin_flagged_listings');
-    if (error) fail(error.message);
-    return (data as {
-      id: string; title: string; category_slug: string; report_count: number; last_reason: string | null; hidden: boolean;
-    }[]).map((r) => ({
-      id: r.id,
-      title: r.title,
-      categorySlug: r.category_slug,
-      reportCount: r.report_count,
-      lastReason: r.last_reason,
-      hidden: r.hidden,
-    }));
-  }
-
-  async setListingHidden(listingId: string, hidden: boolean): Promise<void> {
-    const { error } = await supabase.rpc('admin_set_listing_hidden', { p_listing_id: listingId, p_hidden: hidden });
-    if (error) fail(error.message);
-  }
-
-  async listAdminPartners(): Promise<AdminPartner[]> {
-    const { data, error } = await supabase.rpc('admin_partners');
-    if (error) fail(error.message);
-    return data as AdminPartner[];
-  }
-
-  async setMainPartner(partnerId: string, main: boolean): Promise<void> {
-    const { error } = await supabase.rpc('admin_set_main_partner', { p_partner_id: partnerId, p_main: main });
-    if (error) fail(error.message);
-  }
-
-  async setPartnerHero(partnerId: string, hero: boolean): Promise<void> {
-    const { error } = await supabase.rpc('admin_set_partner_hero', { p_partner_id: partnerId, p_hero: hero });
-    if (error) fail(error.message);
-  }
-
-  async setPartnerActive(partnerId: string, active: boolean): Promise<void> {
-    const { error } = await supabase.rpc('admin_set_partner_active', { p_partner_id: partnerId, p_active: active });
-    if (error) fail(error.message);
-  }
-
-  async getWeekStats(day?: string): Promise<AdminDayStat[]> {
-    const { data, error } = await supabase.rpc('admin_week_stats', day ? { p_day: day } : {});
-    if (error) fail(error.message);
-    return (data as { stat_day: string; n_listings: number; n_offers: number; n_completed: number }[]).map((r) => ({
-      day: r.stat_day,
-      listings: r.n_listings,
-      offers: r.n_offers,
-      completed: r.n_completed,
-    }));
-  }
-
   // --- safety ---
 
   async listReports(): Promise<Report[]> {
     const { data, error } = await supabase
       .from('reports')
       .select('*')
+      // "Mine rapporter": only what I reported myself (an admin's row security would return everyone's)
+      .eq('by_profile_id', await myId())
       .order('created_at', { ascending: false });
     if (error) fail(error.message);
     return (data as {
@@ -1677,6 +1540,7 @@ export class SupabaseApiClient implements ApiClient {
       by_profile_id: string;
       created_at: string;
       status: 'OPEN' | 'RESOLVED';
+      claimed_at?: string | null;
     }[]).map((r) => ({
       id: r.id,
       targetType: r.target_type,
@@ -1686,6 +1550,7 @@ export class SupabaseApiClient implements ApiClient {
       byProfileId: r.by_profile_id,
       createdAt: r.created_at,
       status: r.status,
+      claimedAt: r.claimed_at ?? undefined,
     }));
   }
 
@@ -1787,7 +1652,7 @@ export class SupabaseApiClient implements ApiClient {
     if (!data) return null;
     const r = data as {
       profile_id: string; org_nr: string; company_name: string; contact_person: string; email: string; phone: string;
-      category_slugs: string[] | null; status: BusinessProfile['status']; created_at: string;
+      category_slugs: string[] | null; status: BusinessProfile['status']; created_at: string; rejection_reason?: string | null;
     };
     return {
       profileId: r.profile_id,
@@ -1799,6 +1664,7 @@ export class SupabaseApiClient implements ApiClient {
       categorySlugs: r.category_slugs ?? [],
       status: r.status,
       createdAt: r.created_at,
+      rejectionReason: r.rejection_reason?.trim() || undefined,
     };
   }
 

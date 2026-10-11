@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useActiveCategories } from '@/hooks/useCategories';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
 import { useListings } from '@/api/queries';
@@ -7,8 +8,8 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useDismissedLeads } from '@/lib/dismissedLeads';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
-import { slugForArtId, categoryArtId } from '@/domain/categories';
-import { categoryLabels, colors, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
+import { slugForArtId, categoryArtId, categoryLabel } from '@/domain/categories';
+import { colors, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
 import { HomeTopBar } from '@/components/TopBar';
 import { LocationSheet } from '@/components/LocationSheet';
 import { OppdragCard } from '@/components/OppdragCard';
@@ -28,13 +29,13 @@ import {
   SectionHeader,
 } from '@/components/ui';
 
-const CATS = Object.keys(categoryLabels) as CategoryId[];
 const SHOWN = 6;
 /** "N nye" on the Oppdrag for meg card = open oppdrag in reach from the last 48 hours. */
 const NEW_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 /** Oppdrag – home and default route (design/screens/Oppdrag.dc.html). */
 export function OppdragScreen() {
+  const CATS = useActiveCategories();
   const me = useCurrentUser();
   const { municipality, municipalities, reach, setReach, setKommune, ready } = useLocationScope();
   const { dismissed } = useDismissedLeads();
@@ -141,7 +142,7 @@ export function OppdragScreen() {
           {CATS.map((c) => (
             <Chip
               key={c}
-              label={categoryLabels[c]}
+              label={categoryLabel(c)}
               category={c}
               selected={cat === c}
               onPress={() => setCat(cat === c ? null : c)}

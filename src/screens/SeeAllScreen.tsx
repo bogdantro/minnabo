@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
+import { useCategoryCatalog } from '@/hooks/useCategories';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
-import { categoryArtId } from '@/domain/categories';
+import { categoryArtId, categoryLabel } from '@/domain/categories';
 import { useListings } from '@/api/queries';
 import { useLocationScope, type Reach } from '@/lib/locationScope';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from '@/lib/toast';
-import { categoryLabels, colors, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
+import { colors, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
 import { LocationSheet } from '@/components/LocationSheet';
 import { OppdragCard } from '@/components/OppdragCard';
 import {
@@ -50,6 +51,7 @@ function sortList(list: Listing[], sort: Sort): Listing[] {
 
 /** Se alle oppdrag (design/screens/SeAlle.dc.html). Oppdrag only (rule 1). */
 export function SeeAllScreen({ initialCategory }: { initialCategory?: string }) {
+  useCategoryCatalog(); // labels and colours follow the website's settings
   const router = useRouter();
   const me = useCurrentUser();
   const { municipality, municipalities, reach, setReach, setKommune, ready } = useLocationScope();
@@ -107,7 +109,7 @@ export function SeeAllScreen({ initialCategory }: { initialCategory?: string }) 
         <ChipRow style={styles.chips}>
           <Chip label={nb.seAlle.all} icon="annet" selected={cat === null} onPress={() => setCat(null)} />
           {present.map((c) => (
-            <Chip key={c} label={categoryLabels[c]} category={c} selected={cat === c} onPress={() => setCat(c)} />
+            <Chip key={c} label={categoryLabel(c)} category={c} selected={cat === c} onPress={() => setCat(c)} />
           ))}
         </ChipRow>
 
@@ -115,7 +117,7 @@ export function SeeAllScreen({ initialCategory }: { initialCategory?: string }) 
           <View style={styles.gap3}>
             {/* No count while loading or on error – "0 oppdrag" would be wrong. */}
             {!loading && !jobs.isError ? <Text style={[text.h3, { fontSize: 19 }]}>{nb.seAlle.count(items.length)}</Text> : null}
-            <Text style={text.meta}>{nb.seAlle.sub(cat ? categoryLabels[cat] : null, nb.seAlle.sorts[sort])}</Text>
+            <Text style={text.meta}>{nb.seAlle.sub(cat ? categoryLabel(cat) : null, nb.seAlle.sorts[sort])}</Text>
           </View>
           <Pressable
             accessibilityRole="button"

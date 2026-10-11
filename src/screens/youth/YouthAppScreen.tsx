@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useActiveCategories } from '@/hooks/useCategories';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,7 +7,7 @@ import { GuardianSheet } from '@/components/GuardianSheet';
 import { LocationSheet } from '@/components/LocationSheet';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
-import { categoryArtId } from '@/domain/categories';
+import { categoryArtId, categoryLabel } from '@/domain/categories';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useConversations, useListings, useListingsByIds, useProfile, useSentProposals, useStartConversation } from '@/api/queries';
@@ -17,7 +18,6 @@ import { useVippsIdentity } from '@/auth/identity';
 import { signOut, useSession } from '@/auth/session';
 import { toast } from '@/lib/toast';
 import {
-  categoryLabels,
   colors,
   radius,
   safeTopExtra,
@@ -79,7 +79,7 @@ type Offer = {
 };
 type SheetStep = 'detail' | 'form' | 'busy' | 'done';
 
-const CATS: (CategoryId | null)[] = [null, 'hage', 'dyrepass', 'data', 'snomaking'];
+const YOUTH_CATS: CategoryId[] = ['hage', 'dyrepass', 'data', 'snomaking'];
 const STATUS_TONE: Record<OfferStatus, 'dark' | 'warn' | 'ok' | 'neutral'> = {
   sendt: 'dark',
   venter: 'warn',
@@ -106,6 +106,8 @@ function YouthBadge() {
 export function YouthAppScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const active = useActiveCategories();
+  const CATS: (CategoryId | null)[] = [null, ...YOUTH_CATS.filter((c) => active.includes(c))];
   // empty for the moment it takes to load who is signed in
   const id = useVippsIdentity() ?? { name: '', firstName: '', initials: '·', birthYear: 0, age: 0, phoneMasked: '', youth: true };
   const { municipality, municipalities, ready, reach, setKommune, setReach } = useLocationScope();
@@ -289,7 +291,7 @@ export function YouthAppScreen() {
                 {CATS.map((c) => (
                   <Chip
                     key={c ?? 'alle'}
-                    label={c ? categoryLabels[c] : nb.youth.all}
+                    label={c ? categoryLabel(c) : nb.youth.all}
                     category={c ?? undefined}
                     icon={c ? undefined : 'annet'}
                     selected={cat === c}

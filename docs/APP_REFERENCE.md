@@ -101,7 +101,7 @@ not a gig-economy marketplace and not a classifieds board.
 | **Ungdomskonto** | Under-18 user | Can browse and send tilbud only (see §11) |
 | **Bedrift** | Verified local business / borettslag / lag og forening | Registers with org.nr, gets a verified business badge. Menu text: "For bedrifter · Borettslag, lag og foreninger" |
 | **Partner** | Local sponsor | Shown on Fellesskap on three levels: Hovedpartner (max 4, own page), Lokal helt, Lokal støttespiller (§13.1) |
-| **Admin / moderator** | MinNabo staff | Handles reports, business verification, users, flagged oppdrag, partners, stats |
+| **Admin / moderator** | MinNabo staff | Works on the **website's admin** (not in the app): reports, business verification, users, oppdrag, partners, categories, kommuner, platform switches, stats |
 
 The design centres the **private person**.
 
@@ -429,7 +429,7 @@ Hidden on detail screens, chat and wizards.
 - **Utforsk** (tiles): Oppdrag "Finn og gi tilbud" · Fellesskap "Nabolag og oppslag" · Innboks "3 uleste meldinger" · Legg ut "Nytt oppdrag"
 - **Mitt:** Min profil · Mine avtaler · Mine oppdrag · Mottatte tilbud · Lagrede oppføringer og søk · Varsler
 - **Tillit og trygghet:** Vurderinger og verifisering · Sikkerhet, rapportering og blokkering
-- **Innstillinger:** Innstillinger · Personvern ("Samtykker og dine data") · Vilkår · Varslinger · For bedrifter ("Borettslag, lag og foreninger") · Adminpanel (admins only)
+- **Innstillinger:** Innstillinger · Personvern ("Samtykker og dine data") · Vilkår · Varslinger · For bedrifter ("Borettslag, lag og foreninger")
 - Logg ut (confirm dialog: "Logg ut av MinNabo?") · footer "MinNabo · versjon 1.0 · Innlandet" · "MinNabo håndterer ikke betaling."
 
 ---
@@ -641,7 +641,7 @@ and "Takk for støtten".
 **Empty states:** "Hovedpartnere kommer snart." · "Ingen lokale helter i {kommune} ennå." ·
 "Ingen lokale støttespillere i {kommune} ennå." Missing logos show a dashed placeholder tile labelled "Logo".
 
-**Who decides:** MinNabo staff in Adminpanel → Partnere. They switch a partner on as hovedpartner (only when a slot is
+**Who decides:** MinNabo staff on the website's admin (and the partner's own package there). They switch a partner on as hovedpartner (only when a slot is
 free: "Maks 4 hovedpartnere. Slå av en av dem før du kan velge en ny."), mark a støttespiller as "Lokal helt", or add/remove
 it from the carousel. A hovedpartner is never also a lokal helt. Partner texts, logos and photos are entered by MinNabo
 (the partner delivers them).
@@ -660,8 +660,7 @@ MinNabo (contact, no online checkout). Do not publish prices for the levels unle
 - **Bedrift / "For bedrifter":** for local businesses, borettslag, lag og foreninger. Register with org.nr
   (format + checksum + **live lookup in Enhetsregisteret** for name, address, form), contact details, categories,
   consent → status timeline Sendt → Til verifisering → Verifisert (or rejected → send again).
-- **Adminpanel** (admins only): KPIs, report queue (Avvis / Fjern innhold / Advar bruker + Angre), business approval,
-  user search + suspend, flagged oppdrag hide/show, partners (hovedpartner slots, max 4 · "Lokal helt" · carousel on/off), weekly stats.
+- **Admin:** there is no admin panel in the app (removed 2026-10-11). MinNabo staff use the website's admin, which works on the same database: moderation (hide / close oppdrag, warn, suspend), business verification, partners and packages, categories (order, on/off, colours), kommuner, donations, news and the platform switches (maintenance mode, registration open).
 
 ---
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ModerationBanner } from '@/components/ModerationBanner';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeOutRight, LinearTransition } from 'react-native-reanimated';
@@ -54,6 +55,9 @@ function groupOf(s: ListingStatus): Group {
 
 function statusPill(l: Listing): { tone: PillTone; icon: IconName; label: string } {
   const g = groupOf(l.status);
+  // moderation comes first: nobody else can see the oppdrag
+  if (l.moderation?.pendingReview) return { tone: 'offer', icon: 'hourglass', label: nb.moderation.pendingPill };
+  if (l.moderation?.hidden) return { tone: 'warn', icon: 'eye', label: nb.moderation.hiddenPill };
   if (g === 'aktiv') return { tone: 'ok', icon: 'zap', label: nb.mine.pill.aktiv };
   if (g === 'pauset') return { tone: 'warn', icon: 'pause', label: nb.mine.pill.pauset };
   if (ONGOING.includes(l.status)) return { tone: 'ok', icon: 'hand', label: nb.mine.pill.agreed };
@@ -322,6 +326,7 @@ function ListingRow({
           <IconButton icon="more" variant="ghost" accessibilityLabel={nb.mine.more(l.title)} onPress={onMore} style={styles.more} />
         ) : null}
       </View>
+      <ModerationBanner listing={l} />
       <View style={styles.mstats}>
         <View style={[styles.mstat, hot && styles.mstatHot]}>
           <Icon name="tag" size={14} color={hot ? colors.limeDeep : colors.faint} />

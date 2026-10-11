@@ -4,8 +4,8 @@
 --
 -- What this is
 --   The state of the database after every migration in supabase/migrations
---   (0001_schema.sql … 0061_saved_search_filters.sql) has run, in one file.
---   It was produced by replaying all 61 migrations, in order, on a scratch
+--   (0001_schema.sql … 0062_website.sql) has run, in one file.
+--   It was produced by replaying all 62 migrations, in order, on a scratch
 --   Postgres and dumping the result (pg_dump --schema-only --schema=public),
 --   then adding the parts that live outside `public` (auth trigger, storage
 --   buckets + policies, realtime publication, pg_cron job) and the category
@@ -18,9 +18,9 @@
 --   this file. supabase/migrations stays the source of truth.
 --
 -- Live project status (from docs/LEFT_OUT.md, A14, checked 2026-10-06)
---   0001–0046 are applied to the hosted project; 0047–0061 still have to be
---   pushed. This file already includes them. 0054_website.sql comes from the
---   website repo (minnabo-web) and adds the website's tables (schema `web`
+--   0001–0062 are applied to the hosted project (checked 2026-10-11 with
+--   `supabase migration list`). 0054_website.sql and 0062_website.sql come from
+--   the website repo (minnabo-web) and add the website's tables (schema `web`
 --   is not dumped here – only `public`).
 --
 -- Supabase-managed parts this schema relies on (not defined here)
@@ -40,8 +40,8 @@
 --
 -- Contents
 --   1. Extensions
---   2. public schema: 13 enums, 64 tables, 5 views, 144 functions,
---      64 triggers, 34 indexes (plus primary/unique keys),
+--   2. public schema: 13 enums, 65 tables, 5 views, 149 functions,
+--      67 triggers, 37 indexes (plus primary/unique keys),
 --      foreign keys, row level security + 69 policies, grants
 --   3. Trigger on auth.users
 --   4. Storage buckets and storage.objects policies
@@ -54,13 +54,13 @@
 --   price_mode, proposal_status, purpose, report_status, report_target, task_recurrence,
 --   verification_kind
 --
--- Tables (64):
+-- Tables (65):
 --   account_deletions, admin_audit_log, agreement_reminders, agreement_snapshots,
 --   agreement_time_proposals, app_secrets, app_settings, banned_words, blocks, business_profiles,
 --   categories, clubs, completion_confirmations, consent_records, contact_messages,
 --   conversation_participants, conversations, donation_records, follows, guardian_links,
 --   job_workspaces, kommune_waitlist, kommuner, listing_images, listing_private, listings,
---   message_reads, messages, neighbourhood_members, neighbourhoods, news_articles,
+--   message_reads, messages, neighbourhood_members, neighbourhoods, news_articles, news_views,
 --   newsletter_subscribers, no_show_reports, notice_comments, noticeboard_posts, notifications,
 --   partner_accounts, partner_events, partner_invoices, partner_placements,
 --   partner_profile_changes, partner_reminders, partners, portfolio_items, profile_home_notes,
@@ -1137,10 +1137,11 @@ CREATE FUNCTION public.guard_listing_hidden() RETURNS trigger
     AS $$
 begin
   if not is_admin() and current_user = 'authenticated' then
-    new.admin_hidden  := old.admin_hidden;
-    new.hidden_reason := old.hidden_reason;
-    new.hidden_at     := old.hidden_at;
-    new.hidden_by     := old.hidden_by;
+    new.admin_hidden   := old.admin_hidden;
+    new.hidden_reason  := old.hidden_reason;
+    new.hidden_at      := old.hidden_at;
+    new.hidden_by      := old.hidden_by;
+    new.pending_review := old.pending_review;
   end if;
   return new;
 end $$;
@@ -1530,6 +1531,27 @@ $$;
 
 
 --
+-- Name: listings_first_review(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.listings_first_review() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if new.type = 'TASK_REQUEST' and setting_bool('moderation.review_first_listing', false)
+     and not exists (select 1 from listings where owner_id = new.owner_id and type = 'TASK_REQUEST') then
+    new.pending_review := true;
+    new.admin_hidden   := true;
+    new.hidden_reason  := 'Venter på godkjenning';
+    new.hidden_at      := now();
+    new.hidden_by      := 'system';
+  end if;
+  return new;
+end $$;
+
+
+--
 -- Name: listings_guard_agreement(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1587,6 +1609,29 @@ begin
   new.search := to_tsvector('simple',
     coalesce(new.title,'') || ' ' || coalesce(new.place,'') || ' ' || coalesce(new.category_slug,''));
   return new;
+end $$;
+
+
+--
+-- Name: log_news_view(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.log_news_view(p_article uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_viewer text := md5(coalesce(auth.uid()::text, ''));
+begin
+  if auth.uid() is null then return; end if;
+  if not exists (select 1 from news_articles where id = p_article and status = 'published' and show_in_app) then
+    return;
+  end if;
+  if exists (select 1 from news_views where article_id = p_article and viewer = v_viewer
+               and viewed_at > now() - interval '30 minutes') then
+    return;
+  end if;
+  insert into news_views(article_id, source, viewer) values (p_article, 'app', v_viewer);
+  update news_articles set views = views + 1 where id = p_article;
 end $$;
 
 
@@ -2955,6 +3000,92 @@ end $$;
 
 
 --
+-- Name: reports_auto_moderate(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reports_auto_moderate() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_hide  int := setting_int('moderation.auto_hide_threshold', 3);
+  v_susp  int := setting_int('moderation.auto_suspend_threshold', 5);
+  v_n     int;
+  v_owner uuid;
+  v_title text;
+begin
+  if new.status <> 'OPEN' then return new; end if;
+
+  if new.target_type = 'LISTING' and v_hide > 0
+     and exists (select 1 from listings where id::text = new.target_id and not admin_hidden) then
+    select count(distinct by_profile_id) into v_n from reports
+     where target_type = 'LISTING' and target_id = new.target_id and status = 'OPEN';
+    if v_n >= v_hide then
+      update listings set admin_hidden = true, hidden_at = now(), hidden_by = 'system',
+             hidden_reason = 'Skjult automatisk etter rapporter fra ' || v_n || ' brukere. En moderator ser på saken.'
+       where id::text = new.target_id returning owner_id, title into v_owner, v_title;
+      perform notify_moderation(v_owner, 'Oppdraget ditt er skjult midlertidig',
+        '«' || v_title || '» er rapportert av flere brukere og vises ikke for andre mens en moderator ser på saken.', '/mine');
+      insert into admin_audit_log(actor_email, actor_role, action, target_type, target_id, after)
+      values ('system', 'system', 'listing.auto_hide', 'listing', new.target_id,
+              jsonb_build_object('reports', v_n, 'threshold', v_hide, 'report_id', new.id));
+    end if;
+  end if;
+
+  v_owner := report_target_owner(new.target_type, new.target_id);
+  if v_owner is not null and v_susp > 0
+     and exists (select 1 from profiles where id = v_owner and suspended_at is null and role <> 'admin') then
+    select count(distinct r.by_profile_id) into v_n from reports r
+     where r.status = 'OPEN' and r.by_profile_id <> v_owner
+       and report_target_owner(r.target_type, r.target_id) = v_owner;
+    if v_n >= v_susp then
+      perform moderation_set_suspended(v_owner, true, null,
+        'Midlertidig suspendert etter rapporter fra ' || v_n || ' brukere. En moderator ser på saken.', 'system');
+      insert into admin_audit_log(actor_email, actor_role, action, target_type, target_id, after)
+      values ('system', 'system', 'user.auto_suspend', 'profile', v_owner::text,
+              jsonb_build_object('reports', v_n, 'threshold', v_susp, 'report_id', new.id));
+    end if;
+  end if;
+  return new;
+end $$;
+
+
+--
+-- Name: reports_auto_restore(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reports_auto_restore() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_owner uuid; v_title text;
+begin
+  if new.target_type = 'LISTING'
+     and not exists (select 1 from reports where target_type = 'LISTING' and target_id = new.target_id and status = 'OPEN') then
+    update listings set admin_hidden = false, hidden_reason = null, hidden_at = null, hidden_by = null
+     where id::text = new.target_id and admin_hidden and hidden_by = 'system' and not pending_review
+    returning owner_id, title into v_owner, v_title;
+    if v_owner is not null then
+      perform notify_moderation(v_owner, 'Oppdraget ditt er synlig igjen', '«' || v_title || '» vises for andre igjen.', '/mine');
+      insert into admin_audit_log(actor_email, actor_role, action, target_type, target_id, after)
+      values ('system', 'system', 'listing.auto_restore', 'listing', new.target_id, jsonb_build_object('report_id', new.id));
+    end if;
+  end if;
+  v_owner := report_target_owner(new.target_type, new.target_id);
+  if v_owner is not null
+     and exists (select 1 from profiles p join profile_moderation m on m.profile_id = p.id
+                  where p.id = v_owner and p.suspended_at is not null and m.updated_by = 'system'
+                    and m.suspended_until is null and m.suspension_reason like 'Midlertidig suspendert etter rapporter%')
+     and not exists (select 1 from reports r where r.status = 'OPEN' and report_target_owner(r.target_type, r.target_id) = v_owner) then
+    perform moderation_set_suspended(v_owner, false, null, null, 'system');
+    insert into admin_audit_log(actor_email, actor_role, action, target_type, target_id, after)
+    values ('system', 'system', 'user.auto_unsuspend', 'profile', v_owner::text, jsonb_build_object('report_id', new.id));
+  end if;
+  return new;
+end $$;
+
+
+--
 -- Name: request_help_again(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3455,6 +3586,18 @@ begin
    where id = p_report_id and by_profile_id = auth.uid();
   if not found then raise exception 'Fant ikke rapporten.'; end if;
 end $$;
+
+
+--
+-- Name: setting_bool(text, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.setting_bool(p_key text, p_default boolean) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select coalesce((select (value #>> '{}')::boolean from public.app_settings where key = p_key), p_default)
+$$;
 
 
 --
@@ -4401,6 +4544,7 @@ CREATE TABLE public.listings (
     hidden_reason text,
     hidden_at timestamp with time zone,
     hidden_by text,
+    pending_review boolean DEFAULT false NOT NULL,
     CONSTRAINT listings_estimated_minutes_check CHECK ((estimated_minutes > 0)),
     CONSTRAINT listings_max_distance_km_check CHECK (((max_distance_km >= 1) AND (max_distance_km <= 200))),
     CONSTRAINT listings_offer_audience_check CHECK ((offer_audience = ANY (ARRAY['ALL'::text, 'VERIFIED'::text])))
@@ -4512,6 +4656,34 @@ CREATE VIEW public.news_public AS
     published_at
    FROM public.news_articles
   WHERE ((status = 'published'::text) AND show_in_app);
+
+
+--
+-- Name: news_views; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.news_views (
+    id bigint NOT NULL,
+    article_id uuid NOT NULL,
+    viewed_at timestamp with time zone DEFAULT now() NOT NULL,
+    source text NOT NULL,
+    viewer text,
+    CONSTRAINT news_views_source_check CHECK ((source = ANY (ARRAY['web'::text, 'app'::text])))
+);
+
+
+--
+-- Name: news_views_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.news_views ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.news_views_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -5464,6 +5636,14 @@ ALTER TABLE ONLY public.news_articles
 
 
 --
+-- Name: news_views news_views_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.news_views
+    ADD CONSTRAINT news_views_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: newsletter_subscribers newsletter_subscribers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5883,6 +6063,13 @@ CREATE INDEX listings_owner_idx ON public.listings USING btree (owner_id);
 
 
 --
+-- Name: listings_pending_review_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX listings_pending_review_idx ON public.listings USING btree (created_at) WHERE pending_review;
+
+
+--
 -- Name: listings_search_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5922,6 +6109,20 @@ CREATE UNIQUE INDEX neighbourhoods_area_uidx ON public.neighbourhoods USING btre
 --
 
 CREATE INDEX news_articles_published_idx ON public.news_articles USING btree (status, published_at DESC);
+
+
+--
+-- Name: news_views_article_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX news_views_article_idx ON public.news_views USING btree (article_id, viewed_at DESC);
+
+
+--
+-- Name: news_views_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX news_views_at_idx ON public.news_views USING btree (viewed_at DESC);
 
 
 --
@@ -6055,6 +6256,13 @@ CREATE TRIGGER listings_block_youth BEFORE INSERT ON public.listings FOR EACH RO
 --
 
 CREATE TRIGGER listings_block_youth_update BEFORE UPDATE ON public.listings FOR EACH ROW EXECUTE FUNCTION public.block_youth_listing_update();
+
+
+--
+-- Name: listings listings_first_review; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER listings_first_review BEFORE INSERT ON public.listings FOR EACH ROW EXECUTE FUNCTION public.listings_first_review();
 
 
 --
@@ -6223,6 +6431,20 @@ CREATE TRIGGER proposals_offer_audience BEFORE INSERT ON public.proposals FOR EA
 --
 
 CREATE TRIGGER proposals_open_listing BEFORE INSERT ON public.proposals FOR EACH ROW EXECUTE FUNCTION public.proposals_need_open_listing();
+
+
+--
+-- Name: reports reports_auto_moderate; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reports_auto_moderate AFTER INSERT ON public.reports FOR EACH ROW EXECUTE FUNCTION public.reports_auto_moderate();
+
+
+--
+-- Name: reports reports_auto_restore; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reports_auto_restore AFTER UPDATE OF status ON public.reports FOR EACH ROW WHEN (((old.status = 'OPEN'::public.report_status) AND (new.status = 'RESOLVED'::public.report_status) AND (new.outcome = 'dismiss'::text))) EXECUTE FUNCTION public.reports_auto_restore();
 
 
 --
@@ -6771,6 +6993,14 @@ ALTER TABLE ONLY public.neighbourhood_members
 
 ALTER TABLE ONLY public.neighbourhoods
     ADD CONSTRAINT neighbourhoods_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+
+--
+-- Name: news_views news_views_article_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.news_views
+    ADD CONSTRAINT news_views_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.news_articles(id) ON DELETE CASCADE;
 
 
 --
@@ -7386,6 +7616,12 @@ CREATE POLICY neighbourhoods_read_all ON public.neighbourhoods FOR SELECT TO aut
 --
 
 ALTER TABLE public.news_articles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: news_views; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.news_views ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: newsletter_subscribers; Type: ROW SECURITY; Schema: public; Owner: -
@@ -8301,6 +8537,21 @@ GRANT ALL ON FUNCTION public.listing_offer_count(p_listing_id uuid) TO authentic
 
 
 --
+-- Name: FUNCTION listings_first_review(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.listings_first_review() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION log_news_view(p_article uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.log_news_view(p_article uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.log_news_view(p_article uuid) TO authenticated;
+
+
+--
 -- Name: FUNCTION log_partner_event(p_partner uuid, p_kind text, p_kommune text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8514,6 +8765,20 @@ REVOKE ALL ON FUNCTION public.report_target_text(p_type public.report_target, p_
 
 
 --
+-- Name: FUNCTION reports_auto_moderate(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reports_auto_moderate() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION reports_auto_restore(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reports_auto_restore() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION request_help_again(p_proposal_id uuid, p_when text, p_note text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8553,6 +8818,13 @@ GRANT ALL ON FUNCTION public.set_proposal_extras(p_proposal_id uuid, p_scheduled
 --
 
 GRANT ALL ON FUNCTION public.set_report_attachment(p_report_id uuid, p_path text) TO authenticated;
+
+
+--
+-- Name: FUNCTION setting_bool(p_key text, p_default boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.setting_bool(p_key text, p_default boolean) FROM PUBLIC;
 
 
 --

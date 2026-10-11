@@ -75,6 +75,9 @@ export type ListingRow = {
   estimated_minutes?: number | null;
   edited_at?: string | null;
   invited_profile_id?: string | null;
+  admin_hidden?: boolean | null;
+  hidden_reason?: string | null;
+  pending_review?: boolean | null;
   owner: ProfileRow;
   task_details?: {
     description: string;
@@ -276,6 +279,10 @@ export function toListing(row: ListingRow): Listing {
     estimatedMinutes: row.estimated_minutes ?? undefined,
     editedAt: row.edited_at ?? undefined,
     invitedProfileId: row.invited_profile_id ?? undefined,
+    moderation:
+      row.admin_hidden || row.pending_review
+        ? { hidden: !!row.admin_hidden, reason: row.hidden_reason?.trim() || undefined, pendingReview: !!row.pending_review }
+        : undefined,
     task: row.task_details
       ? {
           description: row.task_details.description,
@@ -394,6 +401,7 @@ export type PartnerRow = {
   municipality: string | null;
   partner_placements: { surface: string; active: boolean }[] | null;
   local_hero?: boolean | null;
+  category_slug?: string | null;
   about?: string | null;
   offer?: string | null;
   address?: string | null;
@@ -417,6 +425,7 @@ export function toPartner(row: PartnerRow): Partner {
     municipality: row.municipality,
     featured: (row.partner_placements ?? []).some((p) => p.active && p.surface === 'fellesskap'),
     localHero: !!row.local_hero,
+    categorySlug: row.category_slug ?? null,
     about: row.about ?? undefined,
     offer: row.offer ?? undefined,
     address: row.address ?? undefined,

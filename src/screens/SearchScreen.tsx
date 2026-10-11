@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useActiveCategories } from '@/hooks/useCategories';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import nb from '@/i18n/nb';
 import type { Listing, ListingSort } from '@/domain/types';
-import { categoryArtId, slugForArtId } from '@/domain/categories';
+import { categoryArtId, slugForArtId, categoryLabel } from '@/domain/categories';
 import { useAddSavedSearch, useListings, useRemoveSavedSearch } from '@/api/queries';
 import { useLocationScope } from '@/lib/locationScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRecentSearches } from '@/lib/recentSearches';
 import { toast } from '@/lib/toast';
-import { categoryLabels, colors, radius, safeTopExtra, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
+import { colors, radius, safeTopExtra, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
 import { OppdragCard } from '@/components/OppdragCard';
 import {
   Button,
@@ -35,7 +36,6 @@ import {
   TextLink,
 } from '@/components/ui';
 
-const CATS = Object.keys(categoryLabels) as CategoryId[];
 const SORTS: ListingSort[] = ['RELEVANCE', 'DISTANCE', 'NEWEST', 'PRICE'];
 const MAX_KM = 50;
 
@@ -83,6 +83,7 @@ export function SearchScreen({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const CATS = useActiveCategories();
   const [q, setQ] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
   const [f, setF] = useState<Filters>(() => {
@@ -128,7 +129,7 @@ export function SearchScreen({
     setSavedId(null);
   };
   const active: { label: string; remove: () => void }[] = [
-    ...f.cats.map((c) => ({ label: categoryLabels[c], remove: () => set({ cats: f.cats.filter((x) => x !== c) }) })),
+    ...f.cats.map((c) => ({ label: categoryLabel(c), remove: () => set({ cats: f.cats.filter((x) => x !== c) }) })),
     ...(f.verified ? [{ label: nb.sok.verifiedOnly, remove: () => set({ verified: false }) }] : []),
     ...(f.km < MAX_KM ? [{ label: nb.sok.distanceUpTo(f.km), remove: () => set({ km: MAX_KM }) }] : []),
     ...(f.sort !== 'RELEVANCE' ? [{ label: nb.sok.sortedBy(nb.sok.sorts[f.sort].label), remove: () => set({ sort: 'RELEVANCE' }) }] : []),
@@ -162,7 +163,7 @@ export function SearchScreen({
     }
     addSearch.mutate(
       {
-        name: term || f.cats.map((c) => categoryLabels[c]).join(', ') || nb.sok.saveSearch,
+        name: term || f.cats.map((c) => categoryLabel(c)).join(', ') || nb.sok.saveSearch,
         filter: {
           type: 'TASK_REQUEST',
           query: term || undefined,
@@ -388,7 +389,7 @@ export function SearchScreen({
               return (
                 <Chip
                   key={c}
-                  label={categoryLabels[c]}
+                  label={categoryLabel(c)}
                   category={c}
                   selected={on}
                   onPress={() => setDraft((d) => ({ ...d, cats: on ? d.cats.filter((x) => x !== c) : [...d.cats, c] }))}

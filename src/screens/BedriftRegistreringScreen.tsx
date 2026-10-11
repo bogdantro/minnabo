@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useActiveCategories } from '@/hooks/useCategories';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { BusinessProfile } from '@/api/ApiClient';
@@ -6,13 +7,13 @@ import nb from '@/i18n/nb';
 import { useFeatureFlags } from '@/config/featureFlags';
 import { useMyBusinessProfile, useSubmitBusinessProfile } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { categoryLabels, colors, fonts, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
+import { colors, fonts, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
 import { isValidOrgNr, lookupOrgNr, type BrregCompany } from '@/lib/brreg';
 import { dayMonth, daysAgo, formatTime } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
-import { slugForArtId } from '@/domain/categories';
+import { slugForArtId, categoryLabel, categoryBySlug } from '@/domain/categories';
 import {
   Button,
   CategoryArt,
@@ -31,9 +32,9 @@ import {
   SubHeader,
   TextLink,
   type IconName,
+  Note,
 } from '@/components/ui';
 
-const CATS = Object.keys(categoryLabels) as CategoryId[];
 type Lookup = { state: 'idle' } | { state: 'looking' } | { state: 'found'; company: BrregCompany } | { state: 'notFound' } | { state: 'error' };
 
 const groupOrg = (d: string) => d.replace(/(\d{3})(?=\d)/g, '$1 ');
@@ -64,6 +65,7 @@ export function BedriftRegistreringScreen() {
 
 function Form({ back, prefill, onSent }: { back: () => void; prefill?: BusinessProfile; onSent: () => void }) {
   const me = useCurrentUser();
+  const CATS = useActiveCategories();
   const submit = useSubmitBusinessProfile();
   const [digits, setDigits] = useState(prefill?.orgNr ?? '');
   const [lookup, setLookup] = useState<Lookup>({ state: 'idle' });
@@ -297,12 +299,12 @@ function Form({ back, prefill, onSent }: { back: () => void; prefill?: BusinessP
                 key={c}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: on }}
-                accessibilityLabel={categoryLabels[c]}
+                accessibilityLabel={categoryLabel(c)}
                 onPress={() => setCats((cs) => (on ? cs.filter((x) => x !== c) : [...cs, c]))}
                 style={[styles.chip, on && styles.chipOn]}
               >
                 <CategoryArt category={c} width={28} height={28} radius={14} iconSize={14} />
-                <Text style={[styles.chipText, on && styles.white]}>{categoryLabels[c]}</Text>
+                <Text style={[styles.chipText, on && styles.white]}>{categoryLabel(c)}</Text>
               </Pressable>
             );
           })}
@@ -341,7 +343,8 @@ function Status({ biz, onBack, onEdit }: { biz: BusinessProfile; onBack: () => v
   const approved = biz.status === 'APPROVED';
   const rejected = biz.status === 'REJECTED';
   const sentWhen = daysAgo(biz.createdAt) === 0 ? `I dag kl. ${formatTime(biz.createdAt)}` : `${dayMonth(biz.createdAt)} kl. ${formatTime(biz.createdAt)}`;
-  const catNames = CATS.filter((c) => biz.categorySlugs.includes(slugForArtId(c))).map((c) => categoryLabels[c]).join(', ');
+  // also categories that have been switched off since the registration
+  const catNames = biz.categorySlugs.map((slug) => categoryBySlug(slug).label).join(', ');
   return (
     <View style={[styles.px, styles.mt14]}>
       <View style={styles.statusHead}>
@@ -360,6 +363,11 @@ function Status({ biz, onBack, onEdit }: { biz: BusinessProfile; onBack: () => v
             {approved ? nb.bedrift.approvedBody : rejected ? nb.bedrift.rejectedBody : nb.bedrift.pendingBody}
           </Text>
         </FadeUp>
+        {rejected && biz.rejectionReason ? (
+          <FadeUp delay={160} style={styles.mt10}>
+            <Note icon="info">{`${nb.bedrift.rejectedReason}: ${biz.rejectionReason}`}</Note>
+          </FadeUp>
+        ) : null}
       </View>
 
       <FadeUp delay={180} style={[styles.card, styles.pad, styles.mt22, shadow.card]}>

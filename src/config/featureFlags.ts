@@ -10,7 +10,6 @@ export const featureFlags = {
   businessRegistration: false,
   /** The registration form on "For bedrifter". Off = only the information card. */
   businessForm: false,
-  adminPanel: true,
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

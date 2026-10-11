@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCategoryCatalog } from '@/hooks/useCategories';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -14,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
-import { categoryArtId } from '@/domain/categories';
+import { categoryArtId, categoryLabel, categoryArtColors } from '@/domain/categories';
 import { useListings, useProfile, useSavedListingIds, useToggleSavedListing } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -25,7 +26,6 @@ import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import {
   categoryColors,
-  categoryLabels,
   colors,
   motion,
   radius,
@@ -73,7 +73,7 @@ const km = (d: number) => d.toLocaleString('nb-NO', { maximumFractionDigits: 1 }
 /** "Hvorfor dette passer" chips: skill match, distance, timing, trust – max three. */
 function whyChips(l: Listing, cat: CategoryId, match: boolean): Why[] {
   const out: Why[] = [];
-  if (match) out.push({ icon: 'check', text: nb.forMeg.why.fits(categoryLabels[cat]) });
+  if (match) out.push({ icon: 'check', text: nb.forMeg.why.fits(categoryLabel(cat)) });
   const when = `${l.task?.scheduledText ?? ''} ${l.task?.durationText ?? ''}`.toLowerCase();
   if (/kveld|etter kl/.test(when)) out.push({ icon: 'moon', text: nb.forMeg.why.evening });
   else if (/lør|søn|helg/.test(when)) out.push({ icon: 'sun', text: nb.forMeg.why.weekend });
@@ -94,6 +94,7 @@ function whyChips(l: Listing, cat: CategoryId, match: boolean): Why[] {
  * the card leaves the stack; "Angre" brings the last one back.
  */
 export function ForMegScreen() {
+  useCategoryCatalog(); // labels and colours follow the website's settings
   const router = useRouter();
   const me = useCurrentUser();
   const { userId } = useSession();
@@ -238,7 +239,7 @@ export function ForMegScreen() {
           {skills.map((c) => (
             <View key={c} style={styles.skill}>
               <Icon name={c} size={15} color={colors.ink} />
-              <Text style={styles.skillText}>{categoryLabels[c]}</Text>
+              <Text style={styles.skillText}>{categoryLabel(c)}</Text>
             </View>
           ))}
           {municipality ? (
@@ -384,8 +385,8 @@ function BackCard({ s, depth }: { s: Suggestion; depth: 1 | 2 }) {
   const t = depth === 1 ? styles.b1 : styles.b2;
   return (
     <View style={[styles.bcard, shadow.card, t]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <View style={[styles.bart, { backgroundColor: categoryColors[s.cat].bg }]}>
-        <Icon name={s.cat} size={depth === 1 ? 52 : 48} color={categoryColors[s.cat].fg} />
+      <View style={[styles.bart, { backgroundColor: categoryArtColors(s.cat).bg }]}>
+        <Icon name={s.cat} size={depth === 1 ? 52 : 48} color={categoryArtColors(s.cat).fg} />
       </View>
       {depth === 1 ? (
         <View style={styles.bbody}>
@@ -415,7 +416,7 @@ function FrontCard({
   const l = s.listing;
   const price = listingPrice(l);
   const when = listingSchedule(l);
-  const c = categoryColors[s.cat];
+  const c = categoryArtColors(s.cat);
 
   // .fcard.rise / .backA / .flyL from the design
   const back = mode !== 'rise';
@@ -518,11 +519,11 @@ function FrontCard({
                     <Icon name="star" size={14} color={colors.star} filled />
                     <Text style={styles.starsVal}>{km(l.owner.rating.average)}</Text>
                     <Text style={styles.starsMeta} numberOfLines={1}>
-                      {` (${l.owner.rating.count}) · ${categoryLabels[s.cat]}`}
+                      {` (${l.owner.rating.count}) · ${categoryLabel(s.cat)}`}
                     </Text>
                   </>
                 ) : (
-                  <Text style={styles.starsMeta}>{categoryLabels[s.cat]}</Text>
+                  <Text style={styles.starsMeta}>{categoryLabel(s.cat)}</Text>
                 )}
               </View>
             </View>

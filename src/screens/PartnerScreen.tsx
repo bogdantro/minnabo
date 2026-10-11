@@ -4,6 +4,8 @@ import type { Partner } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { usePartners } from '@/api/queries';
 import { toast } from '@/lib/toast';
+import { useLocationScope } from '@/lib/locationScope';
+import { logPartnerClick } from '@/lib/partnerStats';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Button,
@@ -54,9 +56,15 @@ export function PartnerScreen({ partnerId }: { partnerId: string }) {
 }
 
 function Body({ partner: p }: { partner: Partner }) {
+  const { municipality } = useLocationScope();
+  // "Besøk nettsiden" counts as a click in the partner's statistics, then opens the link
+  const visit = () => {
+    logPartnerClick(p.id, municipality);
+    void Linking.openURL(p.url!);
+  };
   const web = p.url?.replace(/^https?:\/\//, '').replace(/\/$/, '');
   const contact: { icon: IconName; label: string; value: string; onPress?: () => void }[] = [
-    ...(p.url ? [{ icon: 'globe' as IconName, label: t.website, value: web!, onPress: () => void Linking.openURL(p.url!) }] : []),
+    ...(p.url ? [{ icon: 'globe' as IconName, label: t.website, value: web!, onPress: visit }] : []),
     ...(p.phone ? [{ icon: 'phone' as IconName, label: t.phone, value: p.phone, onPress: () => void Linking.openURL(`tel:${p.phone!.replace(/\s/g, '')}`) }] : []),
     ...(p.email ? [{ icon: 'mail' as IconName, label: t.email, value: p.email, onPress: () => void Linking.openURL(`mailto:${p.email}`) }] : []),
     ...(p.address ? [{ icon: 'pin' as IconName, label: t.address, value: p.address }] : []),
@@ -95,7 +103,7 @@ function Body({ partner: p }: { partner: Partner }) {
 
         {p.url ? (
           <FadeUp delay={60} style={styles.mt18}>
-            <Button label={t.visit} icon="arrowur" variant="ink" onPress={() => void Linking.openURL(p.url!)} />
+            <Button label={t.visit} icon="arrowur" variant="ink" onPress={visit} />
           </FadeUp>
         ) : null}
 

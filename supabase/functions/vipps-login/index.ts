@@ -159,6 +159,12 @@ Deno.serve(async (req: Request) => {
       if (error || !u.user?.email) return json({ error: 'Fant ikke kontoen din. Kontakt MinNabo.' }, 500);
       email = u.user.email;
     } else {
+      // The website's admin can close sign-ups (app_settings platform.registration_open = false).
+      // People who already have an account were handled above and still get in.
+      const { data: reg } = await admin.from('app_settings').select('value').eq('key', 'platform.registration_open').maybeSingle();
+      if (reg?.value === false) {
+        return json({ error: 'MinNabo tar ikke imot nye brukere akkurat nå.', code: 'REGISTRATION_CLOSED' }, 403);
+      }
       isNew = true;
       // Internal address, never shown or mailed – the login key is the Vipps sub.
       email = `${crypto.randomUUID()}@vipps.minnabo.invalid`;

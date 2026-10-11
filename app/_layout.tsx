@@ -24,7 +24,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { colors } from '@/theme';
-import { InboxRealtime } from '@/api/realtime';
+import { InboxRealtime, PlatformRealtime } from '@/api/realtime';
+import { CategorySync } from '@/hooks/useCategories';
+import { MaintenanceGate } from '@/components/MaintenanceGate';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { SafeTripBanner } from '@/components/SafeTripBanner';
 import { ToastHost } from '@/components/ToastHost';
@@ -101,15 +103,19 @@ export default function RootLayout() {
           <BottomSheetModalProvider>
             <AppErrorBoundary>
               <StatusBar style="dark" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.bg },
-                }}
-              />
+              <MaintenanceGate>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.bg },
+                  }}
+                />
+              </MaintenanceGate>
               <AccountGuard />
               <PushBridge />
               <InboxRealtime />
+              <PlatformRealtime />
+              <CategorySync />
               <OfflineOutbox />
               <OfflineBanner />
               <SafeTripBanner />

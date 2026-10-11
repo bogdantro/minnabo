@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ListingExtras } from '@/api/ApiClient';
 import type { Listing, PublicProfile } from '@/domain/types';
 import { nok, groupThousands } from '@/domain/price';
-import { categoryArtId, categoryBySlug, slugForArtId } from '@/domain/categories';
-import { categoryLabels, type CategoryId } from '@/theme/theme';
+import { categoryArtId, categoryBySlug, slugForArtId, categoryLabel } from '@/domain/categories';
+import { type CategoryId } from '@/theme/theme';
 import { EQUIPMENT, FORMS, TIMES_OF_DAY, type EquipKey, type IntakeField } from './wizardConfig';
 
 export type WhenMode = 'fast' | 'flex' | 'innen';
@@ -221,7 +221,7 @@ export function summary(s: WizardState, days: DayItem[]) {
   const tod = TIMES_OF_DAY.filter((t) => s.tod.includes(t.label)).map((t) => t.label.toLowerCase());
   const eqOn = EQUIPMENT.filter((e) => s.eq[e.id]).map((e) => e.label);
   const oppdrag: SummaryRow[] = [
-    { k: 'Kategori', v: s.cat ? categoryLabels[s.cat] : '', step: 1 },
+    { k: 'Kategori', v: s.cat ? categoryLabel(s.cat) : '', step: 1 },
     { k: 'Tittel', v: s.title.trim(), step: 2 },
     { k: 'Beskrivelse', v: desc, step: 3 },
     { k: 'Detaljer', v: details || 'Ingen detaljer', step: 3 },

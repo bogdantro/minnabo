@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useCategoryCatalog } from '@/hooks/useCategories';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { PublicProfile } from '@/domain/types';
 import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
-import { CATEGORIES, categoryArtId } from '@/domain/categories';
+import { categoryArtId } from '@/domain/categories';
 import { PortfolioManager } from '@/components/profile/PortfolioManager';
 import { useSession } from '@/auth/session';
 import { useVippsIdentity } from '@/auth/identity';
@@ -94,6 +95,8 @@ export function EditProfileScreen() {
 }
 
 function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: string }) {
+  // the categories that are switched on, plus any the person already has (so one can be removed)
+  const catalog = useCategoryCatalog();
   const router = useRouter();
   const vipps = useVippsIdentity();
   const update = useUpdateProfile();
@@ -322,7 +325,7 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
             <SecHead icon="hand" bg={colors.limeTint} fg={colors.limeDeep} title={nb.editProfile.secSkills} />
             <Text style={text.meta}>{nb.editProfile.skillsHint}</Text>
             <View style={styles.skills}>
-              {CATEGORIES.map((c) => {
+              {catalog.filter((c) => c.active || form.skills.includes(c.slug)).map((c) => {
                 const on = form.skills.includes(c.slug);
                 return (
                   <Chip

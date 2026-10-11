@@ -120,9 +120,6 @@ export type NoticeComment = {
   createdAt: string;
 };
 
-/** How many hovedpartnere Fellesskap shows (mirrors admin_set_main_partner, 0049). */
-export const MAX_MAIN_PARTNERS = 4;
-
 /** A sponsor shown on Fellesskap. Deals and payment are handled outside the app. */
 export type Partner = {
   id: string;
@@ -134,6 +131,8 @@ export type Partner = {
   municipality: string | null;
   /** has an active placement on Fellesskap → shown as a main partner */
   featured: boolean;
+  /** the partner's line of business (categories.slug) – shown under the name */
+  categorySlug?: string | null;
   /** "Lokal helt" – the middle level: a card that opens the short information sheet */
   localHero?: boolean;
   // --- shown on a hovedpartner's own page ---
@@ -293,6 +292,11 @@ export type Listing = {
   estimatedMinutes?: number;
   /** ISO – set when the owner edited it after publishing */
   editedAt?: string;
+  /**
+   * Set by MinNabo's moderation; only the owner ever receives a hidden oppdrag.
+   * `pendingReview`: a first oppdrag waiting for approval (shown as "Venter på godkjenning", not as hidden).
+   */
+  moderation?: { hidden: boolean; reason?: string; pendingReview: boolean };
 };
 
 // ---------------------------------------------------------------------------
@@ -458,6 +462,8 @@ export type Report = {
   byProfileId: string;
   createdAt: string;
   status?: 'OPEN' | 'RESOLVED';
+  /** ISO – a moderator has picked the report up ("Under behandling") */
+  claimedAt?: string;
 };
 
 export type Block = {

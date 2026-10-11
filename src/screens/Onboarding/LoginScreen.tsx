@@ -16,6 +16,7 @@ import nb from '@/i18n/nb';
 import { useVippsIdentity } from '@/auth/identity';
 import { completeVippsLogin, startVippsLogin, vippsConfigured } from '@/auth/vipps';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAppSettings } from '@/api/queries';
 import { toast } from '@/lib/toast';
 import { openWebsite } from '@/config/links';
 import { VippsIcon, VippsWordmark } from '@/components/VippsLogo';
@@ -152,6 +153,8 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
   const [result, setResult] = useState<{ isNew: boolean; youth: boolean } | null>(null);
   const logoFloat = useFloat(5000);
   const id = useVippsIdentity();
+  // sign-ups can be closed from the website; people with an account still log in
+  const { registrationOpen } = useAppSettings();
   // Back from Vipps: swap the code for a session, then show who was confirmed.
   const handled = useRef(false);
   useEffect(() => {
@@ -239,6 +242,11 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
         <FadeUp delay={150}>
           <Text style={[text.body, styles.lead]}>{nb.login.lead}</Text>
         </FadeUp>
+        {registrationOpen ? null : (
+          <FadeUp delay={180} style={styles.closed}>
+            <Note icon="info">{`${nb.login.registrationClosed} ${nb.login.registrationClosedSub}`}</Note>
+          </FadeUp>
+        )}
         <FadeUp delay={200} style={styles.ctaBlock}>
           <Button label={nb.login.cta} variant="vipps" size="lg" leading={<VippsIcon size={28} onOrange />} onPress={start} />
           <Text style={[text.meta, styles.center]}>{nb.login.onlyVipps}</Text>
@@ -395,6 +403,7 @@ const styles = StyleSheet.create({
   title: { marginTop: 24, fontSize: 32, lineHeight: 34, letterSpacing: -0.96, textAlign: 'center' },
   lead: { marginTop: 12, color: colors.ink2, maxWidth: 320, textAlign: 'center' },
   ctaBlock: { alignSelf: 'stretch', marginTop: 30, gap: 14 },
+  closed: { alignSelf: 'stretch', marginTop: 18 },
   trust: {
     alignSelf: 'stretch',
     marginTop: 22,

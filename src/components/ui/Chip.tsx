@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import { categoryArtColors } from '@/domain/categories';
+import { useCategoryCatalog } from '@/hooks/useCategories';
 import { ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { categoryColors, colors, radius, screenPadding, sizes, text, type CategoryId } from '@/theme/theme';
+import { colors, radius, screenPadding, sizes, text, type CategoryId } from '@/theme/theme';
 import { Icon, type IconName } from './Icon';
 import { PressableScale } from './PressableScale';
 
@@ -39,7 +41,8 @@ export function Chip({
   const hasLead = !!category || !!icon;
   const sm = size === 'sm';
   const selInk = selected && tone === 'ink';
-  const cat = category ? categoryColors[category] : null;
+  useCategoryCatalog(); // tile colours follow the website's settings
+  const cat = category ? categoryArtColors(category) : null;
 
   const bg = !selected ? colors.white : tone === 'lime' ? colors.limeTint : tone === 'cyan' ? colors.cyanTint : colors.ink;
   const border = !selected ? colors.line : tone === 'lime' ? colors.chipLimeBorder : tone === 'cyan' ? colors.chipCyanBorder : colors.ink;

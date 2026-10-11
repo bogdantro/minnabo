@@ -32,7 +32,7 @@ type ConsentId = 'terms' | 'privacy' | 'age' | 'tips';
 type ConsentDef = {
   id: ConsentId;
   required: boolean;
-  /** minnabo.app page opened by the inline link. */
+  /** website page (minnaboapp.no) opened by the inline link. */
   href?: WebsitePage;
 };
 

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Dimensions, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -10,9 +11,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
-import { MAX_MAIN_PARTNERS, type NoticeKind, type Partner } from '@/domain/types';
+import type { NoticeKind, Partner } from '@/domain/types';
+import { categoryBySlug } from '@/domain/categories';
 import { formatPrice, nok } from '@/domain/price';
-import { useDonations, useNeighbourhoodInfo, useNoticeboard, usePartners } from '@/api/queries';
+import { useAppSettings, useDonations, useNeighbourhoodInfo, useNoticeboard, usePartners } from '@/api/queries';
+import { ImpressionWatcher, impressionLogged, logPartnerClick, logPartnerImpression, setPartnerStatsKommune, visibleRatio } from '@/lib/partnerStats';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
 import { safePush } from '@/lib/nav';
@@ -123,11 +126,16 @@ function PartnerLogo({ uri, size = 68 }: { uri?: string | null; size?: number })
   );
 }
 
+/** Under the name in the støttespiller carousel: the line of business (category), else the partner's own line. */
+const supporterLine = (p: Partner): string => (p.categorySlug ? categoryBySlug(p.categorySlug).label : p.tagline);
+
 /** Fellesskap tab (design/screens/Fellesskap.dc.html). */
 export function FellesskapScreen() {
   const me = useCurrentUser();
   const { municipality, municipalities, ready } = useLocationScope();
-  const partners = usePartners().data ?? [];
+  const partnersQuery = usePartners();
+  const partners = useMemo(() => partnersQuery.data ?? [], [partnersQuery.data]);
+  const settings = useAppSettings();
   const donations = useDonations().data ?? [];
   const postsData = useNoticeboard().data;
   const [carRaw, setCar] = useState(0);
@@ -135,7 +143,7 @@ export function FellesskapScreen() {
   const [sheet, setSheet] = useState<Partner | null>(null);
   const [openedAt] = useState(() => Date.now());
 
-  const main = partners.filter((p) => p.featured).slice(0, MAX_MAIN_PARTNERS);
+  const main = partners.filter((p) => p.featured).slice(0, settings.maxHovedpartnere);
   // Lokale helter and støttespillere are scoped to the user's kommune; wait for
   // the profile so we never flash partners from other kommuner.
   const local = !ready
@@ -166,10 +174,50 @@ export function FellesskapScreen() {
   const members = hood?.memberCount ?? 0;
   const shownDonations = donAll ? donations : donations.slice(0, 3);
 
+  // Partners are managed on the website: fresh every time the tab is opened (and live through
+  // PlatformRealtime while it is open).
+  const refetchPartners = partnersQuery.refetch;
+  useFocusEffect(
+    useCallback(() => {
+      void refetchPartners();
+    }, [refetchPartners]),
+  );
+
+  // Statistics for partners: a card at least half visible for a second counts once per session.
+  const cards = useRef(new Map<string, View>());
+  const [watcher] = useState(() => new ImpressionWatcher((id) => logPartnerImpression(id)));
+  useEffect(() => {
+    setPartnerStatsKommune(kommune || undefined);
+  }, [kommune]);
+  const checkVisible = useCallback(() => {
+    const win = Dimensions.get('window');
+    cards.current.forEach((node, id) => {
+      if (impressionLogged(id) || typeof node.measureInWindow !== 'function') return;
+      node.measureInWindow((x, y, width, height) => watcher.update(id, visibleRatio({ x, y, width, height }, win)));
+    });
+  }, [watcher]);
+  const card = useCallback(
+    (id: string) => (node: View | null) => {
+      if (node) cards.current.set(id, node);
+      else {
+        cards.current.delete(id);
+        watcher.update(id, 0);
+      }
+    },
+    [watcher],
+  );
+  useEffect(() => () => watcher.dispose(), [watcher]);
+  // after the list, the kommune or the carousel position changes (the carousel slides for ~550 ms)
+  useEffect(() => {
+    const t = setTimeout(checkVisible, 700);
+    return () => clearTimeout(t);
+  }, [checkVisible, partners, car, ready]);
+
   return (
     <Screen
       scroll
       spacer="nav"
+      scrollProps={{ onScroll: checkVisible, scrollEventThrottle: 200 }}
       header={
         <HomeTopBar
           avatar={{ uri: me.avatarUrl, initials: me.initials }}
@@ -260,6 +308,7 @@ export function FellesskapScreen() {
         ) : (
           main.map((p, i) => (
             <FadeUp key={p.id} delay={i * 50}>
+             <View ref={card(p.id)} collapsable={false} onLayout={checkVisible}>
               <PressableScale
                 accessibilityRole="link"
                 accessibilityLabel={nb.fellesskap.readAbout(p.name)}
@@ -295,6 +344,7 @@ export function FellesskapScreen() {
                   </View>
                 </View>
               </PressableScale>
+             </View>
             </FadeUp>
           ))
         )}
@@ -313,6 +363,7 @@ export function FellesskapScreen() {
           <View style={[styles.px, styles.gap12]}>
             {heroes.map((p, i) => (
               <FadeUp key={p.id} delay={i * 50}>
+               <View ref={card(p.id)} collapsable={false} onLayout={checkVisible}>
                 <PressableScale
                   accessibilityRole="button"
                   accessibilityLabel={nb.fellesskap.readAbout(p.name)}
@@ -328,6 +379,7 @@ export function FellesskapScreen() {
                   </View>
                   <Icon name="right" size={20} color={colors.faint} />
                 </PressableScale>
+               </View>
               </FadeUp>
             ))}
           </View>
@@ -378,7 +430,15 @@ export function FellesskapScreen() {
             {/* No autoplay: the user moves the carousel (design: quiet supporters). */}
             <Animated.View style={[styles.carTrack, track]}>
               {supporters.map((s) => (
-                <View key={s.id} style={styles.scard} accessible accessibilityLabel={`${s.name}, ${s.tagline}`}>
+                <View
+                  key={s.id}
+                  ref={card(s.id)}
+                  collapsable={false}
+                  onLayout={checkVisible}
+                  style={styles.scard}
+                  accessible
+                  accessibilityLabel={`${s.name}, ${supporterLine(s)}`}
+                >
                   <View style={styles.scardLogo}>
                     <Icon name="building" size={22} color={colors.faint} />
                   </View>
@@ -387,7 +447,7 @@ export function FellesskapScreen() {
                       {s.name}
                     </Text>
                     <Text style={[text.meta, { fontSize: 12.5 }]} numberOfLines={1}>
-                      {s.tagline}
+                      {supporterLine(s)}
                     </Text>
                   </View>
                   {s.municipality ? (
@@ -479,7 +539,13 @@ export function FellesskapScreen() {
                 <KeyValueRow
                   label={nb.fellesskap.website}
                   value={
-                    <Pressable accessibilityRole="link" onPress={() => Linking.openURL(sheet.url!)}>
+                    <Pressable
+                      accessibilityRole="link"
+                      onPress={() => {
+                        logPartnerClick(sheet.id, kommune || undefined);
+                        void Linking.openURL(sheet.url!);
+                      }}
+                    >
                       <Text style={[text.kvValue, { color: colors.cyanDeep }]}>{sheet.url.replace(/^https?:\/\//, '')}</Text>
                     </Pressable>
                   }

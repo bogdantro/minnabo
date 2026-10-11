@@ -22,7 +22,8 @@ export function SafeTripBanner() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={nb.safeTrip.activeTitle}
-      onPress={() => safePush(`/avtale/${trip.proposalId}`)}
+      // a trip started without an avtale (Sikkerhet, no upcoming job) opens Sikkerhet, where it can be stopped
+      onPress={() => safePush(trip.proposalId ? `/avtale/${trip.proposalId}` : '/sikkerhet')}
       style={[
         styles.wrap,
         { paddingTop: insets.top + tokens.space.xs },

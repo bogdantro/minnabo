@@ -9,7 +9,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 
 | Design file | Route (`app/…`) | Screen component | Status | Notes |
 |---|---|---|---|---|
-| `Admin.dc.html` | `/admin` (`admin.tsx`) | `src/screens/AdminScreen.tsx` | ✅ done | Admin role only – every action is an admin-only RPC (`0032_admin.sql`). KPIs, report queue (Avvis / Fjern innhold / Advar bruker + Angre), business approval with a live Enhetsregisteret check, user search + suspend, flagged oppdrag hide/show, partner slots (max 2) + carousel, weekly stats |
+| `Admin.dc.html` | – (removed) | – | removed 2026-10-11 | The Adminpanel is gone from the app on request: moderation, verification, users, partners and statistics are done on the website's admin (same database). The database's `admin_*` / `moderation_*` functions are untouched. |
 | `Avtale.dc.html` | `/avtale/[id]` | `src/screens/AvtaleSammendragScreen.tsx` | ✅ done | Avlys = new `cancel_agreement` RPC (migration 0026, ACCEPTED → CANCELLED, reopens the oppdrag). Legg i kalender = expo-calendar, shown on iOS/Android when the agreed time contains a date. Job-day tools moved to `/jobbdag/[id]`. |
 | `Bedrift.dc.html` | `/bedrift` | `src/screens/BedriftRegistreringScreen.tsx` | ✅ done | Org.nr format + mod-11 check + **live Enhetsregisteret lookup** (data.brreg.no: name, address, form), contact fields with validation, categories, consent → PENDING. Opens on the status (Sendt / Til verifisering / Verifisert, or rejected → send again) when already registered. |
 | `Chat.dc.html` | `/chat/[id]` | `src/screens/ChatScreen.tsx` + `src/components/chat/*` | ✅ done | Tap bubble → reactions (stored as emoji 👍❤️😊✅), long-press → fest/løsne. Time proposals are text messages with a "📅 Tidsforslag:" marker rendered as cards; answers "✓ Tidspunktet passer" / "↻ Nytt tidspunkt ønskes". "Del sted" tile only after an agreement (existing feature, not in the design). Send tilbud opens the Gi tilbud sheet (helper only). Mute is on-device. Decline held for Angre. |
@@ -25,7 +25,7 @@ Status: **exists** = a screen for this purpose is already there (still needs the
 | `LeggUt.dc.html` | `/legg-ut` | `src/screens/LeggUt/LeggUtWizard.tsx` | ✅ done | Opens directly (rule 2); draft saved locally ("Lagre utkast"). **API gap:** "Hvem kan gi tilbud", "Maks avstand" and the private estimate have no columns for oppdrag – shown in the summary, not saved |
 | `LoggInn.dc.html` | `/logg-inn` | `src/screens/Onboarding/LoginScreen.tsx` | ✅ done | Real Vipps OIDC (`src/auth/vipps.ts` → `vipps-login` edge function → `/vipps`). Vipps only – the temporary test login was removed 2026-10-09 |
 | `Main.dc.html` | `/velkommen` | `src/screens/Onboarding/WelcomeScreen.tsx` | ✅ done | Anon users are redirected here from `(tabs)/_layout.tsx` |
-| `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. "Tilgjengelig for småjobber" saves `profiles.available_for_jobs` (0036). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag, Admin row for admins only |
+| `Meny.dc.html` | – (sheet) | `src/components/MenySheet.tsx` | ✅ done | Opened from `BottomNav`. "Tilgjengelig for småjobber" saves `profiles.available_for_jobs` (0036). "Legg ut" tile says "Nytt oppdrag" (rule 1). Bedrift row behind feature flag. No Admin row – the Adminpanel is on the website (2026-10-11) |
 | `MineAvtaler.dc.html` | `/avtaler` | `src/screens/MineAvtalerScreen.tsx` | ✅ done | Role (Du hjelper / Du får hjelp), cancelled and my rating added to the agenda item. Agreements whose time has no date go under "Uten dato". Cancelled ones show under Fullført as "Avlyst". |
 | `MineOppforinger.dc.html` | `/mine` | `src/screens/MyListingsScreen.tsx` | ✅ done | Oppdrag only (no Alle/Oppdrag/Tjenester tabs, no "Tilbyr hjelp"). New `setListingStatus` API: Pause = PAUSED, Arkiver = ARCHIVED, Aktiver = PUBLISHED/RECEIVING_OFFERS, Slett = soft delete (REMOVED – chats and offers stay). Public lists hide PAUSED/ARCHIVED. |
 | `MottatteTilbud.dc.html` | `/tilbud` | `src/screens/MottatteTilbudScreen.tsx` | ✅ done | "Ny" = SENT; Besvart = every other status. Row date is always "Sendt …" (the API has no accepted/declined timestamp). Offers on removed or non-oppdrag listings are hidden. |
@@ -195,7 +195,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 | `Vilkar.dc.html` | ✅ Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
 | `SlettKonto.dc.html` | ✅ Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
 | `Bedrift.dc.html` | ✅ Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
-| `Admin.dc.html` | ✅ Adminpanel | KPIs, tabs: reports queue actions, verifications, users (suspend), listings (hide), partners (max 2 enforced), weekly stats bars. Admin role only |
+| `Admin.dc.html` | – removed from the app (2026-10-11) | Done on the website's admin instead |
 
 ## 11 · System
 

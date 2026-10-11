@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useActiveCategories } from '@/hooks/useCategories';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,14 +18,13 @@ import { draftStore } from '@/data/draftStore';
 import { KOMMUNE_AREAS, LAUNCH_KOMMUNER } from '@/data/kommuner';
 import { detectKommune, locationErrorText } from '@/lib/geo';
 import { pickAndUploadMany } from '@/lib/uploads';
-import { slugForArtId } from '@/domain/categories';
-import { useListing, useListingEditData, usePriceGuidance } from '@/api/queries';
+import { slugForArtId, categoryLabel } from '@/domain/categories';
+import { useListing, useListingEditData, usePriceGuidance, useAppSettings } from '@/api/queries';
 import { formatAmount } from '@/components/ui/Field';
 import { toast } from '@/lib/toast';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
-  categoryLabels,
   colors,
   radius,
   safeTopExtra,
@@ -88,8 +88,6 @@ import {
   type WizardState,
 } from './wizardModel';
 
-// "Annet" first, so nobody has to scroll past every category to find it
-const CATS: CategoryId[] = ['annet', ...(Object.keys(categoryLabels) as CategoryId[]).filter((c) => c !== 'annet')];
 const LAST = 9;
 const MAX_PHOTOS = 6;
 
@@ -160,6 +158,9 @@ function AreaMap({ label }: { label: string }) {
  */
 export function LeggUtWizard() {
   const router = useRouter();
+  // the admin's order, with "Annet" first so nobody has to scroll past every category to find it
+  const active = useActiveCategories();
+  const CATS = useMemo<CategoryId[]>(() => [...active.filter((c) => c === 'annet'), ...active.filter((c) => c !== 'annet')], [active]);
   const insets = useSafeAreaInsets();
   const { userId } = useSession();
   const me = useCurrentUser();
@@ -170,7 +171,12 @@ export function LeggUtWizard() {
   const editListing = useListing(editId ?? '');
   const editData = useListingEditData(editId);
   const [editSeeded, setEditSeeded] = useState(false);
-  const [s, setS] = useState<WizardState>(() => emptyWizard(me.municipality ?? ''));
+  // "Maks avstand til hjelperen" starts on the website's default (platform.default_radius_km), inside the slider's 1–30 km
+  const { defaultRadiusKm } = useAppSettings();
+  const [s, setS] = useState<WizardState>(() => ({
+    ...emptyWizard(me.municipality ?? ''),
+    ...(defaultRadiusKm ? { km: Math.min(30, Math.max(1, Math.round(defaultRadiusKm))) } : {}),
+  }));
   const [step, setStep] = useState(1);
   // every step starts at its top, however far down the previous one was scrolled
   const scrollRef = useRef<ScrollView>(null);
@@ -396,13 +402,13 @@ export function LeggUtWizard() {
                     <FadeUp key={c} delay={Math.min(i + 1, 10) * 50} style={styles.ctCell}>
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={categoryLabels[c]}
+                        accessibilityLabel={categoryLabel(c)}
                         accessibilityState={{ selected: on }}
                         onPress={() => edit(on ? {} : applyCategory(s, c))}
                         style={({ pressed }) => [styles.ct, on && [styles.ctOn, shadow.selected], pressed && styles.ctPressed]}
                       >
                         <CategoryArt category={c} width={58} height={58} radius={19} iconSize={26} />
-                        <Text style={styles.ctL}>{tileLabel(categoryLabels[c])}</Text>
+                        <Text style={styles.ctL}>{tileLabel(categoryLabel(c))}</Text>
                         {on ? (
                           <ScaleIn style={styles.ctCk}>
                             <Icon name="check" size={14} color={colors.lime} />
@@ -444,7 +450,7 @@ export function LeggUtWizard() {
               <View style={styles.mt26}>
                 <View style={styles.qlab}>
                   <Icon name="sparkle" size={16} color={colors.limeDeep} />
-                  <Text style={text.label}>{nb.wizard.s2.suggest(s.cat ? categoryLabels[s.cat] : nb.wizard.s2.task)}</Text>
+                  <Text style={text.label}>{nb.wizard.s2.suggest(s.cat ? categoryLabel(s.cat) : nb.wizard.s2.task)}</Text>
                 </View>
                 <View style={styles.sug}>
                   {form.titles.map((t) => {
@@ -840,8 +846,8 @@ export function LeggUtWizard() {
                   <Note icon="chart">
                     {/* real numbers from earlier tilbud when there are enough; otherwise the fixed range */}
                     {guidance
-                      ? nb.wizard.s6.usualArea(categoryLabels[s.cat].toLowerCase(), formatAmount(String(guidance.low)), formatAmount(String(guidance.high)))
-                      : nb.wizard.s6.usual(categoryLabels[s.cat].toLowerCase(), formatAmount(String(form.price[0])), formatAmount(String(form.price[1])))}
+                      ? nb.wizard.s6.usualArea(categoryLabel(s.cat).toLowerCase(), formatAmount(String(guidance.low)), formatAmount(String(guidance.high)))
+                      : nb.wizard.s6.usual(categoryLabel(s.cat).toLowerCase(), formatAmount(String(form.price[0])), formatAmount(String(form.price[1])))}
                   </Note>
                 ) : null}
                 <Note icon="tag">

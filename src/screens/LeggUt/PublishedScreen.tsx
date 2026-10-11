@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import { WEBSITE } from '@/config/links';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
 import { useListing } from '@/api/queries';
@@ -24,8 +25,6 @@ import {
   type IconKey,
 } from '@/components/ui';
 
-const linkFor = (id: string) => `https://minnabo.app/oppdrag/${id}`;
-
 /** Legg ut · Publisert (design/screens/Publisert.dc.html). `id = 'lokal'` = mock publish (nothing saved). */
 export function PublishedScreen({ listingId }: { listingId?: string }) {
   const router = useRouter();
@@ -38,7 +37,8 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
     draftStore.clear();
     router.replace('/');
   };
-  const link = listingId && !local ? linkFor(listingId) : 'https://minnabo.app';
+  // the website has no page per oppdrag yet – share the title with a link to the front page
+  const link = WEBSITE.home;
   const title = listing?.title ?? '';
 
   const share: { icon: IconKey; label: string; run: () => Promise<unknown> | void; done: string }[] = [

@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { apiClient } from '@/api/client';
 import { safeTrip } from '@/lib/safeTrip';
+import { SafeTripBanner } from '@/components/SafeTripBanner';
 import { SavedScreen } from '@/screens/SavedScreen';
 import { SearchScreen } from '@/screens/SearchScreen';
 import { RapporterScreen } from '@/screens/RapporterScreen';
@@ -57,6 +58,14 @@ test('stopping Trygg tur before the reminder is scheduled leaves no reminder beh
   const cancelled = (Notifications.cancelScheduledNotificationAsync as jest.Mock).mock.calls.map((c) => c[0]);
   // either nothing was scheduled, or what was scheduled got cancelled again
   if (scheduled) expect(cancelled).toContain('notif-1');
+});
+
+test('the Trygg tur banner opens the avtale, or Sikkerhet when the trip has none', async () => {
+  safeTrip.start({ proposalId: '', label: 'Ola', startedAt: new Date().toISOString(), dueAt: new Date(Date.now() + 3600_000).toISOString(), contactNames: ['Ola'] });
+  await renderWithProviders(<SafeTripBanner />);
+  await fireEvent.press(await screen.findByLabelText('Trygg tur er aktiv'));
+  expect(router.push).toHaveBeenLastCalledWith('/sikkerhet');
+  await settle(100);
 });
 
 // --- Lagrede → "Kjør søk" keeps every filter -----------------------------------------

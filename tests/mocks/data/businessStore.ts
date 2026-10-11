@@ -1,9 +1,9 @@
-import type { AdminBusiness, BusinessProfile } from '@/api/ApiClient';
+import type { BusinessProfile } from '@/api/ApiClient';
 
-/** business_profiles (mock): submissions wait as PENDING until an admin decides. */
-type Row = AdminBusiness;
+/** business_profiles (mock): submissions wait as PENDING until the website's admin decides. */
+type Row = BusinessProfile & { decidedAt: string | null };
 
-/** Demo queue for the admin panel (other users' registrations). */
+/** Other users' registrations waiting for a decision. */
 const SEED: Record<string, Row> = {
   'u-jonas': {
     profileId: 'u-jonas', orgNr: '923609016', companyName: 'Berg Maling og Hage AS', contactPerson: 'Jonas Berg',
@@ -26,7 +26,7 @@ export const businessStore = {
     const { decidedAt: _d, ...rest } = r;
     return rest;
   },
-  list: (): AdminBusiness[] => Object.values(rows).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+  list: (): Row[] => Object.values(rows).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
   submit(
     profileId: string,
     input: Omit<BusinessProfile, 'profileId' | 'status' | 'createdAt'>,
@@ -35,10 +35,14 @@ export const businessStore = {
     rows = { ...rows, [profileId]: row };
     return row;
   },
-  decide(profileId: string, approve: boolean): BusinessProfile | null {
+  /** what the website's admin decided (with the reason when it is a no) */
+  decide(profileId: string, approve: boolean, reason?: string): BusinessProfile | null {
     const r = rows[profileId];
     if (!r) return null;
-    rows = { ...rows, [profileId]: { ...r, status: approve ? 'APPROVED' : 'REJECTED', decidedAt: new Date().toISOString() } };
+    rows = {
+      ...rows,
+      [profileId]: { ...r, status: approve ? 'APPROVED' : 'REJECTED', rejectionReason: approve ? undefined : reason, decidedAt: new Date().toISOString() },
+    };
     return rows[profileId];
   },
   _reset(): void {
