@@ -60,7 +60,7 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
   const ctx = [listing?.title, proposal.scheduledText].filter(Boolean).join(' · ');
   const word = nb.review.words[rating];
   const toggleTag = (t: string) => setTags((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
-  // "Vil du anbefale …? Ja" is saved as the "Anbefales" tag (no separate field in the API).
+  // "Vil du anbefale …?" is stored as `recommends`; "Ja" also shows the "Anbefales" tag.
   const finalTags = rec === 'ja' && !tags.includes('Anbefales') ? [...tags, 'Anbefales'] : tags;
 
   const send = () => {
@@ -74,6 +74,7 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
         rating,
         comment: comment.trim() || undefined,
         tags: finalTags.length ? finalTags : undefined,
+        recommends: rec === null ? undefined : rec === 'ja',
       },
       {
         onSuccess: () => {

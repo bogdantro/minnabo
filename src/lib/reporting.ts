@@ -8,7 +8,7 @@ import nb from '@/i18n/nb';
  */
 export function reportError(error: unknown, context: Record<string, unknown> = {}) {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
+     
     console.error('[reportError]', error, context);
   }
   if (context.manual) {
@@ -20,7 +20,7 @@ export function reportError(error: unknown, context: Record<string, unknown> = {
 /** Lightweight analytics event. Point this at PostHog / Amplitude / Supabase. */
 export function track(event: string, props: Record<string, unknown> = {}) {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
+     
     console.log('[track]', event, props);
   }
   // TODO(backend): analytics.capture(event, props);

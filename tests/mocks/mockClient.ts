@@ -70,6 +70,7 @@ import type {
   MyAccount,
   SavedSearchRecord,
   SendProposalInput,
+  SharedContact,
   SubmitReportInput,
   SubmitReviewInput,
   UpdateProfilePatch,
@@ -452,16 +453,32 @@ export class MockApiClient implements ApiClient {
     await delay(150);
     const profile = profileRepository.getProfile(id);
     if (!profile) throw new Error('Fant ikke profilen.');
-    // Phone numbers are only shared once you have an agreement together.
-    const sharesContact =
-      id === profileRepository.currentUserId ||
-      chatRepository.listMyAgreements().some((a) => a.counterpartId === id);
+    // Like the database (0057): phone and home notes are never part of someone else's
+    // profile – they come from getSharedContact.
+    const own = id === profileRepository.currentUserId;
     return {
       ...profile,
-      phone: sharesContact ? profile.phone : undefined,
+      phone: undefined,
+      homeNotes: own ? profile.homeNotes : undefined,
       reliability: profileRepository.reliabilityFor(id),
       endorsements: endorsementsStore.list(id),
     };
+  }
+
+  async canEndorse(profileId: string): Promise<boolean> {
+    await delay(40);
+    if (profileId === profileRepository.currentUserId) return false;
+    return chatRepository.listMyAgreements().some((a) => a.counterpartId === profileId && !a.cancelled);
+  }
+
+  async getSharedContact(profileId: string): Promise<SharedContact> {
+    await delay(60);
+    const profile = profileRepository.getProfile(profileId);
+    if (!profile) return {};
+    if (profileId === profileRepository.currentUserId) return { phone: profile.phone, homeNotes: profile.homeNotes };
+    const deals = chatRepository.listMyAgreements().filter((a) => a.counterpartId === profileId && !a.cancelled);
+    if (!deals.length) return {};
+    return { phone: profile.phone, homeNotes: profile.homeNotes };
   }
 
   async getReplyMinutes(profileId: string): Promise<number | null> {

@@ -5,6 +5,7 @@ import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { CompletionScreen } from '@/screens/CompletionScreen';
 import { ReviewScreen } from '@/screens/ReviewScreen';
 import { profileRepository } from '@mocks/data/profileRepository';
+import { chatRepository } from '@mocks/data/chatRepository';
 import { renderWithProviders } from '../testUtils';
 
 test('own profile shows presentation, verifications and reviews', async () => {
@@ -33,7 +34,9 @@ test('"Slik ser andre deg" hides private details and editing', async () => {
   expect(screen.queryByText('Rediger profil')).toBeNull();
   expect(screen.queryByText('Privat – bare for deg')).toBeNull();
   expect(screen.queryByLabelText('Feriemodus')).toBeNull();
-  expect(screen.getByText('Ta kontakt')).toBeTruthy();
+  // the same buttons a neighbour sees: "Følg" – no "Be om tilbud" (rule 1)
+  expect(screen.getByText('Følg')).toBeTruthy();
+  expect(screen.queryByText('Be om tilbud')).toBeNull();
 });
 
 test('edit profile hydrates with the current values; save is enabled only when dirty', async () => {
@@ -87,13 +90,24 @@ test('pausing the profile shows the paused banner and hides own listings', async
   ).toHaveLength(0);
 });
 
+test('"Anbefal" is only offered after an avtale together', async () => {
+  chatRepository._reset();
+  await renderWithProviders(<ProfileScreen profileId="u-emma" />);
+  await waitFor(() => expect(screen.getByText('Emma Larsen')).toBeTruthy());
+  expect(screen.getByText('3 naboer anbefaler')).toBeTruthy();
+  await new Promise((r) => setTimeout(r, 200));
+  expect(screen.queryByLabelText('Anbefal Hagearbeid')).toBeNull();
+});
+
 test('endorsing a skill on another profile increments the count', async () => {
+  chatRepository._reset();
+  chatRepository.respondToProposal('p-emma-klippe', 'ACCEPT', 'RECIPIENT'); // an avtale with Emma
   await renderWithProviders(<ProfileScreen profileId="u-emma" />);
   await waitFor(() => expect(screen.getByText('Emma Larsen')).toBeTruthy());
 
   // Hagearbeid is seeded with 3 endorsements, none from the current user.
   expect(screen.getByText('3 naboer anbefaler')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText('Anbefal Hagearbeid'));
+  await fireEvent.press(await screen.findByLabelText('Anbefal Hagearbeid'));
   await waitFor(() => expect(screen.getByText('4 naboer anbefaler')).toBeTruthy());
 });
 

@@ -5,6 +5,7 @@ import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
 import { useListingsByIds, useProfile, useReplyToReview } from '@/api/queries';
 import { useSession } from '@/auth/session';
+import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { dayMonthYear } from '@/lib/datetime';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -177,6 +178,13 @@ function ReviewCard({ review: r, listing, role, first }: { review: Review; listi
             setDraft(r.reply ?? '');
             setOpen(true);
           }}
+        />
+      ) : null}
+      {canReply ? (
+        <TextLink
+          label={nb.rapporter.reportReview}
+          icon="flag"
+          onPress={() => safePush(`/rapporter?vurdering=${r.id}&profil=${r.fromProfileId}`)}
         />
       ) : null}
       {canReply ? (

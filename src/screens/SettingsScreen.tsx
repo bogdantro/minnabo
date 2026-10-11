@@ -7,6 +7,7 @@ import nb from '@/i18n/nb';
 import { useMyListings, useMySettings, useProfile, useUpdateNotificationPrefs, useUpdateProfile } from '@/api/queries';
 import { signOut } from '@/auth/session';
 import { useFeatureFlags } from '@/config/featureFlags';
+import { useMyAccount } from '@/auth/identity';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { haptics } from '@/lib/haptics';
 import { useLocationScope, type Reach } from '@/lib/locationScope';
@@ -36,6 +37,7 @@ export function SettingsScreen() {
   const router = useRouter();
   const me = useCurrentUser();
   const { data: profile } = useProfile(me.id);
+  const account = useMyAccount().data;
   const { data: settings } = useMySettings();
   const savePrefs = useUpdateNotificationPrefs();
   const update = useUpdateProfile();
@@ -125,8 +127,8 @@ export function SettingsScreen() {
         <ListRow
           icon="phone"
           title={nb.innstillinger.phone}
-          subtitle={profile?.phone ?? nb.innstillinger.notSet}
-          right={verified('PHONE') && profile?.phone ? <Pill label={nb.innstillinger.confirmed} tone="ok" icon="check" size="sm" /> : undefined}
+          subtitle={account?.phoneMasked ?? nb.innstillinger.notSet}
+          right={verified('PHONE') && account?.phoneMasked ? <Pill label={nb.innstillinger.confirmed} tone="ok" icon="check" size="sm" /> : undefined}
           onPress={() => safePush('/verifisering')}
         />
         <ListRow

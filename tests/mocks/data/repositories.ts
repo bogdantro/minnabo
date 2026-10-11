@@ -23,7 +23,9 @@ const matchesFilter = (listing: Listing, filter?: ListingFilter): boolean => {
 
   if (filter.type && listing.type !== filter.type) return false;
 
-  if (filter.categorySlug && filter.categorySlug !== 'alle') {
+  if (filter.categorySlugs?.length) {
+    if (!filter.categorySlugs.includes(listing.category.slug)) return false;
+  } else if (filter.categorySlug && filter.categorySlug !== 'alle') {
     if (listing.category.slug !== filter.categorySlug) return false;
   }
 

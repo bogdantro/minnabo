@@ -15,6 +15,7 @@ import {
   useProfile,
   useReviews,
   useToggleEndorsement,
+  useCanEndorse,
   useToggleFollow,
   useUpdateProfile,
   usePortfolio,
@@ -22,6 +23,7 @@ import {
   useReplyMinutes,
 } from '@/api/queries';
 import { useSession } from '@/auth/session';
+import { useMyAccount } from '@/auth/identity';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { longDate, monthYear, replyTime } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
@@ -53,13 +55,6 @@ import {
 type Tab = 'om' | 'rev' | 'port';
 type View_ = 'me' | 'public';
 
-/** "+47 934 56 789" → "+47 9•• •• 789" */
-function maskPhone(phone: string): string {
-  const d = phone.replace(/\D/g, '').replace(/^47(?=\d{8}$)/, '');
-  if (d.length < 4) return phone;
-  return `+47 ${d[0]}•• •• ${d.slice(-3)}`;
-}
-
 /** Category art for an endorsed skill ("Hagearbeid" → hage); `annet` when nothing matches. */
 function artForSkill(skill: string): CategoryId {
   const s = skill.toLowerCase();
@@ -76,12 +71,14 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   const router = useRouter();
   const myId = useSession().userId ?? '';
   const me = useCurrentUser();
+  const account = useMyAccount().data;
   const id = profileId ?? myId;
   const isSelf = id === myId;
   const { data: profile, isLoading, isError, refetch } = useProfile(id);
   const { data: reviews } = useReviews(id);
   const { data: endorsements } = useEndorsements(id);
   const endorse = useToggleEndorsement(id);
+  const canEndorse = !!useCanEndorse(isSelf ? undefined : id).data;
   const { data: followed } = useFollowedProfileIds();
   const toggleFollow = useToggleFollow();
   const { data: conversations } = useConversations();
@@ -282,8 +279,8 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
           </FadeUp>
         ) : preview ? (
           <FadeUp style={[styles.mt16, styles.row10]}>
-            <Button label={nb.profile.contact} variant="cyan" icon="msg" onPress={previewTap} style={styles.flex} />
-            <Button label={nb.profile.requestOffer} variant="ghost" onPress={previewTap} style={styles.flex} />
+            {/* what a neighbour sees: "Følg" (and "Ta kontakt" only for someone you already chat with) */}
+            <Button label={nb.profile.follow} variant="cyan" icon="user-plus" onPress={previewTap} style={styles.flex} />
           </FadeUp>
         ) : (
           <FadeUp style={[styles.mt16, styles.row10]}>
@@ -486,7 +483,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
                         <Text style={styles.recLabel}>{skill}</Text>
                         <Text style={text.meta}>{nb.profile.recsCount(count)}</Text>
                       </View>
-                      {!isSelf ? (
+                      {!isSelf && (canEndorse || mine) ? (
                         <Pressable
                           accessibilityRole="button"
                           accessibilityState={{ selected: mine }}
@@ -517,7 +514,8 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
                 <Text style={text.eyebrow}>{nb.profile.privateEyebrow}</Text>
               </View>
               <View style={styles.mt6}>
-                {profile.phone ? <KeyValueRow label={nb.profile.privPhone} value={maskPhone(profile.phone)} /> : null}
+                {account?.phoneMasked ? <KeyValueRow label={nb.profile.privPhone} value={account.phoneMasked} /> : null}
+                {account?.emailMasked ? <KeyValueRow label={nb.profile.privEmail} value={account.emailMasked} /> : null}
                 <KeyValueRow
                   label={nb.profile.privHome}
                   value={profile.homeNotes ? nb.profile.privHomeShared : nb.profile.privNone}

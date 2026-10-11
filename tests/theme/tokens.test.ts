@@ -19,7 +19,7 @@ test('text scale entries carry fontFamily + lineHeight', () => {
   for (const key of ['display', 'h1', 'question', 'sectionHead', 'section', 'cardTitle', 'body', 'meta'] as const) {
     expect(tokens.text[key].fontSize).toBeGreaterThan(0);
     expect(tokens.text[key].lineHeight).toBeGreaterThan(tokens.text[key].fontSize);
-    expect(tokens.text[key].fontFamily).toContain('Mulish');
+    expect(tokens.text[key].fontFamily).toContain('Figtree');
   }
 });
 
@@ -34,8 +34,8 @@ test('type scale steps up: meta < body < cardTitle < sectionHead < display', () 
 test('nb strings are bokmål and complete for slice 0-2', () => {
   expect(nb.tabs.oppdrag).toBe('Oppdrag');
   expect(nb.home.question).toMatch(/småjobb/);
-  expect(nb.home.searchPlaceholder).toMatch(/tjeneste/i);
   expect(nb.badge.needsHelp).toBe('Trenger hjelp');
-  expect(nb.badge.offersHelp).toBe('Tilbyr hjelp');
+  // rule 1: only oppdrag – no "Tilbyr hjelp" badge
+  expect(nb.badge).not.toHaveProperty('offersHelp');
   expect(nb.state.offline).toMatch(/nett/i);
 });

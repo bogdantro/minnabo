@@ -15,6 +15,7 @@ import {
   useReportNoShow,
   useSendMessage,
   useUpdateJobWorkspace,
+  useSharedContact,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { confirm } from '@/lib/confirm';
@@ -73,6 +74,8 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
   const { data: listing } = useListing(proposal?.listingId ?? '');
   const otherId = proposal ? (proposal.fromProfileId === me.id ? proposal.toProfileId : proposal.fromProfileId) : '';
   const { data: other } = useProfile(otherId);
+  // the number from Vipps, shared because you have an avtale (0057)
+  const contact = useSharedContact(otherId || undefined).data;
   const { data: ws } = useJobWorkspace(proposalId);
   const update = useUpdateJobWorkspace(proposalId);
   const noShow = useReportNoShow();
@@ -199,7 +202,7 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
       { onSuccess: () => toast.success(nb.avtale.noShowToast), onError: () => toast.error(nb.toast.genericError) },
     );
   };
-  const phone = other?.phone?.replace(/\s/g, '');
+  const phone = contact?.phone?.replace(/\s/g, '');
 
   return (
     <View style={styles.flex}>

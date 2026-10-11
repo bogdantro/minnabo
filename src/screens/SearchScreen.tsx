@@ -62,22 +62,52 @@ function applyFilters(list: Listing[], f: Filters): Listing[] {
 }
 
 /** Søk (design/screens/Sok.dc.html). Oppdrag only (rule 1). */
-export function SearchScreen({ initialQuery = '', initialCategory }: { initialQuery?: string; initialCategory?: string }) {
+/** Filters a link can start Søk with ("Kjør søk" on a saved search passes all of them). */
+export type SearchStart = {
+  categories?: string[];
+  verified?: boolean;
+  km?: number;
+  sort?: ListingSort;
+  /** search these kommuner instead of the current location scope */
+  kommuner?: string[];
+};
+
+export function SearchScreen({
+  initialQuery = '',
+  initialCategory,
+  start,
+}: {
+  initialQuery?: string;
+  initialCategory?: string;
+  start?: SearchStart;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [q, setQ] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
-  const [f, setF] = useState<Filters>(() => ({
-    ...NO_FILTERS,
-    cats: initialCategory && initialCategory !== 'alle' ? [categoryArtId(initialCategory)] : [],
-  }));
+  const [f, setF] = useState<Filters>(() => {
+    const slugs = start?.categories?.length
+      ? start.categories
+      : initialCategory && initialCategory !== 'alle'
+        ? [initialCategory]
+        : [];
+    return {
+      cats: [...new Set(slugs.map((s) => categoryArtId(s)))],
+      verified: !!start?.verified,
+      km: start?.km && start.km > 0 && start.km < MAX_KM ? start.km : MAX_KM,
+      sort: start?.sort ?? 'RELEVANCE',
+    };
+  });
+  // a saved search ("Kjør søk") runs in the kommuner it was saved with
+  const [kommuner] = useState<string[] | undefined>(start?.kommuner?.length ? start.kommuner : undefined);
   const [draft, setDraft] = useState<Filters>(f);
   const [sheet, setSheet] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
 
   const debounced = useDebouncedValue(q, 300);
   const recent = useRecentSearches();
-  const { municipality, municipalities, reach, ready } = useLocationScope();
+  const { municipality, municipalities: scope, reach, ready } = useLocationScope();
+  const municipalities = kommuner ?? scope;
   const jobs = useListings({ type: 'TASK_REQUEST', query: debounced.trim() || undefined, municipalities }, 'RELEVANCE');
   const addSearch = useAddSavedSearch();
   const removeSearch = useRemoveSavedSearch();
@@ -109,7 +139,11 @@ export function SearchScreen({ initialQuery = '', initialCategory }: { initialQu
     recent.add(t);
   };
 
-  const where = !municipality
+  const where = kommuner
+    ? kommuner.length === 1
+      ? nb.sok.whereKommune(kommuner[0])
+      : nb.sok.whereNeighbours(kommuner[0])
+    : !municipality
     ? nb.sok.whereAll
     : reach === 0
       ? nb.sok.whereKommune(municipality)
@@ -133,8 +167,10 @@ export function SearchScreen({ initialQuery = '', initialCategory }: { initialQu
           type: 'TASK_REQUEST',
           query: term || undefined,
           categorySlug: f.cats.length === 1 ? slugForArtId(f.cats[0]) : undefined,
+          categorySlugs: f.cats.length > 1 ? f.cats.map(slugForArtId) : undefined,
           verifiedOnly: f.verified || undefined,
           maxDistanceKm: f.km < MAX_KM ? f.km : undefined,
+          municipalities: municipalities.length ? municipalities : undefined,
         },
         sort: f.sort,
       },

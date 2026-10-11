@@ -234,9 +234,7 @@ export function toProfile(row: ProfileRow): PublicProfile {
     availabilityText: row.availability_text ?? undefined,
     youthAge: row.youth_age ?? undefined,
     categorySlugs: row.category_slugs ?? undefined,
-    homeNotes: row.home_notes ?? undefined,
     portfolio: row.portfolio ?? undefined,
-    phone: row.phone ?? undefined,
     // fully confirmed agreements, counted by the database (0055_jobs_and_reviews)
     completedTasks: row.reliability_completed ?? 0,
     reliability: toReliability(row),
@@ -335,10 +333,8 @@ export function toMessage(row: MessageRow): Message {
     text: row.text,
     kind: row.kind,
     proposalId: row.proposal_id ?? undefined,
-    attachmentUrl:
-      row.kind === 'IMAGE'
-        ? publicUrl('chat-attachments', row.attachment_path) ?? undefined
-        : undefined,
+    // the path in the private bucket – SupabaseApiClient swaps it for a signed link
+    attachmentUrl: row.kind === 'IMAGE' ? row.attachment_path ?? undefined : undefined,
     createdAt: row.created_at,
     // stored on the server = "Sendt"; "Levert" / "Lest" are added by withReadState
     delivery: 'SENT',

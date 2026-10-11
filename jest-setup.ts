@@ -280,6 +280,8 @@ jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   scheduleNotificationAsync: jest.fn().mockResolvedValue('notif-1'),
+  cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
+  SchedulableTriggerInputTypes: { DATE: 'date' },
   getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'ExponentPushToken[test]' }),
   setBadgeCountAsync: jest.fn().mockResolvedValue(true),
 }));
@@ -319,15 +321,6 @@ jest.mock('expo-network', () => ({
   addNetworkStateListener: () => ({ remove: () => undefined }),
   NetworkStateType: { WIFI: 'WIFI', NONE: 'NONE', UNKNOWN: 'UNKNOWN' },
 }));
-
-jest.mock('expo-linear-gradient', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    LinearGradient: ({ children, ...props }: any) =>
-      React.createElement(View, props, children),
-  };
-});
 
 jest.mock('expo-image', () => {
   const React = require('react');

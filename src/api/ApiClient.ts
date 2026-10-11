@@ -122,6 +122,9 @@ export type MyAccount = {
   emailMasked?: string;
 };
 
+/** Phone and home notes of someone you have an accepted tilbud with (shared_contact, 0057). */
+export type SharedContact = { phone?: string; homeNotes?: string };
+
 /** Bedrift registration (business_profiles). */
 export type BusinessProfile = {
   profileId: string;
@@ -290,6 +293,8 @@ export type SubmitReviewInput = {
   rating: number;
   comment?: string;
   tags?: string[];
+  /** "Vil du anbefale …?" – true / false, undefined when not answered */
+  recommends?: boolean;
 };
 
 export type RespondToProposalResult = {
@@ -332,7 +337,8 @@ export interface ApiClient {
   markConversationsRead(conversationIds: string[]): Promise<void>;
   listMessages(conversationId: string): Promise<Message[]>;
   sendMessage(conversationId: string, text: string): Promise<Message>;
-  sendAttachment(conversationId: string, attachmentUrl: string): Promise<Message>;
+  /** `attachmentPath`: the photo's path in the private chat-attachments bucket. */
+  sendAttachment(conversationId: string, attachmentPath: string): Promise<Message>;
   toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message[]>;
   setPinnedMessage(conversationId: string, messageId: string | null): Promise<Message[]>;
 
@@ -392,6 +398,10 @@ export interface ApiClient {
 
   // profile, verification, notifications, reviews
   getProfile(id: string): Promise<PublicProfile>;
+  /** Phone (Vipps) and home notes – only for yourself or a counterpart on an accepted tilbud. */
+  getSharedContact(profileId: string): Promise<SharedContact>;
+  /** "Anbefal" is only for neighbours with a completed avtale together (0060). */
+  canEndorse(profileId: string): Promise<boolean>;
   updateProfile(patch: UpdateProfilePatch): Promise<PublicProfile>;
   /** Median reply time in minutes ("Svarer vanligvis innen …"); null until there is enough history. */
   getReplyMinutes(profileId: string): Promise<number | null>;

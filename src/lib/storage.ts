@@ -1,6 +1,6 @@
 import { ENV } from './env';
 
-type Bucket = 'avatars' | 'listing-images' | 'chat-attachments';
+type Bucket = 'avatars' | 'listing-images';
 
 /**
  * Resolves a Storage object path to a public URL.

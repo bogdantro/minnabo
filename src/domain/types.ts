@@ -406,6 +406,8 @@ export type Message = {
   proposalId?: string;
   /** image url when kind === 'IMAGE' */
   attachmentUrl?: string;
+  /** storage path of a chat photo that is still being sent (retry / outbox) */
+  attachmentPath?: string;
   createdAt: string;
   delivery: MessageDelivery;
   /** client-side only: an optimistic message still in flight */
@@ -521,6 +523,8 @@ export type Conversation = {
 export type ListingFilter = {
   type?: ListingType;
   categorySlug?: string;
+  /** several categories (Søk's filter); takes precedence over `categorySlug` */
+  categorySlugs?: string[];
   maxDistanceKm?: number;
   /** kommune allow-list; undefined/empty = no location filtering */
   municipalities?: string[];

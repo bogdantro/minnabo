@@ -43,12 +43,12 @@ test('accepting an offer in chat shows "Tilbud godtatt"', async () => {
 
 test('a counterpart phone number is hidden until an agreement exists', async () => {
   const { apiClient } = require('@/api/client');
-  const before = await apiClient.getProfile('u-emma');
-  expect(before.phone).toBeUndefined();
+  expect((await apiClient.getSharedContact('u-emma')).phone).toBeUndefined();
 
   chatRepository.respondToProposal('p-emma-klippe', 'ACCEPT', 'RECIPIENT');
-  const after = await apiClient.getProfile('u-emma');
-  expect(after.phone).toBe('+47 901 22 333');
+  expect((await apiClient.getSharedContact('u-emma')).phone).toBe('+47 901 22 333');
+  // never part of the profile itself (0057)
+  expect((await apiClient.getProfile('u-emma')).phone).toBeUndefined();
 });
 
 test('the pinned job card shows the agreed price once an offer is accepted', async () => {

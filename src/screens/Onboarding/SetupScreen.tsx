@@ -17,7 +17,6 @@ import Svg, { Path } from 'react-native-svg';
 import nb from '@/i18n/nb';
 import type { Purpose } from '@/domain/types';
 import { supabase } from '@/lib/supabase';
-import { useSession } from '@/auth/session';
 import { useVippsIdentity } from '@/auth/identity';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { profileKeys } from '@/api/queries';
@@ -27,7 +26,6 @@ import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
 import { KommuneWaitlist } from '@/components/KommuneWaitlist';
 import { KOMMUNE_AREAS, LAUNCH_KOMMUNER } from '@/data/kommuner';
-import { locationScope } from '@/lib/locationScope';
 import { colors, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import {
@@ -154,7 +152,6 @@ function Radar({ state }: { state: 'idle' | 'busy' | 'done' }) {
 export function SetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userId } = useSession();
   const me = useCurrentUser();
   const queryClient = useQueryClient();
   // Full name from Vipps – shown locked as "Fra Vipps".

@@ -57,6 +57,34 @@ export async function sendTestNotification(title: string, body: string): Promise
 }
 
 /**
+ * A local notification at `at` (shown even when the app is closed). Returns its id, or
+ * null when notifications are not allowed. `route` opens that screen when tapped.
+ */
+export async function scheduleLocalAt(at: Date, title: string, body: string, route?: string): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web' || !(await ensureNotificationPermission())) return null;
+    ensureHandler();
+    const Notifications = N();
+    return await Notifications.scheduleNotificationAsync({
+      content: { title, body, data: route ? { route } : {} },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+    });
+  } catch (e) {
+    reportError(e, { where: 'scheduleLocalAt' });
+    return null;
+  }
+}
+
+export async function cancelLocal(id: string | null | undefined): Promise<void> {
+  if (!id || Platform.OS === 'web') return;
+  try {
+    await N().cancelScheduledNotificationAsync(id);
+  } catch (e) {
+    reportError(e, { where: 'cancelLocal' });
+  }
+}
+
+/**
  * Register this device's Expo push token with the backend so the server can
  * deliver pushes. Safe to call on every start; does nothing on simulators/web.
  */

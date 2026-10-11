@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import nb from '@/i18n/nb';
+import { cancelLocal, scheduleLocalAt } from './notifications';
 
 const KEY = 'minnabo.safeTrip.v1';
 
@@ -16,6 +18,8 @@ export type SafeTrip = {
   /** Sikkerhet card details: job + approximate area */
   job?: string;
   place?: string;
+  /** the local "Er du trygt ferdig?" reminder at dueAt */
+  reminderId?: string | null;
 };
 
 let current: SafeTrip | null = null;
@@ -40,12 +44,35 @@ function persist() {
   else AsyncStorage.removeItem(KEY).catch(() => undefined);
 }
 
+// The reminder at the deadline goes to the person on the trip (a local notification –
+// the trip lives on this phone only). Rescheduled on Forleng, cancelled on Stopp.
+const isActive = (trip: SafeTrip) => !!current && current.startedAt === trip.startedAt;
+
+async function remind(trip: SafeTrip) {
+  await cancelLocal(trip.reminderId);
+  if (!isActive(trip)) return;
+  const at = new Date(trip.dueAt);
+  const id = at.getTime() > Date.now()
+    ? await scheduleLocalAt(at, nb.tryggTur.dueTitle, nb.tryggTur.dueBody(trip.label), '/sikkerhet')
+    : null;
+  // stopped (or replaced) while scheduling: don't leave a reminder behind
+  if (!isActive(trip) || current!.dueAt !== trip.dueAt) {
+    await cancelLocal(id);
+    return;
+  }
+  current = { ...current!, reminderId: id };
+  persist();
+}
+
 export const safeTrip = {
   get: () => current,
   start(trip: SafeTrip) {
-    current = trip;
+    const old = current?.reminderId;
+    const next: SafeTrip = { ...trip, reminderId: null };
+    current = next;
     persist();
     emit();
+    void cancelLocal(old).then(() => remind(next));
   },
   /** push the expected end time */
   extend(dueAt: string) {
@@ -53,12 +80,15 @@ export const safeTrip = {
     current = { ...current, dueAt };
     persist();
     emit();
+    void remind(current);
   },
   /** the person checked back in safely */
   checkIn() {
+    const id = current?.reminderId;
     current = null;
     persist();
     emit();
+    void cancelLocal(id);
   },
   _reset() {
     current = null;

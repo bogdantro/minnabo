@@ -139,13 +139,13 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
     }
     sendMessage.mutate(t, { onError: sendFailed });
   };
-  const attach = (url: string) => {
+  const attach = (path: string, preview?: string) => {
     atBottom.current = true;
     if (!online) {
-      outbox.enqueue({ kind: 'attachment', conversationId: c.id, url });
+      outbox.enqueue({ kind: 'attachment', conversationId: c.id, url: path });
       return;
     }
-    sendAttachment.mutate(url, { onError: () => toast.error(nb.toast.genericError) });
+    sendAttachment.mutate({ path, preview }, { onError: () => toast.error(nb.toast.genericError) });
   };
   const pickImage = async (source: 'camera' | 'library') => {
     setUploading(true);
@@ -157,7 +157,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           : [await pickAndUpload({ bucket: 'chat-attachments', folder: me.id, source })].filter((r): r is NonNullable<typeof r> => !!r);
       if (res.length) {
         setSheet(null);
-        res.forEach((r) => attach(r.publicUrl));
+        res.forEach((r) => attach(r.path, r.localUri));
       }
     } catch (e) {
       toast.error((e as Error).message || nb.chat.uploadFailed);
@@ -166,7 +166,9 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
     }
   };
   const retry = (m: Message) => {
-    if (m.kind === 'IMAGE' && m.attachmentUrl) sendAttachment.mutate(m.attachmentUrl);
+    if (m.kind === 'IMAGE' && (m.attachmentPath || m.attachmentUrl)) {
+      sendAttachment.mutate({ path: m.attachmentPath ?? m.attachmentUrl!, preview: m.attachmentUrl });
+    }
     else sendMessage.mutate(m.text, { onError: sendFailed });
   };
 

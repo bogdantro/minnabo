@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GuardianSheet } from '@/components/GuardianSheet';
+import { LocationSheet } from '@/components/LocationSheet';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
@@ -11,7 +12,7 @@ import { apiClient } from '@/api/client';
 import { useConversations, useListings, useListingsByIds, useProfile, useSentProposals, useStartConversation } from '@/api/queries';
 import { formatPrice } from '@/domain/price';
 import { safePush } from '@/lib/nav';
-import { useLocationScope } from '@/lib/locationScope';
+import { useLocationScope, type Reach } from '@/lib/locationScope';
 import { useVippsIdentity } from '@/auth/identity';
 import { signOut, useSession } from '@/auth/session';
 import { toast } from '@/lib/toast';
@@ -107,7 +108,15 @@ export function YouthAppScreen() {
   const insets = useSafeAreaInsets();
   // empty for the moment it takes to load who is signed in
   const id = useVippsIdentity() ?? { name: '', firstName: '', initials: '·', birthYear: 0, age: 0, phoneMasked: '', youth: true };
-  const { municipality, municipalities, ready } = useLocationScope();
+  const { municipality, municipalities, ready, reach, setKommune, setReach } = useLocationScope();
+  // youth accounts skip Oppsett, so the kommune is chosen here
+  const [locOpen, setLocOpen] = useState(false);
+  const applyLocation = (k: string, r: Reach) => {
+    setLocOpen(false);
+    setKommune(k);
+    setReach(r);
+    toast.success(nb.oppdrag.showing(nb.oppdrag.reach[r].name, k), { icon: 'pin' });
+  };
   const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
 
   const [view, setView] = useState<View4>('oppdrag');
@@ -262,12 +271,18 @@ export function YouthAppScreen() {
               </Text>
             </FadeUp>
             <FadeUp delay={100} style={styles.px}>
-              <View style={styles.loc}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={nb.youth.pickKommuneA11y}
+                onPress={() => setLocOpen(true)}
+                style={styles.loc}
+              >
                 <Icon name="pin" size={18} color={colors.limeDeep} />
-                <Text style={[text.label, styles.locK]}>
-                  {municipality ? nb.oppdrag.kommune(municipality) : nb.oppdrag.reach[2].name}
+                <Text style={[text.label, styles.locK, styles.flex]}>
+                  {municipality ? nb.oppdrag.kommune(municipality) : nb.youth.pickKommune}
                 </Text>
-              </View>
+                <Text style={[text.link, styles.locChange]}>{nb.oppdrag.change}</Text>
+              </Pressable>
             </FadeUp>
             <FadeUp delay={150} style={styles.mt14}>
               <ChipRow>
@@ -576,6 +591,7 @@ export function YouthAppScreen() {
         </View>
       </Sheet>
       <GuardianSheet visible={guardian} onClose={() => setGuardian(false)} />
+      <LocationSheet visible={locOpen} onClose={() => setLocOpen(false)} kommune={municipality} reach={reach} onApply={applyLocation} />
     </View>
   );
 }
@@ -630,6 +646,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   locK: { fontSize: 14.5 },
+  locChange: { fontSize: 13.5 },
   list: { paddingHorizontal: screenPadding, gap: 12 },
   bleed: { marginHorizontal: -screenPadding },
   errorBox: { height: 360 },

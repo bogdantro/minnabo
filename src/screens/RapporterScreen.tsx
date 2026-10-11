@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import type { ReportTargetType } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
-import { useBlockedProfileIds, useListing, useProfile, useSubmitReport, useToggleBlock } from '@/api/queries';
+import { useBlockedProfileIds, useListing, useProfile, useProposal, useReviews, useSubmitReport, useToggleBlock } from '@/api/queries';
+import { formatPrice } from '@/domain/price';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatTime } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
@@ -43,7 +44,8 @@ const MAX = 500;
 /**
  * Rapporter (design/screens/Rapporter.dc.html). Opened with the thing to report:
  * `?profil=` (a user), `?listing=` (an oppdrag), `?melding=` (+ `profil` = sender),
- * `?kommentar=` (a comment under an oppslag, + `profil` = who wrote it).
+ * `?kommentar=` (a comment under an oppslag, + `profil` = who wrote it),
+ * `?tilbud=` (a tilbud, + `profil` = sender), `?vurdering=` (a review of me, + `profil` = reviewer).
  * Without any of them it is a general report and the details are required.
  */
 export function RapporterScreen({
@@ -51,25 +53,36 @@ export function RapporterScreen({
   listingId,
   messageId,
   commentId,
+  proposalId,
+  reviewId,
 }: {
   profileId?: string;
   listingId?: string;
   messageId?: string;
   commentId?: string;
+  proposalId?: string;
+  reviewId?: string;
 }) {
   const router = useRouter();
   const me = useCurrentUser();
   const { data: listing } = useListing(listingId ?? '');
-  const personId = profileId ?? listing?.owner.id ?? '';
+  const { data: proposal } = useProposal(proposalId);
+  const { data: proposalListing } = useListing(proposal?.listingId ?? '');
+  // a review can only be reported by the person it is about – it is among my reviews
+  const { data: myReviews } = useReviews(reviewId ? me.id : '');
+  const review = reviewId ? (myReviews ?? []).find((r) => r.id === reviewId) : undefined;
+  const personId = profileId ?? listing?.owner.id ?? proposal?.fromProfileId ?? review?.fromProfileId ?? '';
   const { data: person } = useProfile(personId);
   const { data: blockedIds = [] } = useBlockedProfileIds();
   const report = useSubmitReport();
   const toggleBlock = useToggleBlock();
 
-  const general = !profileId && !listingId && !messageId && !commentId;
+  const general = !profileId && !listingId && !messageId && !commentId && !proposalId && !reviewId;
   const types: ReportTargetType[] = general
     ? ALL_TYPES
     : [
+        ...(proposalId ? (['PROPOSAL'] as const) : []),
+        ...(reviewId ? (['REVIEW'] as const) : []),
         ...(commentId ? (['COMMENT'] as const) : []),
         ...(listingId ? (['LISTING'] as const) : []),
         ...(messageId ? (['MESSAGE'] as const) : []),
@@ -106,7 +119,19 @@ export function RapporterScreen({
   const detOk = !detailsRequired || details.trim().length >= 10;
   const canBlock = !!personId && personId !== me.id && !blockedIds.includes(personId);
   const targetId =
-    type === 'COMMENT' ? commentId ?? '' : type === 'LISTING' ? listingId ?? '' : type === 'MESSAGE' ? messageId ?? '' : type === 'USER' ? personId : '';
+    type === 'COMMENT'
+      ? commentId ?? ''
+      : type === 'LISTING'
+        ? listingId ?? ''
+        : type === 'MESSAGE'
+          ? messageId ?? ''
+          : type === 'PROPOSAL'
+            ? proposalId ?? ''
+            : type === 'REVIEW'
+              ? reviewId ?? ''
+              : type === 'USER'
+                ? personId
+                : '';
   const personName = person?.displayName ?? '';
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/sikkerhet'));
@@ -217,7 +242,26 @@ export function RapporterScreen({
             ) : (
               <>
                 <Text style={[text.label, styles.mb10]}>{nb.rapporter.youReport}</Text>
-                {type === 'LISTING' && listing ? (
+                {type === 'PROPOSAL' && proposal ? (
+                  <FadeUp key="ctx-p" style={[styles.ctx, shadow.card]}>
+                    <View style={[styles.flex, styles.gap5]}>
+                      <Pill label={nb.rapporter.types.PROPOSAL} tone="neutral" size="sm" style={styles.selfStart} />
+                      <Text style={styles.ctxTitle}>{nb.rapporter.offerOn(proposalListing?.title ?? nb.rapporter.oppdrag)}</Text>
+                      <Text style={[text.meta, styles.f125]}>
+                        {[person?.displayName, formatPrice(proposal.price)].filter(Boolean).join(' · ')}
+                      </Text>
+                      {proposal.message ? <Text style={[text.meta, styles.f125]}>{`«${proposal.message}»`}</Text> : null}
+                    </View>
+                  </FadeUp>
+                ) : type === 'REVIEW' && reviewId ? (
+                  <FadeUp key="ctx-r" style={[styles.ctx, shadow.card]}>
+                    <View style={[styles.flex, styles.gap5]}>
+                      <Pill label={nb.rapporter.reviewTitle} tone="neutral" icon="star" size="sm" style={styles.selfStart} />
+                      <Text style={styles.ctxTitle}>{nb.rapporter.reviewedYou(person?.displayName ?? '')}</Text>
+                      {review?.comment ? <Text style={[text.meta, styles.f125]}>{`«${review.comment}»`}</Text> : null}
+                    </View>
+                  </FadeUp>
+                ) : type === 'LISTING' && listing ? (
                   <FadeUp key="ctx-l" style={[styles.ctx, shadow.card]}>
                     <CategoryArt category={categoryArtId(listing.category.slug)} uri={listing.images[0]?.url} width={64} height={64} radius={16} iconSize={26} />
                     <View style={[styles.flex, styles.gap5]}>

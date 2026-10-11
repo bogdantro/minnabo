@@ -6,7 +6,6 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { tokens } from '@/theme';
 import { AppText } from './Text';
 
 export const WHEEL_ITEM_HEIGHT = 40;

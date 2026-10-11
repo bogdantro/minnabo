@@ -31,6 +31,7 @@ import type {
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type {
   ApiClient,
+  SharedContact,
   ListConversationsParams,
   BusinessProfile,
   ConsentRecord,
@@ -46,9 +47,7 @@ import type {
   SubmitReportInput,
   SubmitReviewInput,
   UpdateProfilePatch,
-} from './ApiClient';
-import { withDefaultPrefs } from './ApiClient';
-import type {
+
   MyAccount,
   AccountStatus,
   EditProposalPatch,
@@ -61,8 +60,9 @@ import type {
   AdminPartner,
   AdminReport,
   AdminUser,
-  ReportOutcome,
-} from './ApiClient';
+  ReportOutcome} from './ApiClient';
+import { withDefaultPrefs } from './ApiClient';
+
 import { OPEN_LISTING_STATUSES } from '@/domain/editing';
 import { publicUrl } from '@/lib/storage';
 import {
@@ -130,6 +130,46 @@ function fail(message: string | undefined): never {
 
 const token = () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+/** Signed-in user id, or null – for reads that also work for other people's data. */
+async function sessionUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user.id ?? null;
+}
+
+// Chat photos are private (0058): shown through signed links, reused until shortly
+// before they expire so the same photo is not downloaded again on every refresh.
+const SIGNED_TTL = 7 * 24 * 3600;
+const signed = new Map<string, { url: string; until: number }>();
+const CHAT_PREFIX = '/storage/v1/object/public/chat-attachments/';
+
+function chatPath(v: string): string {
+  const i = v.indexOf(CHAT_PREFIX);
+  return i >= 0 ? v.slice(i + CHAT_PREFIX.length) : v;
+}
+
+async function withSignedPhotos(messages: Message[]): Promise<Message[]> {
+  const now = Date.now();
+  const paths = [
+    ...new Set(
+      messages
+        .filter((m) => m.kind === 'IMAGE' && m.attachmentUrl && !/^(file|content|data|blob):/i.test(m.attachmentUrl))
+        .map((m) => chatPath(m.attachmentUrl!)),
+    ),
+  ];
+  const missing = paths.filter((p) => (signed.get(p)?.until ?? 0) <= now);
+  if (missing.length) {
+    const { data } = await supabase.storage.from('chat-attachments').createSignedUrls(missing, SIGNED_TTL);
+    for (const r of data ?? []) {
+      if (r.path && r.signedUrl) signed.set(r.path, { url: r.signedUrl, until: now + (SIGNED_TTL - 3600) * 1000 });
+    }
+  }
+  return messages.map((m) =>
+    m.kind === 'IMAGE' && m.attachmentUrl
+      ? { ...m, attachmentUrl: signed.get(chatPath(m.attachmentUrl))?.url ?? m.attachmentUrl }
+      : m,
+  );
+}
+
 async function myId(): Promise<string> {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) fail('Ikke innlogget.');
@@ -146,7 +186,9 @@ export class SupabaseApiClient implements ApiClient {
     let q = supabase.from('listings').select(LISTING_SELECT).in('status', OPEN_LISTING_STATUSES);
 
     if (filter?.type) q = q.eq('type', filter.type);
-    if (filter?.categorySlug && filter.categorySlug !== 'alle') {
+    if (filter?.categorySlugs?.length) {
+      q = q.in('category_slug', filter.categorySlugs);
+    } else if (filter?.categorySlug && filter.categorySlug !== 'alle') {
       q = q.eq('category_slug', filter.categorySlug);
     }
     if (filter?.query?.trim()) {
@@ -165,6 +207,10 @@ export class SupabaseApiClient implements ApiClient {
     if (blocked.length) listings = listings.filter((l) => !blocked.includes(l.owner.id));
     if (filter?.verifiedOnly) {
       listings = listings.filter((l) => l.owner.verifications.some((v) => v.verified));
+    }
+    if (typeof filter?.maxDistanceKm === 'number') {
+      const max = filter.maxDistanceKm;
+      listings = listings.filter((l) => typeof l.location.distanceKm !== 'number' || l.location.distanceKm <= max);
     }
     return listings;
   }
@@ -442,7 +488,8 @@ export class SupabaseApiClient implements ApiClient {
         .filter((t): t is string => !!t)
         .sort()
         .pop();
-    return withReadState((data as unknown as MessageRow[]).map(toMessage), me, latest('last_read_at'), latest('last_delivered_at'));
+    const messages = await withSignedPhotos((data as unknown as MessageRow[]).map(toMessage));
+    return withReadState(messages, me, latest('last_read_at'), latest('last_delivered_at'));
   }
 
   async sendMessage(conversationId: string, text: string): Promise<Message> {
@@ -462,7 +509,7 @@ export class SupabaseApiClient implements ApiClient {
     return toMessage(data as unknown as MessageRow);
   }
 
-  async sendAttachment(conversationId: string, attachmentUrl: string): Promise<Message> {
+  async sendAttachment(conversationId: string, attachmentPath: string): Promise<Message> {
     const me = await myId();
     const { data, error } = await supabase
       .from('messages')
@@ -471,13 +518,13 @@ export class SupabaseApiClient implements ApiClient {
         author_id: me,
         kind: 'IMAGE',
         text: '',
-        attachment_path: attachmentUrl,
+        attachment_path: chatPath(attachmentPath),
         client_token: token(),
       })
       .select('*')
       .single();
     if (error) fail(error.message);
-    return toMessage(data as unknown as MessageRow);
+    return (await withSignedPhotos([toMessage(data as unknown as MessageRow)]))[0];
   }
 
   async toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message[]> {
@@ -861,7 +908,31 @@ export class SupabaseApiClient implements ApiClient {
       .eq('id', id)
       .single();
     if (error) fail(error.code === 'PGRST116' ? 'Fant ikke profilen.' : error.message);
-    return toProfile(data as unknown as ProfileRow);
+    const profile = toProfile(data as unknown as ProfileRow);
+    // home notes are private (0057): only your own are part of your profile
+    if (id === (await sessionUserId())) profile.homeNotes = await this.myHomeNotes(id);
+    return profile;
+  }
+
+  private async myHomeNotes(me: string): Promise<string | undefined> {
+    const { data, error } = await supabase.from('profile_home_notes').select('notes').eq('profile_id', me).maybeSingle();
+    if (error) fail(error.message);
+    return (data as { notes: string } | null)?.notes ?? undefined;
+  }
+
+  async canEndorse(profileId: string): Promise<boolean> {
+    const me = await sessionUserId();
+    if (!me || me === profileId) return false;
+    const { data, error } = await supabase.rpc('has_completed_agreement', { p_a: me, p_b: profileId });
+    if (error) fail(error.message);
+    return !!data;
+  }
+
+  async getSharedContact(profileId: string): Promise<SharedContact> {
+    const { data, error } = await supabase.rpc('shared_contact', { p_profile_id: profileId });
+    if (error) fail(error.message);
+    const r = (data ?? {}) as { phone?: string | null; homeNotes?: string | null };
+    return { phone: r.phone ?? undefined, homeNotes: r.homeNotes ?? undefined };
   }
 
   async updateProfile(patch: UpdateProfilePatch): Promise<PublicProfile> {
@@ -879,8 +950,18 @@ export class SupabaseApiClient implements ApiClient {
     if (patch.languages !== undefined) row.languages = patch.languages;
     if (patch.hasCar !== undefined) row.has_car = patch.hasCar;
     if (patch.availabilityText !== undefined) row.availability_text = patch.availabilityText.trim() || null;
-    if (patch.homeNotes !== undefined) row.home_notes = patch.homeNotes || null;
     if (patch.portfolio !== undefined) row.portfolio = patch.portfolio;
+
+    if (patch.homeNotes !== undefined) {
+      const notes = patch.homeNotes.trim();
+      const { error: notesErr } = notes
+        ? await supabase
+            .from('profile_home_notes')
+            .upsert({ profile_id: me, notes, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+        : await supabase.from('profile_home_notes').delete().eq('profile_id', me);
+      if (notesErr) fail(notesErr.message);
+    }
+    if (Object.keys(row).length === 0) return this.getProfile(me);
 
     const { data, error } = await supabase
       .from('profiles')
@@ -889,7 +970,9 @@ export class SupabaseApiClient implements ApiClient {
       .select(PROFILE_SELECT)
       .single();
     if (error) fail(error.message);
-    return toProfile(data as unknown as ProfileRow);
+    const profile = toProfile(data as unknown as ProfileRow);
+    profile.homeNotes = await this.myHomeNotes(me);
+    return profile;
   }
 
   async verify(kind: VerificationKind): Promise<PublicProfile> {
@@ -925,8 +1008,9 @@ export class SupabaseApiClient implements ApiClient {
   }
 
   async listReviews(profileId: string): Promise<Review[]> {
+    // only reviews that are visible: both have reviewed, or 10 days have passed (0059)
     const { data, error } = await supabase
-      .from('reviews')
+      .from('visible_reviews')
       .select('*')
       .eq('to_profile_id', profileId)
       .order('created_at', { ascending: false });
@@ -1028,6 +1112,7 @@ export class SupabaseApiClient implements ApiClient {
       p_rating: input.rating,
       p_comment: input.comment ?? '',
       p_tags: input.tags ?? [],
+      p_recommends: input.recommends ?? null,
     });
     if (error) fail(error.message);
     return toReview(data as unknown as ReviewRow);

@@ -5,11 +5,12 @@
  * accent colours (see `categoryAccent.ts`). Components must never hardcode hex.
  */
 
+// Older components still read these; they use the redesign's body font (Figtree).
 const font = {
-  regular: 'Mulish_400Regular',
-  medium: 'Mulish_500Medium',
-  bold: 'Mulish_700Bold',
-  extrabold: 'Mulish_800ExtraBold',
+  regular: 'Figtree_400Regular',
+  medium: 'Figtree_500Medium',
+  bold: 'Figtree_700Bold',
+  extrabold: 'Figtree_800ExtraBold',
 } as const;
 
 const color = {

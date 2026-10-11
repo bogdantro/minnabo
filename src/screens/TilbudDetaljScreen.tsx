@@ -617,7 +617,7 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
           label={nb.tilbudDetalj.menuReport}
           onPress={() => {
             setSheet(null);
-            safePush(`/rapporter?profil=${otherId}`);
+            safePush(`/rapporter?tilbud=${proposalId}&profil=${otherId}`);
           }}
         />
       </Sheet>

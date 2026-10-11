@@ -48,13 +48,14 @@ async function uploadUri(
   if (error) throw new Error(error.message);
   return {
     path,
-    publicUrl: bucket === 'report-attachments' ? '' : publicUrl(bucket, path)!,
+    // private buckets have no public link (chat photos are shown through signed links)
+    publicUrl: bucket === 'report-attachments' || bucket === 'chat-attachments' ? '' : publicUrl(bucket, path)!,
     localUri: compressed,
     bytes: bytes.byteLength,
   };
 }
 
-/** `publicUrl` is empty for the private bucket; `localUri` / `bytes` describe the uploaded file. */
+/** `publicUrl` is empty for the private buckets; `localUri` / `bytes` describe the uploaded file. */
 export type PickResult = { path: string; publicUrl: string; localUri?: string; bytes?: number };
 
 /**

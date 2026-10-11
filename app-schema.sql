@@ -4,8 +4,8 @@
 --
 -- What this is
 --   The state of the database after every migration in supabase/migrations
---   (0001_schema.sql … 0055_jobs_and_reviews.sql) has run, in one file.
---   It was produced by replaying all 55 migrations, in order, on a scratch
+--   (0001_schema.sql … 0061_saved_search_filters.sql) has run, in one file.
+--   It was produced by replaying all 61 migrations, in order, on a scratch
 --   Postgres and dumping the result (pg_dump --schema-only --schema=public),
 --   then adding the parts that live outside `public` (auth trigger, storage
 --   buckets + policies, realtime publication, pg_cron job) and the category
@@ -18,7 +18,7 @@
 --   this file. supabase/migrations stays the source of truth.
 --
 -- Live project status (from docs/LEFT_OUT.md, A14, checked 2026-10-06)
---   0001–0046 are applied to the hosted project; 0047–0055 still have to be
+--   0001–0046 are applied to the hosted project; 0047–0061 still have to be
 --   pushed. This file already includes them. 0054_website.sql comes from the
 --   website repo (minnabo-web) and adds the website's tables (schema `web`
 --   is not dumped here – only `public`).
@@ -40,9 +40,9 @@
 --
 -- Contents
 --   1. Extensions
---   2. public schema: 13 enums, 63 tables, 6 views, 138 functions,
---      62 triggers, 34 indexes (plus primary/unique keys),
---      foreign keys, row level security + 67 policies, grants
+--   2. public schema: 13 enums, 64 tables, 5 views, 144 functions,
+--      64 triggers, 34 indexes (plus primary/unique keys),
+--      foreign keys, row level security + 69 policies, grants
 --   3. Trigger on auth.users
 --   4. Storage buckets and storage.objects policies
 --   5. Realtime publication
@@ -54,7 +54,7 @@
 --   price_mode, proposal_status, purpose, report_status, report_target, task_recurrence,
 --   verification_kind
 --
--- Tables (63):
+-- Tables (64):
 --   account_deletions, admin_audit_log, agreement_reminders, agreement_snapshots,
 --   agreement_time_proposals, app_secrets, app_settings, banned_words, blocks, business_profiles,
 --   categories, clubs, completion_confirmations, consent_records, contact_messages,
@@ -63,15 +63,14 @@
 --   message_reads, messages, neighbourhood_members, neighbourhoods, news_articles,
 --   newsletter_subscribers, no_show_reports, notice_comments, noticeboard_posts, notifications,
 --   partner_accounts, partner_events, partner_invoices, partner_placements,
---   partner_profile_changes, partner_reminders, partners, portfolio_items, profile_moderation,
---   profile_private, profile_settings, profiles, proposal_revisions, proposals, push_tokens,
---   reports, reviews, safe_trips, saved_listings, saved_notices, saved_searches,
---   service_offer_details, skill_endorsements, stripe_events, task_details, trusted_contacts,
---   verifications
+--   partner_profile_changes, partner_reminders, partners, portfolio_items, profile_home_notes,
+--   profile_moderation, profile_private, profile_settings, profiles, proposal_revisions,
+--   proposals, push_tokens, reports, reviews, safe_trips, saved_listings, saved_notices,
+--   saved_searches, service_offer_details, skill_endorsements, stripe_events, task_details,
+--   trusted_contacts, verifications
 --
--- Views (6):
---   news_public, partners_public, profile_ratings, public_listings, shared_contacts,
---   visible_reviews
+-- Views (5):
+--   news_public, partners_public, profile_ratings, public_listings, visible_reviews
 -- =============================================================================
 
 
@@ -823,6 +822,23 @@ exception when others then
 end $$;
 
 
+--
+-- Name: can_read_chat_attachment(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.can_read_chat_attachment(p_name text) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select auth.uid() is not null and (
+    split_part(p_name, '/', 1) = auth.uid()::text
+    or exists (select 1 from messages m
+                where m.attachment_path = p_name
+                  and is_participant(m.conversation_id))
+  );
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -892,6 +908,23 @@ begin
     '/avtale/' || p.id);
   return p;
 end $$;
+
+
+--
+-- Name: chat_attachment_path(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.chat_attachment_path(p text) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  select case
+    when p is null then null
+    when position('/storage/v1/object/public/chat-attachments/' in p) > 0
+      then substring(p from position('/storage/v1/object/public/chat-attachments/' in p)
+                            + length('/storage/v1/object/public/chat-attachments/'))
+    else p
+  end;
+$$;
 
 
 --
@@ -1021,6 +1054,22 @@ $$;
 
 
 --
+-- Name: drop_notes_on_delete(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.drop_notes_on_delete() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if new.deleted_at is not null and old.deleted_at is null then
+    delete from profile_home_notes where profile_id = new.id;
+  end if;
+  return new;
+end $$;
+
+
+--
 -- Name: edit_proposal(uuid, bigint, text, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1112,6 +1161,10 @@ begin
     new.youth_age := old.youth_age;
     new.reliability_completed := old.reliability_completed;
     new.reliability_no_shows := old.reliability_no_shows;
+  end if;
+  if current_user = 'authenticated' then
+    new.home_notes := old.home_notes;
+    new.phone := old.phone;
   end if;
   return new;
 end $$;
@@ -1241,6 +1294,23 @@ CREATE FUNCTION public.has_banned_word(p_text text) RETURNS boolean
     select 1 from banned_words b
      where lower(p_text) ~ ('(^|[^a-zæøå0-9])' || b.word || '($|[^a-zæøå0-9])'));
 $_$;
+
+
+--
+-- Name: has_completed_agreement(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.has_completed_agreement(p_a uuid, p_b uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select exists (
+    select 1 from proposals p
+     where ((p.from_profile_id = p_a and p.to_profile_id = p_b)
+         or (p.from_profile_id = p_b and p.to_profile_id = p_a))
+       and (select count(*) from completion_confirmations c where c.agreement_proposal_id = p.id) >= 2
+  );
+$$;
 
 
 --
@@ -1965,6 +2035,19 @@ $$;
 
 
 --
+-- Name: normalize_chat_attachment(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.normalize_chat_attachment() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  new.attachment_path := chat_attachment_path(new.attachment_path);
+  return new;
+end $$;
+
+
+--
 -- Name: notice_comment_added(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2141,7 +2224,13 @@ begin
       join profiles p on p.id = ss.profile_id and p.deleted_at is null and p.suspended_at is null
      where ss.alert
        and ss.profile_id <> new.owner_id
-       and (coalesce(ss.filter->>'categorySlug', 'alle') in ('alle', '') or ss.filter->>'categorySlug' = new.category_slug)
+       and (case
+              when jsonb_typeof(ss.filter->'categorySlugs') = 'array'
+                   and jsonb_array_length(ss.filter->'categorySlugs') > 0
+                then ss.filter->'categorySlugs' ? new.category_slug
+              else coalesce(ss.filter->>'categorySlug', 'alle') in ('alle', '')
+                   or ss.filter->>'categorySlug' = new.category_slug
+            end)
        and (coalesce(jsonb_array_length(case when jsonb_typeof(ss.filter->'municipalities') = 'array'
                                              then ss.filter->'municipalities' else '[]'::jsonb end), 0) = 0
             or ss.filter->'municipalities' ? new.municipality)
@@ -2760,6 +2849,7 @@ CREATE TABLE public.reviews (
     tags text[] DEFAULT '{}'::text[] NOT NULL,
     reply text,
     replied_at timestamp with time zone,
+    recommends boolean,
     CONSTRAINT reviews_rating_check CHECK (((rating >= 1) AND (rating <= 5)))
 );
 
@@ -3380,6 +3470,36 @@ $$;
 
 
 --
+-- Name: shared_contact(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.shared_contact(p_profile_id uuid) RETURNS json
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  with me as (select auth.uid() as id),
+  deal as (
+    -- the newest accepted tilbud between the caller and this profile
+    select pr.id, l.status::text as listing_status
+      from proposals pr
+      join listings l on l.id = pr.listing_id, me
+     where pr.status = 'ACCEPTED'
+       and ((pr.from_profile_id = me.id and pr.to_profile_id = p_profile_id)
+         or (pr.to_profile_id = me.id and pr.from_profile_id = p_profile_id))
+  ),
+  access as (
+    select (select id from me) is not null and (p_profile_id = (select id from me) or exists (select 1 from deal)) as phone_ok,
+           (select id from me) is not null and (p_profile_id = (select id from me)
+             or exists (select 1 from deal where listing_status not in ('COMPLETED', 'REVIEWED', 'CANCELLED', 'REMOVED'))) as notes_ok
+  )
+  select json_build_object(
+    'phone', case when a.phone_ok then (select phone from profile_private where profile_id = p_profile_id) end,
+    'homeNotes', case when a.notes_ok then (select notes from profile_home_notes where profile_id = p_profile_id) end)
+  from access a;
+$$;
+
+
+--
 -- Name: conversations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3526,10 +3646,10 @@ end $$;
 
 
 --
--- Name: submit_review(uuid, integer, text, text[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: submit_review(uuid, integer, text, text[], boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[] DEFAULT '{}'::text[]) RETURNS public.reviews
+CREATE FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[] DEFAULT '{}'::text[], p_recommends boolean DEFAULT NULL::boolean) RETURNS public.reviews
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -3550,8 +3670,8 @@ begin
   end if;
 
   v_to := case when v_me = p.from_profile_id then p.to_profile_id else p.from_profile_id end;
-  insert into reviews (agreement_proposal_id, listing_id, from_profile_id, to_profile_id, rating, comment, tags)
-  values (p_agreement_proposal_id, p.listing_id, v_me, v_to, p_rating, nullif(p_comment, ''), coalesce(p_tags, '{}'))
+  insert into reviews (agreement_proposal_id, listing_id, from_profile_id, to_profile_id, rating, comment, tags, recommends)
+  values (p_agreement_proposal_id, p.listing_id, v_me, v_to, p_rating, nullif(p_comment, ''), coalesce(p_tags, '{}'), p_recommends)
   returning * into v_row;
 
   update listings set status = 'REVIEWED' where id = p.listing_id and status = 'COMPLETED';
@@ -3637,6 +3757,11 @@ declare
   v_current jsonb;
   v_people jsonb;
 begin
+  -- you can only react as yourself
+  if auth.uid() is null or p_profile_id is distinct from auth.uid() then
+    raise exception 'Ikke tilgang.';
+  end if;
+
   select conversation_id into v_conversation from messages where id = p_message_id;
   if v_conversation is null then
     raise exception 'Fant ikke meldingen.';
@@ -4721,6 +4846,18 @@ CREATE TABLE public.portfolio_items (
 
 
 --
+-- Name: profile_home_notes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.profile_home_notes (
+    profile_id uuid NOT NULL,
+    notes text NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT profile_home_notes_notes_check CHECK ((char_length(notes) <= 1000))
+);
+
+
+--
 -- Name: profile_moderation; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4751,6 +4888,29 @@ CREATE TABLE public.profile_private (
 
 
 --
+-- Name: visible_reviews; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.visible_reviews AS
+ SELECT id,
+    agreement_proposal_id,
+    listing_id,
+    from_profile_id,
+    to_profile_id,
+    rating,
+    comment,
+    created_at,
+    tags,
+    reply,
+    replied_at,
+    recommends
+   FROM public.reviews r
+  WHERE (((now() - created_at) > '10 days'::interval) OR (EXISTS ( SELECT 1
+           FROM public.reviews x
+          WHERE ((x.agreement_proposal_id = r.agreement_proposal_id) AND (x.from_profile_id = r.to_profile_id)))));
+
+
+--
 -- Name: profile_ratings; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4758,7 +4918,7 @@ CREATE VIEW public.profile_ratings AS
  SELECT to_profile_id AS profile_id,
     round(avg(rating), 1) AS average,
     (count(*))::integer AS count
-   FROM public.reviews
+   FROM public.visible_reviews
   GROUP BY to_profile_id;
 
 
@@ -4938,19 +5098,6 @@ CREATE TABLE public.service_offer_details (
 
 
 --
--- Name: shared_contacts; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.shared_contacts AS
- SELECT id AS profile_id,
-    phone
-   FROM public.profiles p
-  WHERE ((id = auth.uid()) OR (EXISTS ( SELECT 1
-           FROM public.proposals pr
-          WHERE ((pr.status = 'ACCEPTED'::public.proposal_status) AND (((pr.from_profile_id = auth.uid()) AND (pr.to_profile_id = p.id)) OR ((pr.to_profile_id = auth.uid()) AND (pr.from_profile_id = p.id)))))));
-
-
---
 -- Name: skill_endorsements; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5006,26 +5153,6 @@ CREATE TABLE public.trusted_contacts (
     phone text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
---
--- Name: visible_reviews; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.visible_reviews AS
- SELECT id,
-    agreement_proposal_id,
-    listing_id,
-    from_profile_id,
-    to_profile_id,
-    rating,
-    comment,
-    created_at,
-    tags
-   FROM public.reviews r
-  WHERE (((now() - created_at) > '10 days'::interval) OR (EXISTS ( SELECT 1
-           FROM public.reviews x
-          WHERE ((x.agreement_proposal_id = r.agreement_proposal_id) AND (x.from_profile_id = r.to_profile_id)))));
 
 
 --
@@ -5478,6 +5605,14 @@ ALTER TABLE ONLY public.partners
 
 ALTER TABLE ONLY public.portfolio_items
     ADD CONSTRAINT portfolio_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profile_home_notes profile_home_notes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profile_home_notes
+    ADD CONSTRAINT profile_home_notes_pkey PRIMARY KEY (profile_id);
 
 
 --
@@ -6133,6 +6268,13 @@ CREATE TRIGGER t_completed_counter AFTER INSERT ON public.completion_confirmatio
 
 
 --
+-- Name: profiles t_drop_notes_on_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER t_drop_notes_on_delete AFTER UPDATE OF deleted_at ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.drop_notes_on_delete();
+
+
+--
 -- Name: listings t_listings_rate; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -6193,6 +6335,13 @@ CREATE TRIGGER t_messages_rate BEFORE INSERT ON public.messages FOR EACH ROW EXE
 --
 
 CREATE TRIGGER t_no_show_counter AFTER INSERT ON public.no_show_reports FOR EACH ROW EXECUTE FUNCTION public.bump_no_show_counter();
+
+
+--
+-- Name: messages t_normalize_chat_attachment; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER t_normalize_chat_attachment BEFORE INSERT OR UPDATE OF attachment_path ON public.messages FOR EACH ROW EXECUTE FUNCTION public.normalize_chat_attachment();
 
 
 --
@@ -6742,6 +6891,14 @@ ALTER TABLE ONLY public.partners
 
 ALTER TABLE ONLY public.portfolio_items
     ADD CONSTRAINT portfolio_items_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: profile_home_notes profile_home_notes_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profile_home_notes
+    ADD CONSTRAINT profile_home_notes_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 
 --
@@ -7363,6 +7520,13 @@ CREATE POLICY p_donations_read ON public.donation_records FOR SELECT TO authenti
 
 
 --
+-- Name: profile_home_notes p_home_notes_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY p_home_notes_own ON public.profile_home_notes TO authenticated USING ((profile_id = auth.uid())) WITH CHECK ((profile_id = auth.uid()));
+
+
+--
 -- Name: listing_images p_limg_read; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -7387,7 +7551,9 @@ CREATE POLICY p_listing_private_own ON public.listing_private TO authenticated U
 -- Name: listings p_listings_del; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY p_listings_del ON public.listings FOR DELETE TO authenticated USING ((owner_id = auth.uid()));
+CREATE POLICY p_listings_del ON public.listings FOR DELETE TO authenticated USING (((owner_id = auth.uid()) AND (NOT (EXISTS ( SELECT 1
+   FROM public.conversations c
+  WHERE (c.listing_id = listings.id))))));
 
 
 --
@@ -7568,7 +7734,7 @@ CREATE POLICY p_reports_upd ON public.reports FOR UPDATE TO authenticated USING 
 -- Name: reviews p_reviews_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY p_reviews_read ON public.reviews FOR SELECT TO authenticated USING (true);
+CREATE POLICY p_reviews_read ON public.reviews FOR SELECT TO authenticated USING (((from_profile_id = auth.uid()) OR public.is_admin()));
 
 
 --
@@ -7699,6 +7865,12 @@ ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_items ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: profile_home_notes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.profile_home_notes ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: profile_moderation; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -7803,17 +7975,24 @@ ALTER TABLE public.service_offer_details ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.skill_endorsements ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: skill_endorsements skill_endorsements_delete_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY skill_endorsements_delete_own ON public.skill_endorsements FOR DELETE TO authenticated USING ((endorser_id = auth.uid()));
+
+
+--
+-- Name: skill_endorsements skill_endorsements_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY skill_endorsements_insert ON public.skill_endorsements FOR INSERT TO authenticated WITH CHECK (((endorser_id = auth.uid()) AND public.has_completed_agreement(endorser_id, target_id)));
+
+
+--
 -- Name: skill_endorsements skill_endorsements_read; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY skill_endorsements_read ON public.skill_endorsements FOR SELECT TO authenticated USING (true);
-
-
---
--- Name: skill_endorsements skill_endorsements_write_own; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY skill_endorsements_write_own ON public.skill_endorsements TO authenticated USING ((endorser_id = auth.uid())) WITH CHECK ((endorser_id = auth.uid()));
 
 
 --
@@ -8011,11 +8190,26 @@ REVOKE ALL ON FUNCTION public.call_send_push(p_body jsonb) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION can_read_chat_attachment(p_name text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.can_read_chat_attachment(p_name text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.can_read_chat_attachment(p_name text) TO authenticated;
+
+
+--
 -- Name: FUNCTION delete_my_account(p_reason text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.delete_my_account(p_reason text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_my_account(p_reason text) TO authenticated;
+
+
+--
+-- Name: FUNCTION drop_notes_on_delete(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.drop_notes_on_delete() FROM PUBLIC;
 
 
 --
@@ -8044,6 +8238,14 @@ GRANT ALL ON FUNCTION public.guardian_link(p_code text) TO authenticated;
 --
 
 GRANT ALL ON FUNCTION public.guardian_unlink(p_id uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION has_completed_agreement(p_a uuid, p_b uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.has_completed_agreement(p_a uuid, p_b uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.has_completed_agreement(p_a uuid, p_b uuid) TO authenticated;
 
 
 --
@@ -8213,6 +8415,13 @@ GRANT ALL ON FUNCTION public.noticeboard_reply_counts() TO authenticated;
 
 
 --
+-- Name: FUNCTION notify(p_profile uuid, p_kind public.notification_kind, p_title text, p_body text, p_route text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.notify(p_profile uuid, p_kind public.notification_kind, p_title text, p_body text, p_route text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION notify_matching_helpers(p_listing_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8291,6 +8500,20 @@ GRANT ALL ON FUNCTION public.report_no_show(p_agreement_proposal_id uuid, p_prof
 
 
 --
+-- Name: FUNCTION report_target_owner(p_type public.report_target, p_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_target_owner(p_type public.report_target, p_id text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION report_target_text(p_type public.report_target, p_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_target_text(p_type public.report_target, p_id text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION request_help_again(p_proposal_id uuid, p_when text, p_note text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8340,6 +8563,14 @@ REVOKE ALL ON FUNCTION public.setting_int(p_key text, p_default integer) FROM PU
 
 
 --
+-- Name: FUNCTION shared_contact(p_profile_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.shared_contact(p_profile_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.shared_contact(p_profile_id uuid) TO authenticated;
+
+
+--
 -- Name: FUNCTION start_conversation_for_notice(p_notice_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8347,11 +8578,11 @@ GRANT ALL ON FUNCTION public.start_conversation_for_notice(p_notice_id uuid) TO 
 
 
 --
--- Name: FUNCTION submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[]); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[], p_recommends boolean); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[]) TO authenticated;
+REVOKE ALL ON FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[], p_recommends boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_rating integer, p_comment text, p_tags text[], p_recommends boolean) TO authenticated;
 
 
 --
@@ -8372,6 +8603,7 @@ GRANT ALL ON FUNCTION public.toggle_follow(p_followed_id uuid) TO authenticated;
 -- Name: FUNCTION toggle_message_reaction(p_message_id uuid, p_emoji text, p_profile_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
+REVOKE ALL ON FUNCTION public.toggle_message_reaction(p_message_id uuid, p_emoji text, p_profile_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.toggle_message_reaction(p_message_id uuid, p_emoji text, p_profile_id uuid) TO authenticated;
 
 
@@ -8412,6 +8644,20 @@ GRANT SELECT ON TABLE public.partners_public TO authenticated;
 
 
 --
+-- Name: TABLE visible_reviews; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.visible_reviews TO authenticated;
+
+
+--
+-- Name: TABLE profile_ratings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.profile_ratings TO authenticated;
+
+
+--
 
 
 -- -----------------------------------------------------------------------------
@@ -8430,7 +8676,7 @@ CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXEC
 -- Noticeboard images and portfolio photos use the listing-images bucket.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('avatars', 'avatars', true, NULL, NULL)
   ON CONFLICT (id) DO NOTHING;
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('chat-attachments', 'chat-attachments', true, NULL, NULL)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('chat-attachments', 'chat-attachments', false, NULL, NULL)
   ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('listing-images', 'listing-images', true, NULL, NULL)
   ON CONFLICT (id) DO NOTHING;
@@ -8438,6 +8684,9 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
   ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('report-attachments', 'report-attachments', false, NULL, NULL)
   ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "chat attachments read" ON storage.objects FOR SELECT TO authenticated
+  USING (((bucket_id = 'chat-attachments'::text) AND public.can_read_chat_attachment(name)));
 
 CREATE POLICY "report attachments delete own" ON storage.objects FOR DELETE TO authenticated
   USING (((bucket_id = 'report-attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
@@ -8451,8 +8700,8 @@ CREATE POLICY "report attachments write own" ON storage.objects FOR INSERT TO au
 CREATE POLICY "storage delete own folder" ON storage.objects FOR DELETE TO authenticated
   USING (((bucket_id = ANY (ARRAY['avatars'::text, 'listing-images'::text, 'chat-attachments'::text])) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 
-CREATE POLICY "storage read" ON storage.objects FOR SELECT TO authenticated
-  USING ((bucket_id = ANY (ARRAY['avatars'::text, 'listing-images'::text, 'chat-attachments'::text])));
+CREATE POLICY "storage read public buckets" ON storage.objects FOR SELECT TO authenticated
+  USING ((bucket_id = ANY (ARRAY['avatars'::text, 'listing-images'::text])));
 
 CREATE POLICY "storage update own folder" ON storage.objects FOR UPDATE TO authenticated
   USING (((bucket_id = ANY (ARRAY['avatars'::text, 'listing-images'::text, 'chat-attachments'::text])) AND ((storage.foldername(name))[1] = (auth.uid())::text)));

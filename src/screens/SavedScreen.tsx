@@ -207,9 +207,9 @@ function FollowedRow({ profileId }: { profileId: string }) {
 function filterChips(s: SavedSearchRecord): { icon: IconName; label: string }[] {
   const out: { icon: IconName; label: string }[] = [];
   const f = s.filter;
-  if (f.categorySlug && f.categorySlug !== 'alle') {
-    out.push({ icon: categoryArtId(f.categorySlug), label: categoryBySlug(f.categorySlug).label });
-  }
+  const slugs = f.categorySlugs?.length ? f.categorySlugs : f.categorySlug && f.categorySlug !== 'alle' ? [f.categorySlug] : [];
+  for (const slug of slugs) out.push({ icon: categoryArtId(slug), label: categoryBySlug(slug).label });
+  if (typeof f.maxDistanceKm === 'number') out.push({ icon: 'nav', label: nb.sok.distanceUpTo(f.maxDistanceKm) });
   const m = f.municipalities ?? [];
   if (m.length === 1) out.push({ icon: 'pin', label: m[0] });
   else if (m.length > 1) out.push({ icon: 'pin', label: nb.saved.neighbours(m[0]) });
@@ -270,8 +270,14 @@ function SearchCard({ search: s }: { search: SavedSearchRecord }) {
   const run = () => {
     markRun.mutate(s.id);
     const params = new URLSearchParams();
-    if (s.filter.query) params.set('q', s.filter.query);
-    if (s.filter.categorySlug && s.filter.categorySlug !== 'alle') params.set('category', s.filter.categorySlug);
+    const f = s.filter;
+    if (f.query) params.set('q', f.query);
+    if (f.categorySlugs?.length) params.set('cats', f.categorySlugs.join(','));
+    else if (f.categorySlug && f.categorySlug !== 'alle') params.set('category', f.categorySlug);
+    if (f.verifiedOnly) params.set('verified', '1');
+    if (typeof f.maxDistanceKm === 'number') params.set('km', String(f.maxDistanceKm));
+    if (s.sort && s.sort !== 'RELEVANCE') params.set('sort', s.sort);
+    if (f.municipalities?.length) params.set('kommuner', f.municipalities.join(','));
     const qs = params.toString();
     safePush(qs ? `/sok?${qs}` : '/sok');
   };

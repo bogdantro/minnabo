@@ -21,6 +21,7 @@ import {
   useProfile,
   useProposalsForListing,
   useReplyMinutes,
+  useSharedContact,
   useUnreadNotificationCount,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -69,6 +70,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
   const owner = listing.owner;
   const first = owner.displayName.split(' ')[0];
   const isOwner = !!me.id && owner.id === me.id;
+  const homeNotes = useSharedContact(!isOwner && me.id ? owner.id : undefined).data?.homeNotes;
   const cat = categoryArtId(listing.category.slug);
   const price = listingPrice(listing);
   const place = listing.location.place || listing.location.municipality;
@@ -104,7 +106,8 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
   const practical: { icon: IconKey; title: string; sub?: string }[] = [
     ...(task?.intake ?? []).map((a) => ({ icon: 'info' as const, title: a.label, sub: a.value })),
     ...(task?.meetingNote ? [{ icon: 'users' as const, title: nb.detail.meeting, sub: task.meetingNote }] : []),
-    ...(owner.homeNotes ? [{ icon: 'home' as const, title: nb.detail.home, sub: owner.homeNotes }] : []),
+    // home notes only once you have an avtale with the owner (0057) – never on the public page
+    ...(homeNotes ? [{ icon: 'home' as const, title: nb.detail.home, sub: homeNotes }] : []),
   ];
   const equipment = (task?.equipment ?? '')
     .split(/[\n,;]+/)

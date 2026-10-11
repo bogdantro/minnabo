@@ -279,11 +279,12 @@ export function useSendMessage(conversationId: string, meId: string) {
 export function useSendAttachment(conversationId: string, meId: string) {
   const opt = useOptimisticSend(conversationId);
   return useMutation({
-    mutationFn: async (url: string) => {
-      const temp = optimisticMessage(conversationId, meId, { kind: 'IMAGE', attachmentUrl: url });
+    // `path` in the private bucket; `preview` (the photo on the phone) shows while sending
+    mutationFn: async ({ path, preview }: { path: string; preview?: string }) => {
+      const temp = optimisticMessage(conversationId, meId, { kind: 'IMAGE', attachmentUrl: preview ?? path, attachmentPath: path });
       opt.add(temp);
       try {
-        await apiClient.sendAttachment(conversationId, url);
+        await apiClient.sendAttachment(conversationId, path);
         opt.remove(temp.id);
         opt.settle();
       } catch (e) {
@@ -422,6 +423,26 @@ export function useProfile(id: string) {
     queryKey: profileKeys.profile(id),
     queryFn: () => apiClient.getProfile(id),
     enabled: !!id,
+  });
+}
+
+/** Whether "Anbefal" is allowed on this profile (a completed avtale together). */
+export function useCanEndorse(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['can-endorse', profileId],
+    queryFn: () => apiClient.canEndorse(profileId!),
+    enabled: !!profileId,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Phone + home notes of yourself or a counterpart on an accepted tilbud (shared_contact). */
+export function useSharedContact(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['shared-contact', profileId],
+    queryFn: () => apiClient.getSharedContact(profileId!),
+    enabled: !!profileId,
+    staleTime: 60_000,
   });
 }
 

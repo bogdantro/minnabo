@@ -3,13 +3,7 @@ import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import {
-  useFonts,
-  Mulish_400Regular,
-  Mulish_500Medium,
-  Mulish_700Bold,
-  Mulish_800ExtraBold,
-} from '@expo-google-fonts/mulish';
+import { useFonts } from 'expo-font';
 import {
   BricolageGrotesque_500Medium,
   BricolageGrotesque_700Bold,
@@ -76,11 +70,7 @@ const CACHE_MAX_AGE = 1000 * 60 * 60 * 12; // 12h
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Mulish_400Regular,
-    Mulish_500Medium,
-    Mulish_700Bold,
-    Mulish_800ExtraBold,
-    // Redesign fonts (see theme.fonts in src/theme/theme.ts).
+    // Fonts (see theme.fonts in src/theme/theme.ts).
     BricolageGrotesque_500Medium,
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,

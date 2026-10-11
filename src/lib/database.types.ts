@@ -5,7 +5,7 @@
  * loosely typed so the client compiles. Regenerate once the DB is live to get
  * real column types, then delete this comment.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 type LooseTable = { Row: any; Insert: any; Update: any; Relationships: [] };
 type LooseFn = { Args: Record<string, any>; Returns: any };
 
