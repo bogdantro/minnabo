@@ -265,3 +265,74 @@ test('Bedrift: a rejection shows the reason and "Send inn på nytt"', async () =
   expect(screen.getByText('Send inn på nytt')).toBeTruthy();
   businessStore._reset();
 });
+
+test('only hovedpartnere have a page: a støttespiller opened by direct link shows no website link', async () => {
+  const supporter = (await apiClient.listPartners()).find((p) => !p.featured && !p.localHero)!;
+  expect(supporter).toBeTruthy();
+  await renderWithProviders(<PartnerScreen partnerId={supporter.id} />);
+  expect(await screen.findByText('Fant ikke partneren', {}, WAIT)).toBeTruthy();
+  expect(screen.queryByText('Besøk nettsiden')).toBeNull();
+  expect(screen.queryByText(supporter.name)).toBeNull();
+});
+
+// --- hovedpartner card: straight to the partner, and "N naboer har takket" -----------------
+const withContact = async () => {
+  const all = await apiClient.listPartners();
+  const main = all.find((p) => p.featured)!;
+  const list = all.map((p) => (p.id === main.id ? { ...p, url: 'https://partner.example.no', phone: '61 25 00 00' } : p));
+  jest.spyOn(apiClient, 'listPartners').mockResolvedValue(list);
+  return main;
+};
+
+test('hovedpartner card: "Besøk nettsiden" and "Ring" go straight there and count as clicks', async () => {
+  const { Linking } = require('react-native');
+  const { router } = require('expo-router');
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  const main = await withContact();
+  await renderWithProviders(<FellesskapScreen />);
+
+  await fireEvent.press(await screen.findByLabelText(`Besøk nettsiden til ${main.name}`, {}, WAIT));
+  expect(open).toHaveBeenLastCalledWith('https://partner.example.no');
+  await fireEvent.press(screen.getByLabelText(`Ring ${main.name}`));
+  expect(open).toHaveBeenLastCalledWith('tel:61250000');
+
+  expect(extras.partnerEvents.filter((e) => e.kind === 'click').map((e) => e.partnerId)).toEqual([main.id, main.id]);
+  // the buttons don't open the partner page
+  expect((router.push as jest.Mock).mock.calls.some((c) => String(c[0]).startsWith('/partner/'))).toBe(false);
+});
+
+test('a hovedpartner without website and phone shows no action buttons', async () => {
+  await renderWithProviders(<FellesskapScreen />);
+  await screen.findAllByText('Hovedpartner', {}, WAIT);
+  expect(screen.queryByText('Besøk nettsiden')).toBeNull();
+  expect(screen.queryByText('Ring')).toBeNull();
+});
+
+test('"N naboer har takket": shown on the card, counted once per person', async () => {
+  const main = (await apiClient.listPartners()).find((p) => p.featured)!;
+  extras.partnerThanks = { [main.id]: { count: 46, mine: false } };
+  const card = await renderWithProviders(<FellesskapScreen />);
+  expect(await screen.findByText('46 naboer har takket', {}, WAIT)).toBeTruthy();
+  card.unmount();
+});
+
+test('thanking a partner raises the count and can only be done once', async () => {
+  const main = (await apiClient.listPartners()).find((p) => p.featured)!;
+  extras.partnerThanks = { [main.id]: { count: 46, mine: false } };
+  await renderWithProviders(<PartnerScreen partnerId={main.id} />);
+  await fireEvent.press(await screen.findByText('Takk for støtten', {}, WAIT));
+  expect(await screen.findByText('47 naboer har takket', {}, WAIT)).toBeTruthy();
+  expect(await screen.findByText('Du har takket', {}, WAIT)).toBeTruthy();
+  expect(screen.queryByText('Takk for støtten')).toBeNull();
+  // a second call from the same person does not count again
+  expect(await apiClient.thankPartner(main.id)).toBe(47);
+});
+
+test('nobody has thanked yet: no count is shown, and the first thank reads "1 nabo har takket"', async () => {
+  const main = (await apiClient.listPartners()).find((p) => p.featured)!;
+  await renderWithProviders(<PartnerScreen partnerId={main.id} />);
+  await screen.findByText('Takk for støtten', {}, WAIT);
+  expect(screen.queryByText(/har takket/)).toBeNull();
+  await fireEvent.press(screen.getByText('Takk for støtten'));
+  expect(await screen.findByText('1 nabo har takket', {}, WAIT)).toBeTruthy();
+});

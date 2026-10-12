@@ -33,6 +33,7 @@ import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type {
   ApiClient,
   AppSettings,
+  PartnerThanks,
   SharedContact,
   ListConversationsParams,
   BusinessProfile,
@@ -1183,6 +1184,22 @@ export class SupabaseApiClient implements ApiClient {
       partnersVersion: v['partners.version'] == null ? '' : String(v['partners.version']),
       maxHovedpartnere: max && max > 0 ? Math.round(max) : DEFAULT_APP_SETTINGS.maxHovedpartnere,
     };
+  }
+
+  async getPartnerThanks(): Promise<PartnerThanks> {
+    const { data, error } = await supabase.rpc('partner_thanks_summary');
+    if (error) fail(error.message);
+    const out: PartnerThanks = {};
+    for (const r of (data ?? []) as { partner_id: string; thanks: number; mine: boolean }[]) {
+      out[r.partner_id] = { count: r.thanks, mine: !!r.mine };
+    }
+    return out;
+  }
+
+  async thankPartner(partnerId: string): Promise<number> {
+    const { data, error } = await supabase.rpc('thank_partner', { p_partner: partnerId });
+    if (error) fail(error.message);
+    return typeof data === 'number' ? data : 0;
   }
 
   async logPartnerEvent(partnerId: string, kind: 'impression' | 'click', kommune?: string): Promise<void> {

@@ -1891,6 +1891,13 @@ const nb = {
     area: 'Område',
     partnerSheetNote: 'Partnere betaler for synlighet på Fellesskap. De får aldri bedre plass i søk eller blant oppdrag.',
     thanks: 'Takk for støtten',
+    thanksDone: 'Du har takket',
+    thanksCount: (n: number) => (n === 1 ? '1 nabo har takket' : `${n} naboer har takket`),
+    thanksFailed: 'Kunne ikke sende takken. Prøv igjen.',
+    visit: 'Besøk nettsiden',
+    call: 'Ring',
+    visitAria: (name: string) => `Besøk nettsiden til ${name}`,
+    callAria: (name: string) => `Ring ${name}`,
     thanked: (name: string) => `Takken er sendt til ${name}`,
   },
   wizard: {

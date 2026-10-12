@@ -19,9 +19,9 @@ import { ImpressionWatcher, impressionLogged, logPartnerClick, logPartnerImpress
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
 import { safePush } from '@/lib/nav';
-import { toast } from '@/lib/toast';
 import { colors, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { HomeTopBar } from '@/components/TopBar';
+import { ThanksButton, ThanksCount } from '@/components/PartnerThanks';
 import {
   Avatar,
   Button,
@@ -338,6 +338,40 @@ export function FellesskapScreen() {
                       {p.about}
                     </Text>
                   ) : null}
+                  <ThanksCount partnerId={p.id} style={styles.mthanks} />
+                  {/* straight to the partner, without opening the page first; both count as a click in their statistics */}
+                  {p.url || p.phone ? (
+                    <View style={styles.mactions}>
+                      {p.url ? (
+                        <Button
+                          label={nb.fellesskap.visit}
+                          icon="arrowur"
+                          variant="ink"
+                          size="sm"
+                          accessibilityLabel={nb.fellesskap.visitAria(p.name)}
+                          onPress={() => {
+                            logPartnerClick(p.id, kommune || undefined);
+                            void Linking.openURL(p.url!);
+                          }}
+                          style={styles.flex}
+                        />
+                      ) : null}
+                      {p.phone ? (
+                        <Button
+                          label={nb.fellesskap.call}
+                          icon="phone"
+                          variant="ghost"
+                          size="sm"
+                          accessibilityLabel={nb.fellesskap.callAria(p.name)}
+                          onPress={() => {
+                            logPartnerClick(p.id, kommune || undefined);
+                            void Linking.openURL(`tel:${p.phone!.replace(/\s/g, '')}`);
+                          }}
+                          style={styles.flex}
+                        />
+                      ) : null}
+                    </View>
+                  ) : null}
                   <View style={styles.mmore}>
                     <Text style={styles.mmoreText}>{nb.fellesskap.readMore}</Text>
                     <Icon name="arrow" size={16} color={colors.cyanDeep} />
@@ -553,16 +587,8 @@ export function FellesskapScreen() {
               ) : null}
               <KeyValueRow label={nb.fellesskap.area} value={sheet.municipality ?? 'Innlandet'} last />
             </Card>
-            <Button
-              label={nb.fellesskap.thanks}
-              icon="heart"
-              variant="ink"
-              onPress={() => {
-                toast.success(nb.fellesskap.thanked(sheet.name), { icon: 'heart' });
-                setSheet(null);
-              }}
-              style={styles.mt18}
-            />
+            <ThanksCount partnerId={sheet.id} style={styles.sheetThanks} />
+            <ThanksButton partner={sheet} variant="ink" onThanked={() => setSheet(null)} style={styles.mt18} />
           </View>
         ) : null}
       </Sheet>
@@ -677,6 +703,9 @@ const styles = StyleSheet.create({
   mname: { fontFamily: text.h2.fontFamily, fontSize: 23, lineHeight: 27, letterSpacing: -0.5, color: colors.ink },
   mabout: { marginTop: 4, fontSize: 14, lineHeight: 20 },
   mmore: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 28 },
+  mthanks: { marginTop: 6 },
+  mactions: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  sheetThanks: { marginTop: 14, alignSelf: 'center' },
   mmoreText: { fontFamily: text.label.fontFamily, fontSize: 14.5, color: colors.cyanDeep },
   pname: { fontFamily: text.h3.fontFamily, fontSize: 18, lineHeight: 21.6, letterSpacing: -0.36, color: colors.ink },
   logo: {

@@ -140,6 +140,9 @@ export type AppSettings = {
   maxHovedpartnere: number;
 };
 
+/** partner id → how many neighbours have thanked, and whether I am one of them */
+export type PartnerThanks = Record<string, { count: number; mine: boolean }>;
+
 export const DEFAULT_APP_SETTINGS: AppSettings = { maintenance: false, registrationOpen: true, partnersVersion: '', maxHovedpartnere: 4 };
 
 /** Phone and home notes of someone you have an accepted tilbud with (shared_contact, 0057). */
@@ -277,6 +280,10 @@ export interface ApiClient {
   getAppSettings(): Promise<AppSettings>;
   /** public.categories: order, on/off, labels and tile colours set on the website. */
   listCategories(): Promise<CategoryRow[]>;
+  /** "N naboer har takket" per visible partner, and whether I have (partner_thanks_summary). */
+  getPartnerThanks(): Promise<PartnerThanks>;
+  /** "Takk for støtten": once per person per partner. Returns the new count. */
+  thankPartner(partnerId: string): Promise<number>;
   /** Partner statistics for the website: an 'impression' or a 'click' (log_partner_event). */
   logPartnerEvent(partnerId: string, kind: 'impression' | 'click', kommune?: string): Promise<void>;
   getMyAccountStatus(): Promise<AccountStatus>;

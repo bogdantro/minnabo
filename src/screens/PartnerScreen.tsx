@@ -3,9 +3,9 @@ import { useRouter } from 'expo-router';
 import type { Partner } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { usePartners } from '@/api/queries';
-import { toast } from '@/lib/toast';
 import { useLocationScope } from '@/lib/locationScope';
 import { logPartnerClick } from '@/lib/partnerStats';
+import { ThanksButton, ThanksCount } from '@/components/PartnerThanks';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Button,
@@ -30,7 +30,9 @@ const t = nb.partner;
 export function PartnerScreen({ partnerId }: { partnerId: string }) {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = usePartners();
-  const partner = (data ?? []).find((p) => p.id === partnerId);
+  // Only hovedpartnere have a page (with the link to their website). A lokal helt has the sheet on
+  // Fellesskap; a lokal støttespiller has no link at all – also not through a direct link here.
+  const partner = (data ?? []).find((p) => p.id === partnerId && p.featured);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/fellesskap'));
 
   if (!partner) {
@@ -164,13 +166,8 @@ function Body({ partner: p }: { partner: Partner }) {
           })}
         </FadeUp>
 
-        <Button
-          label={nb.fellesskap.thanks}
-          icon="heart"
-          variant="ghost"
-          onPress={() => toast.success(nb.fellesskap.thanked(p.name), { icon: 'heart' })}
-          style={styles.mt18}
-        />
+        <ThanksCount partnerId={p.id} style={styles.thanks} />
+        <ThanksButton partner={p} style={styles.mt10} />
         <View style={styles.bottom} />
       </View>
     </View>
@@ -183,6 +180,8 @@ const styles = StyleSheet.create({
   selfStart: { alignSelf: 'flex-start' },
   ink2: { color: colors.ink2 },
   mt18: { marginTop: 18 },
+  mt10: { marginTop: 10 },
+  thanks: { marginTop: 18, alignSelf: 'center' },
   skel: { paddingHorizontal: screenPadding, paddingTop: 16, gap: 18 },
   cover: { height: 168, backgroundColor: colors.ink, overflow: 'hidden' },
   glow1: { position: 'absolute', right: -60, top: -80, width: 240, height: 240, borderRadius: 120, backgroundColor: colors.lime, opacity: 0.35 },

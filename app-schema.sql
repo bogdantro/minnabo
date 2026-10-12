@@ -4,8 +4,8 @@
 --
 -- What this is
 --   The state of the database after every migration in supabase/migrations
---   (0001_schema.sql … 0062_website.sql) has run, in one file.
---   It was produced by replaying all 62 migrations, in order, on a scratch
+--   (0001_schema.sql … 0063_partner_thanks.sql) has run, in one file.
+--   It was produced by replaying all 63 migrations, in order, on a scratch
 --   Postgres and dumping the result (pg_dump --schema-only --schema=public),
 --   then adding the parts that live outside `public` (auth trigger, storage
 --   buckets + policies, realtime publication, pg_cron job) and the category
@@ -19,7 +19,7 @@
 --
 -- Live project status (from docs/LEFT_OUT.md, A14, checked 2026-10-06)
 --   0001–0062 are applied to the hosted project (checked 2026-10-11 with
---   `supabase migration list`). 0054_website.sql and 0062_website.sql come from
+--   `supabase migration list`); 0063_partner_thanks.sql still has to be pushed. 0054_website.sql and 0062_website.sql come from
 --   the website repo (minnabo-web) and add the website's tables (schema `web`
 --   is not dumped here – only `public`).
 --
@@ -40,9 +40,9 @@
 --
 -- Contents
 --   1. Extensions
---   2. public schema: 13 enums, 65 tables, 5 views, 149 functions,
---      67 triggers, 37 indexes (plus primary/unique keys),
---      foreign keys, row level security + 69 policies, grants
+--   2. public schema: 13 enums, 66 tables, 5 views, 151 functions,
+--      67 triggers, 38 indexes (plus primary/unique keys),
+--      foreign keys, row level security + 70 policies, grants
 --   3. Trigger on auth.users
 --   4. Storage buckets and storage.objects policies
 --   5. Realtime publication
@@ -54,7 +54,7 @@
 --   price_mode, proposal_status, purpose, report_status, report_target, task_recurrence,
 --   verification_kind
 --
--- Tables (65):
+-- Tables (66):
 --   account_deletions, admin_audit_log, agreement_reminders, agreement_snapshots,
 --   agreement_time_proposals, app_secrets, app_settings, banned_words, blocks, business_profiles,
 --   categories, clubs, completion_confirmations, consent_records, contact_messages,
@@ -63,11 +63,11 @@
 --   message_reads, messages, neighbourhood_members, neighbourhoods, news_articles, news_views,
 --   newsletter_subscribers, no_show_reports, notice_comments, noticeboard_posts, notifications,
 --   partner_accounts, partner_events, partner_invoices, partner_placements,
---   partner_profile_changes, partner_reminders, partners, portfolio_items, profile_home_notes,
---   profile_moderation, profile_private, profile_settings, profiles, proposal_revisions,
---   proposals, push_tokens, reports, reviews, safe_trips, saved_listings, saved_notices,
---   saved_searches, service_offer_details, skill_endorsements, stripe_events, task_details,
---   trusted_contacts, verifications
+--   partner_profile_changes, partner_reminders, partner_thanks, partners, portfolio_items,
+--   profile_home_notes, profile_moderation, profile_private, profile_settings, profiles,
+--   proposal_revisions, proposals, push_tokens, reports, reviews, safe_trips, saved_listings,
+--   saved_notices, saved_searches, service_offer_details, skill_endorsements, stripe_events,
+--   task_details, trusted_contacts, verifications
 --
 -- Views (5):
 --   news_public, partners_public, profile_ratings, public_listings, visible_reviews
@@ -2394,6 +2394,23 @@ $$;
 
 
 --
+-- Name: partner_thanks_summary(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.partner_thanks_summary() RETURNS TABLE(partner_id uuid, thanks integer, mine boolean)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select t.partner_id,
+         count(*)::integer,
+         bool_or(t.profile_id = auth.uid())
+    from partner_thanks t
+   where auth.uid() is not null and partner_is_visible(t.partner_id)
+   group by t.partner_id;
+$$;
+
+
+--
 -- Name: price_guidance(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3846,6 +3863,25 @@ end $$;
 
 
 --
+-- Name: thank_partner(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.thank_partner(p_partner uuid) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_me uuid := auth.uid(); v_n integer;
+begin
+  if v_me is null then raise exception 'Ikke innlogget.'; end if;
+  if not partner_is_visible(p_partner) then raise exception 'Fant ikke partneren.'; end if;
+  insert into partner_thanks (partner_id, profile_id) values (p_partner, v_me)
+  on conflict do nothing;
+  select count(*) into v_n from partner_thanks where partner_id = p_partner;
+  return v_n;
+end $$;
+
+
+--
 -- Name: toggle_endorsement(uuid, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4934,6 +4970,17 @@ ALTER SEQUENCE public.partner_reminders_id_seq OWNED BY public.partner_reminders
 
 
 --
+-- Name: partner_thanks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.partner_thanks (
+    partner_id uuid NOT NULL,
+    profile_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: partners; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5772,6 +5819,14 @@ ALTER TABLE ONLY public.partner_reminders
 
 
 --
+-- Name: partner_thanks partner_thanks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_thanks
+    ADD CONSTRAINT partner_thanks_pkey PRIMARY KEY (partner_id, profile_id);
+
+
+--
 -- Name: partners partners_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6172,6 +6227,13 @@ CREATE INDEX partner_invoices_partner_idx ON public.partner_invoices USING btree
 --
 
 CREATE UNIQUE INDEX partner_profile_changes_one_pending ON public.partner_profile_changes USING btree (partner_id) WHERE (status = 'pending'::text);
+
+
+--
+-- Name: partner_thanks_partner_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX partner_thanks_partner_idx ON public.partner_thanks USING btree (partner_id);
 
 
 --
@@ -7108,6 +7170,22 @@ ALTER TABLE ONLY public.partner_reminders
 
 
 --
+-- Name: partner_thanks partner_thanks_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_thanks
+    ADD CONSTRAINT partner_thanks_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id) ON DELETE CASCADE;
+
+
+--
+-- Name: partner_thanks partner_thanks_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.partner_thanks
+    ADD CONSTRAINT partner_thanks_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
 -- Name: partners partners_category_slug_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7860,6 +7938,13 @@ CREATE POLICY p_notif_all ON public.notifications TO authenticated USING ((profi
 
 
 --
+-- Name: partner_thanks p_partner_thanks_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY p_partner_thanks_own ON public.partner_thanks FOR SELECT TO authenticated USING ((profile_id = auth.uid()));
+
+
+--
 -- Name: partners p_partners_read; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -8087,6 +8172,12 @@ ALTER TABLE public.partner_profile_changes ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.partner_reminders ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: partner_thanks; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.partner_thanks ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: partners; Type: ROW SECURITY; Schema: public; Owner: -
@@ -8695,6 +8786,14 @@ GRANT ALL ON FUNCTION public.partner_is_visible(p_partner_id uuid) TO authentica
 
 
 --
+-- Name: FUNCTION partner_thanks_summary(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.partner_thanks_summary() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.partner_thanks_summary() TO authenticated;
+
+
+--
 -- Name: FUNCTION price_guidance(p_category_slug text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8858,6 +8957,14 @@ GRANT ALL ON FUNCTION public.submit_review(p_agreement_proposal_id uuid, p_ratin
 
 
 --
+-- Name: FUNCTION thank_partner(p_partner uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.thank_partner(p_partner uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.thank_partner(p_partner uuid) TO authenticated;
+
+
+--
 -- Name: FUNCTION toggle_endorsement(p_target_id uuid, p_skill text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8905,6 +9012,13 @@ GRANT ALL ON FUNCTION public.update_listing(p_listing_id uuid, p_title text, p_c
 --
 
 GRANT SELECT ON TABLE public.news_public TO authenticated;
+
+
+--
+-- Name: TABLE partner_thanks; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.partner_thanks TO authenticated;
 
 
 --

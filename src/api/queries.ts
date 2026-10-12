@@ -8,7 +8,7 @@ import {
 import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { DEFAULT_APP_SETTINGS } from './ApiClient';
-import type { AppSettings, ConsentRecord, MySettings, NeighbourhoodInfo, NotificationPrefs } from './ApiClient';
+import type { AppSettings, PartnerThanks, ConsentRecord, MySettings, NeighbourhoodInfo, NotificationPrefs } from './ApiClient';
 import { apiClient } from './client';
 
 export const listingKeys = {
@@ -673,8 +673,25 @@ export function useAppSettings(): AppSettings {
 
 export const communityKeys = {
   partners: ['partners'] as const,
+  thanks: ['partner-thanks'] as const,
   donations: ['donations'] as const,
 };
+
+/** "N naboer har takket" per partner (+ whether I have). */
+export function usePartnerThanks() {
+  return useQuery({ queryKey: communityKeys.thanks, queryFn: () => apiClient.getPartnerThanks(), staleTime: 60_000 });
+}
+
+/** "Takk for støtten" – counted once per person; the number updates at once. */
+export function useThankPartner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (partnerId: string) => apiClient.thankPartner(partnerId),
+    onSuccess: (count, partnerId) => {
+      qc.setQueryData<PartnerThanks>(communityKeys.thanks, (old) => ({ ...(old ?? {}), [partnerId]: { count, mine: true } }));
+    },
+  });
+}
 
 export function usePartners() {
   return useQuery({ queryKey: communityKeys.partners, queryFn: () => apiClient.listPartners() });

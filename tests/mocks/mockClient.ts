@@ -64,6 +64,7 @@ import type {
   SavedSearchRecord,
   SendProposalInput,
   AppSettings,
+  PartnerThanks,
   SharedContact,
   SubmitReportInput,
   SubmitReviewInput,
@@ -89,6 +90,7 @@ export const extras = {
   waitlist: [] as string[],
   settings: { ...DEFAULT_APP_SETTINGS } as AppSettings,
   partnerEvents: [] as { partnerId: string; kind: 'impression' | 'click'; kommune?: string }[],
+  partnerThanks: {} as PartnerThanks,
   /** report id → when a moderator on the website picked it up ("Under behandling") */
   claimedReports: {} as Record<string, string>,
   /** null = the database has the same list as the app's built-in one */
@@ -96,6 +98,7 @@ export const extras = {
   reset() {
     this.categories = null;
     this.claimedReports = {};
+    this.partnerThanks = {};
     this.partnerEvents = [];
     this.settings = { ...DEFAULT_APP_SETTINGS };
     this.time = [];
@@ -469,6 +472,20 @@ export class MockApiClient implements ApiClient {
     await delay(40);
     if (profileId === profileRepository.currentUserId) return false;
     return chatRepository.listMyAgreements().some((a) => a.counterpartId === profileId && !a.cancelled);
+  }
+
+  async getPartnerThanks(): Promise<PartnerThanks> {
+    await delay(20);
+    return { ...extras.partnerThanks };
+  }
+
+  async thankPartner(partnerId: string): Promise<number> {
+    await delay(40);
+    const cur = extras.partnerThanks[partnerId] ?? { count: 0, mine: false };
+    // once per person per partner
+    const next = cur.mine ? cur : { count: cur.count + 1, mine: true };
+    extras.partnerThanks = { ...extras.partnerThanks, [partnerId]: next };
+    return next.count;
   }
 
   async logPartnerEvent(partnerId: string, kind: 'impression' | 'click', kommune?: string): Promise<void> {
