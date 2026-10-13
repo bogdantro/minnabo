@@ -11,6 +11,6 @@ export const partners: Partner[] = [
 ];
 
 export const documentedDonations: Donation[] = [
-  { id: 'd1', period: '2026 Q1', amountKr: 18500, recipient: 'Norges Røde Kors', transferredAt: '2026-04-02T10:00:00Z' },
-  { id: 'd2', period: '2025 Q4', amountKr: 14200, recipient: 'Norges Røde Kors', transferredAt: '2026-01-05T10:00:00Z' },
+  { id: 'd1', period: '2026 Q1', amountKr: 18500, recipient: 'Lillehammer Idrettslag', transferredAt: '2026-04-02T10:00:00Z' },
+  { id: 'd2', period: '2025 Q4', amountKr: 14200, recipient: 'Gausdal Skolekorps', transferredAt: '2026-01-05T10:00:00Z' },
 ];

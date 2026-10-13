@@ -192,7 +192,7 @@ Youth permission rules (backend must enforce, UI only reflects):
 |---|---|---|
 | `Innstillinger.dc.html` | ✅ Innstillinger | Account (Vipps), location, notification toggles, feriemodus, text size, dev mode + flags, Logg ut [D], Slett konto |
 | `Varslinger.dc.html` | ✅ Varslinger | Master toggle, per-category Push / E-post, quiet hours |
-| `Vilkar.dc.html` | ✅ Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" boxes, "Til toppen" |
+| `Vilkar.dc.html` | ✅ Vilkår | TOC chips jump to sections, reading progress bar, "Kort fortalt" at the top, same 12 sections and text as minnaboapp.no/vilkar, "Til toppen" |
 | `SlettKonto.dc.html` | ✅ Slett konto | What's deleted → active-agreement warning → type SLETT (disabled until exact) → goodbye |
 | `Bedrift.dc.html` | ✅ Bedrift | Org.nr format + validation + lookup spinner, fields, categories, pending timeline |
 | `Admin.dc.html` | – removed from the app (2026-10-11) | Done on the website's admin instead |

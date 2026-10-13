@@ -13,13 +13,13 @@ beforeEach(() => {
   trustedContacts._reset();
 });
 
-test('Fellesskap shows partners, documented donations and no Røde Kors content', async () => {
+test('Fellesskap shows partners and documented donations – and nothing about Røde Kors', async () => {
   await renderWithProviders(<FellesskapScreen />);
   expect(screen.getByText('Sammen gjør vi en forskjell')).toBeTruthy();
   expect(screen.getByText('Hovedpartnere')).toBeTruthy();
   expect(screen.getByText('Donasjoner')).toBeTruthy();
-  // Røde Kors only as 'Kommer' until written approval (feature flag off).
-  expect(screen.getByText('Samarbeid med Røde Kors er under avklaring.')).toBeTruthy();
+  expect(screen.queryByText(/Røde Kors/)).toBeNull();
+  expect(screen.queryByText('Kommer')).toBeNull();
 });
 
 test('Fellesskap shows MAIN partners always but hides out-of-kommune LOCAL partners', async () => {

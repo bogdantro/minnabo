@@ -541,18 +541,6 @@ export function FellesskapScreen() {
         )}
       </View>
 
-      <View style={[styles.px, styles.mt26]}>
-        <View style={styles.coming}>
-          <View style={styles.comingIcon}>
-            <Icon name="hourglass" size={18} color={colors.mute} />
-          </View>
-          <View style={[styles.flex, { gap: 6 }]}>
-            <Pill label={nb.fellesskap.coming} size="sm" style={styles.pill22} />
-            <Text style={[text.body, { fontSize: 14, lineHeight: 19.6, color: colors.mute }]}>{nb.fellesskap.redCross}</Text>
-          </View>
-        </View>
-      </View>
-
       <Sheet visible={!!sheet} onClose={() => setSheet(null)}>
         {sheet ? (
           <View>
@@ -762,18 +750,6 @@ const styles = StyleSheet.create({
   dotOn: { width: 24, backgroundColor: colors.ink },
   donRight: { alignItems: 'flex-end', gap: 6 },
   donToggle: { marginTop: 12, height: 46 },
-  coming: {
-    flexDirection: 'row',
-    gap: 14,
-    alignItems: 'center',
-    padding: 18,
-    borderRadius: radius.option,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.dashed,
-    backgroundColor: colors.comingBg,
-  },
-  comingIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.neutralPill, alignItems: 'center', justifyContent: 'center' },
   sheetHead: { marginBottom: 16 },
   sheetTop: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   sheetCard: { marginTop: 16, paddingVertical: 4, paddingHorizontal: 16 },

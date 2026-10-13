@@ -18,8 +18,12 @@ test('Personvern shows the consent log and a tips change adds a new row', async 
 test('retention answers open one at a time; links to Vilkår and Slett konto', async () => {
   await renderWithProviders(<PersonvernScreen />);
   expect(screen.getByText(/Så lenge du har konto/)).toBeTruthy();
-  await fireEvent.press(screen.getByText('Meldinger og avtaler'));
+  await fireEvent.press(screen.getByText('Meldinger og bilder'));
   expect(screen.queryByText(/Så lenge du har konto/)).toBeNull();
+  // the periods the nightly clean-up (0064) really uses
+  expect(screen.getByText(/slettes 24 måneder etter siste melding/)).toBeTruthy();
+  await fireEvent.press(screen.getByText('Kontoer som ikke brukes'));
+  expect(screen.getByText(/ikke er brukt på 24 måneder, slettes\. Du får et varsel i appen 30 dager før/)).toBeTruthy();
   expect(screen.getByText('Vilkår for bruk')).toBeTruthy();
   expect(screen.getByText('Slett konto')).toBeTruthy();
 });

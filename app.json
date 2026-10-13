@@ -3,13 +3,13 @@
     "name": "MinNabo",
     "slug": "minnabo",
     "scheme": "minnabo",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FDFBFA",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "no.minnabo.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

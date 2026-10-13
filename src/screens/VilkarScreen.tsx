@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useRouter } from 'expo-router';
-import { TERMS, TERMS_SECTIONS, TERMS_SUMMARY, termsAsText } from '@/content/terms';
+import { TERMS, TERMS_SECTIONS, TERMS_SUMMARY, termsAsText, type TermsBlock } from '@/content/terms';
 import nb from '@/i18n/nb';
 import { useConsentRecords } from '@/api/queries';
 import { longDate } from '@/lib/datetime';
@@ -73,7 +73,7 @@ export function VilkarScreen() {
             <Text style={text.h1} accessibilityRole="header">
               {nb.vilkar.title}
             </Text>
-            <Text style={text.meta}>{nb.vilkar.meta(TERMS.version, longDate(TERMS.validFrom), TERMS.readMinutes)}</Text>
+            <Text style={text.meta}>{nb.vilkar.meta(longDate(TERMS.updated), TERMS.readMinutes)}</Text>
             {__DEV__ ? <Jur /> : null}
           </FadeUp>
 
@@ -118,20 +118,9 @@ export function VilkarScreen() {
                   {s.title}
                 </Text>
               </View>
-              <View style={[styles.kort, shadow.card]}>
-                <Text style={styles.kortLabel}>{nb.vilkar.short}</Text>
-                <Text style={styles.kortText}>{s.short}</Text>
-              </View>
-              {s.body.map((p) => (
-                <Text key={p} style={styles.p}>
-                  {p}
-                </Text>
+              {s.blocks.map((b, j) => (
+                <Block key={j} block={b} />
               ))}
-              {s.link ? (
-                <Text style={[styles.p, styles.link]} accessibilityRole="link" onPress={() => safePush(s.link!.route)}>
-                  {s.link.label}
-                </Text>
-              ) : null}
               {__DEV__ ? <Jur /> : null}
             </View>
           ))}
@@ -161,6 +150,36 @@ export function VilkarScreen() {
         </ScaleIn>
       ) : null}
     </Screen>
+  );
+}
+
+/** One piece of a section: paragraph, bullet list, sub-heading or link. */
+function Block({ block }: { block: TermsBlock }) {
+  if (typeof block === 'string') return <Text style={styles.p}>{block}</Text>;
+  if ('heading' in block) {
+    return (
+      <Text style={styles.h3} accessibilityRole="header">
+        {block.heading}
+      </Text>
+    );
+  }
+  if ('link' in block) {
+    const { label, route } = block.link;
+    return (
+      <Text style={[styles.p, styles.link]} accessibilityRole="link" onPress={() => safePush(route)}>
+        {label}
+      </Text>
+    );
+  }
+  return (
+    <View style={styles.list}>
+      {block.list.map((item) => (
+        <View key={item} style={styles.li}>
+          <View style={styles.dot} />
+          <Text style={styles.liText}>{item}</Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -201,9 +220,11 @@ const styles = StyleSheet.create({
   h2Row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   h2Num: { fontFamily: fonts.bodyHeavy, fontSize: 14, color: colors.limeDeep, backgroundColor: colors.limeTint, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 5, overflow: 'hidden' },
   h2: { flex: 1, fontFamily: fonts.display, fontSize: 21, lineHeight: 25, letterSpacing: -0.42, color: colors.ink },
-  kort: { padding: 14, borderRadius: 18, backgroundColor: colors.white, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: colors.limeDot },
-  kortLabel: { fontFamily: fonts.bodyHeavy, fontSize: 11, letterSpacing: 0.88, textTransform: 'uppercase', color: colors.limeDeep, marginBottom: 6 },
-  kortText: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 21.75, color: colors.ink },
+  h3: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, color: colors.ink, marginTop: 6, marginBottom: 10 },
+  list: { gap: 10, marginBottom: 14 },
+  li: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.limeDot, marginTop: 9 },
+  liText: { flex: 1, fontFamily: fonts.body, fontSize: 15, lineHeight: 24.3, color: colors.ink2 },
   p: { fontFamily: fonts.body, fontSize: 15, lineHeight: 24.3, color: colors.ink2, marginBottom: 12 },
   link: { fontFamily: fonts.bodyBold, color: colors.cyanDeep },
   jur: { flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.jurBorder, backgroundColor: colors.jurBg, marginBottom: 6 },

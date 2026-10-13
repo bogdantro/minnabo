@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react';
 
 /**
  * Feature flags, fixed per build.
- * `redCross` stays OFF until written approval from Norges Røde Kors (spec §17).
  */
 export const featureFlags = {
-  redCross: false,
   /** "For bedrifter" (Meny, Innstillinger, Verifisering, /bedrift). Hidden until it is ready. */
   businessRegistration: false,
   /** The registration form on "For bedrifter". Off = only the information card. */

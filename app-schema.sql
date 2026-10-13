@@ -4,8 +4,8 @@
 --
 -- What this is
 --   The state of the database after every migration in supabase/migrations
---   (0001_schema.sql … 0063_partner_thanks.sql) has run, in one file.
---   It was produced by replaying all 63 migrations, in order, on a scratch
+--   (0001_schema.sql … 0064_retention.sql) has run, in one file.
+--   It was produced by replaying all 64 migrations, in order, on a scratch
 --   Postgres and dumping the result (pg_dump --schema-only --schema=public),
 --   then adding the parts that live outside `public` (auth trigger, storage
 --   buckets + policies, realtime publication, pg_cron job) and the category
@@ -18,8 +18,8 @@
 --   this file. supabase/migrations stays the source of truth.
 --
 -- Live project status (from docs/LEFT_OUT.md, A14, checked 2026-10-06)
---   0001–0062 are applied to the hosted project (checked 2026-10-11 with
---   `supabase migration list`); 0063_partner_thanks.sql still has to be pushed. 0054_website.sql and 0062_website.sql come from
+--   0001–0063 are applied to the hosted project (checked 2026-10-13);
+--   0064_retention.sql still has to be pushed. 0054_website.sql and 0062_website.sql come from
 --   the website repo (minnabo-web) and add the website's tables (schema `web`
 --   is not dumped here – only `public`).
 --
@@ -29,7 +29,7 @@
 --   * auth.uid(), auth.users, auth.sessions, auth.refresh_tokens
 --   * storage.buckets, storage.objects, storage.foldername()
 --   * extensions: pgcrypto (0001), pg_net (0039, push via net.http_post),
---     pg_cron (0053, agreement reminders)
+--     pg_cron (0053 agreement reminders, 0064 nightly retention)
 --   * app_secrets rows 'functions_url' and 'push_secret' (set by hand, see 0039)
 --
 -- Legacy kept in the schema
@@ -40,8 +40,8 @@
 --
 -- Contents
 --   1. Extensions
---   2. public schema: 13 enums, 66 tables, 5 views, 151 functions,
---      67 triggers, 38 indexes (plus primary/unique keys),
+--   2. public schema: 13 enums, 68 tables, 5 views, 157 functions,
+--      68 triggers, 38 indexes (plus primary/unique keys),
 --      foreign keys, row level security + 70 policies, grants
 --   3. Trigger on auth.users
 --   4. Storage buckets and storage.objects policies
@@ -54,20 +54,20 @@
 --   price_mode, proposal_status, purpose, report_status, report_target, task_recurrence,
 --   verification_kind
 --
--- Tables (66):
+-- Tables (68):
 --   account_deletions, admin_audit_log, agreement_reminders, agreement_snapshots,
 --   agreement_time_proposals, app_secrets, app_settings, banned_words, blocks, business_profiles,
 --   categories, clubs, completion_confirmations, consent_records, contact_messages,
 --   conversation_participants, conversations, donation_records, follows, guardian_links,
---   job_workspaces, kommune_waitlist, kommuner, listing_images, listing_private, listings,
---   message_reads, messages, neighbourhood_members, neighbourhoods, news_articles, news_views,
---   newsletter_subscribers, no_show_reports, notice_comments, noticeboard_posts, notifications,
---   partner_accounts, partner_events, partner_invoices, partner_placements,
---   partner_profile_changes, partner_reminders, partner_thanks, partners, portfolio_items,
---   profile_home_notes, profile_moderation, profile_private, profile_settings, profiles,
---   proposal_revisions, proposals, push_tokens, reports, reviews, safe_trips, saved_listings,
---   saved_notices, saved_searches, service_offer_details, skill_endorsements, stripe_events,
---   task_details, trusted_contacts, verifications
+--   inactivity_notices, job_workspaces, kommune_waitlist, kommuner, listing_images,
+--   listing_private, listings, message_reads, messages, neighbourhood_members, neighbourhoods,
+--   news_articles, news_views, newsletter_subscribers, no_show_reports, notice_comments,
+--   noticeboard_posts, notifications, partner_accounts, partner_events, partner_invoices,
+--   partner_placements, partner_profile_changes, partner_reminders, partner_thanks, partners,
+--   portfolio_items, profile_home_notes, profile_moderation, profile_private, profile_settings,
+--   profiles, proposal_revisions, proposals, push_tokens, reports, reviews, safe_trips,
+--   saved_listings, saved_notices, saved_searches, service_offer_details, skill_endorsements,
+--   storage_purge_queue, stripe_events, task_details, trusted_contacts, verifications
 --
 -- Views (5):
 --   news_public, partners_public, profile_ratings, public_listings, visible_reviews
@@ -276,6 +276,37 @@ CREATE TYPE public.verification_kind AS ENUM (
     'EMAIL',
     'BUSINESS'
 );
+
+
+--
+-- Name: account_last_active(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.account_last_active(p_profile uuid) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select greatest(
+    u.created_at,
+    u.last_sign_in_at,
+    (select max(greatest(s.created_at, s.updated_at, s.refreshed_at at time zone 'utc'))
+       from auth.sessions s where s.user_id = u.id))
+    from auth.users u where u.id = p_profile;
+$$;
+
+
+--
+-- Name: accounts_awaiting_auth_delete(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.accounts_awaiting_auth_delete() RETURNS SETOF uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select p.id from profiles p join auth.users u on u.id = p.id
+   where p.deleted_at is not null and u.deleted_at is null
+   limit 200;
+$$;
 
 
 --
@@ -1008,8 +1039,10 @@ begin
 
   -- Active agreements are cancelled, and the other party is told.
   for p in
-    select * from proposals
-    where status = 'ACCEPTED' and (from_profile_id = v_me or to_profile_id = v_me)
+    select pr.* from proposals pr
+    where pr.status = 'ACCEPTED' and (pr.from_profile_id = v_me or pr.to_profile_id = v_me)
+      and (select count(*) from completion_confirmations c where c.agreement_proposal_id = pr.id) < 2
+      and not exists (select 1 from agreement_snapshots a where a.proposal_id = pr.id and a.cancelled_at is not null)
   loop
     perform cancel_agreement(p.id, 'Kontoen er slettet');
   end loop;
@@ -2453,6 +2486,47 @@ end $$;
 
 
 --
+-- Name: profile_deleted_scrub(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.profile_deleted_scrub() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v text;
+begin
+  if new.deleted_at is null or old.deleted_at is not null then return new; end if;
+
+  perform queue_file_purge('avatars', old.avatar_path);
+  foreach v in array coalesce(old.portfolio, '{}') loop
+    perform queue_file_purge('listing-images', v);
+  end loop;
+  perform queue_file_purge('listing-images', i.before_path), queue_file_purge('listing-images', i.after_path)
+     from portfolio_items i where i.profile_id = new.id;
+  perform queue_file_purge('listing-images', li.storage_path)
+     from listing_images li join listings l on l.id = li.listing_id where l.owner_id = new.id;
+
+  delete from portfolio_items where profile_id = new.id;
+  delete from listing_images where listing_id in (select id from listings where owner_id = new.id);
+  delete from notifications where profile_id = new.id;
+  delete from notice_comments where author_id = new.id;
+  delete from guardian_links where youth_id = new.id or guardian_id = new.id;
+  delete from partner_thanks where profile_id = new.id;
+  delete from reviews where to_profile_id = new.id;
+
+  new.avatar_path := null;
+  new.portfolio := '{}';
+  new.municipality := null;
+  new.category_slugs := '{}';
+  new.languages := '{}';
+  new.availability_text := null;
+  new.has_car := false;
+  new.available_for_jobs := false;
+  return new;
+end $$;
+
+
+--
 -- Name: profile_private_sync(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2841,6 +2915,28 @@ CREATE FUNCTION public.push_on_notification() RETURNS trigger
 begin
   perform call_send_push(jsonb_build_object('type', 'notification', 'id', new.id));
   return new;
+end $$;
+
+
+--
+-- Name: queue_file_purge(text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.queue_file_purge(p_bucket text, p_path text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare m text[]; v_bucket text := p_bucket; v_path text := btrim(coalesce(p_path, ''));
+begin
+  if v_path = '' then return; end if;
+  m := regexp_match(v_path, '/storage/v1/object/(?:public|sign|authenticated)/([^/]+)/([^?]+)');
+  if m is not null then
+    v_bucket := m[1]; v_path := m[2];
+  elsif v_path ~* '^https?://' then
+    return; -- not one of our files
+  end if;
+  insert into storage_purge_queue (bucket, path) values (v_bucket, v_path)
+  on conflict do nothing;
 end $$;
 
 
@@ -3364,6 +3460,33 @@ end $$;
 
 
 --
+-- Name: retention_tick(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.retention_tick() RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'extensions'
+    AS $$
+declare v jsonb; v_url text; v_secret text;
+begin
+  v := run_retention();
+  begin
+    select value into v_url from app_secrets where key = 'functions_url';
+    select value into v_secret from app_secrets where key = 'push_secret';
+    if v_url is not null and v_secret is not null then
+      perform net.http_post(
+        url := rtrim(v_url, '/') || '/retention',
+        body := '{}'::jsonb,
+        headers := jsonb_build_object('Content-Type', 'application/json', 'x-push-secret', v_secret));
+    end if;
+  exception when others then
+    null; -- the files stay queued and are taken the next night
+  end;
+  return v;
+end $$;
+
+
+--
 -- Name: review_notify(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3418,6 +3541,116 @@ begin
     raise exception 'Ikke tilgang.';
   end if;
   return p;
+end $$;
+
+
+--
+-- Name: run_retention(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.run_retention() RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_old timestamptz := now() - interval '24 months';
+  v_warn timestamptz := now() - interval '23 months';
+  v_grace timestamptz := now() - interval '30 days';
+  v_messages int := 0; v_listings int := 0; v_photos int := 0; v_reports int := 0;
+  v_no_shows int := 0; v_notifications int := 0; v_warned int := 0; v_deleted int := 0;
+  v_n int; r record;
+begin
+  -- a) quiet conversations: messages and their photos
+  for r in
+    select c.id from conversations c
+     where c.last_message_at < v_old
+       and exists (select 1 from messages m where m.conversation_id = c.id)
+       and not exists (select 1 from messages m where m.conversation_id = c.id and m.created_at >= v_old)
+  loop
+    perform queue_file_purge('chat-attachments', m.attachment_path)
+       from messages m where m.conversation_id = r.id and m.attachment_path is not null;
+    delete from messages where conversation_id = r.id;
+    get diagnostics v_n = row_count;
+    v_messages := v_messages + v_n;
+    update conversations set last_message_preview = 'Eldre meldinger er slettet.' where id = r.id;
+  end loop;
+
+  -- b) closed oppdrag nobody has touched: photos, and the whole oppdrag if it never became an avtale
+  for r in
+    select l.id,
+           exists (select 1 from agreement_snapshots a where a.listing_id = l.id) as agreed
+      from listings l
+     where l.status::text in ('COMPLETED','REVIEWED','CANCELLED','EXPIRED','REMOVED')
+       and l.updated_at < v_old
+       and not exists (select 1 from conversations c where c.listing_id = l.id and c.last_message_at >= v_old)
+       and not exists (select 1 from reviews rv where rv.listing_id = l.id and rv.created_at >= v_old)
+       and (exists (select 1 from listing_images li where li.listing_id = l.id)
+            or not exists (select 1 from agreement_snapshots a where a.listing_id = l.id))
+  loop
+    perform queue_file_purge('listing-images', li.storage_path) from listing_images li where li.listing_id = r.id;
+    delete from listing_images where listing_id = r.id;
+    get diagnostics v_n = row_count;
+    v_photos := v_photos + v_n;
+    if not r.agreed then
+      perform queue_file_purge('chat-attachments', m.attachment_path)
+         from messages m join conversations c on c.id = m.conversation_id
+        where c.listing_id = r.id and m.attachment_path is not null;
+      delete from listings where id = r.id;
+      v_listings := v_listings + 1;
+    end if;
+  end loop;
+
+  -- c) rapporter
+  perform queue_file_purge('report-attachments', attachment_path)
+     from reports where status = 'RESOLVED' and coalesce(resolved_at, created_at) < v_old and attachment_path is not null;
+  delete from reports where status = 'RESOLVED' and coalesce(resolved_at, created_at) < v_old;
+  get diagnostics v_reports = row_count;
+  delete from no_show_reports where created_at < v_old;
+  get diagnostics v_no_shows = row_count;
+
+  -- d) varsler
+  delete from notifications where created_at < now() - interval '12 months';
+  get diagnostics v_notifications = row_count;
+
+  -- e) inactive accounts. Admins and suspended accounts are left alone (a suspended
+  --    account must not come back as a new one).
+  delete from inactivity_notices n where account_last_active(n.profile_id) > n.warned_at;
+
+  for r in
+    select p.id from profiles p
+     where p.deleted_at is null and p.suspended_at is null and p.role <> 'admin'
+       and account_last_active(p.id) < v_warn
+       and not exists (select 1 from inactivity_notices n where n.profile_id = p.id)
+  loop
+    insert into inactivity_notices (profile_id) values (r.id);
+    perform notify_moderation(r.id, 'Kontoen din slettes om 30 dager',
+      'Du har ikke brukt MinNabo på lenge. Åpne appen innen 30 dager hvis du vil beholde kontoen.', '/');
+    v_warned := v_warned + 1;
+  end loop;
+
+  for r in
+    select p.id from profiles p join inactivity_notices n on n.profile_id = p.id
+     where p.deleted_at is null and p.suspended_at is null and p.role <> 'admin'
+       and n.warned_at < v_grace
+       and account_last_active(p.id) < v_old
+  loop
+    -- delete_my_account works on the signed-in person: act as the account for this call
+    perform set_config('request.jwt.claim.sub', r.id::text, true);
+    perform set_config('request.jwt.claims', json_build_object('sub', r.id, 'role', 'authenticated')::text, true);
+    begin
+      perform delete_my_account('Ikke brukt på 24 måneder');
+      v_deleted := v_deleted + 1;
+    exception when others then
+      raise warning 'retention: could not delete inactive account %: %', r.id, sqlerrm;
+    end;
+    perform set_config('request.jwt.claim.sub', '', true);
+    perform set_config('request.jwt.claims', '', true);
+    delete from inactivity_notices where profile_id = r.id;
+  end loop;
+
+  return jsonb_build_object('messages', v_messages, 'listings', v_listings, 'photos', v_photos,
+    'reports', v_reports, 'noShows', v_no_shows, 'notifications', v_notifications,
+    'warned', v_warned, 'deleted', v_deleted);
 end $$;
 
 
@@ -4465,6 +4698,16 @@ CREATE TABLE public.guardian_links (
 
 
 --
+-- Name: inactivity_notices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.inactivity_notices (
+    profile_id uuid NOT NULL,
+    warned_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: job_workspaces; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5330,6 +5573,32 @@ CREATE TABLE public.skill_endorsements (
 
 
 --
+-- Name: storage_purge_queue; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.storage_purge_queue (
+    id bigint NOT NULL,
+    bucket text NOT NULL,
+    path text NOT NULL,
+    queued_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: storage_purge_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.storage_purge_queue ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.storage_purge_queue_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: stripe_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5568,6 +5837,14 @@ ALTER TABLE ONLY public.guardian_links
 
 ALTER TABLE ONLY public.guardian_links
     ADD CONSTRAINT guardian_links_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: inactivity_notices inactivity_notices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inactivity_notices
+    ADD CONSTRAINT inactivity_notices_pkey PRIMARY KEY (profile_id);
 
 
 --
@@ -5992,6 +6269,22 @@ ALTER TABLE ONLY public.service_offer_details
 
 ALTER TABLE ONLY public.skill_endorsements
     ADD CONSTRAINT skill_endorsements_pkey PRIMARY KEY (target_id, endorser_id, skill);
+
+
+--
+-- Name: storage_purge_queue storage_purge_queue_bucket_path_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.storage_purge_queue
+    ADD CONSTRAINT storage_purge_queue_bucket_path_key UNIQUE (bucket, path);
+
+
+--
+-- Name: storage_purge_queue storage_purge_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.storage_purge_queue
+    ADD CONSTRAINT storage_purge_queue_pkey PRIMARY KEY (id);
 
 
 --
@@ -6444,6 +6737,13 @@ CREATE TRIGGER partners_bump_version AFTER INSERT OR DELETE OR UPDATE ON public.
 --
 
 CREATE TRIGGER profiles_deleted_cleanup BEFORE UPDATE OF deleted_at ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.profile_deleted_cleanup();
+
+
+--
+-- Name: profiles profiles_deleted_scrub; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER profiles_deleted_scrub BEFORE UPDATE OF deleted_at ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.profile_deleted_scrub();
 
 
 --
@@ -6927,6 +7227,14 @@ ALTER TABLE ONLY public.guardian_links
 
 ALTER TABLE ONLY public.guardian_links
     ADD CONSTRAINT guardian_links_youth_id_fkey FOREIGN KEY (youth_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: inactivity_notices inactivity_notices_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inactivity_notices
+    ADD CONSTRAINT inactivity_notices_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 
 --
@@ -7589,6 +7897,12 @@ CREATE POLICY follows_write_own ON public.follows TO authenticated USING ((follo
 --
 
 ALTER TABLE public.guardian_links ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: inactivity_notices; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.inactivity_notices ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: job_workspaces; Type: ROW SECURITY; Schema: public; Owner: -
@@ -8323,6 +8637,12 @@ CREATE POLICY skill_endorsements_read ON public.skill_endorsements FOR SELECT TO
 
 
 --
+-- Name: storage_purge_queue; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.storage_purge_queue ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: stripe_events; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -8352,6 +8672,21 @@ CREATE POLICY trusted_contacts_own ON public.trusted_contacts TO authenticated U
 --
 
 ALTER TABLE public.verifications ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: FUNCTION account_last_active(p_profile uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.account_last_active(p_profile uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION accounts_awaiting_auth_delete(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.accounts_awaiting_auth_delete() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.accounts_awaiting_auth_delete() TO service_role;
+
 
 --
 -- Name: FUNCTION admin_businesses(); Type: ACL; Schema: public; Owner: -
@@ -8801,6 +9136,13 @@ GRANT ALL ON FUNCTION public.price_guidance(p_category_slug text) TO authenticat
 
 
 --
+-- Name: FUNCTION profile_deleted_scrub(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.profile_deleted_scrub() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION profile_reliability(p_profile_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8819,6 +9161,13 @@ GRANT ALL ON FUNCTION public.profile_reply_minutes(p_profile_id uuid) TO authent
 --
 
 GRANT ALL ON FUNCTION public.propose_agreement_time(p_proposal_id uuid, p_scheduled_at timestamp with time zone, p_scheduled_text text) TO authenticated;
+
+
+--
+-- Name: FUNCTION queue_file_purge(p_bucket text, p_path text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.queue_file_purge(p_bucket text, p_path text) FROM PUBLIC;
 
 
 --
@@ -8889,6 +9238,20 @@ GRANT ALL ON FUNCTION public.request_help_again(p_proposal_id uuid, p_when text,
 --
 
 GRANT ALL ON FUNCTION public.respond_agreement_time(p_id uuid, p_answer text) TO authenticated;
+
+
+--
+-- Name: FUNCTION retention_tick(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.retention_tick() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION run_retention(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.run_retention() FROM PUBLIC;
 
 
 --
@@ -9044,6 +9407,13 @@ GRANT SELECT ON TABLE public.profile_ratings TO authenticated;
 
 
 --
+-- Name: TABLE storage_purge_queue; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,DELETE ON TABLE public.storage_purge_queue TO service_role;
+
+
+--
 
 
 -- -----------------------------------------------------------------------------
@@ -9117,6 +9487,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.proposals;
 -- -----------------------------------------------------------------------------
 SELECT cron.schedule('minnabo-reminders', '*/10 * * * *', 'select public.send_agreement_reminders()');
 SELECT cron.schedule('minnabo-lift-suspensions', '*/10 * * * *', 'select public.lift_expired_suspensions()');
+SELECT cron.schedule('minnabo-retention', '15 3 * * *', 'select public.retention_tick()');
 
 
 -- -----------------------------------------------------------------------------

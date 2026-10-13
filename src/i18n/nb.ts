@@ -862,7 +862,7 @@ const nb = {
       phoneFrom: 'Hentet fra Vipps da du logget inn',
       phonePrivate: 'Nummeret vises aldri offentlig',
       emailFrom: 'Hentet fra Vipps-profilen din',
-      emailPrivate: 'Brukes bare til kvitteringer og varsler du har valgt',
+      emailPrivate: 'Hentet fra Vipps og vises ikke for andre',
       bizWho: 'Gjelder bare deg som tar oppdrag gjennom et enkeltpersonforetak eller AS.',
       bizCheck: 'Org.nr. sjekkes mot Enhetsregisteret og vises på profilen.',
       confirmedOn: (date: string) => `Bekreftet ${date}`,
@@ -1089,12 +1089,12 @@ const nb = {
       PHONE: {
         short: 'Telefon',
         title: 'Telefonnummer',
-        private: 'Telefonnummeret ditt vises aldri offentlig. Det deles bare hvis du selv sender det i chatten.',
+        private: 'Telefonnummeret ditt vises aldri offentlig. Bare den du har en avtale med, kan se det.',
       },
       EMAIL: {
         short: 'E-post',
         title: 'E-postadresse',
-        private: 'E-postadressen brukes bare til kvitteringer og varsler du har valgt. Den vises ikke for andre.',
+        private: 'E-postadressen er hentet fra Vipps. Den vises ikke for andre.',
       },
       BUSINESS: {
         short: 'Bedrift',
@@ -1884,8 +1884,6 @@ const nb = {
     showAll: 'Vis alle donasjoner',
     showFewer: 'Vis færre',
     noDonations: 'Ingen donasjoner er overført ennå.',
-    coming: 'Kommer',
-    redCross: 'Samarbeid med Røde Kors er under avklaring.',
     partnerSince: 'Partner siden',
     website: 'Nettside',
     area: 'Område',
@@ -2141,7 +2139,7 @@ const nb = {
     phone: 'Telefon',
     age: 'Alder',
     over18: 'Over 18 år',
-    fetchNote: 'Vi henter kun navn, fødselsår og telefonnummer. Ingen betalingsinformasjon.',
+    fetchNote: 'Vi henter navn, fødselsdato, telefonnummer og e-postadresse fra Vipps. Ingen betalingsinformasjon.',
     continue: 'Fortsett',
     under18: 'Under 18 år? Se ungdomskonto',
     notYou: 'Ikke deg? Avbryt',
@@ -2289,7 +2287,7 @@ const nb = {
         exTitle: 'Hva med deg under 18?',
         points: [
           'Er du under 18, får du en ungdomskonto. Den kan bare brukes til å gi tilbud på oppdrag.',
-          'Alderen din ble bekreftet automatisk via Vipps – vi lagrer bare fødselsåret.',
+          'Alderen din ble bekreftet automatisk via Vipps. Fødselsdatoen din vises ikke for andre.',
         ],
       },
       tips: {
@@ -2578,24 +2576,6 @@ const nb = {
     socialProof: (n: number, place: string) => `${n} naboer i ${place} er allerede med`,
   },
 
-  community: {
-    title: 'Fellesskap',
-    heading: 'Sammen gjør vi en forskjell',
-    intro:
-      'Sammen skaper vi flere jobbmuligheter i Innlandet, gjør lokal hjelp lettere tilgjengelig og støtter Norges Røde Kors.',
-    partnerNote:
-      'Våre samarbeidspartnere er med og bidrar – og en del av sponsorinntektene går til Norges Røde Kors.',
-    mainPartners: 'Hovedpartnere',
-    localSupporters: 'Lokale støttespillere',
-    donationsTitle: 'Dokumenterte bidrag',
-    donationsNote: 'Vi viser bare bidrag som faktisk er overført.',
-    transferred: 'Overført',
-    noPartners: 'Ingen samarbeidspartnere ennå.',
-    noDonations: 'Ingen overførte bidrag ennå.',
-    redCrossPending:
-      'Røde Kors-innhold og lenke vises når skriftlig godkjenning er på plass.',
-  },
-
   safety: {
     title: 'Sikkerhet og trygghet',
     reportTitle: 'Rapportér',
@@ -2827,10 +2807,9 @@ const nb = {
     progress: 'Lesefremdrift',
     version: (v: string) => `Versjon ${v}`,
     current: (n: number, title: string, pct: number) => `${n} · ${title} · ${pct} %`,
-    meta: (v: string, from: string, min: number) => `Versjon ${v} · gjelder fra ${from} · ca. ${min} min å lese`,
-    summaryTitle: 'Det viktigste på 20 sekunder',
+    meta: (updated: string, min: number) => `Sist oppdatert ${updated} · Lesetid ca. ${min} min`,
+    summaryTitle: 'Kort fortalt',
     toc: 'Innhold',
-    short: 'Kort fortalt',
     jur: '[Endelig juridisk tekst settes inn av jurist]',
     acceptedPre: 'Du godtok vilkårene ',
     acceptedPost: ' da du opprettet kontoen. Nye versjoner varsles i appen.',
@@ -2913,10 +2892,16 @@ const nb = {
     exportDone: 'Eksporten er klar – du valgte selv hvor den ble lagret.',
     exportAgain: 'Last ned på nytt',
     retentionTitle: 'Hvor lenge lagrer vi data?',
+    // Same periods as https://minnaboapp.no/personvern/ and the nightly job in 0064_retention.sql.
     retention: [
-      { q: 'Profil og vurderinger', a: 'Så lenge du har konto. Når du sletter kontoen, fjernes profilen. Vurderinger du har gitt anonymiseres.' },
-      { q: 'Meldinger og avtaler', a: 'Lagres en periode etter siste aktivitet, slik at dere kan se hva som ble avtalt.' },
-      { q: 'Rapporter og moderering', a: 'Lagres en periode for å kunne håndtere gjentatte brudd på reglene.' },
+      { q: 'Konto og profil', a: 'Så lenge du har konto. Når du sletter kontoen, fjernes navn, bilde, telefonnummer, e-postadresse, fødselsdato, profiltekst og vurderingene du har fått med en gang. Bildene dine slettes fra lagringen innen 30 dager.' },
+      { q: 'Det andre fortsatt ser', a: 'Meldinger, tilbud og avtaler du har vært med på, blir stående hos den andre parten under navnet «Slettet bruker». Vurderinger du har gitt, blir også stående uten navnet ditt.' },
+      { q: 'Meldinger og bilder', a: 'Meldinger og bilder i en samtale slettes 24 måneder etter siste melding. Bilder på et avsluttet oppdrag slettes 24 måneder etter siste aktivitet.' },
+      { q: 'Oppdrag, tilbud og avtaler', a: 'Avsluttede oppdrag som ikke førte til en avtale, slettes helt etter 24 måneder. For jobber som ble avtalt, beholder vi tittel, pris og tidspunkt så lenge kontoen finnes, fordi vurderingene bygger på dem.' },
+      { q: 'Vurderinger', a: 'Så lenge den som fikk vurderingen, har konto.' },
+      { q: 'Rapporter', a: 'Slettes 24 måneder etter at de er ferdig behandlet.' },
+      { q: 'Varsler', a: 'Slettes etter 12 måneder.' },
+      { q: 'Kontoer som ikke brukes', a: 'En konto som ikke er brukt på 24 måneder, slettes. Du får et varsel i appen 30 dager før. Dette gjelder ikke kontoer som er stengt for brudd på vilkårene.' },
     ],
     terms: 'Vilkår for bruk',
     termsSub: 'Les vilkårene for MinNabo',
