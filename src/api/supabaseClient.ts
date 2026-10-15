@@ -42,6 +42,8 @@ import type {
   NotificationPrefs,
   ListListingsParams,
   NeighbourhoodInfo,
+  NabolagSummary,
+  MinNaboMessage,
   ReviseProposalPatch,
   OfferCount,
   RespondToProposalResult,
@@ -1315,6 +1317,7 @@ export class SupabaseApiClient implements ApiClient {
     municipality: string;
     /** storage path in `listing-images` */
     imagePath?: string;
+    neighbourhoodId?: string;
   }): Promise<NoticeboardPost> {
     const me = await myId();
     const { data, error } = await supabase
@@ -1327,6 +1330,7 @@ export class SupabaseApiClient implements ApiClient {
         place: input.place,
         municipality: input.municipality,
         ...(input.imagePath ? { image_path: input.imagePath } : {}),
+        ...(input.neighbourhoodId ? { neighbourhood_id: input.neighbourhoodId } : {}),
       })
       .select('*')
       .single();
@@ -1451,6 +1455,74 @@ export class SupabaseApiClient implements ApiClient {
       if (error) fail(error.message);
     }
     return this.getNeighbourhood(municipality, place);
+  }
+
+  // --- «MinNabo» in Innboks ---
+
+  async getMinNaboThread(): Promise<MinNaboMessage[]> {
+    const { data, error } = await supabase.rpc('minnabo_thread');
+    if (error) fail(error.message);
+    type Row = Omit<MinNaboMessage, 'readAt' | 'broadcastId' | 'title' | 'pollOptions' | 'myVote' | 'pollCounts'> & {
+      readAt: string | null;
+      broadcastId: string | null;
+      title: string | null;
+      pollOptions: string[] | null;
+      myVote: number | null;
+      pollCounts: number[] | null;
+    };
+    return ((data ?? []) as Row[]).map((r) => ({
+      id: r.id,
+      fromAdmin: r.fromAdmin,
+      body: r.body,
+      createdAt: r.createdAt,
+      readAt: r.readAt ?? undefined,
+      broadcastId: r.broadcastId ?? undefined,
+      kind: r.kind,
+      title: r.title ?? undefined,
+      pollOptions: r.pollOptions ?? undefined,
+      pollClosed: !!r.pollClosed,
+      myVote: r.myVote ?? undefined,
+      pollCounts: r.pollCounts ?? undefined,
+    }));
+  }
+
+  async replyToMinNabo(body: string): Promise<void> {
+    const { error } = await supabase.rpc('minnabo_reply', { p_body: body });
+    if (error) fail(error.message);
+  }
+
+  async voteMinNaboPoll(broadcastId: string, option: number): Promise<void> {
+    const { error } = await supabase.rpc('minnabo_vote', { p_broadcast: broadcastId, p_option: option });
+    if (error) fail(error.message);
+  }
+
+  async markMinNaboRead(): Promise<void> {
+    const { error } = await supabase.rpc('minnabo_mark_read');
+    if (error) fail(error.message);
+  }
+
+  async listNabolag(municipality?: string): Promise<NabolagSummary[]> {
+    const { data, error } = await supabase.rpc('nabolag_list', municipality ? { p_municipality: municipality } : {});
+    if (error) fail(error.message);
+    type Row = { id: string; name: string; place: string; municipality: string; member_count: number; is_member: boolean };
+    return ((data ?? []) as Row[]).map((r) => ({
+      id: r.id,
+      name: r.name,
+      place: r.place,
+      municipality: r.municipality,
+      memberCount: r.member_count,
+      isMember: r.is_member,
+    }));
+  }
+
+  async joinNabolag(id: string): Promise<void> {
+    const { error } = await supabase.rpc('join_nabolag', { p_id: id });
+    if (error) fail(error.message);
+  }
+
+  async leaveNabolag(id: string): Promise<void> {
+    const { error } = await supabase.rpc('leave_neighbourhood', { p_id: id });
+    if (error) fail(error.message);
   }
 
   // --- saved listings & searches ---

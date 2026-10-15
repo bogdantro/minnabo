@@ -146,7 +146,7 @@ Sections 1, 3, 8, 9 and 10 match what the system does.
 
 ## Technical notes for the website repo
 
-- **Migration `0064_retention.sql`** is the app's. The next free number for a website migration is **0065**.
+- **Migration `0064_retention.sql`** is the app's. The app has since added `0065_nabolag.sql` and `0066_minnabo_chat.sql`, so the next free number for a website migration is **0067**.
   Do not change functions it creates (`run_retention`, `retention_tick`, `queue_file_purge`,
   `account_last_active`, `accounts_awaiting_auth_delete`, `profile_deleted_scrub`, `delete_my_account`).
 - **Local dev database:** 0064 reads `auth.users.last_sign_in_at` and `auth.sessions.created_at`, `updated_at`

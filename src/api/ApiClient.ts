@@ -173,7 +173,37 @@ export type ConsentRecord = {
   createdAt: string;
 };
 
-/** Nabolag: the group for one area (sted) in a kommune. `id` is null until someone joins. */
+/** One message in my thread with «MinNabo» (0066): from the admin, or my own answer. */
+export type MinNaboMessage = {
+  id: string;
+  fromAdmin: boolean;
+  body: string;
+  createdAt: string;
+  /** when I read it (admin messages only) */
+  readAt?: string;
+  /** set when the message went to many people */
+  broadcastId?: string;
+  kind: 'MESSAGE' | 'NEWS' | 'POLL';
+  title?: string;
+  pollOptions?: string[];
+  pollClosed?: boolean;
+  /** 1-based */
+  myVote?: number;
+  /** votes per option; only after I have voted or the poll has closed */
+  pollCounts?: number[];
+};
+
+/** One nabolag on the list MinNabo manages (0065). A person can be in at most 3. */
+export type NabolagSummary = {
+  id: string;
+  name: string;
+  place: string;
+  municipality: string;
+  memberCount: number;
+  isMember: boolean;
+};
+
+/** Nabolag: the group for one area (sted) in a kommune. `id` is null when the area is not a nabolag. */
 export type NeighbourhoodInfo = {
   id: string | null;
   name: string;
@@ -416,6 +446,8 @@ export interface ApiClient {
     municipality: string;
     /** storage path in `listing-images` */
     imagePath?: string;
+    /** set → only members of this nabolag can read it; unset → the whole kommune */
+    neighbourhoodId?: string;
   }): Promise<NoticeboardPost>;
   deleteNoticeboardPost(id: string): Promise<void>;
   /** The owner edits an oppslag, or marks it as done / open again. */
@@ -456,6 +488,16 @@ export interface ApiClient {
   getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
   joinNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
   leaveNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
+  /** My thread with «MinNabo», oldest first. */
+  getMinNaboThread(): Promise<MinNaboMessage[]>;
+  replyToMinNabo(body: string): Promise<void>;
+  /** `option` is 1-based. Voting again changes the vote. */
+  voteMinNaboPoll(broadcastId: string, option: number): Promise<void>;
+  markMinNaboRead(): Promise<void>;
+  /** The nabolag in a kommune; without a kommune, the ones I am in. */
+  listNabolag(municipality?: string): Promise<NabolagSummary[]>;
+  joinNabolag(id: string): Promise<void>;
+  leaveNabolag(id: string): Promise<void>;
 
   // saved listings & searches
   listSavedListingIds(): Promise<string[]>;

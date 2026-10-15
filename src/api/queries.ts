@@ -8,7 +8,7 @@ import {
 import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { DEFAULT_APP_SETTINGS } from './ApiClient';
-import type { AppSettings, PartnerThanks, ConsentRecord, MySettings, NeighbourhoodInfo, NotificationPrefs } from './ApiClient';
+import type { AppSettings, PartnerThanks, ConsentRecord, MinNaboMessage, MySettings, NabolagSummary, NeighbourhoodInfo, NotificationPrefs } from './ApiClient';
 import { apiClient } from './client';
 
 export const listingKeys = {
@@ -126,7 +126,51 @@ export function useUnreadConversationCount(): number {
     queryFn: () => apiClient.listConversations({}),
     staleTime: 15_000,
   });
-  return (data ?? []).filter((c) => c.unread).length;
+  // the thread with «MinNabo» counts as one conversation
+  const minnabo = useMinNaboUnread() > 0 ? 1 : 0;
+  return (data ?? []).filter((c) => c.unread).length + minnabo;
+}
+
+// --- «MinNabo» in Innboks (0066) ---
+
+export const minnaboKeys = { thread: ['minnabo', 'thread'] as const };
+
+/** My thread with MinNabo. `live` re-reads it every few seconds while the thread is open. */
+export function useMinNaboThread(live = false) {
+  return useQuery<MinNaboMessage[]>({
+    queryKey: minnaboKeys.thread,
+    queryFn: () => apiClient.getMinNaboThread(),
+    staleTime: 15_000,
+    refetchInterval: live ? 10_000 : false,
+  });
+}
+
+export function useMinNaboUnread(): number {
+  return (useMinNaboThread().data ?? []).filter((m) => m.fromAdmin && !m.readAt).length;
+}
+
+export function useMinNaboReply() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => apiClient.replyToMinNabo(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: minnaboKeys.thread }),
+  });
+}
+
+export function useMinNaboVote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ broadcastId, option }: { broadcastId: string; option: number }) => apiClient.voteMinNaboPoll(broadcastId, option),
+    onSuccess: () => qc.invalidateQueries({ queryKey: minnaboKeys.thread }),
+  });
+}
+
+export function useMinNaboMarkRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.markMinNaboRead(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: minnaboKeys.thread }),
+  });
 }
 
 export function useConversation(id: string) {
@@ -746,8 +790,37 @@ export function useSetTipsConsent() {
 }
 
 export const neighbourhoodKeys = {
+  all: ['neighbourhood'] as const,
   info: (municipality: string, place: string) => ['neighbourhood', municipality, place] as const,
+  list: (municipality: string) => ['neighbourhood', 'list', municipality] as const,
+  mine: ['neighbourhood', 'mine'] as const,
 };
+
+/** The nabolag MinNabo has set up in a kommune (empty for kommuner without any yet). */
+export function useNabolagList(municipality?: string | null) {
+  return useQuery({
+    queryKey: neighbourhoodKeys.list(municipality ?? ''),
+    queryFn: () => apiClient.listNabolag(municipality ?? ''),
+    enabled: !!municipality,
+  });
+}
+
+/** The nabolag I am in (at most 3). */
+export function useMyNabolag(enabled = true) {
+  return useQuery<NabolagSummary[]>({ queryKey: neighbourhoodKeys.mine, queryFn: () => apiClient.listNabolag(), enabled });
+}
+
+/** Bli med / Forlat from the list. Oppslag are refetched: what I may read follows my nabolag. */
+export function useNabolagMembership() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, join }: { id: string; join: boolean }) => (join ? apiClient.joinNabolag(id) : apiClient.leaveNabolag(id)),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: neighbourhoodKeys.all });
+      void qc.invalidateQueries({ queryKey: noticeboardKeys.all });
+    },
+  });
+}
 
 /** Nabolag for one area. Disabled until the area is known. */
 export function useNeighbourhoodInfo(municipality?: string | null, place?: string | null) {
@@ -782,6 +855,11 @@ export function useToggleNeighbourhood(municipality: string, place: string, myId
       if (ctx?.prev) qc.setQueryData(key, ctx.prev);
     },
     onSuccess: (data) => qc.setQueryData(key, data),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: neighbourhoodKeys.mine });
+      void qc.invalidateQueries({ queryKey: ['neighbourhood', 'list'] });
+      void qc.invalidateQueries({ queryKey: noticeboardKeys.all });
+    },
   });
 }
 

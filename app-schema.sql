@@ -4,8 +4,8 @@
 --
 -- What this is
 --   The state of the database after every migration in supabase/migrations
---   (0001_schema.sql … 0064_retention.sql) has run, in one file.
---   It was produced by replaying all 64 migrations, in order, on a scratch
+--   (0001_schema.sql … 0066_minnabo_chat.sql) has run, in one file.
+--   It was produced by replaying all 66 migrations, in order, on a scratch
 --   Postgres and dumping the result (pg_dump --schema-only --schema=public),
 --   then adding the parts that live outside `public` (auth trigger, storage
 --   buckets + policies, realtime publication, pg_cron job) and the category
@@ -19,7 +19,7 @@
 --
 -- Live project status (from docs/LEFT_OUT.md, A14, checked 2026-10-06)
 --   0001–0063 are applied to the hosted project (checked 2026-10-13);
---   0064_retention.sql still has to be pushed. 0054_website.sql and 0062_website.sql come from
+--   0064_retention.sql, 0065_nabolag.sql and 0066_minnabo_chat.sql still have to be pushed. 0054_website.sql and 0062_website.sql come from
 --   the website repo (minnabo-web) and add the website's tables (schema `web`
 --   is not dumped here – only `public`).
 --
@@ -40,9 +40,9 @@
 --
 -- Contents
 --   1. Extensions
---   2. public schema: 13 enums, 68 tables, 5 views, 157 functions,
---      68 triggers, 38 indexes (plus primary/unique keys),
---      foreign keys, row level security + 70 policies, grants
+--   2. public schema: 13 enums, 71 tables, 6 views, 173 functions,
+--      71 triggers, 42 indexes (plus primary/unique keys),
+--      foreign keys, row level security + 69 policies, grants
 --   3. Trigger on auth.users
 --   4. Storage buckets and storage.objects policies
 --   5. Realtime publication
@@ -54,23 +54,25 @@
 --   price_mode, proposal_status, purpose, report_status, report_target, task_recurrence,
 --   verification_kind
 --
--- Tables (68):
+-- Tables (71):
 --   account_deletions, admin_audit_log, agreement_reminders, agreement_snapshots,
 --   agreement_time_proposals, app_secrets, app_settings, banned_words, blocks, business_profiles,
 --   categories, clubs, completion_confirmations, consent_records, contact_messages,
 --   conversation_participants, conversations, donation_records, follows, guardian_links,
 --   inactivity_notices, job_workspaces, kommune_waitlist, kommuner, listing_images,
---   listing_private, listings, message_reads, messages, neighbourhood_members, neighbourhoods,
---   news_articles, news_views, newsletter_subscribers, no_show_reports, notice_comments,
---   noticeboard_posts, notifications, partner_accounts, partner_events, partner_invoices,
---   partner_placements, partner_profile_changes, partner_reminders, partner_thanks, partners,
---   portfolio_items, profile_home_notes, profile_moderation, profile_private, profile_settings,
---   profiles, proposal_revisions, proposals, push_tokens, reports, reviews, safe_trips,
---   saved_listings, saved_notices, saved_searches, service_offer_details, skill_endorsements,
---   storage_purge_queue, stripe_events, task_details, trusted_contacts, verifications
+--   listing_private, listings, message_reads, messages, minnabo_broadcasts, minnabo_messages,
+--   minnabo_poll_votes, neighbourhood_members, neighbourhoods, news_articles, news_views,
+--   newsletter_subscribers, no_show_reports, notice_comments, noticeboard_posts, notifications,
+--   partner_accounts, partner_events, partner_invoices, partner_placements,
+--   partner_profile_changes, partner_reminders, partner_thanks, partners, portfolio_items,
+--   profile_home_notes, profile_moderation, profile_private, profile_settings, profiles,
+--   proposal_revisions, proposals, push_tokens, reports, reviews, safe_trips, saved_listings,
+--   saved_notices, saved_searches, service_offer_details, skill_endorsements, storage_purge_queue,
+--   stripe_events, task_details, trusted_contacts, verifications
 --
--- Views (5):
---   news_public, partners_public, profile_ratings, public_listings, visible_reviews
+-- Views (6):
+--   minnabo_broadcast_stats, news_public, partners_public, profile_ratings, public_listings,
+--   visible_reviews
 -- =============================================================================
 
 
@@ -1445,6 +1447,18 @@ $$;
 
 
 --
+-- Name: is_nabolag_member(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_nabolag_member(p_id uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select exists (select 1 from neighbourhood_members m where m.neighbourhood_id = p_id and m.profile_id = auth.uid());
+$$;
+
+
+--
 -- Name: is_open_listing(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1488,6 +1502,29 @@ $$;
 
 
 --
+-- Name: join_nabolag(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.join_nabolag(p_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_me uuid := auth.uid();
+begin
+  if v_me is null then raise exception 'Ikke innlogget.'; end if;
+  if not exists (select 1 from neighbourhoods where id = p_id and active) then
+    raise exception 'Fant ikke nabolaget.';
+  end if;
+  if exists (select 1 from neighbourhood_members where neighbourhood_id = p_id and profile_id = v_me) then return; end if;
+  if (select count(*) from neighbourhood_members m join neighbourhoods n on n.id = m.neighbourhood_id
+       where m.profile_id = v_me and n.active) >= 3 then
+    raise exception 'Du kan være med i høyst 3 nabolag. Forlat ett for å bli med i et nytt.';
+  end if;
+  insert into neighbourhood_members (neighbourhood_id, profile_id) values (p_id, v_me);
+end $$;
+
+
+--
 -- Name: join_neighbourhood(text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1495,23 +1532,13 @@ CREATE FUNCTION public.join_neighbourhood(p_municipality text, p_place text) RET
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-declare
-  v_id uuid;
+declare v_id uuid;
 begin
-  if auth.uid() is null then
-    raise exception 'not authenticated';
-  end if;
-  insert into neighbourhoods (name, place, municipality, created_by)
-  values (p_place || ' nabolag', p_place, p_municipality, auth.uid())
-  on conflict (municipality, place) do nothing;
-  select n.id into v_id from neighbourhoods n
-  where n.municipality = p_municipality and n.place = p_place;
-  insert into neighbourhood_members (neighbourhood_id, profile_id)
-  values (v_id, auth.uid())
-  on conflict do nothing;
+  select id into v_id from neighbourhoods where municipality = p_municipality and place = p_place and active;
+  if v_id is null then raise exception 'Fant ikke nabolaget.'; end if;
+  perform join_nabolag(v_id);
   return v_id;
-end;
-$$;
+end $$;
 
 
 --
@@ -1802,6 +1829,223 @@ end $$;
 
 
 --
+-- Name: minnabo_audience(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_audience(p_audience jsonb) RETURNS SETOF uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  with f as (
+    select coalesce((select array_agg(x) from jsonb_array_elements_text(coalesce(p_audience->'municipalities', '[]'::jsonb)) x), '{}') as kommuner,
+           coalesce((select array_agg(x::uuid) from jsonb_array_elements_text(coalesce(p_audience->'nabolag', '[]'::jsonb)) x), '{}') as nabolag,
+           coalesce(nullif(p_audience->>'account', ''), 'all') as account
+  )
+  select p.id from profiles p, f
+   where p.deleted_at is null and p.role <> 'admin'
+     and (cardinality(f.kommuner) = 0 or p.municipality = any(f.kommuner))
+     and (cardinality(f.nabolag) = 0
+          or exists (select 1 from neighbourhood_members m where m.profile_id = p.id and m.neighbourhood_id = any(f.nabolag)))
+     and (f.account = 'all' or (f.account = 'youth') = is_youth(p.id));
+$$;
+
+
+--
+-- Name: minnabo_audience_count(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_audience_count(p_audience jsonb) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select count(*)::int from minnabo_audience(p_audience);
+$$;
+
+
+--
+-- Name: minnabo_drop_on_delete(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_drop_on_delete() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if new.deleted_at is not null and old.deleted_at is null then
+    delete from minnabo_messages where profile_id = new.id;
+    delete from minnabo_poll_votes where profile_id = new.id;
+  end if;
+  return new;
+end $$;
+
+
+--
+-- Name: minnabo_mark_read(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_mark_read() RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  update minnabo_messages set read_at = now() where profile_id = auth.uid() and from_admin and read_at is null;
+$$;
+
+
+--
+-- Name: minnabo_purge_old(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_purge_old() RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_n int;
+begin
+  delete from minnabo_messages where created_at < now() - interval '24 months';
+  get diagnostics v_n = row_count;
+  delete from minnabo_broadcasts b where b.created_at < now() - interval '24 months'
+     and not exists (select 1 from minnabo_messages m where m.broadcast_id = b.id);
+  return v_n;
+end $$;
+
+
+--
+-- Name: minnabo_reply(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_reply(p_body text) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_me uuid := auth.uid(); v_id uuid; v_body text := btrim(coalesce(p_body, '')); v_last uuid;
+begin
+  if v_me is null then raise exception 'Ikke innlogget.'; end if;
+  if exists (select 1 from profiles where id = v_me and deleted_at is not null) then raise exception 'Ikke tilgang.' using errcode = '42501'; end if;
+  if char_length(v_body) < 1 then raise exception 'Skriv en melding.'; end if;
+  if char_length(v_body) > 2000 then raise exception 'Meldingen kan ha høyst 2000 tegn.'; end if;
+  if (select count(*) from minnabo_messages
+       where profile_id = v_me and not from_admin and created_at > now() - interval '24 hours') >= 30 then
+    raise exception 'Du har sendt mange meldinger i dag. Prøv igjen i morgen.';
+  end if;
+  select broadcast_id into v_last from minnabo_messages
+   where profile_id = v_me and from_admin order by created_at desc limit 1;
+  insert into minnabo_messages (profile_id, from_admin, body, reply_to_broadcast_id)
+    values (v_me, false, v_body, v_last) returning id into v_id;
+  return v_id;
+end $$;
+
+
+--
+-- Name: minnabo_send_broadcast(text, text, text, text[], jsonb, text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_send_broadcast(p_kind text, p_title text, p_body text, p_options text[] DEFAULT NULL::text[], p_audience jsonb DEFAULT '{}'::jsonb, p_staff text DEFAULT NULL::text, p_closes_at timestamp with time zone DEFAULT NULL::timestamp with time zone) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_id uuid; v_n int; v_body text := btrim(coalesce(p_body, '')); v_title text := nullif(btrim(coalesce(p_title, '')), '');
+begin
+  if p_kind = 'NEWS' and v_title is null then raise exception 'En nyhet må ha en tittel.'; end if;
+  insert into minnabo_broadcasts (kind, title, body, poll_options, poll_closes_at, audience, created_by)
+    values (p_kind, v_title, v_body, case when p_kind = 'POLL' then p_options end,
+            case when p_kind = 'POLL' then p_closes_at end, coalesce(p_audience, '{}'::jsonb), p_staff)
+    returning id into v_id;
+
+  insert into minnabo_messages (profile_id, from_admin, staff, body, broadcast_id)
+    select a, true, p_staff, v_body, v_id from minnabo_audience(p_audience) a;
+  get diagnostics v_n = row_count;
+  update minnabo_broadcasts set recipients = v_n where id = v_id;
+
+  insert into notifications (profile_id, kind, title, body, route)
+    select m.profile_id, 'MODERATION',
+           case p_kind when 'POLL' then 'Spørsmål fra MinNabo' when 'NEWS' then coalesce(v_title, 'Nytt fra MinNabo') else 'Melding fra MinNabo' end,
+           left(v_body, 140), '/minnabo'
+      from minnabo_messages m where m.broadcast_id = v_id;
+  return v_id;
+end $$;
+
+
+--
+-- Name: minnabo_send_message(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_send_message(p_profile uuid, p_body text, p_staff text DEFAULT NULL::text) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_id uuid; v_body text := btrim(coalesce(p_body, ''));
+begin
+  if not exists (select 1 from profiles where id = p_profile and deleted_at is null) then
+    raise exception 'Fant ikke brukeren.';
+  end if;
+  insert into minnabo_messages (profile_id, from_admin, staff, body)
+    values (p_profile, true, p_staff, v_body) returning id into v_id;
+  perform notify_moderation(p_profile, 'Melding fra MinNabo', left(v_body, 140), '/minnabo');
+  return v_id;
+end $$;
+
+
+--
+-- Name: minnabo_thread(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_thread() RETURNS json
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select coalesce(json_agg(t order by t."createdAt"), '[]'::json) from (
+    select m.id, m.from_admin as "fromAdmin", m.body, m.created_at as "createdAt", m.read_at as "readAt",
+           b.id as "broadcastId", coalesce(b.kind, 'MESSAGE') as kind, b.title,
+           b.poll_options as "pollOptions",
+           (b.poll_closes_at is not null and b.poll_closes_at <= now()) as "pollClosed",
+           v.option as "myVote",
+           case when b.kind = 'POLL' and (v.option is not null or (b.poll_closes_at is not null and b.poll_closes_at <= now())) then
+             (select array_agg((select count(*)::int from minnabo_poll_votes x where x.broadcast_id = b.id and x.option = o.i) order by o.i)
+                from generate_series(1, array_length(b.poll_options, 1)) as o(i))
+           end as "pollCounts"
+      from minnabo_messages m
+      left join minnabo_broadcasts b on b.id = m.broadcast_id
+      left join minnabo_poll_votes v on v.broadcast_id = b.id and v.profile_id = m.profile_id
+     where m.profile_id = auth.uid()
+  ) t;
+$$;
+
+
+--
+-- Name: minnabo_unread(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_unread() RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select count(*)::int from minnabo_messages where profile_id = auth.uid() and from_admin and read_at is null;
+$$;
+
+
+--
+-- Name: minnabo_vote(uuid, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.minnabo_vote(p_broadcast uuid, p_option integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_me uuid := auth.uid(); b minnabo_broadcasts;
+begin
+  if v_me is null then raise exception 'Ikke innlogget.'; end if;
+  select * into b from minnabo_broadcasts where id = p_broadcast and kind = 'POLL';
+  if not found or not exists (select 1 from minnabo_messages where broadcast_id = p_broadcast and profile_id = v_me) then
+    raise exception 'Fant ikke spørsmålet.';
+  end if;
+  if b.poll_closes_at is not null and b.poll_closes_at <= now() then raise exception 'Avstemningen er avsluttet.'; end if;
+  if p_option is null or p_option < 1 or p_option > array_length(b.poll_options, 1) then raise exception 'Ugyldig valg.'; end if;
+  insert into minnabo_poll_votes (broadcast_id, profile_id, option) values (p_broadcast, v_me, p_option)
+  on conflict (broadcast_id, profile_id) do update set option = excluded.option, created_at = now();
+end $$;
+
+
+--
 -- Name: moderation_decide_business(uuid, boolean, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2081,6 +2325,26 @@ $$;
 
 
 --
+-- Name: nabolag_list(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.nabolag_list(p_municipality text DEFAULT NULL::text) RETURNS TABLE(id uuid, name text, place text, municipality text, member_count integer, is_member boolean)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select n.id, n.name, n.place, n.municipality,
+         (select count(*)::int from neighbourhood_members m where m.neighbourhood_id = n.id),
+         exists (select 1 from neighbourhood_members m where m.neighbourhood_id = n.id and m.profile_id = auth.uid())
+    from neighbourhoods n
+   where n.active and auth.uid() is not null
+     and (n.municipality = p_municipality
+          or (p_municipality is null
+              and exists (select 1 from neighbourhood_members m where m.neighbourhood_id = n.id and m.profile_id = auth.uid())))
+   order by n.sort, n.place;
+$$;
+
+
+--
 -- Name: neighbourhood_info(text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2154,6 +2418,25 @@ begin
               coalesce(v_name, 'En nabo') || ' svarte på oppslaget ditt',
               '«' || n.title || '»: ' || left(new.body, 100), '/oppslagstavle?oppslag=' || n.id);
   end if;
+  return new;
+end $$;
+
+
+--
+-- Name: notice_nabolag_sync(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.notice_nabolag_sync() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare n neighbourhoods;
+begin
+  if new.neighbourhood_id is null then return new; end if;
+  select * into n from neighbourhoods where id = new.neighbourhood_id;
+  if not found or not n.active then raise exception 'Fant ikke nabolaget.'; end if;
+  new.municipality := n.municipality;
+  new.place := n.place;
   return new;
 end $$;
 
@@ -2274,6 +2557,30 @@ CREATE FUNCTION public.notify_moderation(p_profile uuid, p_title text, p_body te
   insert into notifications (profile_id, kind, title, body, route)
   select p_profile, 'MODERATION', p_title, p_body, p_route where p_profile is not null;
 $$;
+
+
+--
+-- Name: notify_nabolag_post(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.notify_nabolag_post() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if new.neighbourhood_id is null or new.hidden_at is not null then return new; end if;
+  insert into notifications (profile_id, kind, title, body, route)
+  select m.profile_id, 'NOTICE_REPLY'::text::notification_kind,
+         'Nytt oppslag i ' || new.place, '«' || new.title || '»', '/oppslagstavle?oppslag=' || new.id
+    from neighbourhood_members m
+    join profiles p on p.id = m.profile_id and p.deleted_at is null and p.suspended_at is null
+   where m.neighbourhood_id = new.neighbourhood_id
+     and m.profile_id <> new.author_id
+     and not exists (select 1 from blocks b
+                      where (b.by_profile_id = m.profile_id and b.blocked_profile_id = new.author_id)
+                         or (b.by_profile_id = new.author_id and b.blocked_profile_id = m.profile_id));
+  return new;
+end $$;
 
 
 --
@@ -3952,6 +4259,9 @@ begin
   end if;
   select * into n from noticeboard_posts where id = p_notice_id and hidden_at is null;
   if not found then raise exception 'Fant ikke oppslaget.'; end if;
+  if n.neighbourhood_id is not null and n.author_id <> v_me and not is_nabolag_member(n.neighbourhood_id) then
+    raise exception 'Fant ikke oppslaget.';
+  end if;
   if n.author_id = v_me then raise exception 'Du kan ikke svare på ditt eget oppslag.'; end if;
   if exists (select 1 from blocks b
               where (b.by_profile_id = v_me and b.blocked_profile_id = n.author_id)
@@ -4861,6 +5171,91 @@ CREATE TABLE public.messages (
 
 
 --
+-- Name: minnabo_broadcasts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.minnabo_broadcasts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    kind text NOT NULL,
+    title text,
+    body text NOT NULL,
+    poll_options text[],
+    poll_closes_at timestamp with time zone,
+    audience jsonb DEFAULT '{}'::jsonb NOT NULL,
+    recipients integer DEFAULT 0 NOT NULL,
+    created_by text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT minnabo_broadcasts_body_check CHECK (((char_length(btrim(body)) >= 1) AND (char_length(btrim(body)) <= 2000))),
+    CONSTRAINT minnabo_broadcasts_check CHECK (((kind <> 'POLL'::text) OR ((poll_options IS NOT NULL) AND ((array_length(poll_options, 1) >= 2) AND (array_length(poll_options, 1) <= 6))))),
+    CONSTRAINT minnabo_broadcasts_kind_check CHECK ((kind = ANY (ARRAY['MESSAGE'::text, 'NEWS'::text, 'POLL'::text])))
+);
+
+
+--
+-- Name: minnabo_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.minnabo_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    profile_id uuid NOT NULL,
+    from_admin boolean NOT NULL,
+    staff text,
+    body text NOT NULL,
+    broadcast_id uuid,
+    reply_to_broadcast_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    read_at timestamp with time zone,
+    CONSTRAINT minnabo_messages_body_check CHECK (((char_length(btrim(body)) >= 1) AND (char_length(btrim(body)) <= 2000)))
+);
+
+
+--
+-- Name: minnabo_poll_votes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.minnabo_poll_votes (
+    broadcast_id uuid NOT NULL,
+    profile_id uuid NOT NULL,
+    option integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: minnabo_broadcast_stats; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.minnabo_broadcast_stats AS
+ SELECT id,
+    kind,
+    title,
+    body,
+    poll_options,
+    poll_closes_at,
+    audience,
+    created_by,
+    created_at,
+    recipients,
+    ( SELECT (count(*))::integer AS count
+           FROM public.minnabo_messages m
+          WHERE ((m.broadcast_id = b.id) AND (m.read_at IS NOT NULL))) AS read_count,
+    ( SELECT (count(*))::integer AS count
+           FROM public.minnabo_messages m
+          WHERE (m.reply_to_broadcast_id = b.id)) AS reply_count,
+    ( SELECT (count(*))::integer AS count
+           FROM public.minnabo_poll_votes v
+          WHERE (v.broadcast_id = b.id)) AS vote_count,
+        CASE
+            WHEN (kind = 'POLL'::text) THEN ( SELECT array_agg(( SELECT (count(*))::integer AS count
+                       FROM public.minnabo_poll_votes v
+                      WHERE ((v.broadcast_id = b.id) AND (v.option = o.i))) ORDER BY o.i) AS array_agg
+               FROM generate_series(1, array_length(b.poll_options, 1)) o(i))
+            ELSE NULL::integer[]
+        END AS votes
+   FROM public.minnabo_broadcasts b;
+
+
+--
 -- Name: neighbourhood_members; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4881,7 +5276,9 @@ CREATE TABLE public.neighbourhoods (
     place text,
     created_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    municipality text
+    municipality text,
+    active boolean DEFAULT true NOT NULL,
+    sort integer DEFAULT 0 NOT NULL
 );
 
 
@@ -5023,7 +5420,8 @@ CREATE TABLE public.noticeboard_posts (
     image_path text,
     hidden_at timestamp with time zone,
     done_at timestamp with time zone,
-    edited_at timestamp with time zone
+    edited_at timestamp with time zone,
+    neighbourhood_id uuid
 );
 
 
@@ -5928,6 +6326,30 @@ ALTER TABLE ONLY public.messages
 
 
 --
+-- Name: minnabo_broadcasts minnabo_broadcasts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_broadcasts
+    ADD CONSTRAINT minnabo_broadcasts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: minnabo_messages minnabo_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_messages
+    ADD CONSTRAINT minnabo_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: minnabo_poll_votes minnabo_poll_votes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_poll_votes
+    ADD CONSTRAINT minnabo_poll_votes_pkey PRIMARY KEY (broadcast_id, profile_id);
+
+
+--
 -- Name: neighbourhood_members neighbourhood_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6446,6 +6868,27 @@ CREATE UNIQUE INDEX messages_one_pin_per_conversation ON public.messages USING b
 
 
 --
+-- Name: minnabo_messages_broadcast_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX minnabo_messages_broadcast_idx ON public.minnabo_messages USING btree (broadcast_id) WHERE (broadcast_id IS NOT NULL);
+
+
+--
+-- Name: minnabo_messages_reply_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX minnabo_messages_reply_idx ON public.minnabo_messages USING btree (reply_to_broadcast_id) WHERE (reply_to_broadcast_id IS NOT NULL);
+
+
+--
+-- Name: minnabo_messages_thread_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX minnabo_messages_thread_idx ON public.minnabo_messages USING btree (profile_id, created_at);
+
+
+--
 -- Name: neighbourhoods_area_uidx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6485,6 +6928,13 @@ CREATE INDEX notice_comments_notice_idx ON public.notice_comments USING btree (n
 --
 
 CREATE INDEX noticeboard_posts_created_idx ON public.noticeboard_posts USING btree (created_at DESC);
+
+
+--
+-- Name: noticeboard_posts_nabolag_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX noticeboard_posts_nabolag_idx ON public.noticeboard_posts USING btree (neighbourhood_id) WHERE (neighbourhood_id IS NOT NULL);
 
 
 --
@@ -6915,6 +7365,13 @@ CREATE TRIGGER t_messages_rate BEFORE INSERT ON public.messages FOR EACH ROW EXE
 
 
 --
+-- Name: profiles t_minnabo_drop_on_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER t_minnabo_drop_on_delete AFTER UPDATE OF deleted_at ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.minnabo_drop_on_delete();
+
+
+--
 -- Name: no_show_reports t_no_show_counter; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -6936,6 +7393,13 @@ CREATE TRIGGER t_notice_comment_added BEFORE INSERT ON public.notice_comments FO
 
 
 --
+-- Name: noticeboard_posts t_notice_nabolag_sync; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER t_notice_nabolag_sync BEFORE INSERT OR UPDATE OF neighbourhood_id ON public.noticeboard_posts FOR EACH ROW EXECUTE FUNCTION public.notice_nabolag_sync();
+
+
+--
 -- Name: noticeboard_posts t_notice_touch_edit; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -6954,6 +7418,13 @@ CREATE TRIGGER t_notices_rate BEFORE INSERT ON public.noticeboard_posts FOR EACH
 --
 
 CREATE TRIGGER t_notifications_push AFTER INSERT ON public.notifications FOR EACH ROW EXECUTE FUNCTION public.push_on_notification();
+
+
+--
+-- Name: noticeboard_posts t_notify_nabolag_post; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER t_notify_nabolag_post AFTER INSERT ON public.noticeboard_posts FOR EACH ROW EXECUTE FUNCTION public.notify_nabolag_post();
 
 
 --
@@ -7342,6 +7813,46 @@ ALTER TABLE ONLY public.messages
 
 
 --
+-- Name: minnabo_messages minnabo_messages_broadcast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_messages
+    ADD CONSTRAINT minnabo_messages_broadcast_id_fkey FOREIGN KEY (broadcast_id) REFERENCES public.minnabo_broadcasts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: minnabo_messages minnabo_messages_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_messages
+    ADD CONSTRAINT minnabo_messages_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: minnabo_messages minnabo_messages_reply_to_broadcast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_messages
+    ADD CONSTRAINT minnabo_messages_reply_to_broadcast_id_fkey FOREIGN KEY (reply_to_broadcast_id) REFERENCES public.minnabo_broadcasts(id) ON DELETE SET NULL;
+
+
+--
+-- Name: minnabo_poll_votes minnabo_poll_votes_broadcast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_poll_votes
+    ADD CONSTRAINT minnabo_poll_votes_broadcast_id_fkey FOREIGN KEY (broadcast_id) REFERENCES public.minnabo_broadcasts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: minnabo_poll_votes minnabo_poll_votes_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.minnabo_poll_votes
+    ADD CONSTRAINT minnabo_poll_votes_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
 -- Name: neighbourhood_members neighbourhood_members_neighbourhood_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7419,6 +7930,14 @@ ALTER TABLE ONLY public.notice_comments
 
 ALTER TABLE ONLY public.noticeboard_posts
     ADD CONSTRAINT noticeboard_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: noticeboard_posts noticeboard_posts_neighbourhood_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.noticeboard_posts
+    ADD CONSTRAINT noticeboard_posts_neighbourhood_id_fkey FOREIGN KEY (neighbourhood_id) REFERENCES public.neighbourhoods(id) ON DELETE RESTRICT;
 
 
 --
@@ -7971,16 +8490,34 @@ ALTER TABLE public.message_reads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: minnabo_broadcasts; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.minnabo_broadcasts ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: minnabo_messages; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.minnabo_messages ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: minnabo_poll_votes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.minnabo_poll_votes ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: neighbourhood_members; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.neighbourhood_members ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: neighbourhood_members neighbourhood_members_own; Type: POLICY; Schema: public; Owner: -
+-- Name: neighbourhood_members neighbourhood_members_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY neighbourhood_members_own ON public.neighbourhood_members TO authenticated USING ((profile_id = auth.uid())) WITH CHECK ((profile_id = auth.uid()));
+CREATE POLICY neighbourhood_members_read ON public.neighbourhood_members FOR SELECT TO authenticated USING ((profile_id = auth.uid()));
 
 
 --
@@ -7990,17 +8527,10 @@ CREATE POLICY neighbourhood_members_own ON public.neighbourhood_members TO authe
 ALTER TABLE public.neighbourhoods ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: neighbourhoods neighbourhoods_create; Type: POLICY; Schema: public; Owner: -
+-- Name: neighbourhoods neighbourhoods_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY neighbourhoods_create ON public.neighbourhoods FOR INSERT TO authenticated WITH CHECK ((created_by = auth.uid()));
-
-
---
--- Name: neighbourhoods neighbourhoods_read_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY neighbourhoods_read_all ON public.neighbourhoods FOR SELECT TO authenticated USING (true);
+CREATE POLICY neighbourhoods_read ON public.neighbourhoods FOR SELECT TO authenticated USING ((active OR public.is_admin()));
 
 
 --
@@ -8057,14 +8587,14 @@ ALTER TABLE public.noticeboard_posts ENABLE ROW LEVEL SECURITY;
 -- Name: noticeboard_posts noticeboard_read_all; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY noticeboard_read_all ON public.noticeboard_posts FOR SELECT TO authenticated USING (((hidden_at IS NULL) OR (author_id = auth.uid()) OR public.is_admin()));
+CREATE POLICY noticeboard_read_all ON public.noticeboard_posts FOR SELECT TO authenticated USING ((((hidden_at IS NULL) OR (author_id = auth.uid()) OR public.is_admin()) AND ((neighbourhood_id IS NULL) OR (author_id = auth.uid()) OR public.is_admin() OR public.is_nabolag_member(neighbourhood_id))));
 
 
 --
 -- Name: noticeboard_posts noticeboard_write_own; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY noticeboard_write_own ON public.noticeboard_posts TO authenticated USING ((author_id = auth.uid())) WITH CHECK ((author_id = auth.uid()));
+CREATE POLICY noticeboard_write_own ON public.noticeboard_posts TO authenticated USING ((author_id = auth.uid())) WITH CHECK (((author_id = auth.uid()) AND ((neighbourhood_id IS NULL) OR public.is_nabolag_member(neighbourhood_id))));
 
 
 --
@@ -8232,7 +8762,9 @@ CREATE POLICY p_notice_comments_delete ON public.notice_comments FOR DELETE TO a
 -- Name: notice_comments p_notice_comments_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY p_notice_comments_insert ON public.notice_comments FOR INSERT TO authenticated WITH CHECK ((author_id = auth.uid()));
+CREATE POLICY p_notice_comments_insert ON public.notice_comments FOR INSERT TO authenticated WITH CHECK (((author_id = auth.uid()) AND (EXISTS ( SELECT 1
+   FROM public.noticeboard_posts n
+  WHERE (n.id = notice_comments.notice_id)))));
 
 
 --
@@ -8933,6 +9465,22 @@ GRANT ALL ON FUNCTION public.instant_book(p_listing_id uuid) TO authenticated;
 
 
 --
+-- Name: FUNCTION is_nabolag_member(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_nabolag_member(p_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.is_nabolag_member(p_id uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION join_nabolag(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.join_nabolag(p_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.join_nabolag(p_id uuid) TO authenticated;
+
+
+--
 -- Name: FUNCTION join_neighbourhood(p_municipality text, p_place text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -9014,6 +9562,88 @@ GRANT ALL ON FUNCTION public.mark_saved_search_run(p_id uuid) TO authenticated;
 
 
 --
+-- Name: FUNCTION minnabo_audience(p_audience jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_audience(p_audience jsonb) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION minnabo_audience_count(p_audience jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_audience_count(p_audience jsonb) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION minnabo_drop_on_delete(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_drop_on_delete() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION minnabo_mark_read(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_mark_read() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.minnabo_mark_read() TO authenticated;
+
+
+--
+-- Name: FUNCTION minnabo_purge_old(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_purge_old() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION minnabo_reply(p_body text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_reply(p_body text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.minnabo_reply(p_body text) TO authenticated;
+
+
+--
+-- Name: FUNCTION minnabo_send_broadcast(p_kind text, p_title text, p_body text, p_options text[], p_audience jsonb, p_staff text, p_closes_at timestamp with time zone); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_send_broadcast(p_kind text, p_title text, p_body text, p_options text[], p_audience jsonb, p_staff text, p_closes_at timestamp with time zone) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION minnabo_send_message(p_profile uuid, p_body text, p_staff text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_send_message(p_profile uuid, p_body text, p_staff text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION minnabo_thread(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_thread() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.minnabo_thread() TO authenticated;
+
+
+--
+-- Name: FUNCTION minnabo_unread(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_unread() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.minnabo_unread() TO authenticated;
+
+
+--
+-- Name: FUNCTION minnabo_vote(p_broadcast uuid, p_option integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.minnabo_vote(p_broadcast uuid, p_option integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.minnabo_vote(p_broadcast uuid, p_option integer) TO authenticated;
+
+
+--
 -- Name: FUNCTION moderation_decide_business(p_profile_id uuid, p_approve boolean, p_reason text, p_by text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -9077,11 +9707,26 @@ GRANT ALL ON FUNCTION public.my_guardian_links() TO authenticated;
 
 
 --
+-- Name: FUNCTION nabolag_list(p_municipality text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.nabolag_list(p_municipality text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.nabolag_list(p_municipality text) TO authenticated;
+
+
+--
 -- Name: FUNCTION neighbourhood_info(p_municipality text, p_place text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.neighbourhood_info(p_municipality text, p_place text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.neighbourhood_info(p_municipality text, p_place text) TO authenticated;
+
+
+--
+-- Name: FUNCTION notice_nabolag_sync(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.notice_nabolag_sync() FROM PUBLIC;
 
 
 --
@@ -9110,6 +9755,13 @@ GRANT ALL ON FUNCTION public.notify_matching_helpers(p_listing_id uuid) TO authe
 --
 
 REVOKE ALL ON FUNCTION public.notify_moderation(p_profile uuid, p_title text, p_body text, p_route text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION notify_nabolag_post(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.notify_nabolag_post() FROM PUBLIC;
 
 
 --
@@ -9488,6 +10140,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.proposals;
 SELECT cron.schedule('minnabo-reminders', '*/10 * * * *', 'select public.send_agreement_reminders()');
 SELECT cron.schedule('minnabo-lift-suspensions', '*/10 * * * *', 'select public.lift_expired_suspensions()');
 SELECT cron.schedule('minnabo-retention', '15 3 * * *', 'select public.retention_tick()');
+SELECT cron.schedule('minnabo-chat-retention', '25 3 * * *', 'select public.minnabo_purge_old()');
 
 
 -- -----------------------------------------------------------------------------

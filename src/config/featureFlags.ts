@@ -8,6 +8,8 @@ export const featureFlags = {
   businessRegistration: false,
   /** The registration form on "For bedrifter". Off = only the information card. */
   businessForm: false,
+  /** Hidden user name + password login for the app stores' reviewer (hold the logo on Logg inn). */
+  reviewerLogin: true,
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

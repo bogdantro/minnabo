@@ -109,6 +109,8 @@ export type NoticeboardPost = {
   doneAt?: string;
   /** ISO – set when the owner edited it */
   editedAt?: string;
+  /** set → only for the members of this nabolag; unset → the whole kommune */
+  neighbourhoodId?: string;
 };
 
 /** A public comment under an oppslag. */

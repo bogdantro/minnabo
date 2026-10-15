@@ -9,6 +9,7 @@ import nb from '@/i18n/nb';
 import {
   useCreateNoticeboardPost,
   useDeleteNoticeboardPost,
+  useMyNabolag,
   useNoticeboard,
   useProfile,
   useSavedNoticeIds,
@@ -87,6 +88,8 @@ export function NoticeboardScreen() {
   };
 
   const [filter, setFilter] = useState<Filter>('ALL');
+  const myNabolag = useMyNabolag(!!me.id).data ?? [];
+  const [mineOnly, setMineOnly] = useState(false);
   const [compose, setCompose] = useState(false);
   const [freshId, setFreshId] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
@@ -97,7 +100,9 @@ export function NoticeboardScreen() {
     return () => clearTimeout(t);
   }, [freshId]);
 
-  const all = (data ?? []).filter((p) => !scope.municipalities.length || scope.municipalities.includes(p.municipality));
+  const all = (data ?? [])
+    .filter((p) => !scope.municipalities.length || scope.municipalities.includes(p.municipality))
+    .filter((p) => !mineOnly || !myNabolag.length || !!p.neighbourhoodId);
   const shown = filter === 'ALL' ? all : all.filter((p) => p.kind === filter);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/fellesskap'));
@@ -155,6 +160,26 @@ export function NoticeboardScreen() {
             </ScrollView>
           </View>
         </FadeUp>
+
+        {myNabolag.length ? (
+          <View style={[styles.px, styles.scope]} accessibilityRole="radiogroup" accessibilityLabel={nb.noticeboard.scopeLabel}>
+            {[false, true].map((mine) => {
+              const on = mineOnly === mine;
+              return (
+                <Pressable
+                  key={String(mine)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => setMineOnly(mine)}
+                  style={[styles.kchip, on && styles.kchipOn]}
+                >
+                  <Icon name={mine ? 'home' : 'globe'} size={16} color={on ? colors.white : colors.ink2} />
+                  <Text style={[styles.kchipText, on && styles.white]}>{mine ? nb.noticeboard.scopeMine : nb.noticeboard.scopeAll}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
 
         <View style={[styles.px, styles.list]}>
           {isLoading ? (
@@ -270,7 +295,7 @@ function PostCard({
             {author?.displayName ?? ''}
           </Text>
           <Text style={[text.meta, styles.f125]}>
-            {[post.place, fresh ? nb.noticeboard.justNow : postedAgo(post.createdAt, new Date(now)), post.editedAt ? nb.noticeboard.edited : null]
+            {[post.neighbourhoodId ? nb.noticeboard.onlyNabolag(post.place) : post.place, fresh ? nb.noticeboard.justNow : postedAgo(post.createdAt, new Date(now)), post.editedAt ? nb.noticeboard.edited : null]
               .filter(Boolean)
               .join(' · ')}
           </Text>
@@ -502,6 +527,10 @@ function ComposeSheet({
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
   const [shake, setShake] = useState(0);
+  // who can read it: null = the whole kommune, or one of my nabolag
+  const myNabolag = useMyNabolag(!!userId).data ?? [];
+  const [audience, setAudience] = useState<string | null>(null);
+  const target = myNabolag.find((n) => n.id === audience);
 
   const titleBad = title.trim().length < 4;
   const textBad = body.trim().length < 10;
@@ -512,6 +541,7 @@ function ComposeSheet({
     setBody('');
     setPhoto(null);
     setTried(false);
+    setAudience(null);
   };
 
   const addPhoto = async () => {
@@ -549,11 +579,11 @@ function ComposeSheet({
       return;
     }
     create.mutate(
-      { kind, title: title.trim(), body: body.trim(), place, municipality: kommune, imagePath: photo?.path },
+      { kind, title: title.trim(), body: body.trim(), place, municipality: kommune, imagePath: photo?.path, neighbourhoodId: target?.id },
       {
         onSuccess: (post) => {
           haptics.success();
-          toast.success(nb.noticeboard.published(kommune), { bottom: 100 });
+          toast.success(nb.noticeboard.published(target?.place ?? kommune), { bottom: 100 });
           reset();
           onPublished(post);
         },
@@ -636,12 +666,40 @@ function ComposeSheet({
         </Pressable>
       )}
 
+      {editing ? null : (
+        <>
+          <View style={[styles.labelRow, styles.mt16]}>
+            <Text style={text.label}>{nb.noticeboard.audienceLabel}</Text>
+          </View>
+          <View style={styles.kinds} accessibilityRole="radiogroup" accessibilityLabel={nb.noticeboard.audienceLabel}>
+            {[null, ...myNabolag].map((n) => {
+              const on = (n?.id ?? null) === audience;
+              const label = n ? nb.noticeboard.audienceNabolag(n.place) : nb.noticeboard.audienceAll(kommune);
+              return (
+                <Pressable
+                  key={n?.id ?? 'all'}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={label}
+                  onPress={() => setAudience(n?.id ?? null)}
+                  style={[styles.kchip, on && styles.kchipOn]}
+                >
+                  <Icon name={n ? 'home' : 'globe'} size={16} color={on ? colors.white : colors.ink2} />
+                  <Text style={[styles.kchipText, on && styles.white]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={[text.hint, styles.mt8]}>{myNabolag.length ? nb.noticeboard.audienceHint : nb.noticeboard.audienceNoNabolag}</Text>
+        </>
+      )}
+
       <View style={styles.where}>
         <View style={styles.whereIcon}>
-          <Icon name="globe" size={16} color={colors.ink} />
+          <Icon name={target ? 'home' : 'globe'} size={16} color={colors.ink} />
         </View>
         <Text style={styles.whereText}>
-          <Text style={styles.whereStrong}>{nb.noticeboard.shownIn(kommune)}</Text>
+          <Text style={styles.whereStrong}>{target ? nb.noticeboard.shownInNabolag(target.place) : nb.noticeboard.shownIn(kommune)}</Text>
           {`\n${nb.noticeboard.approxOnly}`}
         </Text>
       </View>
@@ -657,8 +715,10 @@ const styles = StyleSheet.create({
   head: { marginTop: 8, gap: 8 },
   ink2: { color: colors.ink2 },
   white: { color: colors.white },
+  mt8: { marginTop: 8 },
   mt14: { marginTop: 14 },
   mt16: { marginTop: 16 },
+  scope: { flexDirection: 'row', gap: 8, marginTop: 6 },
   mt18: { marginTop: 18 },
   f125: { fontSize: 12.5 },
   gap6: { gap: 6 },

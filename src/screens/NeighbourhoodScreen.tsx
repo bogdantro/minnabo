@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import Animated, {
@@ -22,6 +22,8 @@ import { monthYear, postedAgo } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
+import { serverMessage } from '@/lib/errors';
+import { NabolagList } from '@/components/community/NabolagList';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { OppdragCard } from '@/components/OppdragCard';
 import { NOTICE_STYLE } from '@/components/community/noticeKinds';
@@ -46,14 +48,21 @@ import {
 type Tab = 'oppdrag' | 'oppslag';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Nabolag (design/screens/Nabolag.dc.html) – the group for your area, scoped to your kommune. */
+/**
+ * Nabolag (design/screens/Nabolag.dc.html). Without `?place=` it is the list of the kommune's
+ * nabolag, where you pick up to three; with it, the page of that one nabolag.
+ */
 export function NeighbourhoodScreen() {
+  const { place } = useLocalSearchParams<{ place?: string }>();
+  return typeof place === 'string' && place ? <NabolagPage place={place} /> : <NabolagList />;
+}
+
+function NabolagPage({ place }: { place: string }) {
   const router = useRouter();
   const me = useCurrentUser();
   const scope = useLocationScope();
   const kommune = me.municipality || scope.municipality || '';
-  const place = me.place || kommune;
-  const { data: info } = useNeighbourhoodInfo(kommune, place);
+  const { data: info, isFetched } = useNeighbourhoodInfo(kommune, place);
   const toggle = useToggleNeighbourhood(kommune, place, me.id);
   const [tab, setTab] = useState<Tab>('oppdrag');
   const [now] = useState(() => Date.now());
@@ -61,7 +70,8 @@ export function NeighbourhoodScreen() {
   const tasks = useListings(kommune ? { type: 'TASK_REQUEST', municipalities: [kommune] } : undefined, 'NEWEST');
   const notices = useNoticeboard();
   const localTasks = tasks.data ?? [];
-  const localPosts = (notices.data ?? []).filter((p) => p.municipality === kommune);
+  // only this nabolag's own oppslag (members can read them; the server decides)
+  const localPosts = (notices.data ?? []).filter((p) => !!info?.id && p.neighbourhoodId === info.id);
   const freshPosts = localPosts.filter((p) => now - Date.parse(p.createdAt) < WEEK_MS).length;
 
   const name = info?.name ?? `${place} nabolag`;
@@ -71,10 +81,10 @@ export function NeighbourhoodScreen() {
   const stack = others.slice(0, 4);
   const rest = Math.max(0, count - stack.length - (joined ? 1 : 0));
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/fellesskap'));
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/nabolag'));
   const share = async () => {
     try {
-      await Clipboard.setStringAsync(Linking.createURL('/nabolag'));
+      await Clipboard.setStringAsync(Linking.createURL('/nabolag', { queryParams: { place } }));
       toast.success(nb.neighbourhood.linkCopied, { icon: 'copy' });
     } catch {
       toast.error(nb.toast.genericError);
@@ -90,7 +100,7 @@ export function NeighbourhoodScreen() {
               icon: 'logout',
               action: { label: nb.neighbourhood.undo, onPress: () => toggle.mutate(true) },
             }),
-      onError: () => toast.error(nb.toast.genericError),
+      onError: (e) => toast.error(serverMessage(e, nb.toast.genericError)),
     });
   };
 
@@ -104,6 +114,14 @@ export function NeighbourhoodScreen() {
           actionLabel={nb.neighbourhood.pickArea}
           onAction={() => safePush('/profil/rediger')}
         />
+      </Screen>
+    );
+  }
+
+  if (isFetched && !info?.id) {
+    return (
+      <Screen header={<SubHeader title={nb.neighbourhood.title} onBack={back} />}>
+        <EmptyState icon="home" title={nb.neighbourhood.notFound} actionLabel={nb.neighbourhood.allNabolag} onAction={() => router.replace('/nabolag')} />
       </Screen>
     );
   }
@@ -252,7 +270,7 @@ export function NeighbourhoodScreen() {
           {localPosts.length ? (
             localPosts.slice(0, 4).map((p) => <PostRow key={p.id} post={p} now={now} />)
           ) : (
-            <Text style={[text.meta, styles.center]}>{nb.neighbourhood.noPosts}</Text>
+            <Text style={[text.meta, styles.center]}>{joined ? nb.neighbourhood.noPosts : nb.neighbourhood.membersOnly}</Text>
           )}
           <Button label={nb.neighbourhood.openBoard} variant="ghost" iconRight="arrow" onPress={() => safePush('/oppslagstavle')} />
         </View>
@@ -310,7 +328,7 @@ function PostRow({ post, now }: { post: NoticeboardPost; now: number }) {
       <PressableScale
         accessibilityRole="link"
         accessibilityLabel={`${nb.noticeboard.kinds[post.kind]}: ${post.title}`}
-        onPress={() => safePush('/oppslagstavle')}
+        onPress={() => safePush(`/oppslagstavle?oppslag=${post.id}`)}
         style={[styles.post, shadow.card]}
       >
         <Avatar initials={author?.initials ?? '·'} uri={author?.avatarUrl} seed={post.authorProfileId} size={48} ring={false} />

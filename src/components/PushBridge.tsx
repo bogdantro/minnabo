@@ -55,16 +55,17 @@ export function PushBridge() {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Notifications = require('expo-notifications') as typeof import('expo-notifications');
     if (typeof Notifications.addNotificationResponseReceivedListener !== 'function') return;
-    const open = (data: unknown) => {
+    // A varsel without a link of its own (e.g. «Melding fra MinNabo» from the website's admin)
+    // opens Varsler, where the whole text can be read.
+    const routeOf = (data: unknown): string => {
       const route = (data as { route?: unknown } | null)?.route;
-      if (typeof route === 'string' && route.startsWith('/')) safePush(route);
+      return typeof route === 'string' && route.startsWith('/') ? route : '/varsler';
     };
-    const sub = Notifications.addNotificationResponseReceivedListener((r) => open(r.notification.request.content.data));
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => safePush(routeOf(r.notification.request.content.data)));
     // the tap that started the app
     void Notifications.getLastNotificationResponseAsync?.()
       .then((r) => {
-        const route = (r?.notification.request.content.data as { route?: unknown } | undefined)?.route;
-        if (typeof route === 'string' && route.startsWith('/')) setPending(route);
+        if (r) setPending(routeOf(r.notification.request.content.data));
       })
       .catch(() => undefined);
     return () => sub.remove();

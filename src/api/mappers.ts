@@ -467,6 +467,7 @@ export type NoticeRow = {
   image_path?: string | null;
   done_at?: string | null;
   edited_at?: string | null;
+  neighbourhood_id?: string | null;
 };
 
 export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
@@ -484,6 +485,7 @@ export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
     imageUrl: publicUrl('listing-images', row.image_path ?? null),
     doneAt: row.done_at ?? undefined,
     editedAt: row.edited_at ?? undefined,
+    neighbourhoodId: row.neighbourhood_id ?? undefined,
   };
 }
 

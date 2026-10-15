@@ -14,14 +14,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
 import { useVippsIdentity } from '@/auth/identity';
-import { completeVippsLogin, startVippsLogin, vippsConfigured } from '@/auth/vipps';
+import { closeVippsWindow, completeVippsLogin, startVippsLogin, traceStep, vippsConfigured, waitForSession, type VippsCallback } from '@/auth/vipps';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppSettings } from '@/api/queries';
 import { toast } from '@/lib/toast';
 import { openWebsite } from '@/config/links';
 import { VippsIcon, VippsWordmark } from '@/components/VippsLogo';
+import { ReviewerLogin } from '@/components/ReviewerLogin';
 import { signOut } from '@/auth/session';
-import { supabase } from '@/lib/supabase';
 import { colors, radius, safeTopExtra, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Avatar,
@@ -42,7 +42,10 @@ import {
 
 const logo = require('../../../assets/logo-icon.png');
 
-type VippsStep = 'opening' | 'confirm' | 'signing' | 'done';
+type VippsStep = 'opening' | 'confirm' | 'signing' | 'done' | 'error';
+
+/** After this long on «Bekreft i Vipps-appen», offer to open Vipps again. */
+const SLOW_MS = 20_000;
 
 /** `.float` – gentle vertical drift. */
 function useFloat(period: number) {
@@ -156,49 +159,106 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
   // sign-ups can be closed from the website; people with an account still log in
   const { registrationOpen } = useAppSettings();
   // Back from Vipps: swap the code for a session, then show who was confirmed.
-  const handled = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [slow, setSlow] = useState(false);
+  const alive = useRef(true);
   useEffect(() => {
-    if (!callback || handled.current) return;
-    handled.current = true;
-    completeVippsLogin(callback)
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  // Where to go when the login is done: new people see what came from Vipps first
+  // (the «Identitet bekreftet» card), people who already have an account go straight in.
+  const goIn = (r: { isNew: boolean; youth: boolean }) => {
+    setVipps(null);
+    toast.success(nb.login.welcomeBack, { icon: 'check' });
+    router.replace(r.youth ? '/ung' : '/');
+  };
+
+  // Swap what Vipps sent back for a session. The sheet stays on «Logger deg inn …» until it is
+  // really decided: an error is only shown when no session has appeared after a few seconds
+  // (another link from Vipps may still be finishing the same login – see auth/vipps.ts).
+  const finish = (cb: VippsCallback) => {
+    setError(null);
+    setVipps('signing');
+    completeVippsLogin(cb)
       .then(async (r) => {
-        await qc.invalidateQueries({ queryKey: ['my-account'] });
+        await qc.invalidateQueries({ queryKey: ['my-account'] }).catch(() => undefined);
+        if (!alive.current) return;
+        if (!r.isNew) return goIn(r);
         setResult(r);
         setVipps('done');
       })
       .catch(async (e: unknown) => {
-        // If the session got created anyway, the login worked – go on instead of
-        // telling the person it failed. The tabs route youth / onboarding correctly.
-        const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-        if (data.session) {
+        const loggedIn = await waitForSession();
+        if (!alive.current) return;
+        if (loggedIn) {
+          // the login worked after all: go in. The tabs route youth / onboarding correctly.
           setVipps(null);
           router.replace('/');
           return;
         }
-        setVipps(null);
-        toast.error(e instanceof Error ? e.message : nb.login.failed);
-        router.replace('/logg-inn');
+        traceStep('shown:error');
+        setError(e instanceof Error ? e.message : nb.login.failed);
+        setVipps('error');
       });
-  }, [callback, qc, router]);
+  };
+
+  // Back from Vipps through the link: close the login window behind it and finish.
+  const handled = useRef(false);
+  useEffect(() => {
+    if (!callback || handled.current) return;
+    handled.current = true;
+    closeVippsWindow();
+    finish(callback);
+    // finish only reads refs and stable setters; run once per callback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callback]);
+
+  // «Fikk du ikke opp Vipps?» when nothing has happened for a while
+  useEffect(() => {
+    if (vipps !== 'confirm') return;
+    const t = setTimeout(() => setSlow(true), SLOW_MS);
+    return () => {
+      clearTimeout(t);
+      setSlow(false);
+    };
+  }, [vipps]);
 
   const start = () => {
     if (!vippsConfigured) {
       toast.error(nb.login.notConfigured);
       return;
     }
+    setError(null);
     setVipps('opening');
-    startVippsLogin()
-      .then(() => setVipps('confirm'))
+    startVippsLogin(() => alive.current && setVipps('confirm'))
+      .then((res) => {
+        if (!alive.current) return;
+        if (res === 'cancel') {
+          setVipps(null);
+          toast.info(nb.login.cancelled, { icon: 'x' });
+        } else if (res === 'returned') {
+          // the link opened /vipps/callback, which finishes the login on top of this screen
+          setVipps(null);
+        } else {
+          finish(res);
+        }
+      })
       .catch(() => {
-        setVipps(null);
-        toast.error(nb.login.openFailed);
+        if (!alive.current) return;
+        setError(nb.login.openFailed);
+        setVipps('error');
       });
   };
 
   const cancel = () => {
     const was = vipps;
     setVipps(null);
-    if (was && was !== 'done') toast.info(nb.login.cancelled, { icon: 'x' });
+    setError(null);
+    if (was === 'opening' || was === 'confirm') toast.info(nb.login.cancelled, { icon: 'x' });
   };
 
   // The age comes from Vipps; a returning user goes straight in.
@@ -229,11 +289,13 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
       </View>
 
       <View style={styles.start}>
-        <ScaleIn delay={50} style={[styles.logobox, shadow.loginLogo]}>
-          <Animated.View style={logoFloat}>
-            <Image source={logo} style={styles.logo} accessibilityLabel="MinNabo" />
-          </Animated.View>
-        </ScaleIn>
+        <ReviewerLogin>
+          <ScaleIn delay={50} style={[styles.logobox, shadow.loginLogo]}>
+            <Animated.View style={logoFloat}>
+              <Image source={logo} style={styles.logo} accessibilityLabel="MinNabo" />
+            </Animated.View>
+          </ScaleIn>
+        </ReviewerLogin>
         <FadeUp delay={100}>
           <Text style={[text.h1, styles.title]} accessibilityRole="header">
             {nb.login.title}
@@ -272,7 +334,7 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
         </FadeUp>
       </View>
 
-      <Sheet visible={!!vipps} onClose={cancel} dismissible={vipps === 'opening' || vipps === 'confirm'}>
+      <Sheet visible={!!vipps} onClose={cancel} dismissible={vipps === 'opening' || vipps === 'confirm' || vipps === 'error'}>
         <View style={styles.sheetHead}>
           <Pill label={nb.login.sheetPill} tone="line" leading={<VippsIcon size={18} />} style={styles.sheetPill} />
           <Steps n={step} />
@@ -302,9 +364,34 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
               {nb.login.confirm}
             </Text>
             <Text style={[text.body, styles.stageBody]}>{nb.login.confirmBody}</Text>
-            <View style={styles.waiting}>
-              <Text style={[text.pillLg, { color: colors.vippsDeep }]}>{nb.login.waiting}</Text>
-              <WaitDots />
+            {slow ? (
+              <FadeUp style={styles.slow}>
+                <Text style={[text.cardTitle, styles.center]}>{nb.login.slowTitle}</Text>
+                <Text style={[text.meta, styles.center]}>{nb.login.slowBody}</Text>
+                <Button label={nb.login.reopen} variant="vipps" size="lg" leading={<VippsIcon size={24} onOrange />} onPress={start} />
+                <Button label={nb.login.cancel} variant="ghost" onPress={cancel} />
+              </FadeUp>
+            ) : (
+              <View style={styles.waiting}>
+                <Text style={[text.pillLg, { color: colors.vippsDeep }]}>{nb.login.waiting}</Text>
+                <WaitDots />
+              </View>
+            )}
+          </FadeUp>
+        ) : null}
+
+        {vipps === 'error' ? (
+          <FadeUp key="error" style={styles.stage}>
+            <View style={styles.errIcon}>
+              <Icon name="alert" size={30} color={colors.danger} />
+            </View>
+            <Text style={[text.h2, styles.stageTitle]} accessibilityRole="header" accessibilityLiveRegion="assertive">
+              {nb.login.errorTitle}
+            </Text>
+            <Text style={[text.body, styles.stageBody]}>{error ?? nb.login.failed}</Text>
+            <View style={styles.errActions}>
+              <Button label={nb.login.retry} variant="vipps" size="lg" leading={<VippsIcon size={24} onOrange />} onPress={start} />
+              <Button label={nb.login.cancel} variant="ghost" onPress={cancel} />
             </View>
           </FadeUp>
         ) : null}
@@ -400,6 +487,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: { width: 78, height: 78 },
+  slow: { alignSelf: 'stretch', gap: 10, marginTop: 18 },
+  errIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.dangerTint, alignItems: 'center', justifyContent: 'center' },
+  errActions: { alignSelf: 'stretch', gap: 10, marginTop: 18 },
   title: { marginTop: 24, fontSize: 32, lineHeight: 34, letterSpacing: -0.96, textAlign: 'center' },
   lead: { marginTop: 12, color: colors.ink2, maxWidth: 320, textAlign: 'center' },
   ctaBlock: { alignSelf: 'stretch', marginTop: 30, gap: 14 },

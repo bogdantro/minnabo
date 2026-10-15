@@ -96,3 +96,44 @@ test('"Bruk posisjonen min" picks the kommune', async () => {
   await waitFor(() => expect(screen.getAllByText('Fant deg: Lillehammer kommune').length).toBeGreaterThan(0));
   expect(screen.getByText('Din posisjon')).toBeTruthy();
 });
+
+// The app stores' reviewer cannot use Vipps: a hidden login behind a long hold on the logo.
+describe('reviewer login', () => {
+  const invoke = supabase.functions.invoke as jest.Mock;
+  const auth = supabase.auth as unknown as { verifyOtp: jest.Mock };
+
+  beforeEach(() => {
+    auth.verifyOtp = jest.fn().mockResolvedValue({ error: null });
+  });
+  afterEach(() => invoke.mockResolvedValue({ data: null, error: null }));
+
+  test('nothing shows until the logo is held, then the demo account is let in', async () => {
+    invoke.mockResolvedValue({ data: { tokenHash: 'hash-1', isNew: true, youth: false }, error: null });
+    await renderWithProviders(<LoginScreen />);
+    expect(screen.queryByText('Testinnlogging')).toBeNull();
+    expect(screen.queryByLabelText('Passord')).toBeNull();
+
+    await fireEvent(screen.getByLabelText('MinNabo'), 'longPress');
+    expect(await screen.findByText('Testinnlogging')).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText('Brukernavn'), 'apple');
+    await fireEvent.changeText(screen.getByLabelText('Passord'), 'riktig-passord');
+    await fireEvent.press(screen.getByText('Logg inn'));
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/samtykker'));
+    expect(invoke).toHaveBeenCalledWith('reviewer-login', { body: { username: 'apple', password: 'riktig-passord' } });
+    expect(auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'hash-1', type: 'magiclink' });
+  });
+
+  test('a wrong password, or the login switched off on the server, shows the answer and lets nobody in', async () => {
+    invoke.mockResolvedValue({ data: { error: 'Feil brukernavn eller passord.' }, error: null });
+    await renderWithProviders(<LoginScreen />);
+    await fireEvent(screen.getByLabelText('MinNabo'), 'longPress');
+    await fireEvent.changeText(await screen.findByLabelText('Brukernavn'), 'apple');
+    await fireEvent.changeText(screen.getByLabelText('Passord'), 'feil');
+    await fireEvent.press(screen.getByText('Logg inn'));
+
+    expect(await screen.findByText('Feil brukernavn eller passord.')).toBeTruthy();
+    expect(auth.verifyOtp).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+});

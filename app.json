@@ -13,7 +13,10 @@
       "bundleIdentifier": "no.minnabo.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": [
+        "applinks:minnaboapp.no"
+      ]
     },
     "android": {
       "package": "no.minnabo.app",
@@ -68,7 +71,8 @@
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},

@@ -408,3 +408,10 @@ jest.mock('expo-router', () => {
     Redirect: () => null,
   };
 });
+
+// Apple's login window (Vipps login). Tests choose what it returns.
+jest.mock('expo-web-browser', () => ({
+  openAuthSessionAsync: jest.fn().mockResolvedValue({ type: 'dismiss' }),
+  dismissAuthSession: jest.fn(),
+  maybeCompleteAuthSession: jest.fn(),
+}));

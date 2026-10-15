@@ -17,7 +17,8 @@ test('Fellesskap shows partners and documented donations – and nothing about R
   await renderWithProviders(<FellesskapScreen />);
   expect(screen.getByText('Sammen gjør vi en forskjell')).toBeTruthy();
   expect(screen.getByText('Hovedpartnere')).toBeTruthy();
-  expect(screen.getByText('Donasjoner')).toBeTruthy();
+  expect(screen.getByText('Støtte til lag og foreninger')).toBeTruthy();
+  expect(screen.getByText('Lokale bedrifter holder MinNabo gratis og bidrar til lokale lag og foreninger.')).toBeTruthy();
   expect(screen.queryByText(/Røde Kors/)).toBeNull();
   expect(screen.queryByText('Kommer')).toBeNull();
 });

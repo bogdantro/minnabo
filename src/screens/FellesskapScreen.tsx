@@ -11,10 +11,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
+import { MAX_NABOLAG } from '@/domain/nabolag';
 import type { NoticeKind, Partner } from '@/domain/types';
 import { categoryBySlug } from '@/domain/categories';
 import { formatPrice, nok } from '@/domain/price';
-import { useAppSettings, useDonations, useNeighbourhoodInfo, useNoticeboard, usePartners } from '@/api/queries';
+import { useAppSettings, useDonations, useMyNabolag, useNoticeboard, usePartners } from '@/api/queries';
 import { ImpressionWatcher, impressionLogged, logPartnerClick, logPartnerImpression, setPartnerStatsKommune, visibleRatio } from '@/lib/partnerStats';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
@@ -169,9 +170,10 @@ export function FellesskapScreen() {
   const newPosts = scopedPosts.filter((p) => Date.parse(p.createdAt) >= openedAt - NEW_WINDOW_MS).length;
   const kinds = [...new Set(scopedPosts.map((p) => p.kind))].slice(0, 2);
   const kommune = me.municipality || municipality || '';
-  const area = me.place || kommune;
-  const { data: hood } = useNeighbourhoodInfo(kommune, area);
-  const members = hood?.memberCount ?? 0;
+  // nabolag are picked here, on Fellesskap → Nabolag (not at sign-up)
+  const myNabolag = (useMyNabolag(!!me.id).data ?? []).map((n) => n.place);
+  const nabolagTitle = myNabolag.length ? nb.fellesskap.nabolagMine(myNabolag) : nb.fellesskap.nabolagJoin;
+  const nabolagMeta = myNabolag.length ? nb.fellesskap.nabolagCount(myNabolag.length, MAX_NABOLAG) : nb.fellesskap.joinHint;
   const shownDonations = donAll ? donations : donations.slice(0, 3);
 
   // Partners are managed on the website: fresh every time the tab is opened (and live through
@@ -241,7 +243,7 @@ export function FellesskapScreen() {
         <FadeUp delay={100}>
           <PressableScale
             accessibilityRole="link"
-            accessibilityLabel={`${nb.fellesskap.nabolag}. ${area ? nb.fellesskap.nabolagTitle(area) : nb.fellesskap.nabolagJoin}`}
+            accessibilityLabel={`${nb.fellesskap.nabolag}. ${nabolagTitle}. ${nabolagMeta}`}
             onPress={() => safePush('/nabolag')}
             scaleTo={0.985}
             style={[styles.linkcard, shadow.card]}
@@ -251,8 +253,10 @@ export function FellesskapScreen() {
             </View>
             <View style={styles.linkBody}>
               <Text style={[text.eyebrow, { fontSize: 11 }]}>{nb.fellesskap.nabolag}</Text>
-              <Text style={styles.linkTitle}>{area ? nb.fellesskap.nabolagTitle(area) : nb.fellesskap.nabolagJoin}</Text>
-              <Text style={text.meta}>{area ? nb.fellesskap.members(members) : nb.fellesskap.joinHint}</Text>
+              <Text style={styles.linkTitle} numberOfLines={2}>
+                {nabolagTitle}
+              </Text>
+              <Text style={text.meta}>{nabolagMeta}</Text>
             </View>
             <Icon name="right" size={20} color={colors.faint} />
           </PressableScale>

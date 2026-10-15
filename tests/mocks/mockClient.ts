@@ -38,6 +38,7 @@ import { endorsementsStore } from '@mocks/data/endorsementsStore';
 import { followStore } from '@mocks/data/followStore';
 import { noticeboardStore } from '@mocks/data/noticeboardStore';
 import { neighbourhoodStore } from '@mocks/data/neighbourhoodStore';
+import { minnaboStore } from '@mocks/data/minnaboStore';
 import { consentStore } from '@mocks/data/consentStore';
 import { settingsStore } from '@mocks/data/settingsStore';
 import { businessStore } from '@mocks/data/businessStore';
@@ -57,6 +58,8 @@ import type {
   NotificationPrefs,
   ListListingsParams,
   NeighbourhoodInfo,
+  NabolagSummary,
+  MinNaboMessage,
   ReviseProposalPatch,
   RespondToProposalResult,
   OfferCount,
@@ -649,9 +652,14 @@ export class MockApiClient implements ApiClient {
     municipality: string;
     /** storage path in `listing-images` */
     imagePath?: string;
+    neighbourhoodId?: string;
   }): Promise<NoticeboardPost> {
     await delay(150);
-    return noticeboardStore.create(input);
+    const hood = input.neighbourhoodId ? neighbourhoodStore.byId(input.neighbourhoodId) : undefined;
+    if (input.neighbourhoodId && !neighbourhoodStore.isMember(input.neighbourhoodId, profileRepository.currentUserId)) {
+      throw new Error('new row violates row-level security policy');
+    }
+    return noticeboardStore.create(hood ? { ...input, place: hood.place, municipality: hood.municipality } : input);
   }
 
   async updateNoticeboardPost(id: string, patch: Parameters<ApiClient['updateNoticeboardPost']>[1]): Promise<NoticeboardPost> {
@@ -738,14 +746,54 @@ export class MockApiClient implements ApiClient {
 
   async joinNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
     await delay(120);
-    neighbourhoodStore.join(municipality, place, profileRepository.currentUserId);
-    return neighbourhoodStore.info(municipality, place, profileRepository.currentUserId);
+    const me = profileRepository.currentUserId;
+    const id = neighbourhoodStore.info(municipality, place, me).id;
+    if (!id) throw new Error('Fant ikke nabolaget.');
+    neighbourhoodStore.joinById(id, me);
+    return neighbourhoodStore.info(municipality, place, me);
   }
 
   async leaveNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
     await delay(120);
-    neighbourhoodStore.leave(municipality, place, profileRepository.currentUserId);
-    return neighbourhoodStore.info(municipality, place, profileRepository.currentUserId);
+    const me = profileRepository.currentUserId;
+    const id = neighbourhoodStore.info(municipality, place, me).id;
+    if (id) neighbourhoodStore.leaveById(id, me);
+    return neighbourhoodStore.info(municipality, place, me);
+  }
+
+  async getMinNaboThread(): Promise<MinNaboMessage[]> {
+    await delay(40);
+    return minnaboStore.thread(profileRepository.currentUserId);
+  }
+
+  async replyToMinNabo(body: string): Promise<void> {
+    await delay(40);
+    minnaboStore.reply(body);
+  }
+
+  async voteMinNaboPoll(broadcastId: string, option: number): Promise<void> {
+    await delay(40);
+    minnaboStore.vote(broadcastId, option, profileRepository.currentUserId);
+  }
+
+  async markMinNaboRead(): Promise<void> {
+    await delay(20);
+    minnaboStore.markRead();
+  }
+
+  async listNabolag(municipality?: string): Promise<NabolagSummary[]> {
+    await delay(60);
+    return neighbourhoodStore.list(municipality, profileRepository.currentUserId);
+  }
+
+  async joinNabolag(id: string): Promise<void> {
+    await delay(80);
+    neighbourhoodStore.joinById(id, profileRepository.currentUserId);
+  }
+
+  async leaveNabolag(id: string): Promise<void> {
+    await delay(80);
+    neighbourhoodStore.leaveById(id, profileRepository.currentUserId);
   }
 
   // --- saved listings & searches ---

@@ -10,6 +10,7 @@ import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { colors, fonts, motion, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { HomeTopBar } from '@/components/TopBar';
+import { MinNaboRow } from '@/components/MinNaboRow';
 import {
   Avatar,
   Button,
@@ -180,6 +181,8 @@ export function InnboksScreen() {
           </ChipRow>
         </View>
       </FadeUp>
+
+      <MinNaboRow />
 
       <View style={styles.px}>
         {isLoading ? (

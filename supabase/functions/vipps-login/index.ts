@@ -49,12 +49,21 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Bruk POST.' }, 405);
 
   try {
-    const { action, code, codeVerifier, redirectUri } = (await req.json().catch(() => ({}))) as {
+    const { action, code, codeVerifier, redirectUri, trace } = (await req.json().catch(() => ({}))) as {
       action?: 'start';
       code?: string;
       codeVerifier?: string;
       redirectUri?: string;
+      /** the app's steps so far: names + milliseconds, no personal data */
+      trace?: unknown;
     };
+    if (Array.isArray(trace)) {
+      const steps = trace
+        .slice(0, 40)
+        .map((t) => (t && typeof t === 'object' ? `${String((t as any).s).slice(0, 40)}@${Number((t as any).ms) | 0}` : ''))
+        .filter(Boolean);
+      console.log('vipps-login app steps', steps.join(' '));
+    }
 
     const clientId = Deno.env.get('VIPPS_CLIENT_ID');
     const clientSecret = Deno.env.get('VIPPS_CLIENT_SECRET');
