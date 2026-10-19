@@ -493,7 +493,9 @@ export type NotificationKind =
   | 'MODERATION'
   | 'AGREEMENT_CANCELLED'
   | 'NEW_MATCH'
-  | 'NOTICE_REPLY';
+  | 'NOTICE_REPLY'
+  /** a new oppslag in one of my nabolag (0067) */
+  | 'NABOLAG_POST';
 
 export type AppNotification = {
   id: string;

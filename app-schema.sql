@@ -4,8 +4,8 @@
 --
 -- What this is
 --   The state of the database after every migration in supabase/migrations
---   (0001_schema.sql … 0066_minnabo_chat.sql) has run, in one file.
---   It was produced by replaying all 66 migrations, in order, on a scratch
+--   (0001_schema.sql … 0067_nabolag_post_kind.sql) has run, in one file.
+--   It was produced by replaying all 67 migrations, in order, on a scratch
 --   Postgres and dumping the result (pg_dump --schema-only --schema=public),
 --   then adding the parts that live outside `public` (auth trigger, storage
 --   buckets + policies, realtime publication, pg_cron job) and the category
@@ -19,7 +19,7 @@
 --
 -- Live project status (from docs/LEFT_OUT.md, A14, checked 2026-10-06)
 --   0001–0063 are applied to the hosted project (checked 2026-10-13);
---   0064_retention.sql, 0065_nabolag.sql and 0066_minnabo_chat.sql still have to be pushed. 0054_website.sql and 0062_website.sql come from
+--   0064–0067 (retention, nabolag, MinNabo chat, nabolag varsel) still have to be pushed. 0054_website.sql and 0062_website.sql come from
 --   the website repo (minnabo-web) and add the website's tables (schema `web`
 --   is not dumped here – only `public`).
 --
@@ -191,7 +191,8 @@ CREATE TYPE public.notification_kind AS ENUM (
     'MODERATION',
     'AGREEMENT_CANCELLED',
     'NEW_MATCH',
-    'NOTICE_REPLY'
+    'NOTICE_REPLY',
+    'NABOLAG_POST'
 );
 
 
@@ -2570,7 +2571,7 @@ CREATE FUNCTION public.notify_nabolag_post() RETURNS trigger
 begin
   if new.neighbourhood_id is null or new.hidden_at is not null then return new; end if;
   insert into notifications (profile_id, kind, title, body, route)
-  select m.profile_id, 'NOTICE_REPLY'::text::notification_kind,
+  select m.profile_id, 'NABOLAG_POST'::text::notification_kind,
          'Nytt oppslag i ' || new.place, '«' || new.title || '»', '/oppslagstavle?oppslag=' || new.id
     from neighbourhood_members m
     join profiles p on p.id = m.profile_id and p.deleted_at is null and p.suspended_at is null

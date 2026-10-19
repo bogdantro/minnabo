@@ -1,19 +1,20 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import nb from '@/i18n/nb';
 import { reviewerLogin } from '@/auth/reviewer';
 import { isEnabled } from '@/config/featureFlags';
 import { Button, Field, Input, Sheet } from '@/components/ui';
 
-const HOLD_MS = 3000;
+/** Long enough that nobody opens it by accident, short enough to hold still on a phone. */
+const HOLD_MS = 1500;
 
 /**
- * Wraps the logo on the login screen. Holding it for three seconds opens a user name +
+ * Wraps a MinNabo logo (Velkommen + Logg inn). Holding it for 1.5 seconds opens a user name +
  * password sheet for the app stores' reviewer (see auth/reviewer.ts). Nothing on the
  * screen shows that it is there: for everyone else, login is Vipps only.
  */
-export function ReviewerLogin({ children }: { children: ReactNode }) {
+export function ReviewerLogin({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState('');
@@ -45,7 +46,7 @@ export function ReviewerLogin({ children }: { children: ReactNode }) {
   const t = nb.reviewerLogin;
   return (
     <>
-      <Pressable onLongPress={() => setOpen(true)} delayLongPress={HOLD_MS} accessible={false}>
+      <Pressable onLongPress={() => setOpen(true)} delayLongPress={HOLD_MS} hitSlop={12} accessible={false} style={style}>
         {children}
       </Pressable>
       <Sheet visible={open} onClose={close} title={t.title} subtitle={t.sub}>

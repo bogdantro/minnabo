@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
 import { MAX_NABOLAG } from '@/domain/nabolag';
+import { MyNabolagCards } from '@/components/community/MyNabolagCards';
 import type { NoticeKind, Partner } from '@/domain/types';
 import { categoryBySlug } from '@/domain/categories';
 import { formatPrice, nok } from '@/domain/price';
@@ -41,6 +42,7 @@ import {
   SectionHeader,
   Sheet,
   type IconKey,
+  TextLink,
 } from '@/components/ui';
 
 const CARD_STEP = 162; // 150 card + 12 gap
@@ -171,9 +173,7 @@ export function FellesskapScreen() {
   const kinds = [...new Set(scopedPosts.map((p) => p.kind))].slice(0, 2);
   const kommune = me.municipality || municipality || '';
   // nabolag are picked here, on Fellesskap → Nabolag (not at sign-up)
-  const myNabolag = (useMyNabolag(!!me.id).data ?? []).map((n) => n.place);
-  const nabolagTitle = myNabolag.length ? nb.fellesskap.nabolagMine(myNabolag) : nb.fellesskap.nabolagJoin;
-  const nabolagMeta = myNabolag.length ? nb.fellesskap.nabolagCount(myNabolag.length, MAX_NABOLAG) : nb.fellesskap.joinHint;
+  const myNabolag = useMyNabolag(!!me.id).data ?? [];
   const shownDonations = donAll ? donations : donations.slice(0, 3);
 
   // Partners are managed on the website: fresh every time the tab is opened (and live through
@@ -241,25 +241,33 @@ export function FellesskapScreen() {
 
       <View style={[styles.px, styles.links]}>
         <FadeUp delay={100}>
-          <PressableScale
-            accessibilityRole="link"
-            accessibilityLabel={`${nb.fellesskap.nabolag}. ${nabolagTitle}. ${nabolagMeta}`}
-            onPress={() => safePush('/nabolag')}
-            scaleTo={0.985}
-            style={[styles.linkcard, shadow.card]}
-          >
-            <View style={[styles.linkIcon, { backgroundColor: colors.limeTint }]}>
-              <Icon name="home" size={22} color={colors.limeDeep} />
+          {myNabolag.length ? (
+            // the nabolag I chose: each opens directly
+            <View style={styles.mine}>
+              <MyNabolagCards nabolag={myNabolag} posts={postsData ?? []} now={openedAt} />
+              <View style={styles.mineLinks}>
+                <TextLink label={myNabolag.length < MAX_NABOLAG ? nb.fellesskap.addNabolag : nb.fellesskap.changeNabolag} onPress={() => safePush('/nabolag')} />
+              </View>
             </View>
-            <View style={styles.linkBody}>
-              <Text style={[text.eyebrow, { fontSize: 11 }]}>{nb.fellesskap.nabolag}</Text>
-              <Text style={styles.linkTitle} numberOfLines={2}>
-                {nabolagTitle}
-              </Text>
-              <Text style={text.meta}>{nabolagMeta}</Text>
-            </View>
-            <Icon name="right" size={20} color={colors.faint} />
-          </PressableScale>
+          ) : (
+            <PressableScale
+              accessibilityRole="link"
+              accessibilityLabel={`${nb.fellesskap.nabolag}. ${nb.fellesskap.nabolagJoin}. ${nb.fellesskap.joinHint}`}
+              onPress={() => safePush('/nabolag')}
+              scaleTo={0.985}
+              style={[styles.linkcard, shadow.card]}
+            >
+              <View style={[styles.linkIcon, { backgroundColor: colors.limeTint }]}>
+                <Icon name="home" size={22} color={colors.limeDeep} />
+              </View>
+              <View style={styles.linkBody}>
+                <Text style={[text.eyebrow, { fontSize: 11 }]}>{nb.fellesskap.nabolag}</Text>
+                <Text style={styles.linkTitle}>{nb.fellesskap.nabolagJoin}</Text>
+                <Text style={text.meta}>{nb.fellesskap.joinHint}</Text>
+              </View>
+              <Icon name="right" size={20} color={colors.faint} />
+            </PressableScale>
+          )}
         </FadeUp>
         <FadeUp delay={150}>
           <PressableScale
@@ -637,6 +645,8 @@ const styles = StyleSheet.create({
   heroHand: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
   dot: { position: 'absolute', borderRadius: 999 },
   links: { gap: 12, marginTop: 16 },
+  mine: { gap: 10 },
+  mineLinks: { flexDirection: 'row', gap: 18, paddingHorizontal: 4 },
   linkcard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -43,6 +43,7 @@ import {
   SubHeader,
   Tabs,
   type IconName,
+  TextLink,
 } from '@/components/ui';
 
 type Tab = 'oppdrag' | 'oppslag';
@@ -53,15 +54,20 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
  * nabolag, where you pick up to three; with it, the page of that one nabolag.
  */
 export function NeighbourhoodScreen() {
-  const { place } = useLocalSearchParams<{ place?: string }>();
-  return typeof place === 'string' && place ? <NabolagPage place={place} /> : <NabolagList />;
+  const { place, kommune } = useLocalSearchParams<{ place?: string; kommune?: string }>();
+  return typeof place === 'string' && place ? (
+    <NabolagPage place={place} kommuneParam={typeof kommune === 'string' ? kommune : undefined} />
+  ) : (
+    <NabolagList />
+  );
 }
 
-function NabolagPage({ place }: { place: string }) {
+function NabolagPage({ place, kommuneParam }: { place: string; kommuneParam?: string }) {
   const router = useRouter();
   const me = useCurrentUser();
   const scope = useLocationScope();
-  const kommune = me.municipality || scope.municipality || '';
+  // the nabolag's own kommune when the link has it (it can differ from mine after a move)
+  const kommune = kommuneParam || me.municipality || scope.municipality || '';
   const { data: info, isFetched } = useNeighbourhoodInfo(kommune, place);
   const toggle = useToggleNeighbourhood(kommune, place, me.id);
   const [tab, setTab] = useState<Tab>('oppdrag');
@@ -84,7 +90,7 @@ function NabolagPage({ place }: { place: string }) {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/nabolag'));
   const share = async () => {
     try {
-      await Clipboard.setStringAsync(Linking.createURL('/nabolag', { queryParams: { place } }));
+      await Clipboard.setStringAsync(Linking.createURL('/nabolag', { queryParams: { place, kommune } }));
       toast.success(nb.neighbourhood.linkCopied, { icon: 'copy' });
     } catch {
       toast.error(nb.toast.genericError);
@@ -187,6 +193,7 @@ function NabolagPage({ place }: { place: string }) {
           <Icon name="pin" size={14} color={colors.mute} />
           <Text style={text.meta}>{nb.neighbourhood.where(place, kommune)}</Text>
         </View>
+        <TextLink label={nb.neighbourhood.switchTo} onPress={() => router.push('/nabolag')} />
       </FadeUp>
 
       {/* members */}

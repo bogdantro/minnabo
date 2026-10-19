@@ -4083,6 +4083,7 @@ export type Database = {
         | "AGREEMENT_CANCELLED"
         | "NEW_MATCH"
         | "NOTICE_REPLY"
+        | "NABOLAG_POST"
       price_mode: "FIXED" | "BUDGET" | "FROM" | "BY_AGREEMENT"
       proposal_status:
         | "DRAFT"
@@ -4269,6 +4270,7 @@ export const Constants = {
         "AGREEMENT_CANCELLED",
         "NEW_MATCH",
         "NOTICE_REPLY",
+        "NABOLAG_POST",
       ],
       price_mode: ["FIXED", "BUDGET", "FROM", "BY_AGREEMENT"],
       proposal_status: [

@@ -1675,6 +1675,15 @@ const nb = {
     membersOnly: 'Bli med for å se oppslagene i dette nabolaget.',
     notFound: 'Fant ikke nabolaget.',
     allNabolag: 'Alle nabolag',
+    yours: 'Ditt nabolag',
+    cardMeta: (members: number, fresh: number) =>
+      [members === 1 ? '1 medlem' : `${members} medlemmer`, fresh ? `${fresh} ${fresh === 1 ? 'nytt oppslag' : 'nye oppslag'}` : null]
+        .filter(Boolean)
+        .join(' · '),
+    mineTitle: 'Mine nabolag',
+    allIn: (kommune: string) => `Alle nabolag i ${kommune}`,
+    allInSub: 'Bli med i opptil 3. Trykk på et nabolag for å se det.',
+    switchTo: 'Alle nabolag',
   },
 
   forMeg: {
@@ -1882,6 +1891,8 @@ const nb = {
     nabolagCount: (n: number, max: number) => `${n} av ${max} nabolag · trykk for å endre`,
     members: (n: number) => `${n} medlemmer`,
     joinHint: 'Bli med og få varsel om oppslag fra naboene',
+    changeNabolag: 'Endre nabolag',
+    addNabolag: 'Legg til eller endre nabolag',
     oppslag: 'Oppslagstavle',
     oppslagTitle: (k: string) => (k ? `Nye oppslag i ${k}` : 'Nye oppslag'),
     newCount: (n: number) => `${n} nye`,
@@ -2171,7 +2182,6 @@ const nb = {
     under18: 'Under 18 år? Se ungdomskonto',
     notYou: 'Ikke deg? Avbryt',
     cancel: 'Avbryt',
-    cancelled: 'Innlogging med Vipps avbrutt',
     welcomeBack: 'Du er logget inn',
     errorTitle: 'Innloggingen gikk ikke',
     retry: 'Prøv igjen',

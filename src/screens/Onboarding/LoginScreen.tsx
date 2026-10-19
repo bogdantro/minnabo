@@ -238,8 +238,8 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
       .then((res) => {
         if (!alive.current) return;
         if (res === 'cancel') {
+          // no message: iOS also reports a successful return as «cancel»
           setVipps(null);
-          toast.info(nb.login.cancelled, { icon: 'x' });
         } else if (res === 'returned') {
           // the link opened /vipps/callback, which finishes the login on top of this screen
           setVipps(null);
@@ -255,10 +255,8 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
   };
 
   const cancel = () => {
-    const was = vipps;
     setVipps(null);
     setError(null);
-    if (was === 'opening' || was === 'confirm') toast.info(nb.login.cancelled, { icon: 'x' });
   };
 
   // The age comes from Vipps; a returning user goes straight in.

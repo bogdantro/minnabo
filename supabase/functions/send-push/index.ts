@@ -27,6 +27,7 @@ const KIND_KEY: Record<string, Key> = {
   REVIEW_RECEIVED: 'review',
   NEW_MATCH: 'match',
   NOTICE_REPLY: 'board',
+  NABOLAG_POST: 'board',
   MODERATION: 'mod',
 };
 

@@ -13,6 +13,7 @@ import { renderWithProviders } from '../testUtils';
 // the screens read the module with require(), so spy on that object
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const expoRouter = require('expo-router');
+const { router } = expoRouter;
 const me = () => profileRepository.currentUserId;
 const mine = () => neighbourhoodStore.list(undefined, me()).map((n) => n.place);
 const idOf = (place: string) => neighbourhoodStore.info('Lillehammer', place, me()).id!;
@@ -87,8 +88,12 @@ test('Fellesskap names the nabolag I am in', async () => {
   neighbourhoodStore.joinById(idOf('Vingnes'), me());
   neighbourhoodStore.joinById(idOf('Sentrum'), me());
   await renderWithProviders(<FellesskapScreen />);
-  expect(await screen.findByText('Sentrum, Vingnes')).toBeTruthy();
-  expect(screen.getByText('2 av 3 nabolag · trykk for å endre')).toBeTruthy();
+  // each nabolag is its own card that opens it directly
+  expect(await screen.findByText('Sentrum nabolag')).toBeTruthy();
+  expect(screen.getByText('Vingnes nabolag')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText(/^Vingnes nabolag\./));
+  expect(router.push).toHaveBeenCalledWith('/nabolag?place=Vingnes&kommune=Lillehammer');
+  expect(screen.getByText('Legg til eller endre nabolag')).toBeTruthy();
 });
 
 // --- oppslag for one nabolag ---------------------------------------------------------------
@@ -112,4 +117,44 @@ test('a new oppslag goes to the whole kommune unless I pick one of my nabolag', 
   await waitFor(() => expect(create).toHaveBeenCalled());
   expect(create.mock.calls[0][0]).toMatchObject({ neighbourhoodId: idOf('Vingnes'), place: 'Vingnes', municipality: 'Lillehammer' });
   expect(await screen.findByText(/Bare Vingnes/)).toBeTruthy();
+});
+
+test('the Nabolag list starts with my nabolag, each one tap away', async () => {
+  neighbourhoodStore.joinById(idOf('Vingnes'), me());
+  await renderWithProviders(<NeighbourhoodScreen />);
+  expect(await screen.findByText('Mine nabolag')).toBeTruthy();
+  expect(screen.getByText('Alle nabolag i Lillehammer')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText(/^Vingnes nabolag\./));
+  expect(router.push).toHaveBeenCalledWith('/nabolag?place=Vingnes&kommune=Lillehammer');
+});
+
+// --- moving to another kommune (bug 2026-10-16) ---------------------------------------------
+// A nabolag page looked the name up in the person's *current* kommune: after moving from
+// Lillehammer to Øyer, the Vingnes card said «Fant ikke nabolaget» and could not be left.
+describe('after moving to another kommune', () => {
+  // move the way the app does it (Rediger profil → kommune)
+  let before: string;
+  beforeEach(() => {
+    neighbourhoodStore.joinById(idOf('Vingnes'), me());
+    before = profileRepository.getProfile(me())!.location.municipality;
+    profileRepository.updateProfile({ municipality: 'Øyer' });
+  });
+  afterEach(() => {
+    profileRepository.updateProfile({ municipality: before });
+  });
+
+  test('the Fellesskap card still opens Vingnes, with its own kommune in the link', async () => {
+    await renderWithProviders(<FellesskapScreen />);
+    await fireEvent.press(await screen.findByLabelText(/^Vingnes nabolag\./));
+    expect(router.push).toHaveBeenCalledWith('/nabolag?place=Vingnes&kommune=Lillehammer');
+  });
+
+  test('the Vingnes page opens and can be left', async () => {
+    jest.spyOn(expoRouter, 'useLocalSearchParams').mockReturnValue({ place: 'Vingnes', kommune: 'Lillehammer' });
+    await renderWithProviders(<NeighbourhoodScreen />);
+    expect(await screen.findByText('Vingnes nabolag')).toBeTruthy();
+    expect(screen.queryByText('Fant ikke nabolaget.')).toBeNull();
+    await fireEvent.press(await screen.findByText('Forlat'));
+    await waitFor(() => expect(mine()).toEqual([]));
+  });
 });

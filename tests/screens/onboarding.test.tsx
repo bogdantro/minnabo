@@ -137,3 +137,22 @@ describe('reviewer login', () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 });
+
+test('the reviewer login also opens from the big logo on the first screen', async () => {
+  const { WelcomeScreen } = require('@/screens/Onboarding/WelcomeScreen');
+  await renderWithProviders(<WelcomeScreen />);
+  // the logo sits in the decorative collage (hidden from screen readers); in the app the sheet
+  // opens in its own layer, in tests it renders inline – so include hidden elements here
+  const all = { includeHiddenElements: true };
+  expect(screen.queryByText('Testinnlogging', all)).toBeNull();
+  await fireEvent(screen.getByTestId('welcome-logo', all), 'longPress');
+  expect(await screen.findByText('Testinnlogging', all)).toBeTruthy();
+  expect(screen.getByLabelText('Brukernavn', all)).toBeTruthy();
+});
+
+test('the reviewer login also opens from the small logo at the top of the first screen', async () => {
+  const { WelcomeScreen } = require('@/screens/Onboarding/WelcomeScreen');
+  await renderWithProviders(<WelcomeScreen />);
+  await fireEvent(screen.getByTestId('welcome-brand'), 'longPress');
+  expect(await screen.findByText('Testinnlogging', { includeHiddenElements: true })).toBeTruthy();
+});

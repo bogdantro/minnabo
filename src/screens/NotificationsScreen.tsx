@@ -74,6 +74,7 @@ const KIND: Record<NotificationKind, { cat: Cat; icon: IconKey; tone: Tone }> =
     NEW_MESSAGE: { cat: "msg", icon: "msg", tone: TONES.msg },
     NEW_MATCH: { cat: "other", icon: "sparkle", tone: TONES.need },
     NOTICE_REPLY: { cat: "msg", icon: "reply", tone: TONES.cyan },
+    NABOLAG_POST: { cat: "other", icon: "home", tone: TONES.need },
     NEW_OFFER: { cat: "offer", icon: "tag", tone: TONES.need },
     OFFER_CHANGED: { cat: "offer", icon: "edit", tone: TONES.cyan },
     OFFER_WITHDRAWN: { cat: "offer", icon: "undo", tone: TONES.mute },
