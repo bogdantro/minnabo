@@ -180,7 +180,7 @@ Deno.serve(async (req: Request) => {
       const { data: created, error } = await admin.auth.admin.createUser({
         email,
         email_confirm: true,
-        user_metadata: { display_name: displayName(v, fullName) },
+        user_metadata: { display_name: displayName(fullName) },
         app_metadata: { provider: 'vipps' },
       });
       if (error || !created.user) return json({ error: error?.message ?? 'Kunne ikke opprette konto.' }, 500);
@@ -235,12 +235,15 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-/** "Mari H." – what other people see until the person changes it. */
-function displayName(v: VippsUser, fullName: string): string {
-  const first = v.given_name ?? fullName.split(' ')[0] ?? '';
-  const last = v.family_name ?? fullName.split(' ').slice(-1)[0] ?? '';
-  if (!first) return 'Nabo';
-  return last && last !== first ? `${first} ${last[0].toUpperCase()}.` : first;
+/**
+ * "Mari H." – what other people see until the person picks another form. Must be one of
+ * src/domain/displayName.ts' options (also checked in the database, 0068), so it is built
+ * from the full name the same way: first word + first letter of the last word.
+ */
+function displayName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'Nabo';
+  return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
 }
 
 function randomToken(bytes: number): string {

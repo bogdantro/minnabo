@@ -3,6 +3,7 @@ import { ConsentScreen } from '@/screens/Onboarding/ConsentScreen';
 import { SetupScreen } from '@/screens/Onboarding/SetupScreen';
 import { LoginScreen } from '@/screens/Onboarding/LoginScreen';
 import { router } from 'expo-router';
+import * as Location from 'expo-location';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import { apiClient } from '@/api/client';
@@ -74,85 +75,86 @@ test('setup validates each step before moving on', async () => {
   expect(screen.getByText('Velg ett alternativ for å gå videre')).toBeTruthy();
 });
 
-test('setup walks navn → bruk → sted and writes the profile', async () => {
-  await renderWithProviders(<SetupScreen />);
-  await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'Ola Nordmann');
-  await fireEvent.press(screen.getByText('Neste'));
-  await fireEvent.press(screen.getByText('Jeg trenger hjelp'));
-  await fireEvent.press(screen.getByText('Neste'));
-  await fireEvent.press(screen.getByText('Hamar'));
-  await fireEvent.press(screen.getByText('Fullfør'));
-  await waitFor(() => expect(supabase.from).toHaveBeenCalledWith('profiles'));
-  await waitFor(() => expect(screen.getByText('Velkommen til nabolaget, Ola!')).toBeTruthy());
-});
-
-test('"Bruk posisjonen min" picks the kommune', async () => {
+/** Steps 1–2 of Oppsett with a typed name (an account without a Vipps name), up to «Hvor bor du?». */
+async function toPlaceStep() {
   await renderWithProviders(<SetupScreen />);
   await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'Ola Nordmann');
   await fireEvent.press(screen.getByText('Neste'));
   await fireEvent.press(screen.getByText('Begge deler'));
   await fireEvent.press(screen.getByText('Neste'));
+}
+
+/** What Oppsett wrote to `profiles` (the upsert's first argument). */
+function savedProfile(): Record<string, unknown> | undefined {
+  const from = supabase.from as jest.Mock;
+  const i = from.mock.calls.findIndex(([table]) => table === 'profiles');
+  return i < 0 ? undefined : from.mock.results[i].value.upsert.mock.calls[0]?.[0];
+}
+
+test('setup walks navn → bruk → sted and writes the profile', async () => {
+  await toPlaceStep();
+  await fireEvent.press(screen.getByText(nb.setup.locIdle));
+  await screen.findAllByText('Fant deg: Lillehammer kommune');
+  await fireEvent.press(screen.getByText('Fullfør'));
+  await waitFor(() => expect(screen.getByText('Velkommen til nabolaget, Ola!')).toBeTruthy());
+  expect(savedProfile()).toMatchObject({ display_name: 'Ola Nordmann', municipality: 'Lillehammer' });
+});
+
+test('"Bruk posisjonen min" picks the kommune and keeps the kommune list out of the way', async () => {
+  await toPlaceStep();
   await fireEvent.press(screen.getByText(nb.setup.locIdle));
   await waitFor(() => expect(screen.getAllByText('Fant deg: Lillehammer kommune').length).toBeGreaterThan(0));
-  expect(screen.getByText('Din posisjon')).toBeTruthy();
+  expect(screen.queryByText('Hamar')).toBeNull();
 });
 
-// The app stores' reviewer cannot use Vipps: a hidden login behind a long hold on the logo.
-describe('reviewer login', () => {
-  const invoke = supabase.functions.invoke as jest.Mock;
-  const auth = supabase.auth as unknown as { verifyOtp: jest.Mock };
+test('Hvor bor du? asks for the position first – the kommune list only shows when that fails', async () => {
+  jest.mocked(Location.getForegroundPermissionsAsync).mockResolvedValueOnce({ granted: false, canAskAgain: true } as never);
+  jest.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValueOnce({ granted: false } as never);
+  await toPlaceStep();
+  expect(screen.queryByText('Hamar')).toBeNull();
+  expect(screen.queryByLabelText(nb.setup.searchKommune)).toBeNull();
 
-  beforeEach(() => {
-    auth.verifyOtp = jest.fn().mockResolvedValue({ error: null });
-  });
-  afterEach(() => invoke.mockResolvedValue({ data: null, error: null }));
-
-  test('nothing shows until the logo is held, then the demo account is let in', async () => {
-    invoke.mockResolvedValue({ data: { tokenHash: 'hash-1', isNew: true, youth: false }, error: null });
-    await renderWithProviders(<LoginScreen />);
-    expect(screen.queryByText('Testinnlogging')).toBeNull();
-    expect(screen.queryByLabelText('Passord')).toBeNull();
-
-    await fireEvent(screen.getByLabelText('MinNabo'), 'longPress');
-    expect(await screen.findByText('Testinnlogging')).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText('Brukernavn'), 'apple');
-    await fireEvent.changeText(screen.getByLabelText('Passord'), 'riktig-passord');
-    await fireEvent.press(screen.getByText('Logg inn'));
-
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/samtykker'));
-    expect(invoke).toHaveBeenCalledWith('reviewer-login', { body: { username: 'apple', password: 'riktig-passord' } });
-    expect(auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'hash-1', type: 'magiclink' });
-  });
-
-  test('a wrong password, or the login switched off on the server, shows the answer and lets nobody in', async () => {
-    invoke.mockResolvedValue({ data: { error: 'Feil brukernavn eller passord.' }, error: null });
-    await renderWithProviders(<LoginScreen />);
-    await fireEvent(screen.getByLabelText('MinNabo'), 'longPress');
-    await fireEvent.changeText(await screen.findByLabelText('Brukernavn'), 'apple');
-    await fireEvent.changeText(screen.getByLabelText('Passord'), 'feil');
-    await fireEvent.press(screen.getByText('Logg inn'));
-
-    expect(await screen.findByText('Feil brukernavn eller passord.')).toBeTruthy();
-    expect(auth.verifyOtp).not.toHaveBeenCalled();
-    expect(router.replace).not.toHaveBeenCalled();
-  });
+  await fireEvent.press(screen.getByText(nb.setup.locIdle));
+  expect(await screen.findByText(nb.location.permissionDenied)).toBeTruthy();
+  await fireEvent.press(screen.getByText('Hamar'));
+  await fireEvent.press(screen.getByText('Fullfør'));
+  await waitFor(() => expect(screen.getByText('Velkommen til nabolaget, Ola!')).toBeTruthy());
+  expect(savedProfile()).toMatchObject({ municipality: 'Hamar' });
 });
 
-test('the reviewer login also opens from the big logo on the first screen', async () => {
-  const { WelcomeScreen } = require('@/screens/Onboarding/WelcomeScreen');
-  await renderWithProviders(<WelcomeScreen />);
-  // the logo sits in the decorative collage (hidden from screen readers); in the app the sheet
-  // opens in its own layer, in tests it renders inline – so include hidden elements here
-  const all = { includeHiddenElements: true };
-  expect(screen.queryByText('Testinnlogging', all)).toBeNull();
-  await fireEvent(screen.getByTestId('welcome-logo', all), 'longPress');
-  expect(await screen.findByText('Testinnlogging', all)).toBeTruthy();
-  expect(screen.getByLabelText('Brukernavn', all)).toBeTruthy();
+test('a found kommune can still be changed through «Ikke riktig? Velg selv»', async () => {
+  await toPlaceStep();
+  await fireEvent.press(screen.getByText(nb.setup.locIdle));
+  await screen.findAllByText('Fant deg: Lillehammer kommune');
+  await fireEvent.press(screen.getByText(nb.setup.pickOther));
+  await fireEvent.press(screen.getByText('Hamar'));
+  await fireEvent.press(screen.getByText('Fullfør'));
+  await waitFor(() => expect(screen.getByText('Velkommen til nabolaget, Ola!')).toBeTruthy());
+  expect(savedProfile()).toMatchObject({ municipality: 'Hamar' });
 });
 
-test('the reviewer login also opens from the small logo at the top of the first screen', async () => {
-  const { WelcomeScreen } = require('@/screens/Onboarding/WelcomeScreen');
-  await renderWithProviders(<WelcomeScreen />);
-  await fireEvent(screen.getByTestId('welcome-brand'), 'longPress');
-  expect(await screen.findByText('Testinnlogging', { includeHiddenElements: true })).toBeTruthy();
+test('with a Vipps name the visningsnavn can only be that name or its short forms – no free text', async () => {
+  jest.spyOn(apiClient, 'getMyAccount').mockResolvedValue({ ...YOUTH, youth: false, age: 34, fullName: 'Ola Nordmann' });
+  await renderWithProviders(<SetupScreen />);
+  expect(await screen.findByRole('radio', { name: 'Ola N.' })).toBeTruthy();
+  expect(screen.getByRole('radio', { name: 'Ola Nordmann' })).toBeTruthy();
+  expect(screen.getByRole('radio', { name: 'Ola' })).toBeTruthy();
+  expect(screen.queryByPlaceholderText(nb.setup.namePlaceholder)).toBeNull();
+
+  await fireEvent.press(screen.getByRole('radio', { name: 'Ola N.' }));
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Begge deler'));
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText(nb.setup.locIdle));
+  await screen.findAllByText('Fant deg: Lillehammer kommune');
+  await fireEvent.press(screen.getByText('Fullfør'));
+  await waitFor(() => expect(savedProfile()).toMatchObject({ display_name: 'Ola N.' }));
+});
+
+test('there is no hidden test login: holding the logo does nothing, Vipps is the only way in', async () => {
+  await renderWithProviders(<LoginScreen />);
+  await fireEvent(screen.getByLabelText('MinNabo'), 'longPress');
+  expect(screen.queryByText('Testinnlogging')).toBeNull();
+  expect(screen.queryByLabelText('Passord')).toBeNull();
+  expect(supabase.functions.invoke).not.toHaveBeenCalledWith('reviewer-login', expect.anything());
 });

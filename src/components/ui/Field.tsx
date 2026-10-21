@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useState, type ReactNode } from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -82,7 +83,10 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
 ) {
   const [focused, setFocused] = useState(false);
   // Inside a bottom sheet the input must register with the sheet, or the keyboard covers it.
-  const inSheet = useBottomSheetInternal(true) != null;
+  // Not on web: there is no on-screen keyboard to dodge, and BottomSheetTextInput's focus
+  // handler calls TextInput.State.currentlyFocusedInput(), which react-native-web lacks –
+  // the first tap into a field in a sheet crashed the web app.
+  const inSheet = useBottomSheetInternal(true) != null && Platform.OS !== 'web';
   const NativeInput = (inSheet ? BottomSheetTextInput : TextInput) as typeof TextInput;
   return (
     <View style={[styles.inwrap, containerStyle]}>

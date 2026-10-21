@@ -16,7 +16,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
-import { ReviewerLogin } from '@/components/ReviewerLogin';
 import { colors, motion, radius, shadow, text } from '@/theme/theme';
 import { Avatar } from '@/components/ui/Avatar';
 import { Stars } from '@/components/ui/Badges';
@@ -110,12 +109,10 @@ export function WelcomeScreen() {
       <View style={[styles.blob, styles.blobCyan]} />
 
       <View style={[styles.topbar, { paddingTop: insets.top + 12 }]}>
-        <ReviewerLogin>
-          <View style={styles.brand} accessible accessibilityRole="header" accessibilityLabel="MinNabo">
-            <Image source={logo} style={styles.brandLogo} testID="welcome-brand" />
-            <Text style={text.brand}>MinNabo</Text>
-          </View>
-        </ReviewerLogin>
+        <View style={styles.brand} accessible accessibilityRole="header" accessibilityLabel="MinNabo">
+          <Image source={logo} style={styles.brandLogo} />
+          <Text style={text.brand}>MinNabo</Text>
+        </View>
       </View>
 
       <View
@@ -130,12 +127,9 @@ export function WelcomeScreen() {
           entering={ZoomIn.delay(100).springify().damping(motion.spring.damping).stiffness(motion.spring.stiffness)}
           style={[styles.logoTile, shadow.logoTile]}
         >
-          {/* hold the logo (the whole tile): the app stores' reviewer login (components/ReviewerLogin.tsx) */}
-          <ReviewerLogin style={styles.logoHold}>
-            <Float period={5000}>
-              <Image source={logo} style={styles.logoBig} accessibilityLabel="MinNabo" testID="welcome-logo" />
-            </Float>
-          </ReviewerLogin>
+          <Float period={5000}>
+            <Image source={logo} style={styles.logoBig} />
+          </Float>
         </Animated.View>
 
         <Animated.View entering={fadeUp(200)} style={styles.needCard}>
@@ -235,7 +229,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoHold: { alignSelf: 'stretch', flex: 1, alignItems: 'center', justifyContent: 'center' },
   logoBig: { width: 96, height: 96 },
   needCard: { position: 'absolute', left: 18, top: 8, width: 214 },
   cardRow: { padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' },

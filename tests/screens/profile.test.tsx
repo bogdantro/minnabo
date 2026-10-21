@@ -7,6 +7,9 @@ import { ReviewScreen } from '@/screens/ReviewScreen';
 import { profileRepository } from '@mocks/data/profileRepository';
 import { chatRepository } from '@mocks/data/chatRepository';
 import { renderWithProviders } from '../testUtils';
+import { apiClient } from '@/api/client';
+
+afterEach(() => jest.restoreAllMocks());
 
 test('own profile shows presentation, verifications and reviews', async () => {
   await renderWithProviders(<ProfileScreen />);
@@ -71,6 +74,31 @@ test('edit profile blocks saving a blank display name', async () => {
 
   await fireEvent.press(screen.getByText('Forkast'));
   expect(screen.getByLabelText('Visningsnavn').props.value).toBe('Marius B.');
+});
+
+test('with a Vipps name, Rediger profil only offers that name and its short forms', async () => {
+  jest
+    .spyOn(apiClient, 'getMyAccount')
+    .mockResolvedValue({ vipps: true, youth: false, age: 30, birthYear: 1996, fullName: 'Marius Berg', phoneMasked: '' });
+  const meId = profileRepository.currentUserId;
+  await renderWithProviders(<EditProfileScreen />);
+  expect(await screen.findByRole('radio', { name: 'Marius B.' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: 'Marius Berg' })).toBeTruthy();
+  expect(screen.queryByPlaceholderText('F.eks. Mari H.')).toBeNull();
+
+  await fireEvent.press(screen.getByRole('radio', { name: 'Marius' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Lagre endringer' }));
+  await waitFor(() => expect(profileRepository.getProfile(meId)?.displayName).toBe('Marius'));
+});
+
+test('an old visningsnavn from before the rule stays selectable until the person picks another', async () => {
+  jest
+    .spyOn(apiClient, 'getMyAccount')
+    .mockResolvedValue({ vipps: true, youth: false, age: 30, birthYear: 1996, fullName: 'Marius Bakken Olsen', phoneMasked: '' });
+  await renderWithProviders(<EditProfileScreen />);
+  // the saved name «Marius B.» isn't one of «Marius Bakken Olsen», «Marius O.», «Marius»
+  expect(await screen.findByRole('radio', { name: 'Marius B.' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: 'Marius O.' })).toBeTruthy();
 });
 
 test('pausing the profile shows the paused banner and hides own listings', async () => {

@@ -16,6 +16,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 import nb from '@/i18n/nb';
 import type { Purpose } from '@/domain/types';
+import { displayNameOptions } from '@/domain/displayName';
 import { supabase } from '@/lib/supabase';
 import { useVippsIdentity } from '@/auth/identity';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -25,6 +26,7 @@ import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
 import { KommuneWaitlist } from '@/components/KommuneWaitlist';
+import { DisplayNamePicker } from '@/components/DisplayNamePicker';
 import { KOMMUNE_AREAS, LAUNCH_KOMMUNER } from '@/data/kommuner';
 import { colors, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
@@ -52,6 +54,7 @@ import {
   SlideIn,
   StepProgress,
   StickyFooter,
+  TextLink,
   VerifiedBadge,
   type IconKey,
 } from '@/components/ui';
@@ -84,13 +87,6 @@ function initialsOf(name: string): string {
   const first = parts[0]?.[0] ?? '';
   const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
   return (first + last).toUpperCase();
-}
-
-/** "Mari Haugen" → ["Mari Haugen", "Mari H.", "Mari"]. */
-function nameSuggestions(full: string): string[] {
-  const parts = full.trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return parts.length ? [parts[0]] : [];
-  return [parts.join(' '), `${parts[0]} ${parts[parts.length - 1][0]}.`, parts[0]];
 }
 
 /** Radar: two rings, rotating flat sweep while locating, pulses, dot → check when found. */
@@ -167,6 +163,8 @@ export function SetupScreen() {
   const [kommune, setKommune] = useState<string | null>(null);
   const [locState, setLocState] = useState<'idle' | 'busy' | 'done'>('idle');
   const [located, setLocated] = useState<string | null>(null);
+  // The kommune list stays hidden until the position fails or the person says it's wrong.
+  const [manual, setManual] = useState(false);
   const [q, setQ] = useState('');
   const [area, setArea] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -177,8 +175,14 @@ export function SetupScreen() {
   const [nameTouched, setNameTouched] = useState(false);
   if (!nameTouched && !display && me.displayName) setDisplay(me.displayName);
 
+  // With a Vipps name the visningsnavn is one of its forms (also checked in the database, 0068).
+  // Start on the short form («Mari H.») unless the saved name already is one of them.
+  const vippsOptions = useMemo(() => (vippsName ? displayNameOptions(vippsName) : []), [vippsName]);
+  if (!nameTouched && vippsOptions.length && !vippsOptions.includes(display)) setDisplay(vippsOptions[1] ?? vippsOptions[0]);
+
   const name = display.trim();
-  const suggestions = useMemo(() => nameSuggestions(vippsName ?? me.displayName ?? ''), [vippsName, me.displayName]);
+  // an account without a Vipps name (an old test login) types its own, with the same suggestions
+  const suggestions = useMemo(() => displayNameOptions(me.displayName ?? ''), [me.displayName]);
   const kommuner = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return LAUNCH_KOMMUNER.filter((k) => !needle || k.toLowerCase().includes(needle));
@@ -257,7 +261,7 @@ export function SetupScreen() {
     }
     if (step === 2 && !role) return fail(nb.setup.errRole);
     if (step === 3) {
-      if (!kommune) return fail(nb.setup.errKommune);
+      if (!kommune) return fail(manual ? nb.setup.errKommune : nb.setup.errLocateFirst);
       if (!(await save())) return;
     }
     setErr(null);
@@ -289,6 +293,7 @@ export function SetupScreen() {
       toastAbove(nb.setup.found(res.municipality), 'pin');
     } else {
       setLocState('idle');
+      setManual(true);
       fail(locationErrorText(res.error));
     }
   };
@@ -422,21 +427,35 @@ export function SetupScreen() {
                 </Field>
               ) : null}
 
-              <Field label={nb.setup.displayName} hint={`${name.length}/30`} style={styles.mt18}>
-                <Input
-                  value={display}
-                  onChangeText={(v) => {
-                    setNameTouched(true);
-                    setDisplay(v.slice(0, 40));
-                    setErr(null);
-                  }}
-                  placeholder={nb.setup.namePlaceholder}
-                  autoComplete="nickname"
-                  accessibilityLabel={nb.setup.displayName}
-                  error={!!err && step === 1}
-                />
-              </Field>
-              {suggestions.length > 1 ? (
+              {vippsName ? (
+                <Field label={nb.setup.displayName} style={styles.mt18}>
+                  <DisplayNamePicker
+                    fullName={vippsName}
+                    value={display}
+                    onChange={(v) => {
+                      setNameTouched(true);
+                      setDisplay(v);
+                      setErr(null);
+                    }}
+                  />
+                </Field>
+              ) : (
+                <Field label={nb.setup.displayName} hint={`${name.length}/30`} style={styles.mt18}>
+                  <Input
+                    value={display}
+                    onChangeText={(v) => {
+                      setNameTouched(true);
+                      setDisplay(v.slice(0, 40));
+                      setErr(null);
+                    }}
+                    placeholder={nb.setup.namePlaceholder}
+                    autoComplete="nickname"
+                    accessibilityLabel={nb.setup.displayName}
+                    error={!!err && step === 1}
+                  />
+                </Field>
+              )}
+              {!vippsName && suggestions.length > 1 ? (
                 <View style={styles.chips}>
                   {suggestions.map((s) => (
                     <Chip
@@ -568,87 +587,96 @@ export function SetupScreen() {
                 </FadeUp>
               ) : null}
 
-              <View style={styles.orline}>
-                <View style={styles.orRule} />
-                <Text style={text.orLine}>{nb.setup.orPick}</Text>
-                <View style={styles.orRule} />
-              </View>
+              {locState === 'done' && !manual ? (
+                <TextLink label={nb.setup.pickOther} icon={null} onPress={() => setManual(true)} style={styles.pickOther} />
+              ) : null}
 
-              <View style={styles.search}>
-                <Icon name="search" size={20} color={colors.mute} />
-                <TextInput
-                  value={q}
-                  onChangeText={setQ}
-                  placeholder={nb.setup.searchKommune}
-                  placeholderTextColor={colors.mute}
-                  accessibilityLabel={nb.setup.searchKommune}
-                  style={[text.input, styles.searchInput]}
-                />
-                {q ? (
-                  <IconButton icon="x" iconSize={16} variant="ghost" accessibilityLabel={nb.setup.clearSearch} onPress={() => setQ('')} />
-                ) : null}
-              </View>
+              {manual ? (
+                <>
+                  <View style={styles.orline}>
+                    <View style={styles.orRule} />
+                    <Text style={text.orLine}>{nb.setup.orPick}</Text>
+                    <View style={styles.orRule} />
+                  </View>
 
-              <View style={styles.klist} accessibilityRole="radiogroup">
-                {kommuner.map((k) => {
-                  const on = kommune === k;
-                  return (
-                    <OptionCard
-                      key={k}
-                      selected={on}
-                      accessibilityLabel={k}
-                      onPress={() => {
-                        if (kommune && kommune !== k) setArea('');
-                        setKommune(k);
-                        setErr(null);
-                      }}
-                      style={styles.kopt}
-                    >
-                      <Radio selected={on} />
-                      <Text style={[text.optionName, styles.flex]}>{k}</Text>
-                      {located === k ? <Pill label={nb.setup.yourPosition} tone="ok" icon="locate" /> : null}
-                      <Text style={text.meta}>{nb.setup.region}</Text>
-                    </OptionCard>
-                  );
-                })}
-                {kommuner.length === 0 ? (
-                  <ScaleIn style={styles.noK}>
-                    <View style={styles.noKIcon}>
-                      <Icon name="map" size={18} color={colors.ink2} />
-                    </View>
-                    <Text style={[text.metaBold, styles.center, { fontSize: 14.5 }]}>{nb.setup.noKommune(q.trim())}</Text>
-                    <Text style={[text.meta, styles.center]}>{nb.setup.onlyInnlandet}</Text>
-                  </ScaleIn>
-                ) : null}
-              </View>
-              <View style={styles.waitlist}>
-                <KommuneWaitlist initial={kommuner.length === 0 ? q.trim() : undefined} />
-              </View>
-
-              <Field label={nb.setup.area} hint={nb.setup.optional} style={styles.mt22}>
-                <Input
-                  icon="pin"
-                  value={area}
-                  onChangeText={setArea}
-                  placeholder={nb.setup.areaPlaceholder}
-                  accessibilityLabel={nb.setup.area}
-                />
-              </Field>
-              {areas.length ? (
-                <View style={styles.chips}>
-                  {areas.map((a) => (
-                    <Chip
-                      key={a}
-                      label={a}
-                      size="sm"
-                      selected={area === a}
-                      onPress={() => {
-                        setArea(area === a ? '' : a);
-                        if (!kommune) setKommune('Lillehammer');
-                      }}
+                  <View style={styles.search}>
+                    <Icon name="search" size={20} color={colors.mute} />
+                    <TextInput
+                      value={q}
+                      onChangeText={setQ}
+                      placeholder={nb.setup.searchKommune}
+                      placeholderTextColor={colors.mute}
+                      accessibilityLabel={nb.setup.searchKommune}
+                      style={[text.input, styles.searchInput]}
                     />
-                  ))}
-                </View>
+                    {q ? (
+                      <IconButton icon="x" iconSize={16} variant="ghost" accessibilityLabel={nb.setup.clearSearch} onPress={() => setQ('')} />
+                    ) : null}
+                  </View>
+
+                  <View style={styles.klist} accessibilityRole="radiogroup">
+                    {kommuner.map((k) => {
+                      const on = kommune === k;
+                      return (
+                        <OptionCard
+                          key={k}
+                          selected={on}
+                          accessibilityLabel={k}
+                          onPress={() => {
+                            if (kommune && kommune !== k) setArea('');
+                            setKommune(k);
+                            setErr(null);
+                          }}
+                          style={styles.kopt}
+                        >
+                          <Radio selected={on} />
+                          <Text style={[text.optionName, styles.flex]}>{k}</Text>
+                          {located === k ? <Pill label={nb.setup.yourPosition} tone="ok" icon="locate" /> : null}
+                          <Text style={text.meta}>{nb.setup.region}</Text>
+                        </OptionCard>
+                      );
+                    })}
+                    {kommuner.length === 0 ? (
+                      <ScaleIn style={styles.noK}>
+                        <View style={styles.noKIcon}>
+                          <Icon name="map" size={18} color={colors.ink2} />
+                        </View>
+                        <Text style={[text.metaBold, styles.center, { fontSize: 14.5 }]}>{nb.setup.noKommune(q.trim())}</Text>
+                        <Text style={[text.meta, styles.center]}>{nb.setup.onlyInnlandet}</Text>
+                      </ScaleIn>
+                    ) : null}
+                  </View>
+                  <View style={styles.waitlist}>
+                    <KommuneWaitlist initial={kommuner.length === 0 ? q.trim() : undefined} />
+                  </View>
+                </>
+              ) : null}
+
+              {kommune ? (
+                <>
+                  <Field label={nb.setup.area} hint={nb.setup.optional} style={styles.mt22}>
+                    <Input
+                      icon="pin"
+                      value={area}
+                      onChangeText={setArea}
+                      placeholder={nb.setup.areaPlaceholder}
+                      accessibilityLabel={nb.setup.area}
+                    />
+                  </Field>
+                  {areas.length ? (
+                    <View style={styles.chips}>
+                      {areas.map((a) => (
+                        <Chip
+                          key={a}
+                          label={a}
+                          size="sm"
+                          selected={area === a}
+                          onPress={() => setArea(area === a ? '' : a)}
+                        />
+                      ))}
+                    </View>
+                  ) : null}
+                </>
               ) : null}
 
               <View style={styles.tip}>
@@ -938,6 +966,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, height: '100%', fontSize: 15.5 },
   klist: { gap: 8, marginTop: 10 },
+  pickOther: { alignSelf: 'center', marginTop: 12 },
   kopt: { paddingVertical: 13, paddingHorizontal: 14 },
   noK: {
     borderWidth: 1.5,

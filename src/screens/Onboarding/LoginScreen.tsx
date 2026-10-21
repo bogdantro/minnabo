@@ -20,7 +20,6 @@ import { useAppSettings } from '@/api/queries';
 import { toast } from '@/lib/toast';
 import { openWebsite } from '@/config/links';
 import { VippsIcon, VippsWordmark } from '@/components/VippsLogo';
-import { ReviewerLogin } from '@/components/ReviewerLogin';
 import { signOut } from '@/auth/session';
 import { colors, radius, safeTopExtra, screenPadding, shadow, text } from '@/theme/theme';
 import {
@@ -287,13 +286,11 @@ export function LoginScreen({ callback }: { callback?: { code?: string; state?: 
       </View>
 
       <View style={styles.start}>
-        <ReviewerLogin>
-          <ScaleIn delay={50} style={[styles.logobox, shadow.loginLogo]}>
-            <Animated.View style={logoFloat}>
-              <Image source={logo} style={styles.logo} accessibilityLabel="MinNabo" />
-            </Animated.View>
-          </ScaleIn>
-        </ReviewerLogin>
+        <ScaleIn delay={50} style={[styles.logobox, shadow.loginLogo]}>
+          <Animated.View style={logoFloat}>
+            <Image source={logo} style={styles.logo} accessibilityLabel="MinNabo" />
+          </Animated.View>
+        </ScaleIn>
         <FadeUp delay={100}>
           <Text style={[text.h1, styles.title]} accessibilityRole="header">
             {nb.login.title}

@@ -1172,6 +1172,8 @@ const nb = {
     displayNamePh: 'F.eks. Mari H.',
     displayNameErr: 'Skriv inn et visningsnavn',
     displayNameTip: 'Tips: fornavn og første bokstav i etternavnet.',
+    displayNameVippsTip: 'Visningsnavnet bygger på navnet ditt fra Vipps, så naboene vet hvem de snakker med.',
+    currentName: 'Nåværende visningsnavn',
     secAbout: 'Om meg',
     bio: 'Presentasjon',
     bioHint: 'Hva kan du, og hvem er du?',
@@ -2212,15 +2214,6 @@ const nb = {
     voteFailed: 'Svaret ble ikke lagret. Prøv igjen.',
     note: 'MinNabo ber deg aldri om passord, koder eller betaling.',
   },
-  // For the app stores' reviewer only (components/ReviewerLogin.tsx) – not part of the design.
-  reviewerLogin: {
-    title: 'Testinnlogging',
-    sub: 'Bare for gjennomgang av appen. Alle andre logger inn med Vipps.',
-    username: 'Brukernavn',
-    password: 'Passord',
-    submit: 'Logg inn',
-    busy: 'Logger inn …',
-  },
   youth: {
     marker: (age: number) => `Ungdomskonto · ${age} år`,
     title: 'Ungdomskonto',
@@ -2556,6 +2549,8 @@ const nb = {
     nameNote: 'Visningsnavnet står på oppføringene dine. Fullt navn vises bare til naboer du gjør en avtale med.',
     errNameShort: 'Visningsnavnet må ha minst 2 tegn',
     errNameLong: 'Visningsnavnet kan ha maks 30 tegn',
+    /** what each visningsnavn option is, in the order of displayNameOptions() */
+    nameKinds: ['Fullt navn', 'Fornavn og forbokstav', 'Bare fornavn'],
     s2Eyebrow: 'Steg 2 · Bruk',
     s2Title: 'Hva vil du bruke MinNabo til?',
     s2Body: 'Vi tilpasser forsiden etter det du velger. Du kan endre det når som helst.',
@@ -2579,6 +2574,8 @@ const nb = {
     locDoneSub: 'Posisjonen er brukt én gang og ikke lagret',
     found: (k: string) => `Fant deg: ${k} kommune`,
     orPick: 'eller velg kommune',
+    pickOther: 'Ikke riktig? Velg selv',
+    pickTitle: 'Velg kommune',
     searchKommune: 'Søk etter kommune',
     clearSearch: 'Tøm søket',
     yourPosition: 'Din posisjon',
@@ -2590,6 +2587,7 @@ const nb = {
     areaPlaceholder: 'F.eks. Nordre Ål',
     privacy: 'Andre ser bare omtrentlig område – aldri adressen din.',
     errKommune: 'Velg kommunen din eller bruk posisjonen din',
+    errLocateFirst: 'Trykk på «Bruk posisjonen min» for å finne kommunen din',
     ready: 'Kontoen din er klar',
     welcome: (first: string) => `Velkommen til nabolaget, ${first}!`,
     doneSub: {

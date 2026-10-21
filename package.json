@@ -12,7 +12,8 @@
     "lint": "expo lint",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --project-id hvxuzvhzsaocsnwznsai > src/lib/database.types.ts",
-    "test:backend": "tsx scripts/test-backend.ts"
+    "test:backend": "tsx scripts/test-backend.ts",
+    "release": "tsx scripts/release.ts"
   },
   "dependencies": {
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",

@@ -11,6 +11,7 @@ import { useSession } from '@/auth/session';
 import { useVippsIdentity } from '@/auth/identity';
 import { useProfile, useUpdateProfile } from '@/api/queries';
 import { KommuneWaitlist } from '@/components/KommuneWaitlist';
+import { DisplayNamePicker } from '@/components/DisplayNamePicker';
 import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE, profileAreas } from '@/data/kommuner';
 import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
@@ -257,21 +258,28 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
             >
               <Input value={vipps?.name || profile.displayName} editable={false} accessibilityLabel={nb.editProfile.fullName} style={styles.locked} />
             </Field>
-            <Field
-              label={nb.editProfile.displayName}
-              hint={nb.editProfile.displayNameHint}
-              error={dnBad ? nb.editProfile.displayNameErr : null}
-              help={nb.editProfile.displayNameTip}
-            >
-              <Input
-                value={form.dn}
-                onChangeText={(dn) => set({ dn })}
-                placeholder={nb.editProfile.displayNamePh}
-                maxLength={30}
-                error={dnBad}
-                accessibilityLabel={nb.editProfile.displayName}
-              />
-            </Field>
+            {vipps?.name ? (
+              // only the Vipps name or its short forms (enforced in the database too, 0068)
+              <Field label={nb.editProfile.displayName} hint={nb.editProfile.displayNameHint} help={nb.editProfile.displayNameVippsTip}>
+                <DisplayNamePicker fullName={vipps.name} value={form.dn} current={base.dn} onChange={(dn) => set({ dn })} />
+              </Field>
+            ) : (
+              <Field
+                label={nb.editProfile.displayName}
+                hint={nb.editProfile.displayNameHint}
+                error={dnBad ? nb.editProfile.displayNameErr : null}
+                help={nb.editProfile.displayNameTip}
+              >
+                <Input
+                  value={form.dn}
+                  onChangeText={(dn) => set({ dn })}
+                  placeholder={nb.editProfile.displayNamePh}
+                  maxLength={30}
+                  error={dnBad}
+                  accessibilityLabel={nb.editProfile.displayName}
+                />
+              </Field>
+            )}
           </FadeUp>
 
           {/* about */}
