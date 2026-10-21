@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { ReportTargetType } from '@/domain/types';
@@ -103,7 +104,7 @@ export function RapporterScreen({
       const res = await pickAndUpload({ bucket: 'report-attachments', folder: me.id, source: 'library' });
       if (res) setShot({ path: res.path, uri: res.localUri, bytes: res.bytes });
     } catch (e) {
-      toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError);
+      toast.error(serverMessage(e, nb.toast.genericError));
     } finally {
       setShotBusy(false);
     }

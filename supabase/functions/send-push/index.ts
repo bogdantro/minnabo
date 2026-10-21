@@ -39,6 +39,12 @@ const DEFAULT_PUSH: Record<Key, boolean> = {
 
 type Push = { profileId: string; key: Key; title: string; body: string; route: string | null; conversationId?: string };
 
+/**
+ * A push that opens a review gets star buttons («★★★★★», «★★★★», «Skriv vurdering»).
+ * The app registers the buttons under this name: REVIEW_CATEGORY in src/components/PushBridge.tsx.
+ */
+const REVIEW_CATEGORY = 'review';
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('POST only', { status: 405 });
   const secret = Deno.env.get('PUSH_SECRET');
@@ -125,6 +131,7 @@ async function deliver(db: any, p: Push): Promise<number> {
         sound: 'default',
         ...(typeof badge === 'number' ? { badge } : {}),
         data: { route: p.route },
+        ...(p.route?.startsWith('/vurder/') ? { categoryId: REVIEW_CATEGORY } : {}),
       })),
     ),
   });

@@ -1,4 +1,5 @@
 import { CATEGORIES, type CategoryRow } from '@/domain/categories';
+import { UserError } from '@/lib/errors';
 import type {
   AgendaItem,
   AgreementSnapshot,
@@ -121,7 +122,7 @@ export class MockApiClient implements ApiClient {
   async getListing(id: string): Promise<Listing> {
     await delay(200);
     const listing = repositories.listings.get(id);
-    if (!listing) throw new Error('Fant ikke oppføringen.');
+    if (!listing) throw new UserError('Fant ikke oppføringen.');
     return listing;
   }
 
@@ -144,9 +145,9 @@ export class MockApiClient implements ApiClient {
   async updateListing(listingId: string, listing: Listing, extras: ListingExtras): Promise<Listing> {
     await delay(250);
     const cur = repositories.listings.get(listingId);
-    if (!cur || cur.owner.id !== profileRepository.currentUserId) throw new Error('Ikke tilgang.');
+    if (!cur || cur.owner.id !== profileRepository.currentUserId) throw new UserError('Ikke tilgang.');
     if (!['DRAFT', 'PUBLISHED', 'RECEIVING_OFFERS', 'ACTIVE', 'PAUSED', 'EXPIRED'].includes(cur.status)) {
-      throw new Error('Oppdraget kan ikke endres etter at et tilbud er godtatt.');
+      throw new UserError('Oppdraget kan ikke endres etter at et tilbud er godtatt.');
     }
     const next: Listing = {
       ...cur,
@@ -199,7 +200,7 @@ export class MockApiClient implements ApiClient {
   async setListingStatus(listingId: string, status: ListingStatus): Promise<void> {
     await delay(150);
     const l = repositories.listings.get(listingId);
-    if (!l || l.owner.id !== profileRepository.currentUserId) throw new Error('Fant ikke oppføringen.');
+    if (!l || l.owner.id !== profileRepository.currentUserId) throw new UserError('Fant ikke oppføringen.');
     repositories.listings.setStatus(listingId, status);
   }
 
@@ -225,7 +226,7 @@ export class MockApiClient implements ApiClient {
   async getConversation(id: string): Promise<Conversation> {
     await delay(150);
     const conv = chatRepository.getConversation(id);
-    if (!conv) throw new Error('Fant ikke samtalen.');
+    if (!conv) throw new UserError('Fant ikke samtalen.');
     chatRepository.markRead(id);
     return conv;
   }
@@ -272,7 +273,7 @@ export class MockApiClient implements ApiClient {
   async getProposal(id: string): Promise<Proposal> {
     await delay(120);
     const proposal = chatRepository.getProposal(id);
-    if (!proposal) throw new Error('Fant ikke tilbudet.');
+    if (!proposal) throw new UserError('Fant ikke tilbudet.');
     return proposal;
   }
 
@@ -334,7 +335,7 @@ export class MockApiClient implements ApiClient {
   async proposeAgreementTime(proposalId: string, scheduledAt: string, scheduledText: string): Promise<AgreementTimeProposal> {
     await delay(60);
     const me = chatRepository.currentUserId;
-    if (Date.parse(scheduledAt) <= Date.now()) throw new Error('Velg et tidspunkt fram i tid.');
+    if (Date.parse(scheduledAt) <= Date.now()) throw new UserError('Velg et tidspunkt fram i tid.');
     extras.time.forEach((t) => {
       if (t.proposalId === proposalId && t.status === 'PENDING') t.status = t.proposedBy === me ? 'WITHDRAWN' : 'DECLINED';
     });
@@ -346,9 +347,9 @@ export class MockApiClient implements ApiClient {
   async respondAgreementTime(id: string, answer: 'ACCEPT' | 'DECLINE' | 'WITHDRAW'): Promise<AgreementTimeProposal> {
     await delay(60);
     const row = extras.time.find((t) => t.id === id);
-    if (!row || row.status !== 'PENDING') throw new Error('Forslaget er allerede besvart.');
+    if (!row || row.status !== 'PENDING') throw new UserError('Forslaget er allerede besvart.');
     const mine = row.proposedBy === chatRepository.currentUserId;
-    if (answer === 'WITHDRAW' ? !mine : mine) throw new Error('Den andre må svare på forslaget.');
+    if (answer === 'WITHDRAW' ? !mine : mine) throw new UserError('Den andre må svare på forslaget.');
     row.status = answer === 'ACCEPT' ? 'ACCEPTED' : answer === 'DECLINE' ? 'DECLINED' : 'WITHDRAWN';
     if (answer === 'ACCEPT') {
       const a = chatRepository.getAgreement(row.proposalId);
@@ -384,7 +385,7 @@ export class MockApiClient implements ApiClient {
 
   async linkGuardian(code: string): Promise<string> {
     await delay(20);
-    if (code.replace(/\s/g, '').toUpperCase() !== 'ABC234') throw new Error('Koden er feil eller har utløpt. Be om en ny kode.');
+    if (code.replace(/\s/g, '').toUpperCase() !== 'ABC234') throw new UserError('Koden er feil eller har utløpt. Be om en ny kode.');
     extras.guardian.youths.push({ id: `link-${extras.guardian.youths.length + 1}`, name: 'Ola N.', age: 16 });
     return 'Ola N.';
   }
@@ -458,7 +459,7 @@ export class MockApiClient implements ApiClient {
   async getProfile(id: string): Promise<PublicProfile> {
     await delay(150);
     const profile = profileRepository.getProfile(id);
-    if (!profile) throw new Error('Fant ikke profilen.');
+    if (!profile) throw new UserError('Fant ikke profilen.');
     // Like the database (0057): phone and home notes are never part of someone else's
     // profile – they come from getSharedContact.
     const own = id === profileRepository.currentUserId;
@@ -748,7 +749,7 @@ export class MockApiClient implements ApiClient {
     await delay(120);
     const me = profileRepository.currentUserId;
     const id = neighbourhoodStore.info(municipality, place, me).id;
-    if (!id) throw new Error('Fant ikke nabolaget.');
+    if (!id) throw new UserError('Fant ikke nabolaget.');
     neighbourhoodStore.joinById(id, me);
     return neighbourhoodStore.info(municipality, place, me);
   }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
@@ -123,7 +124,7 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   // the time can be moved until the job is done
   const canMoveTime = !cancelled && !finished && ls !== 'COMPLETION_SENT';
   const pendingTime = canMoveTime && timeProposal?.status === 'PENDING' ? timeProposal : null;
-  const errorText = (e: unknown) => (e instanceof Error && e.message ? e.message : nb.toast.genericError);
+  const errorText = (e: unknown) => (serverMessage(e, nb.toast.genericError));
 
   const sendTime = (whenText: string, iso: string) => {
     proposeTime.mutate(

@@ -5,6 +5,7 @@ import type {
   Proposal,
 } from '@/domain/types';
 import { transition, type ProposalEvent, type Actor } from '@/domain/proposalMachine';
+import { UserError } from '@/lib/errors';
 import nb from '@/i18n/nb';
 import { safetyStore } from './safetyStore';
 import { repositories } from './repositories';
@@ -62,9 +63,9 @@ export const chatRepository = {
     if (existing) return existing;
 
     const listing = repositories.listings.get(listingId);
-    if (!listing) throw new Error('Fant ikke oppføringen.');
+    if (!listing) throw new UserError('Fant ikke oppføringen.');
     if (listing.owner.id === CURRENT_USER_ID) {
-      throw new Error('Du kan ikke kontakte deg selv.');
+      throw new UserError('Du kan ikke kontakte deg selv.');
     }
 
     const conv: Conversation = {
@@ -121,7 +122,7 @@ export const chatRepository = {
     patch: { priceAmountMinor?: number; scheduledText?: string; message?: string; caveats?: string },
   ): Proposal {
     const existing = chatRepository.getProposal(proposalId);
-    if (!existing) throw new Error('Fant ikke tilbudet.');
+    if (!existing) throw new UserError('Fant ikke tilbudet.');
 
     const isRecipient = existing.toProfileId === CURRENT_USER_ID;
     const nextStatus = isRecipient
@@ -175,9 +176,9 @@ export const chatRepository = {
     },
   ): Proposal {
     const existing = chatRepository.getProposal(proposalId);
-    if (!existing) throw new Error('Fant ikke tilbudet.');
-    if (existing.fromProfileId !== CURRENT_USER_ID) throw new Error('Ikke tilgang.');
-    if (existing.status !== 'SENT' && existing.status !== 'REVISION_PENDING') throw new Error('Tilbudet kan ikke endres nå.');
+    if (!existing) throw new UserError('Fant ikke tilbudet.');
+    if (existing.fromProfileId !== CURRENT_USER_ID) throw new UserError('Ikke tilgang.');
+    if (existing.status !== 'SENT' && existing.status !== 'REVISION_PENDING') throw new UserError('Tilbudet kan ikke endres nå.');
     const updated: Proposal = {
       ...existing,
       status: 'SENT',
@@ -329,8 +330,8 @@ export const chatRepository = {
    */
   instantBook(listingId: string): { proposalId: string } {
     const listing = repositories.listings.get(listingId);
-    if (!listing) throw new Error('Fant ikke oppføringen.');
-    if (!listing.offer?.instantBook) throw new Error('Direktebooking er ikke tilgjengelig.');
+    if (!listing) throw new UserError('Fant ikke oppføringen.');
+    if (!listing.offer?.instantBook) throw new UserError('Direktebooking er ikke tilgjengelig.');
 
     const conv = chatRepository.findOrCreateConversationForListing(listingId);
     const proposal: Proposal = {
@@ -355,7 +356,7 @@ export const chatRepository = {
     actor: Actor,
   ): { proposal: Proposal; agreement?: AgreementSnapshot } {
     const existing = chatRepository.getProposal(proposalId);
-    if (!existing) throw new Error('Fant ikke tilbudet.');
+    if (!existing) throw new UserError('Fant ikke tilbudet.');
 
     const nextStatus = transition(existing.status, event, actor);
     const updated: Proposal = {
@@ -423,7 +424,7 @@ export const chatRepository = {
 
   cancelAgreement(proposalId: string, reason?: string): Proposal {
     const existing = chatRepository.getProposal(proposalId);
-    if (!existing) throw new Error('Fant ikke tilbudet.');
+    if (!existing) throw new UserError('Fant ikke tilbudet.');
     const actor = existing.fromProfileId === CURRENT_USER_ID ? 'PROPOSER' : 'RECIPIENT';
     const updated: Proposal = { ...existing, status: transition(existing.status, 'CANCEL', actor) };
     // the avtale is off: the oppdrag is looking for help again

@@ -202,7 +202,9 @@ const styles = StyleSheet.create({
   intro: { alignItems: 'center', gap: 8, paddingVertical: 12 },
   logobox: { width: 64, height: 64, borderRadius: 20, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   logo: { width: 46, height: 46 },
-  center: { textAlign: 'center' },
+  // Full width, then centred line by line: a shrink-wrapped Text in a centred column can
+  // end up narrower than its lines and look left-aligned under the logo.
+  center: { textAlign: 'center', alignSelf: 'stretch', paddingHorizontal: 12 },
   white: { color: colors.white },
   rowMine: { alignItems: 'flex-end', gap: 4 },
   rowTheirs: { alignItems: 'flex-start', gap: 4 },

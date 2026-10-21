@@ -10,6 +10,7 @@ import type {
   VerificationKind,
 } from '@/domain/types';
 import { profiles } from './seed';
+import { UserError } from '@/lib/errors';
 import { notificationsSeed, reviewsSeed } from './seedProfile';
 import { repositories } from './repositories';
 
@@ -131,7 +132,7 @@ export const profileRepository = {
    */
   replyToReview(reviewId: string, reply: string): Review {
     const r = reviews.find((x) => x.id === reviewId);
-    if (!r || r.toProfileId !== CURRENT_USER_ID) throw new Error('Ikke tilgang.');
+    if (!r || r.toProfileId !== CURRENT_USER_ID) throw new UserError('Ikke tilgang.');
     const next = { ...r, reply: reply.trim(), repliedAt: new Date().toISOString() };
     reviews = reviews.map((x) => (x.id === reviewId ? next : x));
     return next;

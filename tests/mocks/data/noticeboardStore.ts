@@ -1,4 +1,5 @@
 import type { NoticeboardPost, NoticeComment, NoticeKind } from '@/domain/types';
+import { UserError } from '@/lib/errors';
 import { profileRepository } from './profileRepository';
 
 const SEED: NoticeboardPost[] = [
@@ -77,7 +78,7 @@ export const noticeboardStore = {
   get: (id: string): NoticeboardPost | undefined => posts.find((p) => p.id === id),
   update(id: string, patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; done?: boolean }): NoticeboardPost {
     const cur = posts.find((p) => p.id === id);
-    if (!cur || cur.authorProfileId !== profileRepository.currentUserId) throw new Error('Ikke tilgang.');
+    if (!cur || cur.authorProfileId !== profileRepository.currentUserId) throw new UserError('Ikke tilgang.');
     const next: NoticeboardPost = {
       ...cur,
       kind: patch.kind ?? cur.kind,
@@ -93,8 +94,8 @@ export const noticeboardStore = {
   comments: (noticeId: string): NoticeComment[] => comments.filter((c) => c.noticeId === noticeId),
   addComment(noticeId: string, body: string, authorProfileId = profileRepository.currentUserId): NoticeComment {
     const post = posts.find((p) => p.id === noticeId);
-    if (!post) throw new Error('Fant ikke oppslaget.');
-    if (post.doneAt) throw new Error('Oppslaget er avsluttet.');
+    if (!post) throw new UserError('Fant ikke oppslaget.');
+    if (post.doneAt) throw new UserError('Oppslaget er avsluttet.');
     const c: NoticeComment = { id: `nc-${Date.now()}-${seq++}`, noticeId, authorProfileId, body: body.trim(), createdAt: new Date().toISOString() };
     comments = [...comments, c];
     return c;

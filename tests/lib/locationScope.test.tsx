@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationScope, useLocationScope } from '@/lib/locationScope';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+  // gcTime: Infinity – the default 5-minute clean-up timers kept the Jest worker alive
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } })}>{children}</QueryClientProvider>
 );
 
 beforeEach(async () => {

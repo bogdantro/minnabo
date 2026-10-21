@@ -4,6 +4,21 @@ import { useSession } from '@/auth/session';
 import { safePush } from '@/lib/nav';
 import { useUnreadConversationCount, useUnreadNotificationCount } from '@/api/queries';
 import { registerForPush } from '@/lib/notifications';
+import nb from '@/i18n/nb';
+
+/**
+ * The «Hvordan gikk det?» push the day after a job (0069) carries this category, which
+ * gives it star buttons. Must match REVIEW_CATEGORY in supabase/functions/send-push.
+ * Three buttons, because Android shows no more than three.
+ */
+export const REVIEW_CATEGORY = 'review';
+const STAR_ACTIONS: Record<string, number> = { 'stars-5': 5, 'stars-4': 4 };
+
+/** '/vurder/p1' + 'stars-5' → '/vurder/p1?stjerner=5'. Anything else stays as it was. */
+export function reviewRouteFor(route: string, action: string): string {
+  const stars = STAR_ACTIONS[action];
+  return stars && route.startsWith('/vurder/') ? `${route}?stjerner=${stars}` : route;
+}
 
 /** Keeps the number on the app icon in step with what is unread (pushes set it while the app is closed). */
 function BadgeSync() {
@@ -61,11 +76,19 @@ export function PushBridge() {
       const route = (data as { route?: unknown } | null)?.route;
       return typeof route === 'string' && route.startsWith('/') ? route : '/varsler';
     };
-    const sub = Notifications.addNotificationResponseReceivedListener((r) => safePush(routeOf(r.notification.request.content.data)));
+    // star buttons on the review reminder (registered once; harmless to repeat)
+    void Notifications.setNotificationCategoryAsync?.(REVIEW_CATEGORY, [
+      { identifier: 'stars-5', buttonTitle: nb.reviewReminder.fiveStars, options: { opensAppToForeground: true } },
+      { identifier: 'stars-4', buttonTitle: nb.reviewReminder.fourStars, options: { opensAppToForeground: true } },
+      { identifier: 'write', buttonTitle: nb.reviewReminder.write, options: { opensAppToForeground: true } },
+    ])?.catch(() => undefined);
+    const targetOf = (r: import('expo-notifications').NotificationResponse) =>
+      reviewRouteFor(routeOf(r.notification.request.content.data), r.actionIdentifier);
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => safePush(targetOf(r)));
     // the tap that started the app
     void Notifications.getLastNotificationResponseAsync?.()
       .then((r) => {
-        if (r) setPending(routeOf(r.notification.request.content.data));
+        if (r) setPending(targetOf(r));
       })
       .catch(() => undefined);
     return () => sub.remove();

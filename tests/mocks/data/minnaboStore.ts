@@ -1,4 +1,5 @@
 import type { MinNaboMessage } from '@/api/ApiClient';
+import { UserError } from '@/lib/errors';
 
 type Poll = { options: string[]; closed: boolean; votes: Map<string, number> };
 
@@ -41,14 +42,14 @@ export const minnaboStore = {
   },
   reply(body: string): void {
     const text = body.trim();
-    if (!text) throw new Error('Skriv en melding.');
+    if (!text) throw new UserError('Skriv en melding.');
     messages = [...messages, { id: `mn-${++seq}`, fromAdmin: false, body: text, createdAt: new Date().toISOString(), kind: 'MESSAGE' }];
   },
   vote(broadcastId: string, option: number, me: string): void {
     const poll = polls.get(broadcastId);
-    if (!poll) throw new Error('Fant ikke spørsmålet.');
-    if (poll.closed) throw new Error('Avstemningen er avsluttet.');
-    if (option < 1 || option > poll.options.length) throw new Error('Ugyldig valg.');
+    if (!poll) throw new UserError('Fant ikke spørsmålet.');
+    if (poll.closed) throw new UserError('Avstemningen er avsluttet.');
+    if (option < 1 || option > poll.options.length) throw new UserError('Ugyldig valg.');
     poll.votes.set(me, option);
   },
   markRead(): void {

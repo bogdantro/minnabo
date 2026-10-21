@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { useActiveCategories } from '@/hooks/useCategories';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -90,6 +91,8 @@ import {
 
 const LAST = 9;
 const MAX_PHOTOS = 6;
+/** Autosave the draft this long after the last change. */
+const AUTOSAVE_MS = 600;
 
 /** "/" and long words wrap nicely in the 3-column grid. */
 const tileLabel = (l: string) => l.replace('/', '/​').replace('Arrangementshjelp', 'Arrangements­hjelp');
@@ -224,11 +227,48 @@ export function LeggUtWizard() {
     setS((p) => ({ ...p, kommune: me.municipality ?? '' }));
   }
 
+  // ------------------------------------------------------------
+  // Autosave – the phone can close the app at any time (a call, low memory), so the
+  // draft is kept without a tap on «Lagre utkast»: shortly after each change, and
+  // straight away when the app goes to the background. Only after the person has
+  // changed something (opening Legg ut leaves no draft), never when editing a
+  // published oppdrag, and never again after «Forkast utkastet».
+  // ------------------------------------------------------------
+  const touched = useRef(false);
+  const discarded = useRef(false);
+  // only unsaved changes are written – after publishing, going to the background must
+  // not bring the published oppdrag back as a draft
+  const dirty = useRef(false);
+  const latest = useRef({ s, step });
+  // declared before the autosave effect below, so it always sees the newest values
+  useEffect(() => {
+    latest.current = { s, step };
+  }, [s, step]);
+  const flush = useCallback(() => {
+    if (editing || !dirty.current || discarded.current) return;
+    dirty.current = false;
+    void wizardDraft.save(latest.current.s, latest.current.step);
+  }, [editing]);
+  useEffect(() => {
+    if (!touched.current) return;
+    dirty.current = true;
+    const t = setTimeout(flush, AUTOSAVE_MS);
+    return () => clearTimeout(t);
+  }, [s, step, flush]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') flush();
+    });
+    return () => sub.remove();
+  }, [flush]);
+
   const edit = (patch: Partial<WizardState>) => {
+    touched.current = true;
     setS((p) => ({ ...p, ...patch }));
     setErr(null);
   };
   const go = (n: number, d: 'forward' | 'back', returning = false) => {
+    touched.current = true;
     setErr(null);
     setDir(d);
     setRet(returning);
@@ -306,12 +346,13 @@ export function LeggUtWizard() {
       const urls = (await pickAndUploadMany({ bucket: 'listing-images', folder: userId, max: room, onStart: setUploading })).map((r) => r.publicUrl);
       setUploading(0);
       if (!urls.length) return;
+      touched.current = true;
       setS((p) => ({ ...p, photos: [...p.photos, ...urls].slice(0, MAX_PHOTOS) }));
       const n = s.photos.length + urls.length;
       toast.success(n >= MAX_PHOTOS ? nb.wizard.photoAddedMax : nb.wizard.photosAdded(urls.length), { icon: 'image', bottom: 130 });
     } catch (e) {
       setUploading(0);
-      toast.error(e instanceof Error ? e.message : nb.wizard.photoFailed, { bottom: 130 });
+      toast.error(serverMessage(e, nb.wizard.photoFailed), { bottom: 130 });
     }
   };
 
@@ -1058,6 +1099,7 @@ export function LeggUtWizard() {
               accessibilityRole="button"
               style={styles.discard}
               onPress={async () => {
+                discarded.current = true;
                 await wizardDraft.clear();
                 setCloseOpen(false);
                 if (router.canGoBack()) router.back();

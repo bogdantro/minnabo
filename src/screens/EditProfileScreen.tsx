@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { useCategoryCatalog } from '@/hooks/useCategories';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { PublicProfile } from '@/domain/types';
-import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
 import { categoryArtId } from '@/domain/categories';
 import { PortfolioManager } from '@/components/profile/PortfolioManager';
@@ -66,7 +66,8 @@ const snap = (f: Form) =>
   JSON.stringify([f.dn, f.bio, f.kom, f.area, f.notes, f.avatarPath, f.portfolio, [...f.skills].sort(), [...f.languages].sort(), f.hasCar, f.availability]);
 
 function initialForm(profile: PublicProfile): Form {
-  const kom = profile.location.municipality || 'Lillehammer';
+  // no fallback: saving must never move someone to a kommune they didn't choose
+  const kom = profile.location.municipality ?? '';
   const place = profile.location.place;
   return {
     dn: profile.displayName,
@@ -135,7 +136,7 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
       set({ avatarPath: res.path });
       toast.success(source === 'camera' ? nb.editProfile.photoTaken : nb.editProfile.photoPicked, { icon: source === 'camera' ? 'camera' : 'image', bottom: 150 });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : nb.toast.avatarFailed, { bottom: 150 });
+      toast.error(serverMessage(e, nb.toast.avatarFailed), { bottom: 150 });
     } finally {
       setBusy(null);
     }
@@ -151,12 +152,12 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
   const save = () => {
     if (!canSave) return;
     const place = form.area === WHOLE_KOMMUNE ? form.kom : form.area;
+    const where = form.kom ? { municipality: form.kom, place } : {};
     update.mutate(
       {
         displayName: form.dn.trim(),
         presentation: form.bio.trim(),
-        municipality: form.kom,
-        place,
+        ...where,
         homeNotes: form.notes.trim(),
         portfolio: form.portfolio,
         categorySlugs: form.skills,
@@ -307,8 +308,14 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
           <FadeUp delay={140} style={[styles.sec, shadow.card]}>
             <SecHead icon="pin" bg={colors.limeTint} fg={colors.limeDeep} title={nb.editProfile.secWhere} />
             <Field label={nb.editProfile.kommune}>
-              <SelectBox value={form.kom} onPress={() => setKomOpen(true)} accessibilityLabel={`${nb.editProfile.kommune}: ${form.kom}`} />
+              <SelectBox
+                value={form.kom}
+                placeholder={nb.editProfile.pickKommune}
+                onPress={() => setKomOpen(true)}
+                accessibilityLabel={form.kom ? `${nb.editProfile.kommune}: ${form.kom}` : nb.editProfile.pickKommune}
+              />
             </Field>
+            {form.kom ? (
             <Field label={nb.editProfile.area} hint={nb.editProfile.areaHint}>
               <View style={styles.wrap8}>
                 {areas.map((a) => (
@@ -326,6 +333,7 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
                 </Text>
               </View>
             </Field>
+            ) : null}
           </FadeUp>
 
           {/* skills – not in RedigerProfil.dc.html; ForMeg's "Endre" link lands here */}
@@ -428,7 +436,7 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
 
       <Sheet visible={komOpen} onClose={() => setKomOpen(false)} title={nb.editProfile.pickKommune} scroll heightRatio={0.7}>
         {/* the launch kommuner; a kommune saved earlier stays in the list */}
-        {[...new Set([...LAUNCH_KOMMUNER, form.kom])].map((k) => (
+        {[...new Set([...LAUNCH_KOMMUNER, form.kom])].filter(Boolean).map((k) => (
           <Pressable
             key={k}
             accessibilityRole="radio"

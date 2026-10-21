@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -129,7 +130,9 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
 
   // the server says why when the other person has blocked you; otherwise a plain "try again"
   const sendFailed = (e: unknown) =>
-    toast.error(e instanceof Error && /kan ikke sende meldinger/i.test(e.message) ? nb.chat.blockedByThem : nb.toast.genericError, { bottom: 150 });
+    toast.error(e instanceof Error && /kan ikke sende meldinger/i.test(e.message) ? nb.chat.blockedByThem : serverMessage(e, nb.toast.genericError), {
+      bottom: 150,
+    });
   const send = (t: string) => {
     atBottom.current = true;
     setSelected(null);

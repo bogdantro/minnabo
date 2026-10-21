@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';
 import type { NoticeComment, NoticeKind, NoticeboardPost } from '@/domain/types';
-import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
 import {
   useCreateNoticeboardPost,
@@ -400,7 +400,7 @@ function Comments({ post, meId, onReport }: { post: NoticeboardPost; meId: strin
         setDraft('');
         haptics.light();
       },
-      onError: (e) => toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError),
+      onError: (e) => toast.error(serverMessage(e, nb.toast.genericError)),
     });
   };
 
@@ -551,7 +551,7 @@ function ComposeSheet({
       const res = await pickAndUpload({ bucket: 'listing-images', folder: userId, source: 'library' });
       if (res) setPhoto({ path: res.path, url: res.publicUrl });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : nb.toast.genericError);
+      toast.error(serverMessage(e, nb.toast.genericError));
     } finally {
       setBusy(false);
     }

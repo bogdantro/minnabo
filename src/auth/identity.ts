@@ -28,11 +28,14 @@ const initialsOf = (name: string) =>
     .toUpperCase() || 'N';
 
 function toIdentity(a: MyAccount): VippsIdentity | null {
-  if (!a.vipps || !a.fullName) return null;
+  // Only a missing Vipps link means "no identity". A missing name must not hide the rest –
+  // above all the youth flag, which decides what the person may do.
+  if (!a.vipps) return null;
+  const name = a.fullName ?? '';
   return {
-    name: a.fullName,
-    firstName: a.fullName.split(' ')[0],
-    initials: initialsOf(a.fullName),
+    name,
+    firstName: name.split(' ')[0],
+    initials: initialsOf(name),
     birthYear: a.birthYear ?? 0,
     age: a.age ?? 0,
     phoneMasked: a.phoneMasked ?? '',
@@ -40,8 +43,9 @@ function toIdentity(a: MyAccount): VippsIdentity | null {
   };
 }
 
-function useSupabaseUserId(): string | null {
-  const [id, setId] = useState<string | null>(null);
+/** The signed-in user's id; null when nobody is signed in, undefined until that is known. */
+function useSupabaseUserId(): string | null | undefined {
+  const [id, setId] = useState<string | null | undefined>(undefined);
   useEffect(() => {
     let active = true;
     supabase.auth.getSession().then(({ data }) => active && setId(data.session?.user?.id ?? null));
@@ -74,9 +78,13 @@ export function useVippsIdentity(): VippsIdentity | null {
   return account.data ? toIdentity(account.data) : null;
 }
 
-/** True once we know whether the signed-in account is a youth account. */
+/**
+ * True once we know whether the signed-in account is a youth account. Not before the
+ * session itself is known: "ready" with no answer yet sent youths to the adult tabs.
+ */
 export function useAccountReady(): boolean {
   const userId = useSupabaseUserId();
   const account = useMyAccount();
-  return !userId || !account.isLoading;
+  if (userId === undefined) return false;
+  return userId === null || !account.isPending;
 }

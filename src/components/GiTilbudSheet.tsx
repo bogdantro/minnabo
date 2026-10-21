@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Listing, Proposal } from '@/domain/types';
@@ -170,7 +171,7 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
       setStep(3);
       onSent(id);
     } catch (e) {
-      toast.error(editing && e instanceof Error && e.message ? e.message : nb.giTilbud.sendFailed);
+      toast.error(editing ? serverMessage(e, nb.giTilbud.sendFailed) : nb.giTilbud.sendFailed);
     } finally {
       setSending(false);
     }

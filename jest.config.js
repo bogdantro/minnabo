@@ -16,5 +16,4 @@ module.exports = {
   // Fewer workers keeps RNTL waitFor() timers reliable on a loaded machine.
   maxWorkers: '50%',
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/tests/testUtils.tsx', '<rootDir>/tests/fileMock.js'],
-  forceExit: true,
 };

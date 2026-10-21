@@ -4,7 +4,8 @@ import { useConversationChannel } from '@/api/realtime';
 import { supabase } from '@/lib/supabase';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+  // gcTime: Infinity – the default 5-minute clean-up timers kept the Jest worker alive
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } })}>{children}</QueryClientProvider>
 );
 
 test('useConversationChannel subscribes to the conversation', async () => {

@@ -107,7 +107,18 @@ test('"Bruk posisjonen min" picks the kommune and keeps the kommune list out of 
   expect(screen.queryByText('Hamar')).toBeNull();
 });
 
-test('Hvor bor du? asks for the position first – the kommune list only shows when that fails', async () => {
+test('the place step asks which kommune you are in – no Område, that comes later with Nabolag', async () => {
+  await toPlaceStep();
+  expect(screen.getByText('Hvilken kommune er du i?')).toBeTruthy();
+  expect(screen.queryByText('Hvor bor du?')).toBeNull();
+  await fireEvent.press(screen.getByText(nb.setup.locIdle));
+  await screen.findAllByText('Fant deg: Lillehammer kommune');
+  expect(screen.queryByLabelText('Område')).toBeNull();
+  await fireEvent.press(screen.getByText('Fullfør'));
+  await waitFor(() => expect(savedProfile()).toMatchObject({ municipality: 'Lillehammer', place: 'Lillehammer' }));
+});
+
+test('the place step asks for the position first – the kommune list only shows when that fails', async () => {
   jest.mocked(Location.getForegroundPermissionsAsync).mockResolvedValueOnce({ granted: false, canAskAgain: true } as never);
   jest.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValueOnce({ granted: false } as never);
   await toPlaceStep();

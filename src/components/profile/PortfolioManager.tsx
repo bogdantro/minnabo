@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
 import { useAddPortfolioItem, usePortfolio, useRemovePortfolioItem } from '@/api/queries';
@@ -93,7 +94,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
               haptics.success();
               toast.success(t.portAdded, { icon: 'image', bottom: 150 });
             },
-            onError: (e) => toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError),
+            onError: (e) => toast.error(serverMessage(e, nb.toast.genericError)),
           })
         }
       />
@@ -129,7 +130,7 @@ function AddSheet({
       const res = await pickAndUpload({ bucket: 'listing-images', folder: userId, source: 'library' });
       if (res) (which === 'before' ? setBefore : setAfter)({ path: res.publicUrl, uri: res.localUri ?? res.publicUrl });
     } catch (e) {
-      toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError);
+      toast.error(serverMessage(e, nb.toast.genericError));
     } finally {
       setBusy(null);
     }

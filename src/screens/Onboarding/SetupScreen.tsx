@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,7 +28,7 @@ import { toast } from '@/lib/toast';
 import { reportError } from '@/lib/reporting';
 import { KommuneWaitlist } from '@/components/KommuneWaitlist';
 import { DisplayNamePicker } from '@/components/DisplayNamePicker';
-import { KOMMUNE_AREAS, LAUNCH_KOMMUNER } from '@/data/kommuner';
+import { LAUNCH_KOMMUNER } from '@/data/kommuner';
 import { colors, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { KeyboardAvoider } from '@/components/ui/KeyboardAvoider';
 import {
@@ -166,7 +167,6 @@ export function SetupScreen() {
   // The kommune list stays hidden until the position fails or the person says it's wrong.
   const [manual, setManual] = useState(false);
   const [q, setQ] = useState('');
-  const [area, setArea] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [shakeN, setShakeN] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -187,7 +187,6 @@ export function SetupScreen() {
     const needle = q.trim().toLowerCase();
     return LAUNCH_KOMMUNER.filter((k) => !needle || k.toLowerCase().includes(needle));
   }, [q]);
-  const areas = KOMMUNE_AREAS[kommune ?? 'Lillehammer'] ?? [];
 
   const fail = (msg: string) => {
     setErr(msg);
@@ -222,7 +221,8 @@ export function SetupScreen() {
           initials: initialsOf(name) || 'N',
           purpose: role,
           municipality: kommune,
-          place: area.trim() || kommune,
+          // Område is chosen later (Innstillinger, Nabolag) – onboarding only asks for the kommune
+          place: kommune,
           ...(photo?.path ? { avatar_path: photo.path } : {}),
           onboarded_at: now,
           updated_at: now,
@@ -329,9 +329,7 @@ export function SetupScreen() {
     reportError(e, { where: 'SetupScreen.photo' });
 
     toast.error(
-      e instanceof Error && e.message
-        ? e.message
-        : nb.setup.photoFailed,
+      serverMessage(e, nb.setup.photoFailed),
       { bottom: 130 },
     );
   } finally {
@@ -340,7 +338,7 @@ export function SetupScreen() {
 };
 
   if (step === 4) {
-    return <Done name={name} role={role ?? 'BOTH'} kommune={kommune ?? ''} area={area.trim()} hasPhoto={!!photo} />;
+    return <Done name={name} role={role ?? 'BOTH'} kommune={kommune ?? ''} hasPhoto={!!photo} />;
   }
 
   const initials = initialsOf(name) || '?';
@@ -623,7 +621,6 @@ export function SetupScreen() {
                           selected={on}
                           accessibilityLabel={k}
                           onPress={() => {
-                            if (kommune && kommune !== k) setArea('');
                             setKommune(k);
                             setErr(null);
                           }}
@@ -649,33 +646,6 @@ export function SetupScreen() {
                   <View style={styles.waitlist}>
                     <KommuneWaitlist initial={kommuner.length === 0 ? q.trim() : undefined} />
                   </View>
-                </>
-              ) : null}
-
-              {kommune ? (
-                <>
-                  <Field label={nb.setup.area} hint={nb.setup.optional} style={styles.mt22}>
-                    <Input
-                      icon="pin"
-                      value={area}
-                      onChangeText={setArea}
-                      placeholder={nb.setup.areaPlaceholder}
-                      accessibilityLabel={nb.setup.area}
-                    />
-                  </Field>
-                  {areas.length ? (
-                    <View style={styles.chips}>
-                      {areas.map((a) => (
-                        <Chip
-                          key={a}
-                          label={a}
-                          size="sm"
-                          selected={area === a}
-                          onPress={() => setArea(area === a ? '' : a)}
-                        />
-                      ))}
-                    </View>
-                  ) : null}
                 </>
               ) : null}
 
@@ -733,13 +703,11 @@ function Done({
   name,
   role,
   kommune,
-  area,
   hasPhoto,
 }: {
   name: string;
   role: Purpose;
   kommune: string;
-  area: string;
   hasPhoto: boolean;
 }) {
   const router = useRouter();
@@ -748,7 +716,7 @@ function Done({
   const summary: { icon: IconKey; t: string }[] = [
     { icon: 'user', t: name },
     { icon: role === 'WANT_JOBS' ? 'hand' : role === 'NEED_HELP' ? 'clip' : 'repeat', t: nb.setup.roles[role].summary },
-    { icon: 'pin', t: (area ? `${area}, ` : '') + kommune },
+    { icon: 'pin', t: nb.setup.locDone(kommune) },
   ];
   if (hasPhoto) summary.push({ icon: 'camera', t: nb.setup.photoAdded });
 

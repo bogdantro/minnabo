@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { useActiveCategories } from '@/hooks/useCategories';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -119,13 +120,21 @@ export function YouthAppScreen() {
     setReach(r);
     toast.success(nb.oppdrag.showing(nb.oppdrag.reach[r].name, k), { icon: 'pin' });
   };
-  const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
+  // Without a kommune there is no filter – that would list every oppdrag in the country.
+  const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST', municipalities.length > 0);
 
   const [view, setView] = useState<View4>('oppdrag');
   const [guardian, setGuardian] = useState(false);
   const [cat, setCat] = useState<CategoryId | null>(null);
   const { userId } = useSession();
   const { data: profile } = useProfile(userId ?? '');
+  // Youth accounts skip Oppsett: ask for the kommune the first time the app opens without
+  // one – only once the profile has loaded, so a saved kommune never flashes the sheet.
+  const [askedKommune, setAskedKommune] = useState(false);
+  if (profile && !profile.location.municipality && !askedKommune) {
+    setAskedKommune(true);
+    setLocOpen(true);
+  }
   const qc = useQueryClient();
   const startConversation = useStartConversation();
   const sent = useSentProposals(!!userId);
@@ -182,7 +191,7 @@ export function YouthAppScreen() {
       refreshOffers();
       toast.success(nb.youth.withdrawn);
     } catch (e) {
-      toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError);
+      toast.error(serverMessage(e, nb.toast.genericError));
     }
   };
   const sentIds = new Set(offers.filter((o) => o.status !== 'trukket').map((o) => o.listingId));
@@ -231,7 +240,7 @@ export function YouthAppScreen() {
       })
       .catch((e: unknown) => {
         setStep('form');
-        toast.error(e instanceof Error && e.message ? e.message : nb.giTilbud.sendFailed);
+        toast.error(serverMessage(e, nb.giTilbud.sendFailed));
       });
   };
 

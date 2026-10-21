@@ -180,7 +180,8 @@ test('the counterpart has confirmed; confirming completes the job and offers the
   await renderWithProviders(<CompletionScreen proposalId="p-martin-flytting" />);
   await waitFor(() => expect(screen.getByText('Jeg bekrefter at jobben er utført')).toBeTruthy());
   expect(screen.getByText('Venter på deg')).toBeTruthy();
-  expect(screen.getByText(/Martin har markert jobben som ferdig/)).toBeTruthy();
+  // who confirmed and Martin's name load after the button – wait instead of racing them
+  expect(await screen.findByText(/Martin har markert jobben som ferdig/)).toBeTruthy();
   expect(screen.queryByText('Gi vurdering')).toBeNull();
 
   await fireEvent.press(screen.getByText('Jeg bekrefter at jobben er utført'));
@@ -218,4 +219,19 @@ test('submitting a review needs stars, records tags and "Anbefaler", then shows 
   expect(mine?.tags).toEqual(expect.arrayContaining(['Punktlig', 'Anbefales']));
   expect(await screen.findByText('Takk for vurderingen!')).toBeTruthy();
   expect(screen.getByText('Anbefaler')).toBeTruthy();
+});
+
+test('Rediger profil never fills in a kommune the person did not choose', async () => {
+  const real = apiClient.getProfile.bind(apiClient);
+  jest.spyOn(apiClient, 'getProfile').mockImplementation(async (id: string) => {
+    const p = await real(id);
+    return { ...p, location: { ...p.location, municipality: '', place: '' } };
+  });
+  const update = jest.spyOn(apiClient, 'updateProfile');
+  await renderWithProviders(<EditProfileScreen />);
+  await fireEvent.changeText(await screen.findByLabelText('Presentasjon'), 'Hjelper gjerne med hagen.');
+  await fireEvent.press(screen.getByRole('button', { name: 'Lagre endringer' }));
+  await waitFor(() => expect(update).toHaveBeenCalled());
+  expect(update.mock.calls[0][0]).not.toHaveProperty('municipality', 'Lillehammer');
+  expect(update.mock.calls[0][0].municipality).toBeUndefined();
 });

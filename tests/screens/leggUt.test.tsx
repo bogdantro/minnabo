@@ -75,3 +75,61 @@ test('Forhåndsvisning publishes and goes straight to Publisert', async () => {
   // No extra "Fortsett" tap – publishing goes straight to Publisert.
   await waitFor(() => expect(router.replace).toHaveBeenCalledWith(expect.stringMatching(/^\/legg-ut\/publisert\?id=/)), { timeout: 5000 });
 });
+
+// ------------------------------------------------------------
+// Drafts are kept without a tap on «Lagre» – the app can be closed by the
+// phone at any time (a call, low memory), and the oppdrag must still be there.
+// ------------------------------------------------------------
+describe('Legg ut keeps a draft by itself', () => {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const DRAFT_KEY = 'minnabo.leggUt.draft.v3';
+  const draft = async () => JSON.parse((await AsyncStorage.getItem(DRAFT_KEY)) ?? 'null');
+
+  beforeEach(() => AsyncStorage.removeItem(DRAFT_KEY));
+
+  test('what was typed is saved shortly after, and is back when the wizard opens again', async () => {
+    const first = await renderWithProviders(<LeggUtWizard />);
+    await fireEvent.press(screen.getByLabelText('Hage'));
+    await fireEvent.press(screen.getByText('Neste'));
+    await fireEvent.changeText(screen.getByLabelText('Tittel'), 'Rake løv i hagen');
+    await waitFor(async () => expect((await draft())?.state.title).toBe('Rake løv i hagen'), { timeout: 3000 });
+
+    await first.unmount(); // the app was closed – nobody tapped «Lagre utkast»
+    await renderWithProviders(<LeggUtWizard />);
+    expect(await screen.findByDisplayValue('Rake løv i hagen')).toBeTruthy();
+  });
+
+  test('just opening Legg ut leaves no draft behind', async () => {
+    await renderWithProviders(<LeggUtWizard />);
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(await draft()).toBeNull();
+  });
+
+  test('«Forkast» throws the draft away for good', async () => {
+    await renderWithProviders(<LeggUtWizard />);
+    await fireEvent.press(screen.getByLabelText('Hage'));
+    await waitFor(async () => expect(await draft()).not.toBeNull(), { timeout: 3000 });
+    await fireEvent.press(screen.getAllByLabelText('Lukk')[0]); // the X at the top
+    await fireEvent.press(await screen.findByText('Forkast utkastet'));
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(await draft()).toBeNull();
+  });
+});
+
+test('after publishing, the app going to the background does not bring the oppdrag back as a draft', async () => {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const { AppState } = require('react-native');
+  const { wizardDraft } = require('@/screens/LeggUt/wizardModel');
+  const listeners: ((s: string) => void)[] = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_e: unknown, l: unknown) => {
+    listeners.push(l as (s: string) => void);
+    return { remove: () => undefined };
+  });
+  await renderWithProviders(<LeggUtWizard />);
+  await fireEvent.press(screen.getByLabelText('Hage'));
+  await waitFor(async () => expect(await AsyncStorage.getItem('minnabo.leggUt.draft.v3')).not.toBeNull(), { timeout: 3000 });
+  await wizardDraft.clear(); // what Forhåndsvisning does when the oppdrag is published
+  listeners.forEach((l) => l('background'));
+  await new Promise((r) => setTimeout(r, 50));
+  expect(await AsyncStorage.getItem('minnabo.leggUt.draft.v3')).toBeNull();
+});

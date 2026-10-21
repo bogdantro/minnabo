@@ -8,8 +8,10 @@ const metrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
+// gcTime: Infinity – a cache's clean-up timers (5 minutes by default) kept Jest workers
+// alive after the tests had finished («A worker process has failed to exit gracefully»).
 export function renderWithProviders(ui: ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: 0 } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: 0, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
   return render(
     <SafeAreaProvider initialMetrics={metrics}>
       <QueryClientProvider client={qc}>{ui}</QueryClientProvider>

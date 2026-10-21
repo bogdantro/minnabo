@@ -32,6 +32,7 @@ const cors = {
 };
 
 const SCOPE = 'openid name phoneNumber birthDate email';
+const VIPPS_DOWN = 'Vipps svarer ikke akkurat nå. Prøv igjen om litt.';
 
 type VippsUser = {
   sub: string;
@@ -83,9 +84,14 @@ Deno.serve(async (req: Request) => {
       ...(msn ? { 'Merchant-Serial-Number': msn } : {}),
       ...(subKey ? { 'Ocp-Apim-Subscription-Key': subKey } : {}),
     };
-    const conf = await fetch(`${base}/access-management-1.0/access/.well-known/openid-configuration`, { headers: extra }).then(
-      (r) => r.json(),
-    );
+    // Where Vipps' login lives. If Vipps can't answer this, nothing else will work either.
+    const conf = (await fetch(`${base}/access-management-1.0/access/.well-known/openid-configuration`, { headers: extra })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)) as { authorization_endpoint?: string; token_endpoint?: string; userinfo_endpoint?: string } | null;
+    if (!conf?.authorization_endpoint || !conf.token_endpoint || !conf.userinfo_endpoint) {
+      console.error('vipps openid-configuration unavailable');
+      return json({ error: VIPPS_DOWN }, 503);
+    }
 
     // --- 0. start: authorize URL with PKCE ----------------------------------
     if (action === 'start') {
@@ -183,7 +189,10 @@ Deno.serve(async (req: Request) => {
         user_metadata: { display_name: displayName(fullName) },
         app_metadata: { provider: 'vipps' },
       });
-      if (error || !created.user) return json({ error: error?.message ?? 'Kunne ikke opprette konto.' }, 500);
+      if (error || !created.user) {
+        console.error('vipps-login createUser', error?.message);
+        return json({ error: 'Kunne ikke opprette kontoen. Prøv igjen.' }, 500);
+      }
       profileId = created.user.id;
     }
 
@@ -197,7 +206,10 @@ Deno.serve(async (req: Request) => {
       birth_date: v.birthdate,
       updated_at: new Date().toISOString(),
     });
-    if (ppErr) return json({ error: ppErr.message }, 500);
+    if (ppErr) {
+      console.error('vipps-login profile_private', ppErr.message);
+      return json({ error: 'Kunne ikke lagre opplysningene fra Vipps. Prøv igjen.' }, 500);
+    }
 
     const now = new Date().toISOString();
     if (v.phone_number) {
@@ -226,12 +238,16 @@ Deno.serve(async (req: Request) => {
     // --- 5. one-time token → session in the app ----------------------------
     const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
     const tokenHash = (link as any)?.properties?.hashed_token as string | undefined;
-    if (linkErr || !tokenHash) return json({ error: linkErr?.message ?? 'Kunne ikke starte økten.' }, 500);
+    if (linkErr || !tokenHash) {
+      console.error('vipps-login generateLink', linkErr?.message);
+      return json({ error: 'Kunne ikke starte økten. Prøv igjen.' }, 500);
+    }
 
     return json({ tokenHash, isNew, youth: age < 18 }, 200);
   } catch (e) {
+    // the details go to the function log; the person gets a message they can act on
     console.error('vipps-login', e);
-    return json({ error: (e as any)?.message ?? 'Ukjent feil.' }, 500);
+    return json({ error: 'Noe gikk galt med innloggingen. Prøv igjen.' }, 500);
   }
 });
 

@@ -8,6 +8,8 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
+const FAILED = 'Kontoen kunne ikke slettes akkurat nå. Prøv igjen om litt.';
+
 Deno.serve(async (req: Request) => {
   const cors = {
     'Access-Control-Allow-Origin': '*',
@@ -30,11 +32,16 @@ Deno.serve(async (req: Request) => {
     if (userErr || !userData.user) return json({ error: 'Ugyldig økt.' }, 401, cors);
 
     const { error: delErr } = await admin.auth.admin.deleteUser(userData.user.id, true);
-    if (delErr) return json({ error: delErr.message }, 500, cors);
+    if (delErr) {
+      console.error('delete-account deleteUser', delErr.message);
+      return json({ error: FAILED }, 500, cors);
+    }
 
     return json({ ok: true }, 200, cors);
   } catch (e) {
-    return json({ error: (e as any)?.message ?? 'Ukjent feil.' }, 500, cors);
+    // the details go to the function log; the person gets a message they can act on
+    console.error('delete-account', e);
+    return json({ error: FAILED }, 500, cors);
   }
 });
 

@@ -1,4 +1,5 @@
 import type { NabolagSummary, NeighbourhoodInfo } from '@/api/ApiClient';
+import { UserError } from '@/lib/errors';
 import { profiles } from './seed';
 
 type Group = { id: string; place: string; municipality: string; createdAt: string; members: string[] };
@@ -57,10 +58,10 @@ export const neighbourhoodStore = {
   },
   joinById(id: string, me: string): void {
     const g = groups.find((x) => x.id === id);
-    if (!g) throw new Error('Fant ikke nabolaget.');
+    if (!g) throw new UserError('Fant ikke nabolaget.');
     if (g.members.includes(me)) return;
     if (groups.filter((x) => x.members.includes(me)).length >= MAX_NABOLAG) {
-      throw new Error('Du kan være med i høyst 3 nabolag. Forlat ett for å bli med i et nytt.');
+      throw new UserError('Du kan være med i høyst 3 nabolag. Forlat ett for å bli med i et nytt.');
     }
     g.members.push(me);
   },

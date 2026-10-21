@@ -167,7 +167,11 @@ async function recentSuccess(): Promise<VippsLoginResult | null> {
 async function exchange(params: { code?: string; state?: string; error?: string }): Promise<VippsLoginResult> {
   const done = await recentSuccess();
   if (done) return done;
-  if (params.error || !params.code) throw new Error('Innloggingen ble avbrutt.');
+  // Vipps turns down people under 15 inside its own app and only sends back an error code
+  // (the same kind as a cancel), so the age limit is mentioned – it's the likely reason
+  // for anyone who didn't cancel themselves.
+  if (params.error) throw new Error('Vipps fullførte ikke innloggingen. Du må være minst 15 år for å bruke MinNabo – er du det, prøv igjen.');
+  if (!params.code) throw new Error('Innloggingen ble avbrutt.');
   const expected = await AsyncStorage.getItem(STATE_KEY);
   const codeVerifier = await AsyncStorage.getItem(VERIFIER_KEY);
   if (!expected || expected !== params.state || !codeVerifier) throw new Error('Innloggingen kunne ikke bekreftes. Prøv igjen.');

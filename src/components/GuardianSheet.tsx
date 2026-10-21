@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
 import { useGuardianActions, useGuardianLinks } from '@/api/queries';
@@ -6,7 +7,7 @@ import { toast } from '@/lib/toast';
 import { colors, fonts, radius, text } from '@/theme/theme';
 import { Button, Field, Icon, Input, Note, Sheet, Spinner, TextLink } from '@/components/ui';
 
-const errorText = (e: unknown) => (e instanceof Error && e.message ? e.message : nb.toast.genericError);
+const errorText = (e: unknown) => (serverMessage(e, nb.toast.genericError));
 
 /**
  * Foresatt ↔ ungdomskonto. A youth account makes a code and gives it to a

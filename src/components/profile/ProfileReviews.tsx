@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Listing, PublicProfile, Review } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
@@ -131,7 +132,7 @@ function ReviewCard({ review: r, listing, role, first }: { review: Review; listi
           setOpen(false);
           toast.success(nb.profile.replySent);
         },
-        onError: (e) => toast.error(e instanceof Error && e.message ? e.message : nb.toast.genericError),
+        onError: (e) => toast.error(serverMessage(e, nb.toast.genericError)),
       },
     );
   const name = author?.displayName ?? 'Nabo';

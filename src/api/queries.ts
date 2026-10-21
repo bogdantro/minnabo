@@ -27,11 +27,13 @@ export const chatKeys = {
   agreement: (conversationId: string) => ['agreement', conversationId] as const,
 };
 
-export function useListings(filter?: ListingFilter, sort?: ListingSort) {
+/** `enabled: false` waits, e.g. until the kommune is known (no filter = every oppdrag). */
+export function useListings(filter?: ListingFilter, sort?: ListingSort, enabled = true) {
   return useQuery({
     queryKey: listingKeys.list(filter, sort),
     queryFn: () => apiClient.listListings({ filter, sort }),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 

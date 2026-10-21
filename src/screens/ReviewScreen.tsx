@@ -34,7 +34,8 @@ import {
 const WORD_COLOR = [colors.mute, colors.danger, colors.warn, colors.ink2, colors.limeDeep, colors.limeDeep];
 
 /** Gi vurdering (design/screens/Vurdering.dc.html). */
-export function ReviewScreen({ proposalId }: { proposalId: string }) {
+/** `initialRating` – stars chosen on the reminder's star button (PushBridge), 1–5. */
+export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: string; initialRating?: number }) {
   const router = useRouter();
   const me = useCurrentUser();
   const submit = useSubmitReview();
@@ -43,7 +44,7 @@ export function ReviewScreen({ proposalId }: { proposalId: string }) {
   const counterpartId = proposal ? (proposal.fromProfileId === me.id ? proposal.toProfileId : proposal.fromProfileId) : '';
   const { data: other } = useProfile(counterpartId);
   const agenda = useMyAgreements();
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(initialRating >= 1 && initialRating <= 5 ? Math.round(initialRating) : 0);
   const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
   const [rec, setRec] = useState<'ja' | 'nei' | null>(null);

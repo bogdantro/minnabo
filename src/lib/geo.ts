@@ -26,11 +26,16 @@ const LAST_KNOWN_MAX_AGE_MS = 15 * 60_000;
 type Coords = { latitude: number; longitude: number };
 
 async function currentCoords(Location: typeof import('expo-location')): Promise<Coords | null> {
-  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), FIX_TIMEOUT_MS));
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), FIX_TIMEOUT_MS);
+  });
   const fresh = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
     .then((p) => p.coords as Coords)
     .catch(() => null);
   const coords = await Promise.race([fresh, timeout]);
+  // a quick fix must not leave the 12-second timer running
+  clearTimeout(timer);
   if (coords) return coords;
   // No new fix: the phone's last known position is fine for choosing a kommune.
   const last = await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS }).catch(() => null);

@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from './supabase';
 import { publicUrl } from './storage';
+import { UserError, backendError } from './errors';
 
 /** `report-attachments` is private (reporter + admins only); the others are public-read. */
 export type UploadBucket = 'avatars' | 'listing-images' | 'chat-attachments' | 'report-attachments';
@@ -45,7 +46,7 @@ async function uploadUri(
   const { error } = await supabase.storage
     .from(bucket)
     .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
-  if (error) throw new Error(error.message);
+  if (error) throw backendError(error);
   return {
     path,
     // private buckets have no public link (chat photos are shown through signed links)
@@ -72,17 +73,17 @@ export async function pickAndUpload(opts: {
 
   if (source === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) throw new Error('MinNabo trenger tilgang til kameraet.');
+    if (!perm.granted) throw new UserError('MinNabo trenger tilgang til kameraet.');
     const r = await ImagePicker.launchCameraAsync({ quality: 0.9 });
     if (r.canceled) return null;
     const asset = r.assets[0];
     const err = validateImage(asset);
-    if (err) throw new Error(err);
+    if (err) throw new UserError(err);
     return uploadUri(bucket, folder, asset.uri);
   }
 
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted) throw new Error('MinNabo trenger tilgang til bildene dine.');
+  if (!perm.granted) throw new UserError('MinNabo trenger tilgang til bildene dine.');
   const r = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     quality: 0.9,
@@ -90,7 +91,7 @@ export async function pickAndUpload(opts: {
   if (r.canceled) return null;
   const asset = r.assets[0];
   const err = validateImage(asset);
-  if (err) throw new Error(err);
+  if (err) throw new UserError(err);
   return uploadUri(bucket, folder, asset.uri);
 }
 
@@ -108,7 +109,7 @@ export async function pickAndUploadMany(opts: {
   const { bucket, folder, max, onStart } = opts;
   if (max <= 0) return [];
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted) throw new Error('MinNabo trenger tilgang til bildene dine.');
+  if (!perm.granted) throw new UserError('MinNabo trenger tilgang til bildene dine.');
   const r = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     quality: 0.9,
@@ -119,7 +120,7 @@ export async function pickAndUploadMany(opts: {
   if (r.canceled) return [];
   const assets = r.assets.slice(0, max);
   const ok = assets.filter((a) => validateImage(a) == null);
-  if (!ok.length) throw new Error(validateImage(assets[0]) ?? 'Kunne ikke bruke bildene.');
+  if (!ok.length) throw new UserError(validateImage(assets[0]) ?? 'Kunne ikke bruke bildene.');
   onStart?.(ok.length);
   return Promise.all(ok.map((a) => uploadUri(bucket, folder, a.uri)));
 }

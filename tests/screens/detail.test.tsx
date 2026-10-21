@@ -77,7 +77,7 @@ test('sending an offer creates a SENT proposal and the footer offers "Endre tilb
 });
 
 test('the sent offer shows up in the inbox without a manual refetch', async () => {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: 0 } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: 0, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
   await render(
     <SafeAreaProvider
       initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } }}

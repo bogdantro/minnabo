@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { serverMessage } from '@/lib/errors';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
 import { useCreateListing, useUpdateListing } from '@/api/queries';
@@ -86,7 +86,7 @@ export function PreviewScreen() {
         router.dismissTo((meta.back ?? `/oppdrag/${editId}`) as never);
       } catch (e) {
         setPhase('idle');
-        toast.error(e instanceof Error && e.message ? e.message : nb.preview.saveFailed, { bottom: 130 });
+        toast.error(serverMessage(e, nb.preview.saveFailed), { bottom: 130 });
       }
       return;
     }
