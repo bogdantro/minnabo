@@ -119,7 +119,7 @@ test('category logic: defaults, required questions and intake rows', () => {
   expect(rows).toContainEqual({ label: 'Haster', value: 'Ja' });
   // settings for the backend
   expect(extrasFor({ ...s1, who: 'verif', priceMode: 'offer', amount: '1200', km: 7 })).toMatchObject({
-    offerAudience: 'VERIFIED',
+    offerAudience: 'ALL', // «Kun verifiserte» is gone: with Vipps login everyone is verified
     maxDistanceKm: 7,
     privateEstimateMinor: 120000,
     estimatedMinutes: 180,

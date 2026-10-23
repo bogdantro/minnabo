@@ -12,6 +12,7 @@ import {
   ErrorState,
   FadeUp,
   Icon,
+  Note,
   Pill,
   RowSkeleton,
   ScaleIn,
@@ -128,6 +129,22 @@ function Body({ partner: p }: { partner: Partner }) {
           </FadeUp>
         ) : null}
 
+        {p.prices?.length ? (
+          <FadeUp delay={160} style={[styles.card, shadow.card]}>
+            <Text style={text.eyebrow}>{t.prices}</Text>
+            <View style={styles.prices}>
+              {p.prices.map((row, i) => (
+                <View key={`${row.name}-${i}`} style={[styles.priceRow, i > 0 && styles.priceLine]}>
+                  <Text style={[text.body, styles.flex]}>{row.name}</Text>
+                  <Text style={styles.priceValue}>{row.price}</Text>
+                </View>
+              ))}
+            </View>
+            {/* rule 4: a payment note next to every price */}
+            <Note style={styles.mt10}>{t.pricesNote(p.name)}</Note>
+          </FadeUp>
+        ) : null}
+
         {p.gallery?.length ? (
           <FadeUp delay={180} style={styles.gallery}>
             {p.gallery.map((uri) => (
@@ -203,6 +220,10 @@ const styles = StyleSheet.create({
   offer: { flexDirection: 'row', gap: 12, backgroundColor: colors.limeTint },
   offerIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   gallery: { marginTop: 14, gap: 12 },
+  prices: { marginTop: 8 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 10 },
+  priceLine: { borderTopWidth: 1, borderTopColor: colors.line2 },
+  priceValue: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 20, color: colors.ink },
   photo: { height: 200, borderRadius: radius.card, overflow: 'hidden', backgroundColor: colors.track },
   contact: { paddingHorizontal: 0, paddingBottom: 6 },
   contactHead: { paddingHorizontal: 18, marginBottom: 6 },

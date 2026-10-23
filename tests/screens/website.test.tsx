@@ -336,3 +336,30 @@ test('nobody has thanked yet: no count is shown, and the first thank reads "1 na
   await fireEvent.press(screen.getByText('Takk for støtten'));
   expect(await screen.findByText('1 nabo har takket', {}, WAIT)).toBeTruthy();
 });
+
+// --- hovedpartner page: «Priser» -------------------------------------------------------------
+const withPrices = async (prices: { name: string; price: string }[]) => {
+  const all = await apiClient.listPartners();
+  const main = all.find((p) => p.featured)!;
+  jest.spyOn(apiClient, 'listPartners').mockResolvedValue(all.map((p) => (p.id === main.id ? { ...p, prices } : p)));
+  return main;
+};
+
+test('a hovedpartner page lists their prices, with the note that MinNabo has nothing to do with payment', async () => {
+  const main = await withPrices([
+    { name: 'Herreklipp', price: '450 kr' },
+    { name: 'Dameklipp', price: 'fra 650 kr' },
+  ]);
+  await renderWithProviders(<PartnerScreen partnerId={main.id} />);
+  expect(await screen.findByText('Priser', {}, WAIT)).toBeTruthy();
+  expect(screen.getByText('Herreklipp')).toBeTruthy();
+  expect(screen.getByText('fra 650 kr')).toBeTruthy();
+  expect(screen.getByText(`Prisene er satt av ${main.name}. MinNabo håndterer ikke betaling.`)).toBeTruthy();
+});
+
+test('a hovedpartner without prices shows no «Priser» section', async () => {
+  const main = await withPrices([]);
+  await renderWithProviders(<PartnerScreen partnerId={main.id} />);
+  await screen.findByText(main.name, {}, WAIT);
+  expect(screen.queryByText('Priser')).toBeNull();
+});

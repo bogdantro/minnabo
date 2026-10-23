@@ -307,3 +307,12 @@ test('Innboks knows whether my last message is sent, delivered or read', () => {
   // their message last → no receipt to show
   expect(toConversation(row({ last_read_at: '2026-10-05T12:02:00Z' }, 'other'), 'me').lastMessageDelivery).toBeUndefined();
 });
+
+test('partner prices come through as name + price, and a broken list is ignored', () => {
+  const { toPartner } = require('@/api/mappers');
+  const base = { id: 'p1', name: 'Frisør', blurb: '', url: null, logo_path: null, municipality: null, partner_placements: [] };
+  expect(toPartner({ ...base, prices: [{ name: 'Klipp', price: '450 kr' }, { name: '', price: 'x' }, 'tull'] }).prices).toEqual([
+    { name: 'Klipp', price: '450 kr' },
+  ]);
+  expect(toPartner({ ...base, prices: null }).prices).toEqual([]);
+});

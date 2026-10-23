@@ -30,11 +30,12 @@ test('Innstillinger asks before logging out', async () => {
 
 test('Varslinger saves each push/e-post switch and the master pause', async () => {
   await renderWithProviders(<NotificationPrefsScreen />);
-  expect(await screen.findByText('9 push og 4 e-post er på')).toBeTruthy();
+  // nye oppdrag and oppslag i nabolaget are on by default
+  expect(await screen.findByText('10 push og 4 e-post er på')).toBeTruthy();
 
   await fireEvent.press(screen.getByLabelText('Nye meldinger, e-post'));
   await waitFor(() => expect(settingsStore.get().notificationPrefs.email.msg).toBe(true));
-  expect(await screen.findByText('9 push og 5 e-post er på')).toBeTruthy();
+  expect(await screen.findByText('10 push og 5 e-post er på')).toBeTruthy();
 
   await fireEvent.press(screen.getByRole('switch', { name: 'Alle varsler' }));
   await waitFor(() => expect(settingsStore.get().notificationPrefs.master).toBe(false));
@@ -43,6 +44,9 @@ test('Varslinger saves each push/e-post switch and the master pause', async () =
 
 test('Varslinger quiet hours: pick a new start time', async () => {
   await renderWithProviders(<NotificationPrefsScreen />);
+  // stille timer is off by default – switched on, the hours are ready to change
+  await fireEvent.press(await screen.findByRole('switch', { name: 'Stille timer' }));
+  await waitFor(() => expect(settingsStore.get().notificationPrefs.quiet.on).toBe(true));
   await screen.findByText('22:00');
   await fireEvent.press(screen.getByLabelText('Endre starttid'));
   await fireEvent.press(screen.getByRole('radio', { name: '23:00' }));

@@ -147,7 +147,11 @@ export type Partner = {
   openingHours?: string;
   coverUrl?: string;
   gallery?: string[];
+  /** the partner's own price list (0070), e.g. { name: 'Herreklipp', price: 'fra 450 kr' } */
+  prices?: PartnerPrice[];
 };
+
+export type PartnerPrice = { name: string; price: string };
 
 /** A donation that has actually been transferred (only those are shown). */
 export type Donation = {

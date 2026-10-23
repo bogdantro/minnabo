@@ -243,11 +243,7 @@ export function summary(s: WizardState, days: DayItem[]) {
     },
     { k: 'Praktisk', v: eqOn.length ? eqOn.join(', ') : 'Ingenting valgt', step: 7 },
   ];
-  const synlighet: SummaryRow[] = [
-    { k: 'Hvem kan gi tilbud', v: s.who === 'alle' ? 'Alle naboer' : 'Kun verifiserte', step: 8 },
-    { k: 'Maks avstand', v: `Innen ${s.km} km`, step: 8 },
-  ];
-  return { oppdrag, stedTid, prisPraktisk, synlighet };
+  return { oppdrag, stedTid, prisPraktisk };
 }
 
 // The owner is assigned server-side from the auth session on createListing;
@@ -299,7 +295,9 @@ export function buildListing(s: WizardState, days: DayItem[]): Listing {
 export function extrasFor(s: WizardState): ListingExtras {
   const amt = Number(s.amount) || 0;
   return {
-    offerAudience: s.who === 'verif' ? 'VERIFIED' : 'ALL',
+    // Always everyone: with Vipps-only login all naboer are verified, so «Kun verifiserte»
+    // (s.who, kept in old drafts) no longer means anything. Editing an old oppdrag opens it up.
+    offerAudience: 'ALL',
     maxDistanceKm: s.km,
     privateEstimateMinor: s.priceMode === 'offer' && amt > 0 ? amt * 100 : null,
     estimatedMinutes: s.hours * 60,

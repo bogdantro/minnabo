@@ -62,9 +62,11 @@ export type NotificationPrefs = {
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   master: true,
   channels: { push: true, email: false },
-  push: { msg: true, offer: true, changed: true, decided: true, time: true, done: true, review: true, match: true, board: false, mod: true },
+  // «Nye oppdrag» (match) and «Oppslag i nabolaget» (board) on: that's what brings people back
+  push: { msg: true, offer: true, changed: true, decided: true, time: true, done: true, review: true, match: true, board: true, mod: true },
   email: { msg: false, offer: true, changed: false, decided: true, time: true, done: false, review: false, match: false, board: false, mod: true },
-  quiet: { on: true, from: '22:00', to: '07:00' },
+  // off until the person turns it on; the hours are ready for when they do
+  quiet: { on: false, from: '22:00', to: '07:00' },
 };
 
 /** Private settings (profile_settings) – only the owner can read them. */

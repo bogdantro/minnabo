@@ -34,7 +34,7 @@ const KIND_KEY: Record<string, Key> = {
 // Same defaults as DEFAULT_NOTIFICATION_PREFS in src/api/ApiClient.ts.
 const DEFAULT_PUSH: Record<Key, boolean> = {
   msg: true, offer: true, changed: true, decided: true, time: true,
-  done: true, review: true, match: true, board: false, mod: true,
+  done: true, review: true, match: true, board: true, mod: true,
 };
 
 type Push = { profileId: string; key: Key; title: string; body: string; route: string | null; conversationId?: string };
@@ -108,7 +108,7 @@ async function deliver(db: any, p: Push): Promise<number> {
     if (prefs.master === false) return 0;
     if (prefs.channels?.push === false) return 0;
     if ((prefs.push?.[p.key] ?? DEFAULT_PUSH[p.key]) === false) return 0;
-    const quiet = { on: true, from: '22:00', to: '07:00', ...(prefs.quiet ?? {}) };
+    const quiet = { on: false, from: '22:00', to: '07:00', ...(prefs.quiet ?? {}) };
     if (quiet.on && inQuietHours(quiet.from, quiet.to)) return 0;
   }
 
@@ -128,7 +128,11 @@ async function deliver(db: any, p: Push): Promise<number> {
         to: t.token,
         title: p.title,
         body: p.body,
-        sound: 'default',
+        // MinNabo's own sound (bundled in the app, assets/sounds). iPhone vibrates for it on
+        // silent; Android takes sound + vibration from the channel (src/lib/notifications.ts).
+        sound: 'minnabo.wav',
+        channelId: 'minnabo',
+        priority: 'high',
         ...(typeof badge === 'number' ? { badge } : {}),
         data: { route: p.route },
         ...(p.route?.startsWith('/vurder/') ? { categoryId: REVIEW_CATEGORY } : {}),

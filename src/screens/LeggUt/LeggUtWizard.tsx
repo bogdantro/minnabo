@@ -54,7 +54,6 @@ import {
   OptionCard,
   PhotoAddTile,
   Radio,
-  RangeSlider,
   ScaleIn,
   Screen,
   Segmented,
@@ -89,7 +88,8 @@ import {
   type WizardState,
 } from './wizardModel';
 
-const LAST = 9;
+// «Hvem kan gi tilbud?» (old step 8) is gone: everyone logs in with Vipps, so everyone is verified.
+const LAST = 8;
 const MAX_PHOTOS = 6;
 /** Autosave the draft this long after the last change. */
 const AUTOSAVE_MS = 600;
@@ -212,7 +212,8 @@ export function LeggUtWizard() {
     wizardDraft.load().then((d) => {
       if (alive && d) {
         setS(d.state);
-        setStep(d.step);
+        // a draft from when the wizard had 9 steps may point past the last one
+        setStep(Math.min(Math.max(d.step, 1), LAST));
       }
     });
     return () => {
@@ -942,76 +943,7 @@ export function LeggUtWizard() {
             </>
           ) : null}
 
-          {step === 8 ? (
-            <>
-              <Text style={styles.q} accessibilityRole="header">{nb.wizard.s8.q}</Text>
-              <Text style={styles.qs}>{nb.wizard.s8.sub}</Text>
-              <View style={styles.whoList}>
-                {(
-                  [
-                    { id: 'alle', icon: 'users' },
-                    { id: 'verif', icon: 'verified' },
-                  ] as { id: WizardState['who']; icon: IconKey }[]
-                ).map((w) => (
-                  <OptionCard
-                    key={w.id}
-                    selected={s.who === w.id}
-                    onPress={() => edit({ who: w.id })}
-                    accessibilityLabel={nb.wizard.s8.who[w.id].label}
-                  >
-                    <View style={styles.whoIcon}>
-                      <Icon name={w.icon} size={18} color={colors.limeDeep} />
-                    </View>
-                    <View style={[styles.flex, { gap: 3 }]}>
-                      <Text style={[text.rowTitle, { fontFamily: text.label.fontFamily }]}>{nb.wizard.s8.who[w.id].label}</Text>
-                      <Text style={text.meta}>{nb.wizard.s8.who[w.id].sub}</Text>
-                    </View>
-                    <Radio selected={s.who === w.id} />
-                  </OptionCard>
-                ))}
-              </View>
-              <View style={[styles.kmCard, shadow.card]}>
-                <View style={styles.labelRow}>
-                  <Text style={text.label}>{nb.wizard.s8.maxKm}</Text>
-                  <Text style={[text.num, { fontSize: 18 }]}>{s.km} km</Text>
-                </View>
-                <View style={styles.kmRow}>
-                  <View style={styles.rings} accessibilityElementsHidden>
-                    <View
-                      style={[
-                        styles.rg,
-                        { width: 26 + s.km * 3.2, height: 26 + s.km * 3.2, marginLeft: -(26 + s.km * 3.2) / 2, marginTop: -(26 + s.km * 3.2) / 2 },
-                      ]}
-                    />
-                    <View style={styles.meDot} />
-                  </View>
-                  <View style={[styles.flex, { gap: 6 }]}>
-                    <Text style={[text.h4, { fontFamily: text.h3.fontFamily, fontSize: 16 }]}>
-                      {s.km <= 3 ? nb.wizard.s8.near : s.km <= 12 ? nb.wizard.s8.mid(s.kommune || nb.oppdrag.yourKommune) : nb.wizard.s8.far}
-                    </Text>
-                    <Text style={text.meta}>{nb.wizard.s8.hidden}</Text>
-                  </View>
-                </View>
-                <View style={styles.mt20}>
-                  <RangeSlider
-                    value={s.km}
-                    min={1}
-                    max={30}
-                    onChange={(v) => edit({ km: v })}
-                    accessibilityLabel={nb.wizard.s8.kmA11y}
-                    formatValue={(v) => `${v} km`}
-                  />
-                </View>
-                <View style={styles.ticks}>
-                  <Text style={text.meta}>1 km</Text>
-                  <Text style={text.meta}>15 km</Text>
-                  <Text style={text.meta}>30 km</Text>
-                </View>
-              </View>
-            </>
-          ) : null}
-
-          {step === 9 ? (
+          {step === LAST ? (
             <>
               <Text style={styles.q} accessibilityRole="header">{nb.wizard.s9.q}</Text>
               <Text style={styles.qs}>{nb.wizard.s9.sub}</Text>
@@ -1028,7 +960,6 @@ export function LeggUtWizard() {
                 <SumGroup icon="clip" title={nb.wizard.s9.groups.oppdrag} rows={sum.oppdrag} onEdit={(n) => go(n, 'back', true)} />
                 <SumGroup icon="pin" title={nb.wizard.s9.groups.sted} rows={sum.stedTid} onEdit={(n) => go(n, 'back', true)} />
                 <SumGroup icon="tag" title={nb.wizard.s9.groups.pris} rows={sum.prisPraktisk} onEdit={(n) => go(n, 'back', true)} />
-                <SumGroup icon="users" title={nb.wizard.s9.groups.synlighet} rows={sum.synlighet} onEdit={(n) => go(n, 'back', true)} />
               </View>
               <Note style={styles.mt16}>{nb.wizard.s9.note}</Note>
             </>
@@ -1541,31 +1472,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  whoList: { gap: 10, marginTop: 20 },
-  whoIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
-  kmCard: { marginTop: 22, padding: 18, borderRadius: radius.card, backgroundColor: colors.white },
-  kmRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 4 },
-  rings: { width: 124, height: 124, borderRadius: 62, backgroundColor: colors.bg },
-  rg: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    borderRadius: 999,
-    backgroundColor: colors.wizardRing,
-    borderWidth: 1.5,
-    borderColor: colors.limeDot,
-  },
-  meDot: {
-    position: 'absolute',
-    left: 55,
-    top: 55,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.ink,
-    ...shadow.whiteRing4,
-  },
-  ticks: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   sgroups: { gap: 12, marginTop: 16 },
   sgroup: { backgroundColor: colors.white, borderRadius: radius.card, paddingVertical: 4, paddingHorizontal: 16 },
   gh: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12, paddingBottom: 6 },

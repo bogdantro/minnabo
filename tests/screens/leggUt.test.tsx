@@ -16,7 +16,7 @@ beforeEach(() => {
 test('Legg ut opens straight into step 1 and validates before moving on', async () => {
   await renderWithProviders(<LeggUtWizard />);
   expect(screen.getByText('Hva trenger du hjelp med?')).toBeTruthy();
-  expect(screen.getByText('Steg 1 av 9')).toBeTruthy();
+  expect(screen.getByText('Steg 1 av 8')).toBeTruthy();
   await fireEvent.press(screen.getByText('Neste'));
   expect(screen.getByText('Velg en kategori for å gå videre.')).toBeTruthy();
 
@@ -28,7 +28,7 @@ test('Legg ut opens straight into step 1 and validates before moving on', async 
   expect(screen.getByText('Tittelen må ha minst 5 tegn.')).toBeTruthy();
 });
 
-test('walking all 9 steps ends in Forhåndsvisning with a built oppdrag', async () => {
+test('walking all 8 steps ends in Forhåndsvisning with a built oppdrag', async () => {
   await renderWithProviders(<LeggUtWizard />);
   await fireEvent.press(screen.getByLabelText('Hage'));
   await fireEvent.press(screen.getByText('Neste'));
@@ -43,8 +43,11 @@ test('walking all 9 steps ends in Forhåndsvisning with a built oppdrag', async 
   await fireEvent.press(screen.getByText('Neste'));
   await fireEvent.press(screen.getByText('Neste')); // Pris: Ønsker tilbud
   await fireEvent.press(screen.getByText('Neste')); // Utstyr
-  await fireEvent.press(screen.getByText('Neste')); // Hvem
+  // no «Hvem kan gi tilbud?» step: everyone logs in with Vipps, so everyone is verified
   expect(screen.getByText('Ser alt riktig ut?')).toBeTruthy();
+  expect(screen.getByText('Steg 8 av 8')).toBeTruthy();
+  expect(screen.queryByText('Hvem kan gi tilbud?')).toBeNull();
+  expect(screen.queryByText('Synlighet')).toBeNull();
   expect(screen.getByText('Nordre Ål, Lillehammer (omtrentlig)')).toBeTruthy();
 
   await fireEvent.press(screen.getByText('Forhåndsvis'));
@@ -132,4 +135,18 @@ test('after publishing, the app going to the background does not bring the oppdr
   listeners.forEach((l) => l('background'));
   await new Promise((r) => setTimeout(r, 50));
   expect(await AsyncStorage.getItem('minnabo.leggUt.draft.v3')).toBeNull();
+});
+
+test('every oppdrag is open to all naboer – the old «Kun verifiserte» choice is gone', () => {
+  const { extrasFor } = require('@/screens/LeggUt/wizardModel');
+  // an oppdrag saved earlier with «Kun verifiserte» is opened to all when edited
+  expect(extrasFor({ ...emptyWizard(), who: 'verif' }).offerAudience).toBe('ALL');
+});
+
+test('a draft saved at the old step 9 opens on the summary', async () => {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  await AsyncStorage.setItem('minnabo.leggUt.draft.v3', JSON.stringify({ state: { ...emptyWizard(), cat: 'hage' }, step: 9 }));
+  await renderWithProviders(<LeggUtWizard />);
+  expect(await screen.findByText('Steg 8 av 8')).toBeTruthy();
+  await AsyncStorage.removeItem('minnabo.leggUt.draft.v3');
 });

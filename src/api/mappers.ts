@@ -10,6 +10,7 @@ import type {
   PublicProfile,
   NoticeboardPost,
   Partner,
+  PartnerPrice,
   Donation,
   NoticeKind,
   PortfolioItem,
@@ -410,7 +411,17 @@ export type PartnerRow = {
   opening_hours?: string | null;
   cover_path?: string | null;
   gallery?: string[] | null;
+  prices?: unknown;
 };
+
+/** Only well-formed rows from the partner's price list – it's edited on the website. */
+function partnerPrices(raw: unknown): PartnerPrice[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((r): r is { name: string; price: string } => !!r && typeof r === 'object' && typeof r.name === 'string' && typeof r.price === 'string')
+    .map((r) => ({ name: r.name.trim(), price: r.price.trim() }))
+    .filter((r) => r.name && r.price);
+}
 
 /** Partner images are full URLs, or paths in the public `listing-images` bucket. */
 const partnerImage = (p?: string | null) => (p ? publicUrl('listing-images', p) : undefined);
@@ -434,6 +445,7 @@ export function toPartner(row: PartnerRow): Partner {
     openingHours: row.opening_hours ?? undefined,
     coverUrl: partnerImage(row.cover_path),
     gallery: (row.gallery ?? []).map((g) => partnerImage(g)!).filter(Boolean),
+    prices: partnerPrices(row.prices),
   };
 }
 

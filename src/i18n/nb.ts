@@ -1880,6 +1880,8 @@ const nb = {
     address: 'Adresse',
     hours: 'Åpningstider',
     area: 'Område',
+    prices: 'Priser',
+    pricesNote: (name: string) => `Prisene er satt av ${name}. MinNabo håndterer ikke betaling.`,
   },
 
   fellesskap: {
@@ -2068,20 +2070,6 @@ const nb = {
       other: 'Annet hjelperen bør vite',
       otherPh: 'F.eks. hvor utstyret står, eller om det er trapp opp til huset',
       otherHelp: 'Valgfritt. Ikke skriv nøyaktig adresse her.',
-    },
-    s8: {
-      q: 'Hvem kan gi tilbud?',
-      sub: 'Du bestemmer hvem som kan svare på oppdraget.',
-      who: {
-        alle: { label: 'Alle naboer', sub: 'Alle med bekreftet telefonnummer kan gi tilbud' },
-        verif: { label: 'Kun verifiserte', sub: 'Bare de som har bekreftet identiteten med Vipps' },
-      },
-      maxKm: 'Maks avstand til hjelperen',
-      kmA11y: 'Maks avstand i kilometer',
-      near: 'Bare nærmeste nabolag',
-      mid: (k: string) => `${k} og omegn`,
-      far: 'Også nabokommuner',
-      hidden: 'Hjelpere lenger unna ser ikke oppdraget ditt.',
     },
     s9: {
       q: 'Ser alt riktig ut?',

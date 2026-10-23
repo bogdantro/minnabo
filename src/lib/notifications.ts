@@ -13,6 +13,31 @@ import { reportError } from './reporting';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const N = () => require('expo-notifications') as typeof import('expo-notifications');
 
+/**
+ * MinNabo's own sound (assets/sounds, made by scripts/make-notification-sound.py, bundled
+ * by the expo-notifications plugin in app.json). send-push names the same file and channel.
+ */
+export const NOTIFICATION_SOUND = 'minnabo.wav';
+/**
+ * Android plays a channel's sound and vibration, not the push's own. A channel can't be
+ * changed after it exists on a phone, so a new sound or pattern needs a new channel id.
+ */
+export const NOTIFICATION_CHANNEL = 'minnabo';
+/** Two short buzzes – felt in a pocket when the phone is on silent / vibrate (ms: wait, buzz, pause, buzz). */
+const VIBRATION = [0, 220, 140, 220];
+
+async function ensureAndroidChannel() {
+  if (Platform.OS !== 'android') return;
+  const Notifications = N();
+  await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL, {
+    name: 'Varsler fra MinNabo',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: NOTIFICATION_SOUND,
+    enableVibrate: true,
+    vibrationPattern: VIBRATION,
+  });
+}
+
 /** This phone's push token once registered – needed to release it on sign-out. */
 let registeredToken: string | null = null;
 
@@ -21,10 +46,12 @@ function ensureHandler() {
   if (handlerSet) return;
   handlerSet = true;
   N().setNotificationHandler({
-    handleNotification: async () => ({
+    // While the app is open, pushes show quietly – except «Send et testvarsel», which is
+    // there to hear what the sound is like.
+    handleNotification: async (n) => ({
       shouldShowBanner: true,
       shouldShowList: true,
-      shouldPlaySound: false,
+      shouldPlaySound: (n.request.content.data as { test?: boolean } | undefined)?.test === true,
       shouldSetBadge: false,
     }),
   });
@@ -48,7 +75,11 @@ export async function sendTestNotification(title: string, body: string): Promise
   try {
     if (!(await ensureNotificationPermission())) return false;
     ensureHandler();
-    await N().scheduleNotificationAsync({ content: { title, body }, trigger: null });
+    await ensureAndroidChannel();
+    await N().scheduleNotificationAsync({
+      content: { title, body, sound: NOTIFICATION_SOUND, data: { test: true } },
+      trigger: Platform.OS === 'android' ? { channelId: NOTIFICATION_CHANNEL } : null,
+    });
     return true;
   } catch (e) {
     reportError(e, { where: 'sendTestNotification' });
@@ -65,9 +96,10 @@ export async function scheduleLocalAt(at: Date, title: string, body: string, rou
     if (Platform.OS === 'web' || !(await ensureNotificationPermission())) return null;
     ensureHandler();
     const Notifications = N();
+    await ensureAndroidChannel();
     return await Notifications.scheduleNotificationAsync({
-      content: { title, body, data: route ? { route } : {} },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+      content: { title, body, sound: NOTIFICATION_SOUND, data: route ? { route } : {} },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: NOTIFICATION_CHANNEL },
     });
   } catch (e) {
     reportError(e, { where: 'scheduleLocalAt' });
@@ -96,6 +128,8 @@ export async function registerForPush(): Promise<void> {
     if (!Device.isDevice) return;
     if (!(await ensureNotificationPermission())) return;
     ensureHandler();
+    // before the first push arrives: that is what gives it the sound and the vibration
+    await ensureAndroidChannel();
     const projectId =
       (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ?? Constants.easConfig?.projectId;
     const { data: token } = await N().getExpoPushTokenAsync(projectId ? { projectId } : undefined);
