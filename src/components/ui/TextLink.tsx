@@ -22,7 +22,8 @@ export function TextLink({ label, onPress, icon = 'arrow', accessibilityLabel, t
       onPress={onPress}
       style={({ pressed }) => [styles.base, pressed && styles.pressed, style]}
     >
-      <Text style={text.link} maxFontSizeMultiplier={1.4}>
+      {/* shrink so a long link wraps inside its container instead of running past the edge */}
+      <Text style={[text.link, styles.label]} maxFontSizeMultiplier={1.4}>
         {label}
       </Text>
       {icon ? <Icon name={icon} size={16} color={colors.cyanDeep} /> : null}
@@ -39,4 +40,5 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   pressed: { opacity: 0.6 },
+  label: { flexShrink: 1 },
 });

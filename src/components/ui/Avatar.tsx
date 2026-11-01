@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from './Image';
 import { avatarColors, colors, shadow, text } from '@/theme/theme';
 
 export type AvatarColorKey = keyof typeof avatarColors;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Dimensions, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useFocusEffect } from 'expo-router';
 import Animated, {
   Easing,
@@ -43,6 +44,8 @@ import {
   Sheet,
   type IconKey,
   TextLink,
+  pullRefreshControl,
+  usePullRefresh,
 } from '@/components/ui';
 
 const CARD_STEP = 162; // 150 card + 12 gap
@@ -134,6 +137,7 @@ const supporterLine = (p: Partner): string => (p.categorySlug ? categoryBySlug(p
 
 /** Fellesskap tab (design/screens/Fellesskap.dc.html). */
 export function FellesskapScreen() {
+  const pull = usePullRefresh();
   const me = useCurrentUser();
   const { municipality, municipalities, ready } = useLocationScope();
   const partnersQuery = usePartners();
@@ -219,7 +223,7 @@ export function FellesskapScreen() {
     <Screen
       scroll
       spacer="nav"
-      scrollProps={{ onScroll: checkVisible, scrollEventThrottle: 200 }}
+      scrollProps={{ onScroll: checkVisible, scrollEventThrottle: 200, refreshControl: pullRefreshControl(pull) }}
       header={
         <HomeTopBar
           avatar={{ uri: me.avatarUrl, initials: me.initials }}

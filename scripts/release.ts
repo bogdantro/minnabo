@@ -6,6 +6,16 @@
  *   npm run release -- major     # 1.1.0 → 2.0.0
  *   npm run release -- --dry-run # only show what would happen
  *
+ *   npm run release -- --android                 # Google Play instead of the App Store
+ *   npm run release -- --both                    # both stores
+ *   npm run release -- --android --same-version  # no new version number (e.g. the first
+ *                                                # Android release of a version already on iOS)
+ *
+ * Android is uploaded to Google Play automatically only once eas.json has a Google service
+ * account (submit.production.android.serviceAccountKeyPath) – Google refuses an automatic
+ * upload for an app's very first release anyway. Until then the .aab is built and you
+ * upload it in the Play Console yourself.
+ *
  * Steps: typecheck + tests → raise `expo.version` in app.json → `eas build --auto-submit`
  * (iOS, production). If the build fails, app.json goes back to the old version, so the
  * next try uses the same number. No git commit or tag – not needed for a release.
@@ -20,6 +30,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export type Bump = 'patch' | 'minor' | 'major';
+export type Platform = 'ios' | 'android';
+
+/** Which stores a release goes to: iOS unless --android or --both. */
+export function platformsFrom(args: string[]): Platform[] {
+  if (args.includes('--both')) return ['ios', 'android'];
+  if (args.includes('--android')) return ['android'];
+  return ['ios'];
+}
 
 /** '1.0.9' + 'patch' → '1.0.10'; 'minor' → '1.1.0'; 'major' → '2.0.0'. */
 export function nextVersion(version: string, bump: Bump): string {
@@ -43,6 +61,17 @@ export function withVersion(appJson: string, from: string, to: string): string {
 }
 
 const APP_JSON = join(__dirname, '..', 'app.json');
+const EAS_JSON = join(__dirname, '..', 'eas.json');
+
+/** True once eas.json can upload to Google Play by itself (a service account key is set). */
+function androidAutoSubmit(): boolean {
+  try {
+    const eas = JSON.parse(readFileSync(EAS_JSON, 'utf8')) as { submit?: { production?: { android?: { serviceAccountKeyPath?: string } } } };
+    return !!eas.submit?.production?.android?.serviceAccountKeyPath;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Only npx needs a shell (on Windows it is npx.cmd, which Node won't start without one).
@@ -68,14 +97,17 @@ function fail(message: string): never {
 function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
+  const sameVersion = args.includes('--same-version');
+  const platforms = platformsFrom(args);
   const bump = (args.find((a) => !a.startsWith('--')) ?? 'patch') as Bump;
   if (!['patch', 'minor', 'major'].includes(bump)) fail(`Unknown step "${bump}". Use patch, minor or major.`);
 
   const appJson = readFileSync(APP_JSON, 'utf8');
   const current = (JSON.parse(appJson) as { expo: { version: string } }).expo.version;
-  const next = nextVersion(current, bump);
+  const next = sameVersion ? current : nextVersion(current, bump);
+  const stores = platforms.map((p) => (p === 'ios' ? 'App Store' : 'Google Play')).join(' + ');
 
-  console.log(`Release ${current} → ${next}`);
+  console.log(sameVersion ? `Release ${current} (same version) to ${stores}` : `Release ${current} → ${next} to ${stores}`);
   if (dryRun) {
     console.log('(dry run – nothing changed)');
     return;
@@ -85,18 +117,43 @@ function main() {
   if (!runLive('npx', ['tsc', '--noEmit'])) fail('Typecheck failed – nothing was released.');
   if (!runLive('npx', ['jest', '--silent'])) fail('Tests failed – nothing was released.');
 
-  console.log(`\n2/3 app.json version → ${next}`);
-  writeFileSync(APP_JSON, withVersion(appJson, current, next));
-
-  console.log('\n3/3 Build in the EAS cloud and send it to App Store Connect …');
-  if (!runLive('npx', ['eas-cli', 'build', '--platform', 'ios', '--profile', 'production', '--auto-submit'])) {
-    // Back to the old number, so the next try doesn't skip a version.
-    writeFileSync(APP_JSON, appJson);
-    fail(`The build or upload failed. app.json is back at ${current} – fix the problem and run npm run release again.`);
+  if (!sameVersion) {
+    console.log(`\n2/3 app.json version → ${next}`);
+    writeFileSync(APP_JSON, withVersion(appJson, current, next));
+  } else {
+    console.log(`\n2/3 app.json stays at ${current}`);
   }
 
-  console.log(`\n✓ ${next} is on its way to App Store Connect (shows up in TestFlight within ~30 minutes).`);
-  console.log(`  Then in App Store Connect: + Version → ${next}, pick the build, «Nytt i denne versjonen», submit for review.`);
+  const autoAndroid = androidAutoSubmit();
+  const done: string[] = [];
+  for (const platform of platforms) {
+    const submit = platform === 'ios' || autoAndroid;
+    console.log(`\n3/3 ${platform === 'ios' ? 'iPhone' : 'Android'}: build in the EAS cloud${submit ? ' and upload' : ''} …`);
+    const build = ['eas-cli', 'build', '--platform', platform, '--profile', 'production', ...(submit ? ['--auto-submit'] : [])];
+    if (!runLive('npx', build)) {
+      // Back to the old number, so the next try doesn't skip a version – unless another
+      // platform already went out with the new one.
+      if (!sameVersion && done.length === 0) writeFileSync(APP_JSON, appJson);
+      fail(
+        `The ${platform} build or upload failed.` +
+          (done.length ? ` ${done.join(', ')} already went out with ${next}; run again with --${platform} --same-version.` : ` app.json is back at ${current}.`),
+      );
+    }
+    done.push(platform);
+  }
+
+  if (platforms.includes('ios')) {
+    console.log(`\n✓ iPhone ${next} is on its way to App Store Connect (TestFlight within ~30 minutes).`);
+    console.log(`  App Store Connect: + Version → ${next}, pick the build, «Nytt i denne versjonen», submit for review.`);
+  }
+  if (platforms.includes('android')) {
+    console.log(
+      autoAndroid
+        ? `\n✓ Android ${next} is uploaded to Google Play. In the Play Console: Production → the new release → «Send til gjennomgang».`
+        : `\n✓ Android ${next} is built. Download the .aab from the link above (expo.dev), then in the Play Console:` +
+            ' Production (or Intern testing) → Opprett ny utgivelse → upload the .aab.',
+    );
+  }
 }
 
 // Only when run as a script – tests import the helpers above.

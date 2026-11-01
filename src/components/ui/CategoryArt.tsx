@@ -1,4 +1,5 @@
-import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from './Image';
 import { categoryColors, type CategoryId } from '@/theme/theme';
 import { categoryArtColors } from '@/domain/categories';
 import { useCategoryCatalog } from '@/hooks/useCategories';

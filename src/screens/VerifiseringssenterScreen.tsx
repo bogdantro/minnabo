@@ -13,7 +13,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { PublicProfile, Review } from '@/domain/types';
 import nb from '@/i18n/nb';
-import { useListingsByIds, useProfile, useReviews, useVerify } from '@/api/queries';
+import { completenessPct, completenessSteps } from '@/domain/profileCompleteness';
+import { useListingsByIds, useProfile, useReviews, useVerify, usePortfolio } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { longDate } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
@@ -347,18 +348,11 @@ function Ratings({ profile, reviews }: { profile: PublicProfile; reviews: Review
 }
 
 function Tips({ profile, hasContacts }: { profile: PublicProfile; hasContacts: boolean }) {
-  const T = nb.verificationCenter.tips;
-  const portN = profile.portfolio?.length ?? 0;
-  const tips: { id: string; label: string; sub: string; done: boolean; href: string }[] = [
-    { id: 'photo', label: T.photo.label, sub: T.photo.sub, done: !!profile.avatarUrl, href: '/profil/rediger' },
-    { id: 'bio', label: T.bio.label, sub: T.bio.sub, done: !!profile.presentation?.trim(), href: '/profil/rediger' },
-    { id: 'cats', label: T.cats.label, sub: T.cats.sub, done: (profile.categorySlugs?.length ?? 0) > 0, href: '/profil/rediger' },
-    { id: 'port', label: T.port.label, sub: T.port.sub(portN), done: portN > 0, href: '/profil/rediger' },
-    { id: 'notes', label: T.notes.label, sub: T.notes.sub, done: !!profile.homeNotes?.trim(), href: '/profil/rediger' },
-    { id: 'contacts', label: T.contacts.label, sub: T.contacts.sub, done: hasContacts, href: '/trygge-kontakter' },
-  ];
+  // the before/after portfolio lives in portfolio_items, not the old photo list on the profile
+  const portN = usePortfolio(profile.id).data?.length ?? 0;
+  const tips = completenessSteps(profile, portN, hasContacts);
   const done = tips.filter((t) => t.done).length;
-  const pct = Math.round((done / tips.length) * 100);
+  const pct = completenessPct(tips);
 
   return (
     <>

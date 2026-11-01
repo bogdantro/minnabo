@@ -1,4 +1,4 @@
-import { nextVersion, withVersion } from '../../scripts/release';
+import { nextVersion, platformsFrom, withVersion } from '../../scripts/release';
 
 test('a release raises the last number by default, and resets the smaller ones on bigger steps', () => {
   expect(nextVersion('1.0.0', 'patch')).toBe('1.0.1');
@@ -19,4 +19,10 @@ test('only the app version line changes in app.json, not formatting or other ver
 test('an app.json with the version zero or several times is refused', () => {
   expect(() => withVersion('{"expo": {}}', '1.0.0', '1.0.1')).toThrow('found it 0 times');
   expect(() => withVersion('{"version": "1.0.0", "a": {"version": "1.0.0"}}', '1.0.0', '1.0.1')).toThrow('found it 2 times');
+});
+
+test('a release goes to the App Store unless Android or both are asked for', () => {
+  expect(platformsFrom([])).toEqual(['ios']);
+  expect(platformsFrom(['--android'])).toEqual(['android']);
+  expect(platformsFrom(['minor', '--both'])).toEqual(['ios', 'android']);
 });

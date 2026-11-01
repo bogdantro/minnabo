@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';

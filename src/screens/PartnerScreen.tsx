@@ -1,4 +1,5 @@
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useRouter } from 'expo-router';
 import type { Partner } from '@/domain/types';
 import nb from '@/i18n/nb';

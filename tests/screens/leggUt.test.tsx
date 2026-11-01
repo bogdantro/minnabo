@@ -37,7 +37,9 @@ test('walking all 8 steps ends in Forhåndsvisning with a built oppdrag', async 
   await fireEvent.changeText(screen.getByLabelText('Beskrivelse'), 'Plenen er ca. 300 m² og løvet skal i sekker.');
   await fireEvent.press(screen.getByText('Plen'));
   await fireEvent.press(screen.getByText('Neste'));
-  await fireEvent.changeText(screen.getByLabelText('Område eller bydel'), 'Nordre Ål');
+  // Område: search the kommune's nabolag and pick one
+    await fireEvent.changeText(await screen.findByLabelText('Søk etter område'), 'nordre');
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Nordre Ål' }));
   await fireEvent.press(screen.getByText('Neste'));
   await fireEvent.press(screen.getAllByLabelText(DAY_LABEL)[2]);
   await fireEvent.press(screen.getByText('Neste'));
@@ -149,4 +151,121 @@ test('a draft saved at the old step 9 opens on the summary', async () => {
   await renderWithProviders(<LeggUtWizard />);
   expect(await screen.findByText('Steg 8 av 8')).toBeTruthy();
   await AsyncStorage.removeItem('minnabo.leggUt.draft.v3');
+});
+
+// ------------------------------------------------------------
+// «Det haster» – in the Når step, shown first in the feed until the deadline
+// ------------------------------------------------------------
+describe('Hasteoppdrag', () => {
+  const toNaar = async () => {
+    await fireEvent.press(screen.getByLabelText('Hage'));
+    await fireEvent.press(screen.getByText('Neste'));
+    await fireEvent.press(screen.getByText('Klippe plen og rake løv'));
+    await fireEvent.press(screen.getByText('Neste'));
+    await fireEvent.changeText(screen.getByLabelText('Beskrivelse'), 'Plenen er ca. 300 m² og løvet skal i sekker.');
+    await fireEvent.press(screen.getByText('Plen'));
+    await fireEvent.press(screen.getByText('Neste'));
+    // Område: search the kommune's nabolag and pick one
+    await fireEvent.changeText(await screen.findByLabelText('Søk etter område'), 'nordre');
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Nordre Ål' }));
+    await fireEvent.press(screen.getByText('Neste'));
+  };
+
+  test('«Det haster» lives in Når: choosing «I dag» sets the date and the oppdrag gets a deadline', async () => {
+    await renderWithProviders(<LeggUtWizard />);
+    await toNaar();
+    expect(screen.getByText('Når passer det?')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('switch', { name: 'Det haster' }));
+    expect(screen.getByText('Hvor fort må det gjøres?')).toBeTruthy();
+    // the date strip is replaced by the haste choice – no day to pick
+    expect(screen.queryByText('Fast dato')).toBeNull();
+    await fireEvent.press(screen.getByText('I dag'));
+    await fireEvent.press(screen.getByText('Neste'));
+    await fireEvent.press(screen.getByText('Neste')); // Pris
+    await fireEvent.press(screen.getByText('Neste')); // Utstyr
+    expect(screen.getByText(/^Haster · Innen /)).toBeTruthy();
+    await fireEvent.press(screen.getByText('Forhåndsvis'));
+    const l = draftStore.get();
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    expect(l?.urgentUntil).toBe(end.toISOString());
+    expect(draftStore.meta().extras?.urgentUntil).toBe(end.toISOString());
+  });
+
+  test('turning it off again sends no deadline and brings the date choice back', async () => {
+    await renderWithProviders(<LeggUtWizard />);
+    await toNaar();
+    const sw = screen.getByRole('switch', { name: 'Det haster' });
+    await fireEvent.press(sw);
+    await fireEvent.press(sw);
+    expect(screen.getByText('Fast dato')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Neste'));
+    await fireEvent.press(screen.getByText('Neste'));
+    await fireEvent.press(screen.getByText('Neste'));
+    await fireEvent.press(screen.getByText('Forhåndsvis'));
+    expect(draftStore.get()?.urgentUntil).toBeUndefined();
+  });
+});
+
+test('«Neste» with an error scrolls to that field, not just shows it off-screen', async () => {
+  const lib = require('@/lib/scrollIntoView');
+  const spy = jest.spyOn(lib, 'scrollIntoView');
+  await renderWithProviders(<LeggUtWizard />);
+  await fireEvent.press(screen.getByLabelText('Hage'));
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Klippe plen og rake løv'));
+  await fireEvent.press(screen.getByText('Neste'));
+  // step 3: the description is too short
+  await fireEvent.press(screen.getByText('Neste'));
+  expect(screen.getByText('Beskriv oppdraget med minst 20 tegn.')).toBeTruthy();
+  await waitFor(() => expect(spy).toHaveBeenCalled());
+  // the marker it measured is the one right above the description field
+  const [target, container] = spy.mock.calls[spy.mock.calls.length - 1];
+  expect(target).toBeTruthy();
+  expect(container).toBeTruthy();
+  spy.mockRestore();
+});
+
+test('photo first: a picture taken on step 1 is already there on step 3', async () => {
+  // no storage in tests: the upload hands back a link straight away
+  jest.spyOn(require('@/lib/uploads'), 'pickAndUpload').mockResolvedValue({ path: 'u/cam.jpg', publicUrl: 'https://x/cam.jpg' });
+  await renderWithProviders(<LeggUtWizard />);
+  expect(screen.getByText('Ta et bilde av jobben')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Ta bilde'));
+  expect(await screen.findByText('1 bilde lagt til')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Hage'));
+  await fireEvent.press(screen.getByText('Neste'));
+  await fireEvent.press(screen.getByText('Klippe plen og rake løv'));
+  await fireEvent.press(screen.getByText('Neste'));
+  expect(screen.getByText('1/6 · valgfritt')).toBeTruthy();
+});
+
+test('«Legg ut igjen»: an older oppdrag is filled in, only a new date is needed', async () => {
+  const expoRouter = jest.requireMock('expo-router');
+  const real = expoRouter.useLocalSearchParams;
+  expoRouter.useLocalSearchParams = () => ({ kopier: 'l-male-gjerdet' });
+  try {
+    await renderWithProviders(<LeggUtWizard />);
+    // opens on «Når»: the old date has passed
+    expect(await screen.findByText('Steg 5 av 8')).toBeTruthy();
+    expect(screen.getByText('Når passer det?')).toBeTruthy();
+    // the rest is there already
+    await fireEvent.press(screen.getAllByLabelText('Forrige steg')[0]);
+    await fireEvent.press(screen.getAllByLabelText('Forrige steg')[0]);
+    await fireEvent.press(screen.getAllByLabelText('Forrige steg')[0]);
+    expect(screen.getByDisplayValue('Male gjerdet')).toBeTruthy();
+  } finally {
+    expoRouter.useLocalSearchParams = real;
+  }
+});
+
+test('live preview: the card naboene will see follows every step', async () => {
+  await renderWithProviders(<LeggUtWizard />);
+  expect(screen.queryByTestId('live-preview')).toBeNull();
+  await fireEvent.press(screen.getByLabelText('Hage'));
+  await fireEvent.press(screen.getByText('Neste'));
+  expect(screen.getByText('Tittelen kommer her')).toBeTruthy();
+  await fireEvent.changeText(screen.getByLabelText('Tittel'), 'Rake løv i hagen');
+  expect(screen.getAllByText('Rake løv i hagen').length).toBeGreaterThan(0);
+  expect(screen.queryByText('Tittelen kommer her')).toBeNull();
 });

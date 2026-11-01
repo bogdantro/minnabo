@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useCategoryCatalog } from '@/hooks/useCategories';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -23,7 +23,7 @@ import {
   ListingListSkeleton,
   PaymentNote,
   ScaleIn,
-  Screen,
+  ListScreen,
   SubHeader,
   TextLink,
   type IconKey,
@@ -50,15 +50,28 @@ function sortList(list: Listing[], sort: Sort): Listing[] {
 }
 
 /** Se alle oppdrag (design/screens/SeAlle.dc.html). Oppdrag only (rule 1). */
-export function SeeAllScreen({ initialCategory }: { initialCategory?: string }) {
+/** `kind='offer'`: naboer who offer help («Tilbyr hjelp», 0076) instead of oppdrag. */
+export function SeeAllScreen({ initialCategory, kind = 'need' }: { initialCategory?: string; kind?: 'need' | 'offer' }) {
   useCategoryCatalog(); // labels and colours follow the website's settings
   const router = useRouter();
   const me = useCurrentUser();
   const { municipality, municipalities, reach, setReach, setKommune, ready } = useLocationScope();
-  const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
+  const offer = kind === 'offer';
+  const jobs = useListings({ type: offer ? 'SERVICE_OFFER' : 'TASK_REQUEST', municipalities }, 'NEWEST');
   const [cat, setCat] = useState<CategoryId | null>(initialCategory ? categoryArtId(initialCategory) : null);
   const [sort, setSort] = useState<Sort>('near');
   const [menu, setMenu] = useState(false);
+  // The sort menu lives at the screen root so it sits above its tap-catcher on both platforms
+  // (zIndex only orders siblings – inside the list it was under the catcher and couldn't be tapped).
+  const sortBtn = useRef<View>(null);
+  // null until measured: the menu opens at once but stays invisible for that one frame
+  const [menuTop, setMenuTop] = useState<number | null>(null);
+  const openMenu = () => {
+    if (menu) return setMenu(false);
+    setMenuTop(null);
+    setMenu(true);
+    sortBtn.current?.measureInWindow?.((_x, y, _w, h) => setMenuTop(y + h + 6));
+  };
   const [locOpen, setLocOpen] = useState(false);
   const [openedAt] = useState(() => Date.now());
 
@@ -83,123 +96,129 @@ export function SeeAllScreen({ initialCategory }: { initialCategory?: string }) 
 
   return (
     <View style={styles.flex}>
-      <Screen
-        scroll
+      <ListScreen
+        data={loading || jobs.isError ? [] : items}
+        keyExtractor={(l) => l.id}
+        resetKey={`${cat ?? ''}|${sort}`}
         header={
           <SubHeader
-            title={nb.seAlle.title}
+            title={offer ? nb.offer.seeAllTitle : nb.seAlle.title}
             onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
             right={<IconButton icon="search" iconSize={18} accessibilityLabel={nb.seAlle.search} onPress={() => router.push('/sok')} />}
           />
         }
-        scrollProps={{
-          refreshControl: <RefreshControl refreshing={jobs.isFetching && !jobs.isLoading} onRefresh={() => jobs.refetch()} tintColor={colors.limeDeep} />,
-        }}
-      >
-        <View style={styles.locline}>
-          <View style={styles.row8}>
-            <Icon name="pin" size={16} color={colors.faint} />
-            <Text style={[text.bodySemi, styles.locText]} numberOfLines={1}>
-              {municipality ? `${nb.oppdrag.kommune(municipality)} · ${nb.oppdrag.reach[reach].name}` : nb.oppdrag.reach[2].name}
-            </Text>
-          </View>
-          <TextLink label={nb.seAlle.change} icon={null} onPress={() => setLocOpen(true)} />
-        </View>
-
-        <ChipRow style={styles.chips}>
-          <Chip label={nb.seAlle.all} icon="annet" selected={cat === null} onPress={() => setCat(null)} />
-          {present.map((c) => (
-            <Chip key={c} label={categoryLabel(c)} category={c} selected={cat === c} onPress={() => setCat(c)} />
-          ))}
-        </ChipRow>
-
-        <View style={styles.countRow}>
-          <View style={styles.gap3}>
-            {/* No count while loading or on error – "0 oppdrag" would be wrong. */}
-            {!loading && !jobs.isError ? <Text style={[text.h3, { fontSize: 19 }]}>{nb.seAlle.count(items.length)}</Text> : null}
-            <Text style={text.meta}>{nb.seAlle.sub(cat ? categoryLabel(cat) : null, nb.seAlle.sorts[sort])}</Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: menu }}
-            onPress={() => setMenu((m) => !m)}
-            style={styles.sortbtn}
-          >
-            <Icon name="sliders" size={16} color={colors.mute} />
-            <Text style={[text.segment, { fontSize: 13.5 }]}>{nb.seAlle.sorts[sort]}</Text>
-            <Icon name="down" size={16} color={colors.mute} />
-          </Pressable>
-          {menu ? (
-            <ScaleIn style={[styles.menu, shadow.large]}>
-              <View accessibilityRole="menu">
-                <Text style={[text.eyebrow, styles.menuHead]}>{nb.seAlle.sortBy}</Text>
-                {SORTS.map((s) => {
-                  const on = sort === s.id;
-                  return (
-                    <Pressable
-                      key={s.id}
-                      accessibilityRole="menuitem"
-                      accessibilityState={{ checked: on }}
-                      onPress={() => {
-                        setSort(s.id);
-                        setMenu(false);
-                      }}
-                      style={[styles.menuItem, on && styles.menuOn]}
-                    >
-                      <Icon name={s.icon} size={18} color={colors.faint} />
-                      <Text style={[text.bodySemi, styles.flex, { fontSize: 14.5 }]}>{nb.seAlle.sorts[s.id]}</Text>
-                      {on ? <Icon name="check" size={18} color={colors.ink} /> : null}
-                    </Pressable>
-                  );
-                })}
+        refreshControl={<RefreshControl refreshing={jobs.isFetching && !jobs.isLoading} onRefresh={() => jobs.refetch()} tintColor={colors.limeDeep} />}
+        listHeader={
+          <View style={styles.headerCell}>
+            <View style={styles.locline}>
+              <View style={styles.row8}>
+                <Icon name="pin" size={16} color={colors.faint} />
+                <Text style={[text.bodySemi, styles.locText]} numberOfLines={1}>
+                  {municipality ? `${nb.oppdrag.kommune(municipality)} · ${nb.oppdrag.reach[reach].name}` : nb.oppdrag.reach[2].name}
+                </Text>
               </View>
-            </ScaleIn>
-          ) : null}
-        </View>
+              <TextLink label={nb.seAlle.change} icon={null} onPress={() => setLocOpen(true)} />
+            </View>
 
-        <View style={styles.list}>
-          {loading ? (
-            <View style={styles.bleed}>
-              <ListingListSkeleton count={4} />
-            </View>
-          ) : jobs.isError ? (
-            <View style={styles.errorBox}>
-              <ErrorState onRetry={() => void jobs.refetch()} retrying={jobs.isFetching} />
-            </View>
-          ) : items.length === 0 ? (
-            <ScaleIn style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Icon name="clip" size={24} color={colors.limeDeep} />
+            <ChipRow style={styles.chips}>
+              <Chip label={nb.seAlle.all} icon="annet" selected={cat === null} onPress={() => setCat(null)} />
+              {present.map((c) => (
+                <Chip key={c} label={categoryLabel(c)} category={c} selected={cat === c} onPress={() => setCat(c)} />
+              ))}
+            </ChipRow>
+
+            <View style={styles.countRow}>
+              <View style={styles.gap3}>
+                {/* No count while loading or on error – "0 oppdrag" would be wrong. */}
+                {!loading && !jobs.isError ? <Text style={[text.h3, { fontSize: 19 }]}>{(offer ? nb.seAlle.offerCount : nb.seAlle.count)(items.length)}</Text> : null}
+                <Text style={text.meta}>{nb.seAlle.sub(cat ? categoryLabel(cat) : null, nb.seAlle.sorts[sort])}</Text>
               </View>
-              <Text style={[text.label, { fontSize: 15.5, textAlign: 'center' }]}>
-                {cat ? nb.seAlle.emptyTitle : nb.seAlle.emptyAll}
-              </Text>
-              <Text style={[text.meta, { textAlign: 'center' }]}>{nb.seAlle.emptyBody}</Text>
-              {cat ? (
-                <Button label={nb.seAlle.showAllCats} variant="ghost" size="sm" block={false} align="center" onPress={() => setCat(null)} />
-              ) : (
-                <Button label={nb.oppdrag.widen} variant="ghost" size="sm" block={false} align="center" onPress={() => setLocOpen(true)} />
-              )}
-            </ScaleIn>
-          ) : (
-            items.map((l, i) => (
-              <FadeUp key={l.id} delay={Math.min(i + 1, 10) * 50}>
-                <OppdragCard
-                  listing={l}
-                  statusBadge={undefined}
-                  showVerified={false}
-                  isNew={Date.parse(l.createdAt) >= openedAt - DAY_MS}
-                />
-              </FadeUp>
-            ))
-          )}
-          <PaymentNote style={styles.note} />
-        </View>
-        <View style={styles.bottom} />
-      </Screen>
+              <Pressable
+                ref={sortBtn}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: menu }}
+                onPress={openMenu}
+                style={styles.sortbtn}
+              >
+                <Icon name="sliders" size={16} color={colors.mute} />
+                <Text style={[text.segment, { fontSize: 13.5 }]}>{nb.seAlle.sorts[sort]}</Text>
+                <Icon name="down" size={16} color={colors.mute} />
+              </Pressable>
+            </View>
+
+          </View>
+        }
+        empty={
+          <View style={styles.list}>
+            {loading ? (
+              <View style={styles.bleed}>
+                <ListingListSkeleton count={4} />
+              </View>
+            ) : jobs.isError ? (
+              <View style={styles.errorBox}>
+                <ErrorState onRetry={() => void jobs.refetch()} retrying={jobs.isFetching} />
+              </View>
+            ) : items.length === 0 ? (
+              <ScaleIn style={styles.empty}>
+                <View style={styles.emptyIcon}>
+                  <Icon name="clip" size={24} color={colors.limeDeep} />
+                </View>
+                <Text style={[text.label, { fontSize: 15.5, textAlign: 'center' }]}>
+                  {offer ? (cat ? nb.seAlle.offerEmptyTitle : nb.seAlle.offerEmptyAll) : cat ? nb.seAlle.emptyTitle : nb.seAlle.emptyAll}
+                </Text>
+                <Text style={[text.meta, { textAlign: 'center' }]}>{nb.seAlle.emptyBody}</Text>
+                {cat ? (
+                  <Button label={nb.seAlle.showAllCats} variant="ghost" size="sm" block={false} align="center" onPress={() => setCat(null)} />
+                ) : (
+                  <Button label={nb.oppdrag.widen} variant="ghost" size="sm" block={false} align="center" onPress={() => setLocOpen(true)} />
+                )}
+              </ScaleIn>
+            ) : null}
+            </View>
+        }
+        renderItem={({ item: l, index: i }) => (
+          // only the first screenful fades in; later pages appear at once
+          <FadeUp delay={i < 10 ? (i + 1) * 50 : 0} style={styles.px}>
+            <OppdragCard listing={l} statusBadge={undefined} showVerified={false} isNew={Date.parse(l.createdAt) >= openedAt - DAY_MS} />
+          </FadeUp>
+        )}
+        listFooter={
+          <View style={styles.px}>
+            <PaymentNote style={styles.note} />
+            <View style={styles.bottom} />
+          </View>
+        }
+      />
 
       {menu ? (
         <Pressable accessibilityRole="button" accessibilityLabel={nb.seAlle.closeMenu} style={styles.mscrim} onPress={() => setMenu(false)} />
+      ) : null}
+      {/* the menu is a sibling of the tap-catcher (above it), placed under the sort button */}
+      {menu ? (
+        <ScaleIn style={[styles.menu, shadow.large, menuTop == null ? styles.hidden : { top: menuTop }]}>
+          <View accessibilityRole="menu">
+            <Text style={[text.eyebrow, styles.menuHead]}>{nb.seAlle.sortBy}</Text>
+            {SORTS.map((s) => {
+              const on = sort === s.id;
+              return (
+                <Pressable
+                  key={s.id}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ checked: on }}
+                  onPress={() => {
+                    setSort(s.id);
+                    setMenu(false);
+                  }}
+                  style={[styles.menuItem, on && styles.menuOn]}
+                >
+                  <Icon name={s.icon} size={18} color={colors.faint} />
+                  <Text style={[text.bodySemi, styles.flex, { fontSize: 14.5 }]}>{nb.seAlle.sorts[s.id]}</Text>
+                  {on ? <Icon name="check" size={18} color={colors.ink} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScaleIn>
       ) : null}
 
       <LocationSheet
@@ -214,6 +233,9 @@ export function SeeAllScreen({ initialCategory }: { initialCategory?: string }) 
 }
 
 const styles = StyleSheet.create({
+  // the sort menu hangs below the header cell: keep it above the rows
+  headerCell: { zIndex: 10, elevation: 10 },
+  px: { paddingHorizontal: screenPadding },
   flex: { flex: 1 },
   gap3: { gap: 3, flexShrink: 1 },
   row8: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
@@ -250,7 +272,6 @@ const styles = StyleSheet.create({
   menu: {
     position: 'absolute',
     right: screenPadding,
-    top: 46,
     width: 228,
     backgroundColor: colors.white,
     borderRadius: 20,
@@ -263,6 +284,7 @@ const styles = StyleSheet.create({
   menuItem: { minHeight: 46, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12 },
   menuOn: { backgroundColor: colors.bg },
   mscrim: { ...StyleSheet.absoluteFill, zIndex: 20 },
+  hidden: { opacity: 0 },
   list: { paddingHorizontal: screenPadding, gap: 12 },
   bleed: { marginHorizontal: -screenPadding },
   errorBox: { height: 380 },

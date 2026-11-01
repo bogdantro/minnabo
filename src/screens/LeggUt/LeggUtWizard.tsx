@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { serverMessage } from '@/lib/errors';
 import { useActiveCategories } from '@/hooks/useCategories';
-import { AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -16,11 +17,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
-import { KOMMUNE_AREAS, LAUNCH_KOMMUNER } from '@/data/kommuner';
+import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE } from '@/data/kommuner';
+import { AreaSearch } from '@/components/AreaSearch';
 import { detectKommune, locationErrorText } from '@/lib/geo';
-import { pickAndUploadMany } from '@/lib/uploads';
+import { pickAndUpload, pickAndUploadMany } from '@/lib/uploads';
 import { slugForArtId, categoryLabel } from '@/domain/categories';
-import { useListing, useListingEditData, usePriceGuidance, useAppSettings } from '@/api/queries';
+import { useListing, useListingEditData, useMyListings, usePriceGuidance, useAppSettings } from '@/api/queries';
+import { isOpenListing } from '@/domain/editing';
+import { isUrgent, URGENCIES } from '@/domain/urgent';
 import { formatAmount } from '@/components/ui/Field';
 import { toast } from '@/lib/toast';
 import { useSession } from '@/auth/session';
@@ -66,9 +70,14 @@ import {
   Toggle,
   type IconKey,
 } from '@/components/ui';
+import { tileLabel } from '@/lib/tileLabel';
+import { PriceRangeHint } from './PriceRangeHint';
+import { MiniPreview } from './MiniPreview';
+import { ERROR_SCROLL_MARGIN, scrollIntoView } from '@/lib/scrollIntoView';
 import { EQUIPMENT, FORMS, MAX_HELPERS, QUICK_AMOUNTS, STEP_NAMES, TIMES_OF_DAY, type IntakeField } from './wizardConfig';
 import {
   applyCategory,
+  applyUrgency,
   buildListing,
   emptyWizard,
   extrasFor,
@@ -81,6 +90,7 @@ import {
   placeLine,
   summary,
   upcomingDays,
+  urgencyOf,
   validateStep,
   whenLabel,
   wizardDraft,
@@ -94,8 +104,12 @@ const MAX_PHOTOS = 6;
 /** Autosave the draft this long after the last change. */
 const AUTOSAVE_MS = 600;
 
-/** "/" and long words wrap nicely in the 3-column grid. */
-const tileLabel = (l: string) => l.replace('/', '/​').replace('Arrangementshjelp', 'Arrangements­hjelp');
+
+/** Category name in a tile: long words split where the compound joins, never mid-word (lib/tileLabel). */
+function TileLabel({ label }: { label: string }) {
+  const t = tileLabel(label);
+  return <Text style={[styles.ctL, t.small && styles.ctLSmall]}>{t.text}</Text>;
+}
 
 /** `.stepper` – − value + (44 px buttons). */
 function Stepper({
@@ -168,28 +182,52 @@ export function LeggUtWizard() {
   const { userId } = useSession();
   const me = useCurrentUser();
   // Edit mode: /legg-ut?rediger=<id>[&tilbake=<path>] reopens a published oppdrag.
-  const params = useLocalSearchParams<{ rediger?: string; tilbake?: string }>();
+  const params = useLocalSearchParams<{ rediger?: string; tilbake?: string; kopier?: string; kategori?: string }>();
   const editId = typeof params.rediger === 'string' && params.rediger ? params.rediger : undefined;
   const editing = !!editId;
-  const editListing = useListing(editId ?? '');
-  const editData = useListingEditData(editId);
+  // «Legg ut igjen»: /legg-ut?kopier=<id> – a NEW oppdrag with an older one filled in
+  const copyId = !editId && typeof params.kopier === 'string' && params.kopier ? params.kopier : undefined;
+  const sourceId = editId ?? copyId;
+  const editListing = useListing(sourceId ?? '');
+  const editData = useListingEditData(sourceId);
   const [editSeeded, setEditSeeded] = useState(false);
   // "Maks avstand til hjelperen" starts on the website's default (platform.default_radius_km), inside the slider's 1–30 km
   const { defaultRadiusKm } = useAppSettings();
-  const [s, setS] = useState<WizardState>(() => ({
-    ...emptyWizard(me.municipality ?? ''),
-    ...(defaultRadiusKm ? { km: Math.min(30, Math.max(1, Math.round(defaultRadiusKm))) } : {}),
-  }));
+  // «Nå i november: Snømåking» on Oppdrag opens /legg-ut?kategori=snomaking with it chosen
+  const startCat = !sourceId && typeof params.kategori === 'string' && params.kategori in FORMS ? (params.kategori as CategoryId) : undefined;
+  const [s, setS] = useState<WizardState>(() => {
+    const base: WizardState = {
+      ...emptyWizard(me.municipality ?? ''),
+      ...(defaultRadiusKm ? { km: Math.min(30, Math.max(1, Math.round(defaultRadiusKm))) } : {}),
+    };
+    return startCat ? { ...base, ...applyCategory(base, startCat) } : base;
+  });
   const [step, setStep] = useState(1);
   // every step starts at its top, however far down the previous one was scrolled
   const scrollRef = useRef<ScrollView>(null);
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [step]);
+  // ------------------------------------------------------------
+  // The first error is scrolled into view – after «Neste», and after «Forhåndsvis» jumps
+  // back to a step that isn't done. Each field has a marker just above its input.
+  // ------------------------------------------------------------
+  const contentRef = useRef<View>(null);
+  // a Map kept for the screen's lifetime: the markers register themselves, the effect reads them
+  const [targets] = useState(() => new Map<string, View | null>());
+  const target = (key: string) => (el: View | null) => {
+    targets.set(key, el);
+  };
   const [dir, setDir] = useState<'forward' | 'back'>('forward');
   const [ret, setRet] = useState(false);
   const [err, setErr] = useState<WizardError | null>(null);
   const [errN, setErrN] = useState(0);
+  useEffect(() => {
+    if (!err) return;
+    // after the step has rendered (Forhåndsvis may have just switched step)
+    const t = setTimeout(() => scrollIntoView(targets.get(err.field), contentRef.current, scrollRef.current, ERROR_SCROLL_MARGIN * 2), 80);
+    return () => clearTimeout(t);
+  }, [err, errN, targets]);
   const [kSheet, setKSheet] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -201,16 +239,34 @@ export function LeggUtWizard() {
   if (editing && !editSeeded && editListing.data && editData.data) {
     setEditSeeded(true);
     const w = editData.data.wizard;
-    setS(isWizardState(w) ? { ...emptyWizard(), ...w, photos: editListing.data.images.map((im) => im.url) } : wizardFromListing(editListing.data, editData.data.privateEstimateMinor));
+    setS(
+      isWizardState(w)
+        ? // the saved form may still say «Det haster» after the deadline has passed
+          { ...emptyWizard(), ...w, urgent: isUrgent(editListing.data), photos: editListing.data.images.map((im) => im.url) }
+        : wizardFromListing(editListing.data, editData.data.privateEstimateMinor),
+    );
     setStep(LAST);
   }
+  // Copy: everything as before, but a new time (the old one has passed) and no haste – opens on «Når».
+  if (copyId && !editSeeded && editListing.data && editData.data) {
+    setEditSeeded(true);
+    const w = editData.data.wizard;
+    const base = isWizardState(w)
+      ? { ...emptyWizard(), ...w, photos: editListing.data.images.map((im) => im.url) }
+      : wizardFromListing(editListing.data, editData.data.privateEstimateMinor);
+    setS({ ...base, days: [], keepWhen: undefined, urgent: false, urgency: undefined, repeat: base.repeat });
+    setStep(5);
+    toast.info(nb.wizard.copied, { icon: 'repeat', bottom: 130 });
+  }
 
-  // Continue a saved draft ("fortsette der du slapp") – not when editing a published oppdrag.
+  // Continue a saved draft ("fortsette der du slapp") – not when editing a published oppdrag,
+  // and not over «Legg ut igjen» (the copy is the starting point then).
   useEffect(() => {
-    if (editing) return;
+    if (editing || copyId) return;
     let alive = true;
     wizardDraft.load().then((d) => {
-      if (alive && d) {
+      // a chosen category starts fresh unless there's a draft with something in it
+      if (alive && d && (!startCat || d.state.cat || d.state.title.trim())) {
         setS(d.state);
         // a draft from when the wizard had 9 steps may point past the last one
         setStep(Math.min(Math.max(d.step, 1), LAST));
@@ -219,14 +275,11 @@ export function LeggUtWizard() {
     return () => {
       alive = false;
     };
-  }, [editing]);
+  }, [editing, copyId, startCat]);
 
-  // Profile kommune may arrive after the first render.
-  const [kommuneSeeded, setKommuneSeeded] = useState(false);
-  if (!kommuneSeeded && !s.kommune && me.municipality) {
-    setKommuneSeeded(true);
-    setS((p) => ({ ...p, kommune: me.municipality ?? '' }));
-  }
+  // The kommune on the profile fills an empty Kommune – also when it arrives after the first
+  // render, or a saved draft without one is loaded afterwards.
+  if (!s.kommune && me.municipality) setS((p) => (p.kommune ? p : { ...p, kommune: me.municipality ?? '' }));
 
   // ------------------------------------------------------------
   // Autosave – the phone can close the app at any time (a call, low memory), so the
@@ -304,12 +357,16 @@ export function LeggUtWizard() {
       }
     }
     draftStore.set(buildListing(s, days), {
-      extras: extrasFor(s),
+      extras: extrasFor(s, today),
       editId,
       back: typeof params.tilbake === 'string' && params.tilbake ? params.tilbake : editId ? `/oppdrag/${editId}` : undefined,
     });
     router.push('/legg-ut/forhandsvisning');
   };
+
+  // «Det haster» is one oppdrag at a time (0071) – say so here instead of failing on publish
+  const mine = useMyListings('TASK_REQUEST');
+  const otherUrgent = (mine.data ?? []).find((l) => l.id !== editId && isOpenListing(l.status) && isUrgent(l));
 
   const form = FORMS[s.cat ?? 'annet'];
   const { data: guidance } = usePriceGuidance(s.cat ? slugForArtId(s.cat) : undefined);
@@ -319,8 +376,8 @@ export function LeggUtWizard() {
   const when = whenLabel(s, days);
   // Only the launch kommuner; an oppdrag being edited keeps the kommune it already has.
   const kommuneList = [...new Set([...(s.kommune ? [s.kommune] : []), ...LAUNCH_KOMMUNER])];
-  const areaChips = KOMMUNE_AREAS[s.kommune] ?? [];
   const sum = summary(s, days);
+  const live = useMemo(() => buildListing(s, days), [s, days]);
 
   const locate = async () => {
     if (locating) return;
@@ -338,6 +395,22 @@ export function LeggUtWizard() {
   };
 
   const [uploading, setUploading] = useState(0);
+  // photo first (step 1): one photo straight from the camera
+  const takePhoto = async () => {
+    if (s.photos.length >= MAX_PHOTOS || !userId) return;
+    try {
+      setUploading(1);
+      const r = await pickAndUpload({ bucket: 'listing-images', folder: userId, source: 'camera' });
+      setUploading(0);
+      if (!r) return;
+      touched.current = true;
+      setS((p) => ({ ...p, photos: [...p.photos, r.publicUrl].slice(0, MAX_PHOTOS) }));
+      toast.success(nb.wizard.photosAdded(1), { icon: 'image', bottom: 130 });
+    } catch (e) {
+      setUploading(0);
+      toast.error(serverMessage(e, nb.wizard.photoFailed), { bottom: 130 });
+    }
+  };
   const addPhoto = async () => {
     const room = MAX_PHOTOS - s.photos.length;
     if (room <= 0) return;
@@ -433,10 +506,54 @@ export function LeggUtWizard() {
         }
       >
         <SlideIn key={step} direction={dir} style={styles.px}>
+          <View ref={contentRef} collapsable={false}>
+            {/* live preview: the card naboene will see, from step 2 until the summary */}
+            {step >= 2 && step < LAST ? <MiniPreview listing={live} /> : null}
           {step === 1 ? (
             <>
               <Text style={styles.q} accessibilityRole="header">{nb.wizard.s1.q}</Text>
               <Text style={styles.qs}>{nb.wizard.s1.sub}</Text>
+              {/* photo first: start with a picture of the job – it comes along to step 3 */}
+              <FadeUp style={[styles.photoFirst, shadow.card]}>
+                {s.photos.length || uploading ? (
+                  <View style={styles.pfRow}>
+                    <View style={styles.pfThumbs}>
+                      {s.photos.slice(0, 3).map((url, i) => (
+                        <Image key={url} source={{ uri: url }} style={[styles.pfThumb, i > 0 && styles.pfOverlap]} />
+                      ))}
+                      {uploading ? (
+                        <View style={[styles.pfThumb, styles.pfBusy, s.photos.length > 0 && styles.pfOverlap]}>
+                          <Spinner />
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.flex}>
+                      <Text style={text.label}>{nb.wizard.s1.photosAdded(s.photos.length)}</Text>
+                      <Text style={text.meta}>{nb.wizard.s1.photosLater}</Text>
+                    </View>
+                    {s.photos.length < MAX_PHOTOS ? (
+                      <Button label={nb.wizard.s1.addMore} icon="plus" variant="ghost" size="sm" block={false} onPress={addPhoto} />
+                    ) : null}
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.pfRow}>
+                      <View style={styles.pfIc}>
+                        <Icon name="camera" size={22} color={colors.limeDeep} />
+                      </View>
+                      <View style={styles.flex}>
+                        <Text style={text.label}>{nb.wizard.s1.photoTitle}</Text>
+                        <Text style={text.meta}>{nb.wizard.s1.photoSub}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.pfBtns}>
+                      <Button label={nb.wizard.s1.takePhoto} icon="camera" variant="ink" size="sm" block={false} onPress={takePhoto} style={styles.flex} />
+                      <Button label={nb.wizard.s1.choosePhotos} icon="image" variant="ghost" size="sm" block={false} onPress={addPhoto} style={styles.flex} />
+                    </View>
+                  </>
+                )}
+              </FadeUp>
+              <View ref={target('cat')} collapsable={false} />
               <Shake shakeKey={errOn('cat') ? errN : 0} style={[styles.ctgrid, errOn('cat') && styles.ctgridErr]}>
                 {CATS.map((c, i) => {
                   const on = s.cat === c;
@@ -450,7 +567,7 @@ export function LeggUtWizard() {
                         style={({ pressed }) => [styles.ct, on && [styles.ctOn, shadow.selected], pressed && styles.ctPressed]}
                       >
                         <CategoryArt category={c} width={58} height={58} radius={19} iconSize={26} />
-                        <Text style={styles.ctL}>{tileLabel(categoryLabel(c))}</Text>
+                        <TileLabel label={categoryLabel(c)} />
                         {on ? (
                           <ScaleIn style={styles.ctCk}>
                             <Icon name="check" size={14} color={colors.lime} />
@@ -476,6 +593,7 @@ export function LeggUtWizard() {
                 style={styles.mt22}
                 help={err ? undefined : nb.wizard.s2.help}
               >
+                <View ref={target('title')} collapsable={false} />
                 <Shake shakeKey={errOn('title') ? errN : 0}>
                   <Input
                     value={s.title}
@@ -535,6 +653,7 @@ export function LeggUtWizard() {
               <Text style={styles.q} accessibilityRole="header">{nb.wizard.s3.q}</Text>
               <Text style={styles.qs}>{nb.wizard.s3.sub}</Text>
               <Field label={nb.wizard.s3.label} hint={`${s.desc.length}/600`} style={styles.mt22}>
+                <View ref={target('desc')} collapsable={false} />
                 <Shake shakeKey={errOn('desc') ? errN : 0}>
                   <Input
                     multiline
@@ -552,6 +671,7 @@ export function LeggUtWizard() {
               <View style={[styles.qcard, shadow.card]}>
                 {form.fields.map((f, i) => (
                   <View key={`${s.cat}-${f.key}`}>
+                    <View ref={target(`q:${f.key}`)} collapsable={false} />
                     {i > 0 ? <View style={[styles.divider, styles.mb16]} /> : null}
                     <IntakeQuestion
                       field={f}
@@ -578,22 +698,6 @@ export function LeggUtWizard() {
                     }
                   />
                 </View>
-                <View style={styles.divider} />
-                <Pressable
-                  accessibilityRole="switch"
-                  accessibilityLabel={nb.wizard.s3.urgent}
-                  accessibilityState={{ checked: s.urgent }}
-                  onPress={() => edit({ urgent: !s.urgent })}
-                  style={styles.urgentRow}
-                >
-                  <View style={styles.flex}>
-                    <QLabel icon="zap">{nb.wizard.s3.urgent}</QLabel>
-                    <Text style={text.meta}>{nb.wizard.s3.urgentSub}</Text>
-                  </View>
-                  <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-                    <Toggle value={s.urgent} onValueChange={() => undefined} accessibilityLabel={nb.wizard.s3.urgent} />
-                  </View>
-                </Pressable>
               </View>
               <View style={[styles.labelRow, styles.mt26]}>
                 <Text style={text.label}>{nb.wizard.s3.photos}</Text>
@@ -668,24 +772,17 @@ export function LeggUtWizard() {
                 />
               </Field>
               <Field label={nb.wizard.s4.area} style={styles.mt16}>
+                <View ref={target('area')} collapsable={false} />
+                {/* the nabolag MinNabo has in this kommune (database), «Hele kommunen» = the kommune itself */}
                 <Shake shakeKey={errOn('area') ? errN : 0}>
-                  <Input
-                    value={s.area}
-                    onChangeText={(v) => edit({ area: v.slice(0, 40) })}
-                    placeholder={nb.wizard.s4.areaPh}
-                    autoComplete="off"
-                    accessibilityLabel={nb.wizard.s4.area}
+                  <AreaSearch
+                    kommune={s.kommune}
+                    value={!s.area ? '' : s.area === s.kommune ? WHOLE_KOMMUNE : s.area}
+                    onChange={(a) => edit({ area: a === WHOLE_KOMMUNE ? s.kommune : a })}
                     error={errOn('area')}
                   />
                 </Shake>
                 {errOn('area') ? <ErrorText shakeKey={errN}>{err!.message}</ErrorText> : null}
-                {areaChips.length ? (
-                  <View style={styles.qchips}>
-                    {areaChips.map((a) => (
-                      <Chip key={a} label={a} size="sm" tone="lime" selected={s.area === a} onPress={() => edit({ area: a })} />
-                    ))}
-                  </View>
-                ) : null}
               </Field>
               <View style={styles.mt22}>
                 <AreaMap label={`${s.area.trim() || nb.wizard.s4.areaFallback}, ${s.kommune || '…'} · ${nb.wizard.s4.approx}`} />
@@ -705,7 +802,48 @@ export function LeggUtWizard() {
           {step === 5 ? (
             <>
               <Text style={styles.q} accessibilityRole="header">{nb.wizard.s5.q}</Text>
-              <Text style={styles.qs}>{nb.wizard.s5.help[s.whenMode]}</Text>
+              <Text style={styles.qs}>{s.urgent ? nb.wizard.s5.urgentHelp : nb.wizard.s5.help[s.whenMode]}</Text>
+              <View style={[styles.qcard, styles.mt20, shadow.card, s.urgent && styles.urgentOn]}>
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityLabel={nb.wizard.s5.urgent}
+                  accessibilityHint={otherUrgent ? nb.wizard.s5.urgentTaken(otherUrgent.title) : nb.wizard.s5.urgentSub}
+                  accessibilityState={{ checked: s.urgent, disabled: !!otherUrgent && !s.urgent }}
+                  disabled={!!otherUrgent && !s.urgent}
+                  onPress={() => edit(s.urgent ? { urgent: false } : applyUrgency(urgencyOf(s), days))}
+                  style={styles.urgentRow}
+                >
+                  <View style={[styles.urgentIcon, s.urgent && styles.urgentIconOn]}>
+                    <Icon name="zap" size={18} color={s.urgent ? colors.white : colors.warn} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Text style={text.label}>{nb.wizard.s5.urgent}</Text>
+                    <Text style={text.meta}>{otherUrgent && !s.urgent ? nb.wizard.s5.urgentTaken(otherUrgent.title) : nb.wizard.s5.urgentSub}</Text>
+                  </View>
+                  <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                    <Toggle value={s.urgent} disabled={!!otherUrgent && !s.urgent} onValueChange={() => undefined} accessibilityLabel={nb.wizard.s5.urgent} />
+                  </View>
+                </Pressable>
+                {s.urgent ? (
+                  <FadeUp style={styles.urgentBody}>
+                    <QLabel icon="clock">{nb.wizard.s5.urgentHow}</QLabel>
+                    <View style={styles.qchips}>
+                      {URGENCIES.map((u) => (
+                        <Chip
+                          key={u}
+                          label={nb.wizard.s5.urgency[u]}
+                          tone="lime"
+                          selected={urgencyOf(s) === u}
+                          onPress={() => edit(applyUrgency(u, days))}
+                        />
+                      ))}
+                    </View>
+                    <Note>{nb.wizard.s5.urgentNote}</Note>
+                  </FadeUp>
+                ) : null}
+              </View>
+              {s.urgent ? null : (
+              <>
               <Segmented
                 style={styles.mt20}
                 value={s.whenMode}
@@ -721,6 +859,7 @@ export function LeggUtWizard() {
                   { value: 'innen', label: nb.wizard.s5.innen },
                 ]}
               />
+              <View ref={target('days')} collapsable={false} />
               <Shake shakeKey={errOn('days') ? errN : 0}>
                 <ScrollView
                   horizontal
@@ -763,10 +902,12 @@ export function LeggUtWizard() {
                   })}
                 </ScrollView>
               </Shake>
+              </>
+              )}
               {errOn('days') ? <ErrorText shakeKey={errN}>{err!.message}</ErrorText> : null}
               {when ? (
-                <ScaleIn style={[styles.sumpill, shadow.card]}>
-                  <Icon name="cal" size={16} color={colors.limeDeep} />
+                <ScaleIn key={s.urgent ? 'u' : 'n'} style={[styles.sumpill, shadow.card]}>
+                  <Icon name={s.urgent ? 'zap' : 'cal'} size={16} color={s.urgent ? colors.warn : colors.limeDeep} />
                   <Text style={text.label}>{when}</Text>
                 </ScaleIn>
               ) : null}
@@ -850,6 +991,7 @@ export function LeggUtWizard() {
               {s.priceMode === 'budget' ? (
                 <FadeUp style={styles.mt20}>
                   <Field label={nb.wizard.s6.budgetLabel} hint={nb.wizard.s6.budgetHint}>
+                    <View ref={target('amount')} collapsable={false} />
                     <Shake shakeKey={errOn('amount') ? errN : 0}>
                       <AmountInput
                         value={s.amount}
@@ -860,6 +1002,14 @@ export function LeggUtWizard() {
                       />
                     </Shake>
                     {errOn('amount') ? <ErrorText shakeKey={errN}>{err!.message}</ErrorText> : null}
+                    {s.cat ? (
+                      <PriceRangeHint
+                        low={guidance ? guidance.low : form.price[0]}
+                        high={guidance ? guidance.high : form.price[1]}
+                        amount={amt}
+                        fromArea={!!guidance}
+                      />
+                    ) : null}
                     <View style={styles.qchips}>
                       {QUICK_AMOUNTS.map((v) => (
                         <Chip key={v} label={fmtKr(v)} size="sm" tone="lime" selected={amt === v} onPress={() => edit({ amount: String(v) })} />
@@ -884,7 +1034,7 @@ export function LeggUtWizard() {
                 </FadeUp>
               )}
               <View style={styles.priceNotes}>
-                {s.cat ? (
+                {s.cat && s.priceMode !== 'budget' ? (
                   <Note icon="chart">
                     {/* real numbers from earlier tilbud when there are enough; otherwise the fixed range */}
                     {guidance
@@ -964,6 +1114,7 @@ export function LeggUtWizard() {
               <Note style={styles.mt16}>{nb.wizard.s9.note}</Note>
             </>
           ) : null}
+          </View>
         </SlideIn>
       </Screen>
 
@@ -1231,6 +1382,14 @@ const styles = StyleSheet.create({
   backBtn: { width: 58, paddingHorizontal: 0 },
   q: { fontFamily: text.h1.fontFamily, fontSize: 27, lineHeight: 29, letterSpacing: -0.81, color: colors.ink },
   qs: { ...text.body, lineHeight: 21.75, color: colors.ink2, marginTop: 8 },
+  photoFirst: { marginTop: 18, borderRadius: radius.card, backgroundColor: colors.white, padding: 14, gap: 12 },
+  pfRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  pfIc: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
+  pfBtns: { flexDirection: 'row', gap: 8 },
+  pfThumbs: { flexDirection: 'row' },
+  pfThumb: { width: 44, height: 44, borderRadius: 12, borderWidth: 2, borderColor: colors.white },
+  pfOverlap: { marginLeft: -14 },
+  pfBusy: { backgroundColor: colors.neutralPill, alignItems: 'center', justifyContent: 'center' },
   ctgrid: { marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, borderRadius: 24 },
   ctgridErr: { ...shadow.errorOutline, padding: 6, margin: -6, marginTop: 14 },
   ctCell: { width: '30%', flexGrow: 1 },
@@ -1248,6 +1407,7 @@ const styles = StyleSheet.create({
   ctOn: { borderColor: colors.ink, backgroundColor: colors.consentOnBg },
   ctPressed: { transform: [{ scale: 0.95 }] },
   ctL: { ...text.label, fontSize: 12.5, lineHeight: 15, textAlign: 'center', minHeight: 30, textAlignVertical: 'center' },
+  ctLSmall: { fontSize: 11, lineHeight: 14 },
   ctCk: {
     position: 'absolute',
     top: 8,
@@ -1297,6 +1457,10 @@ const styles = StyleSheet.create({
   ochipErr: { borderColor: colors.dateErrBorder },
   mb16: { marginBottom: 16 },
   urgentRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
+  urgentOn: { borderWidth: 1.5, borderColor: colors.warn },
+  urgentIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.warnTint, alignItems: 'center', justifyContent: 'center' },
+  urgentIconOn: { backgroundColor: colors.warn },
+  urgentBody: { gap: 12 },
   phUploading: { borderRadius: radius.thumb, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   divider: { height: 1, backgroundColor: colors.line },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface2, borderRadius: 18, padding: 6 },

@@ -5,6 +5,8 @@ import type { Proposal, ProposalStatus } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
+import { ReliableBadge } from '@/components/ReliableBadge';
+import { WEEKDAYS } from '@/domain/offer';
 import { isExpiredProposal, isTakenListing } from '@/domain/editing';
 import { useListing, useProfile, useReceivedProposals } from '@/api/queries';
 import { formatTime, shortDate } from '@/lib/datetime';
@@ -312,6 +314,10 @@ function OfferRow({ p, onHold }: { p: Proposal; onHold: boolean }) {
           ) : null}
         </View>
         {from?.youthAge != null ? <Text style={[text.meta, styles.youth]}>{nb.youth.marker(from.youthAge)}</Text> : null}
+        <ReliableBadge profileId={p.fromProfileId} />
+        {p.scheduledAt && from?.availableWeekdays?.includes(new Date(p.scheduledAt).getDay()) ? (
+          <Text style={[text.meta, styles.free]}>{nb.availability.freeOn(WEEKDAYS.find((w) => w.i === new Date(p.scheduledAt!).getDay())!.long)}</Text>
+        ) : null}
         {p.scheduledText ? (
           <Text style={text.meta} numberOfLines={1}>
             {p.scheduledText}
@@ -370,6 +376,7 @@ const styles = StyleSheet.create({
   oname: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   onameText: { fontFamily: text.label.fontFamily, fontSize: 15.5, lineHeight: 19, color: colors.ink, flexShrink: 1 },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  free: { color: colors.okText },
   starsVal: { fontFamily: text.meta.fontFamily, fontSize: 13, color: colors.mute },
   date: { fontSize: 12, color: colors.faint },
   oright: { alignItems: 'flex-end', gap: 6 },

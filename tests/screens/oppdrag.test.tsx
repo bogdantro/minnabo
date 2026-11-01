@@ -20,9 +20,8 @@ test('lists open oppdrag (no service offers) as listing cards', async () => {
   await renderWithProviders(<OppdragScreen />);
   expect(screen.getByText('Folk som trenger hjelp')).toBeTruthy();
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
-  // Product rule 1: there is no "Folk som tilbyr hjelp" section.
+  // the «Trenger hjelp» tab shows oppdrag only – offers live on their own tab (0076)
   expect(screen.queryByText('Jeg kan klippe plenen din')).toBeNull();
-  expect(screen.queryByText('Folk som tilbyr hjelp')).toBeNull();
   const hearts = screen.getAllByLabelText('Lagre');
   expect(hearts.length).toBeGreaterThan(0);
   expect(hearts.length).toBeLessThanOrEqual(6);
@@ -57,4 +56,45 @@ test('the payment note is shown', async () => {
   expect(
     screen.getByText('MinNabo håndterer ikke betaling. Pris og betaling avtales direkte mellom dere.'),
   ).toBeTruthy();
+});
+
+describe('Hasteoppdrag', () => {
+  const { repositories } = require('@mocks/data/repositories');
+  const { profileRepository } = require('@mocks/data/profileRepository');
+  afterEach(() => repositories.listings._reset());
+
+  test('a hasteoppdrag is shown first with a «Haster» pill, and drops back once the deadline has passed', async () => {
+    const feed = repositories.listings
+      .list({ type: 'TASK_REQUEST' }, 'NEWEST')
+      .filter((l: { owner: { id: string } }) => l.owner.id !== profileRepository.currentUserId);
+    const oldest = feed[feed.length - 1];
+    repositories.listings.replace({ ...oldest, urgentUntil: new Date(Date.now() + 3600000).toISOString() });
+
+    await renderWithProviders(<OppdragScreen />);
+    const cards = await screen.findAllByLabelText(/(kr|Ønsker tilbud|Frivillig)$/);
+    expect(cards[0].props.accessibilityLabel).toMatch(new RegExp(`^${oldest.title}, Haster, `));
+    expect(screen.getAllByText('Haster')).toHaveLength(1);
+  });
+
+  test('an expired haste is an ordinary oppdrag again', async () => {
+    const feed = repositories.listings
+      .list({ type: 'TASK_REQUEST' }, 'NEWEST')
+      .filter((l: { owner: { id: string } }) => l.owner.id !== profileRepository.currentUserId);
+    const oldest = feed[feed.length - 1];
+    repositories.listings.replace({ ...oldest, urgentUntil: new Date(Date.now() - 60000).toISOString() });
+
+    await renderWithProviders(<OppdragScreen />);
+    const cards = await screen.findAllByLabelText(/(kr|Ønsker tilbud|Frivillig)$/);
+    expect(cards[0].props.accessibilityLabel).not.toMatch(new RegExp(`^${oldest.title},`));
+    expect(screen.queryByText('Haster')).toBeNull();
+  });
+});
+
+test('«Tilbyr hjelp» shows naboer who offer help, with their own pill', async () => {
+  await renderWithProviders(<OppdragScreen />);
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  await fireEvent.press(screen.getAllByText('Tilbyr hjelp')[0]);
+  expect(await screen.findByText('Naboer som tilbyr hjelp')).toBeTruthy();
+  expect(await screen.findByText('Jeg kan klippe plenen din')).toBeTruthy();
+  expect(screen.queryByText('Klippe plen')).toBeNull();
 });

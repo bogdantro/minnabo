@@ -13,8 +13,8 @@ test('lists my active oppdrag with offer count and status chips', async () => {
   expect(screen.getByLabelText('Aktive, 1')).toBeTruthy();
   expect(screen.getByText('Trenger hjelp')).toBeTruthy();
   expect(screen.getByText(/Pris og betaling avtales direkte/)).toBeTruthy();
-  // no service-offer UI (rule 1)
-  expect(screen.queryByText('Tilbyr hjelp')).toBeNull();
+  // my oppdrag only on this tab; what I offer has its own tab (0076)
+  expect(screen.getByText('Tilbyr hjelp')).toBeTruthy();
 });
 
 test('pause hides the oppdrag from search, Aktiver igjen brings it back', async () => {

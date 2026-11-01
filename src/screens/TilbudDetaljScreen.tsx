@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import type { ProposalStatus } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
-import { isTakenListing } from '@/domain/editing';
+import { isOpenListing, isTakenListing } from '@/domain/editing';
+import { serverMessage } from '@/lib/errors';
+import { StillAvailableCard } from '@/components/rescue/StillAvailableCard';
 import nb from '@/i18n/nb';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import { apiClient } from '@/api/client';
@@ -47,6 +50,8 @@ import {
   TextLink,
   VerifiedBadge,
   type IconKey,
+  pullRefreshControl,
+  usePullRefresh,
 } from '@/components/ui';
 
 const logo = require('../../assets/logo-icon.png');
@@ -64,8 +69,12 @@ const stamp = (iso: string) => `${shortDate(iso).replace(/^\S+ /, '')} kl. ${for
 
 type SheetKind = 'godta' | 'avsla' | 'endring' | 'menu' | null;
 
-/** Tilbudsdetaljer (design/screens/TilbudDetaljer.dc.html) – recipient and sender views. */
-export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
+/**
+ * Tilbudsdetaljer (design/screens/TilbudDetaljer.dc.html) – recipient and sender views.
+ * `answerYes`: «Ja, jeg kan i dag» tapped on the «Oppdraget er ledig igjen» push (0074).
+ */
+export function TilbudDetaljScreen({ proposalId, answerYes }: { proposalId: string; answerYes?: boolean }) {
+  const pull = usePullRefresh();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const me = useCurrentUser();
@@ -165,8 +174,9 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
       setSheet(null);
       setSuccess(true);
       return true;
-    } catch {
-      toast.error(nb.toast.genericError);
+    } catch (e) {
+      // the database's own reason (a review owed, the oppdrag already taken …), not a generic error
+      toast.error(serverMessage(e, nb.toast.genericError));
       return false;
     }
   };
@@ -298,7 +308,11 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
 
   return (
     <View style={styles.wrap}>
-      <ScrollView contentContainerStyle={{ paddingBottom: (hasFoot ? 190 : 40) + insets.bottom }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: (hasFoot ? 190 : 40) + insets.bottom }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={pullRefreshControl(pull)}
+      >
         <View style={[styles.dbar, { paddingTop: insets.top + 12 }]}>
           <IconButton icon="back" accessibilityLabel="Tilbake" onPress={back} />
           <View style={styles.mid}>
@@ -324,6 +338,18 @@ export function TilbudDetaljScreen({ proposalId }: { proposalId: string }) {
               <Icon name="right" size={18} color={colors.faint} />
             </Pressable>
           </FadeUp>
+        ) : null}
+
+        {/* the helper the owner picked didn't come: does my tilbud still stand today? */}
+        {isSender && proposal.rescueFrom && listing && isOpenListing(listing.status) && (status === 'SENT' || status === 'REVISION_PENDING') ? (
+          <View style={[styles.px, styles.mt12]}>
+            <StillAvailableCard proposal={proposal} ownerFirst={first} answerYes={answerYes} />
+          </View>
+        ) : null}
+        {!isSender && proposal.availableTodayAt && canRespond ? (
+          <ScaleIn style={[styles.px, styles.mt12]}>
+            <Pill label={`${helperFirst} – ${nb.rescue.canToday.toLowerCase()}`} icon="check" tone="ok" size="lg" />
+          </ScaleIn>
         ) : null}
 
         {banner ? (

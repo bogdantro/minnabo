@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -8,6 +8,9 @@ import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
+import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
+import { RecordingBar, useVoiceRecorder, type VoiceClip } from './Voice';
 import { colors, fonts, motion, radius, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
 import { Avatar, Button, CategoryArt, Chip, FadeUp, Icon, IconButton, Pill, ScaleIn, VerifiedIcon } from '@/components/ui';
@@ -211,11 +214,17 @@ export function Composer({
   onSend,
   onAttach,
   onTyping,
+  replies,
+  onVoice,
 }: {
   first: string;
   onSend: (t: string) => void;
   onAttach: () => void;
   onTyping?: () => void;
+  /** Hurtigsvar for where the conversation is (see domain/quickReplies) */
+  replies: string[];
+  /** a finished talemelding; without it there is no microphone */
+  onVoice?: (clip: VoiceClip) => void;
 }) {
   const insets = useSafeAreaInsets();
   const keyboardOpen = useKeyboardVisible();
@@ -238,48 +247,89 @@ export function Composer({
     setValue('');
   };
 
+  // ---- talemelding: the send button is a microphone while the text field is empty
+  const voice = useVoiceRecorder();
+  const startVoice = async () => {
+    const r = await voice.start();
+    if (r === 'denied') toast.error(nb.chat.voiceDenied, { icon: 'mic', action: { label: nb.chat.voiceOpenSettings, onPress: () => void Linking.openSettings() } });
+    else if (r === 'failed') toast.error(nb.chat.voiceFailed, { icon: 'mic' });
+  };
+  const sendVoice = async () => {
+    const clip = await voice.finish().catch(() => null);
+    if (!clip) {
+      toast.info(nb.chat.voiceTooShort, { icon: 'mic' });
+      return;
+    }
+    haptics.success();
+    onVoice?.(clip);
+  };
+  const cancelVoice = () => {
+    void voice.cancel();
+    haptics.light();
+    toast.info(nb.chat.voiceCancelled, { icon: 'trash' });
+  };
+  const showMic = !!onVoice && !can;
+
   return (
     <View style={[styles.composer, { paddingBottom: keyboardOpen ? 10 : Math.max(26, insets.bottom + 10) }]}>
       <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
       <View style={[StyleSheet.absoluteFill, styles.composerBg]} />
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.qr}
-        accessibilityLabel={nb.chat.quickRepliesLabel}
-      >
-        {nb.chat.quickReplies.map((q) => (
-          <Chip key={q} label={q} size="sm" onPress={() => onSend(q)} accessibilityLabel={q} style={styles.qrChip} />
-        ))}
-      </ScrollView>
-      <View style={styles.crow}>
-        <IconButton icon="plus" accessibilityLabel={nb.chat.attachA11y} onPress={onAttach} />
-        <View style={[styles.cin, focused && [styles.cinFocus, shadow.focus]]}>
-          <TextInput
-            value={value}
-            onChangeText={change}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onSubmitEditing={submit}
-            returnKeyType="send"
-            placeholder={nb.chat.inputPlaceholder}
-            placeholderTextColor={colors.placeholder}
-            accessibilityLabel={nb.chat.composerA11y(first)}
-            style={styles.input}
-          />
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={nb.chat.sendMessageA11y}
-          accessibilityState={{ disabled: !can }}
-          disabled={!can}
-          onPress={submit}
-          style={({ pressed }) => [styles.sendb, can ? [styles.sendOn, shadow.btnLime] : styles.sendOff, pressed && styles.pressed]}
+      {replies.length ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.qr}
+          accessibilityLabel={nb.chat.quickRepliesLabel}
         >
-          <Icon name="send" size={18} color={can ? colors.ink : colors.typingDot} />
-        </Pressable>
-      </View>
+          {replies.map((q) => (
+            <Chip key={q} label={q} size="sm" onPress={() => onSend(q)} accessibilityLabel={q} style={styles.qrChip} />
+          ))}
+        </ScrollView>
+      ) : null}
+      {voice.active ? (
+        <RecordingBar elapsedMs={voice.elapsedMs} onCancel={cancelVoice} onSend={() => void sendVoice()} />
+      ) : (
+        <View style={styles.crow}>
+          <IconButton icon="plus" accessibilityLabel={nb.chat.attachA11y} onPress={onAttach} />
+          <View style={[styles.cin, focused && [styles.cinFocus, shadow.focus]]}>
+            <TextInput
+              value={value}
+              onChangeText={change}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onSubmitEditing={submit}
+              returnKeyType="send"
+              placeholder={nb.chat.inputPlaceholder}
+              placeholderTextColor={colors.placeholder}
+              accessibilityLabel={nb.chat.composerA11y(first)}
+              style={styles.input}
+            />
+          </View>
+          {showMic ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={nb.chat.voiceRecord}
+              onPress={() => void startVoice()}
+              style={({ pressed }) => [styles.sendb, styles.micBtn, pressed && styles.pressed]}
+              testID="voice-record"
+            >
+              <Icon name="mic" size={20} color={colors.white} />
+            </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={nb.chat.sendMessageA11y}
+              accessibilityState={{ disabled: !can }}
+              disabled={!can}
+              onPress={submit}
+              style={({ pressed }) => [styles.sendb, can ? [styles.sendOn, shadow.btnLime] : styles.sendOff, pressed && styles.pressed]}
+            >
+              <Icon name="send" size={18} color={can ? colors.ink : colors.typingDot} />
+            </Pressable>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -378,6 +428,7 @@ const styles = StyleSheet.create({
   sendb: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   sendOn: { backgroundColor: colors.lime },
   sendOff: { backgroundColor: colors.track },
+  micBtn: { backgroundColor: colors.ink },
   blocked: { marginHorizontal: 12, padding: 14, borderRadius: 18, backgroundColor: colors.dangerTint, flexDirection: 'row', alignItems: 'center', gap: 12 },
   blockedText: { flex: 1, fontFamily: text.body.fontFamily, fontSize: 13.5, lineHeight: 19, color: colors.dangerDark },
 });

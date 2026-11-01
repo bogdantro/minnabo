@@ -6,6 +6,9 @@ import type {
   AgendaItem,
   AgreementSnapshot,
   AgreementTimeProposal,
+  HelperStatus,
+  NoShowReason,
+  NoShowReport,
   GuardianLinks,
   PriceRange,
   AppNotification,
@@ -43,6 +46,7 @@ import type {
   NotificationPrefs,
   ListListingsParams,
   NeighbourhoodInfo,
+  NeighbourhoodHighlight,
   NabolagSummary,
   MinNaboMessage,
   ReviseProposalPatch,
@@ -58,7 +62,9 @@ import type {
   AccountStatus,
   EditProposalPatch,
   ListingEditData,
-  ListingExtras} from './ApiClient';
+  ListingExtras,
+  PendingReview,
+  RescueResult} from './ApiClient';
 import { DEFAULT_APP_SETTINGS, withDefaultPrefs } from './ApiClient';
 
 import { OPEN_LISTING_STATUSES } from '@/domain/editing';
@@ -154,7 +160,7 @@ async function withSignedPhotos(messages: Message[]): Promise<Message[]> {
   const paths = [
     ...new Set(
       messages
-        .filter((m) => m.kind === 'IMAGE' && m.attachmentUrl && !/^(file|content|data|blob):/i.test(m.attachmentUrl))
+        .filter((m) => (m.kind === 'IMAGE' || m.kind === 'AUDIO') && m.attachmentUrl && !/^(file|content|data|blob):/i.test(m.attachmentUrl))
         .map((m) => chatPath(m.attachmentUrl!)),
     ),
   ];
@@ -166,7 +172,7 @@ async function withSignedPhotos(messages: Message[]): Promise<Message[]> {
     }
   }
   return messages.map((m) =>
-    m.kind === 'IMAGE' && m.attachmentUrl
+    (m.kind === 'IMAGE' || m.kind === 'AUDIO') && m.attachmentUrl
       ? { ...m, attachmentUrl: signed.get(chatPath(m.attachmentUrl))?.url ?? m.attachmentUrl }
       : m,
   );
@@ -245,6 +251,8 @@ export class SupabaseApiClient implements ApiClient {
         offer_audience: extras?.offerAudience ?? 'ALL',
         max_distance_km: extras?.maxDistanceKm ?? null,
         estimated_minutes: extras?.estimatedMinutes ?? null,
+        // only when it hastes: an app build that reaches people before 0071 is pushed can still publish
+        ...(extras?.urgentUntil ? { urgent_until: extras.urgentUntil } : {}),
       })
       .select('id')
       .single();
@@ -283,7 +291,8 @@ export class SupabaseApiClient implements ApiClient {
       const { error: e } = await supabase.from('service_offer_details').insert({
         listing_id: listingId,
         about: listing.offer.about,
-        experience_years: listing.offer.experienceYears ?? null,
+        experience_years: listing.offer.experienceMonths != null ? Math.floor(listing.offer.experienceMonths / 12) : (listing.offer.experienceYears ?? null),
+        experience_months: listing.offer.experienceMonths ?? null,
         completed_jobs: listing.offer.completedJobs ?? null,
         services: listing.offer.services,
         availability_text: listing.offer.availabilityText ?? null,
@@ -328,6 +337,31 @@ export class SupabaseApiClient implements ApiClient {
       p_private_estimate_minor: extras.privateEstimateMinor ?? null,
       p_estimated_minutes: extras.estimatedMinutes ?? null,
       p_wizard: extras.wizard ?? null,
+      p_urgent_until: extras.urgentUntil ?? null,
+    });
+    if (error) fail(error);
+    return this.getListing(listingId);
+  }
+
+  async updateOffer(listingId: string, listing: Listing): Promise<Listing> {
+    const o = listing.offer;
+    if (!o) fail('Mangler beskrivelse av hjelpen.');
+    const { error } = await supabase.rpc('update_offer', {
+      p_listing_id: listingId,
+      p_title: listing.title,
+      p_category_slug: listing.category.slug,
+      p_price_mode: listing.priceMode,
+      p_price_minor: listing.price?.amountMinor ?? null,
+      p_municipality: listing.location.municipality,
+      p_place: listing.location.place,
+      p_about: o.about,
+      p_services: o.services,
+      p_availability_text: o.availabilityText ?? '',
+      p_available_weekdays: o.availableWeekdays ?? [],
+      p_equipment_text: o.equipmentText ?? '',
+      p_experience_months: o.experienceMonths ?? null,
+      p_max_distance_km: o.maxDistanceKm ?? null,
+      p_images: listing.images.map((im) => im.url),
     });
     if (error) fail(error);
     return this.getListing(listingId);
@@ -521,6 +555,25 @@ export class SupabaseApiClient implements ApiClient {
         kind: 'IMAGE',
         text: '',
         attachment_path: chatPath(attachmentPath),
+        client_token: token(),
+      })
+      .select('*')
+      .single();
+    if (error) fail(error);
+    return (await withSignedPhotos([toMessage(data as unknown as MessageRow)]))[0];
+  }
+
+  async sendVoice(conversationId: string, attachmentPath: string, durationMs: number): Promise<Message> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        author_id: me,
+        kind: 'AUDIO',
+        text: '',
+        attachment_path: chatPath(attachmentPath),
+        audio_ms: Math.round(durationMs),
         client_token: token(),
       })
       .select('*')
@@ -947,6 +1000,8 @@ export class SupabaseApiClient implements ApiClient {
     if (patch.hasCar !== undefined) row.has_car = patch.hasCar;
     if (patch.availabilityText !== undefined) row.availability_text = patch.availabilityText.trim() || null;
     if (patch.portfolio !== undefined) row.portfolio = patch.portfolio;
+    if (patch.highlightOptIn !== undefined) row.highlight_opt_in = patch.highlightOptIn;
+    if (patch.availableWeekdays !== undefined) row.available_weekdays = patch.availableWeekdays.length ? patch.availableWeekdays : null;
 
     if (patch.homeNotes !== undefined) {
       const notes = patch.homeNotes.trim();
@@ -1112,6 +1167,84 @@ export class SupabaseApiClient implements ApiClient {
     });
     if (error) fail(error);
     return toReview(data as unknown as ReviewRow);
+  }
+
+  async listPendingReviews(): Promise<PendingReview[]> {
+    const { data, error } = await supabase.rpc('my_pending_reviews');
+    // before 0072 is pushed the function is missing – nothing is owed then, never block the app
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') return [];
+      fail(error);
+    }
+    type Row = { proposal_id: string; listing_id: string; listing_title: string; other_id: string; other_name: string; completed_at: string };
+    return ((data ?? []) as Row[]).map((r) => ({
+      proposalId: r.proposal_id,
+      listingId: r.listing_id,
+      listingTitle: r.listing_title,
+      otherId: r.other_id,
+      otherName: r.other_name,
+      completedAt: r.completed_at,
+    }));
+  }
+
+  // --- no-show rescue (0074) ---
+
+  async reportHelperNoShow(proposalId: string, reason: Exclude<NoShowReason, 'HELPER_CANCELLED'>, makeUrgent: boolean): Promise<RescueResult> {
+    const { data, error } = await supabase.rpc('report_helper_no_show', {
+      p_proposal_id: proposalId,
+      p_reason: reason,
+      p_make_urgent: makeUrgent,
+    });
+    if (error) fail(error);
+    const r = (data ?? {}) as { urgent?: boolean; others?: number; reportId?: string | null };
+    return { urgent: !!r.urgent, others: r.others ?? 0, reportId: r.reportId ?? undefined };
+  }
+
+  async makeRescueUrgent(proposalId: string): Promise<void> {
+    const { error } = await supabase.rpc('make_rescue_urgent', { p_proposal_id: proposalId });
+    if (error) fail(error);
+  }
+
+  async confirmStillAvailable(proposalId: string): Promise<void> {
+    const { error } = await supabase.rpc('confirm_still_available', { p_proposal_id: proposalId });
+    if (error) fail(error);
+  }
+
+  async confirmAttendance(proposalId: string): Promise<void> {
+    const { error } = await supabase.rpc('confirm_attendance', { p_proposal_id: proposalId });
+    if (error) fail(error);
+  }
+
+  async setHelperStatus(proposalId: string, status: HelperStatus, place?: string): Promise<void> {
+    const args = { p_proposal_id: proposalId, p_status: status };
+    const { error } = await supabase.rpc('set_helper_status', place ? { ...args, p_place: place } : args);
+    // a server without 0078 doesn't know p_place yet – the status itself must still get through
+    if (error && place && error.code === 'PGRST202') {
+      const retry = await supabase.rpc('set_helper_status', args);
+      if (retry.error) fail(retry.error);
+      return;
+    }
+    if (error) fail(error);
+  }
+
+  async getNoShowReport(id: string): Promise<NoShowReport> {
+    const { data, error } = await supabase.rpc('no_show_report', { p_id: id });
+    if (error) fail(error);
+    if (!data) fail('Fant ikke saken.');
+    const r = data as NoShowReport & { explanation?: string | null; explainedAt?: string | null; weight: number | string };
+    return { ...r, weight: Number(r.weight), explanation: r.explanation ?? undefined, explainedAt: r.explainedAt ?? undefined };
+  }
+
+  async explainNoShow(id: string, text: string): Promise<void> {
+    const { error } = await supabase.rpc('explain_no_show', { p_id: id, p_text: text });
+    if (error) fail(error);
+  }
+
+  async getMyTilbudPause(): Promise<string | null> {
+    const { data, error } = await supabase.rpc('my_tilbud_pause');
+    // before 0074 is pushed nothing is paused – never block a tilbud on that
+    if (error) return null;
+    return ((data ?? {}) as { until?: string | null }).until ?? null;
   }
 
   async reportNoShow(agreementProposalId: string, profileId: string): Promise<void> {
@@ -1430,6 +1563,28 @@ export class SupabaseApiClient implements ApiClient {
   }
 
   // --- nabolag ---
+
+  async recordInvite(inviterId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('record_invite', { p_inviter: inviterId });
+    if (error) fail(error);
+    return !!data;
+  }
+
+  async inviteCount(profileId: string): Promise<number> {
+    const { data, error } = await supabase.rpc('invite_count', { p_profile: profileId });
+    // a server without 0081 has no invites yet
+    if (error?.code === 'PGRST202') return 0;
+    if (error) fail(error);
+    return Number(data ?? 0);
+  }
+
+  async neighbourhoodHighlights(municipality: string): Promise<NeighbourhoodHighlight[]> {
+    const { data, error } = await supabase.rpc('neighbourhood_highlights', { p_municipality: municipality });
+    // a server without 0080 has nothing to highlight yet – Nabolag just shows no card
+    if (error?.code === 'PGRST202') return [];
+    if (error) fail(error);
+    return ((data ?? []) as NeighbourhoodHighlight[]).filter((h) => h.profileId && h.jobs > 0);
+  }
 
   async getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
     const { data, error } = await supabase.rpc('neighbourhood_info', { p_municipality: municipality, p_place: place });

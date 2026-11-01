@@ -9,6 +9,8 @@ import { colors, motion, radius, shadow, sizes, text } from '@/theme/theme';
 import { CountBadge } from './ui/Badges';
 import { Icon, type IconKey } from './ui/Icon';
 import { MenySheet } from './MenySheet';
+import { LeggUtChooser } from './LeggUtChooser';
+import { router } from 'expo-router';
 
 export type NavTarget = 'oppdrag' | 'fellesskap' | 'innboks';
 
@@ -23,7 +25,7 @@ const RIGHT: Slot[] = [{ target: 'innboks', label: nb.tabs.innboks, icon: 'msg' 
 /** Total height the floating bar covers, for screens that pad their scroll content. */
 export const NAV_OCCUPIED = sizes.navHeight + sizes.navBottom;
 
-/** One tab in the floating bar: icon in a 48×32 pill + label (). */
+/** One tab in the floating bar: icon in a 40 px circle (lime when active) + label. */
 export function NavItem({
   label,
   icon,
@@ -46,7 +48,7 @@ export function NavItem({
       style={styles.item}
       onPress={onPress}
     >
-      <View style={[styles.ni, active && styles.niOn]}>
+      <View style={[styles.ni, active && styles.niOn]} testID={active ? 'nav-active-bubble' : undefined}>
         <Icon name={icon} size={sizes.navIcon} color={fg} />
         {badge > 0 ? <CountBadge count={badge} style={styles.count} /> : null}
       </View>
@@ -114,6 +116,8 @@ export function BottomNav({
   onLeggUt: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // «Hva vil du legge ut?» – an oppdrag, or what you can help with (0076)
+  const [chooseOpen, setChooseOpen] = useState(false);
   const unreadInbox = useUnreadConversationCount();
 
   const slot = (s: Slot) => (
@@ -131,12 +135,21 @@ export function BottomNav({
     <>
       <NavFrame>
         {LEFT.map(slot)}
-        <PostButton onPress={onLeggUt} />
+        <PostButton onPress={() => setChooseOpen(true)} />
         {RIGHT.map(slot)}
         <NavItem label={nb.tabs.meny} icon="menu" active={false} onPress={() => setMenuOpen(true)} />
       </NavFrame>
 
       <MenySheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
+      <LeggUtChooser
+        visible={chooseOpen}
+        onClose={() => setChooseOpen(false)}
+        onPick={(k) => {
+          setChooseOpen(false);
+          if (k === 'need') onLeggUt();
+          else router.push('/legg-ut/tilbyr');
+        }}
+      />
     </>
   );
 }
@@ -156,16 +169,20 @@ const styles = StyleSheet.create({
   },
   bg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.nav, overflow: 'hidden' },
   bgTint: { backgroundColor: colors.navBg },
-  item: { flex: 1, height: 66, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  item: { flex: 1, height: 66, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  // A perfect circle on both platforms: equal sides, half radius, and never squeezed by the
+  // flex row (a shrunk side turned the bubble into a rounded square on Android).
   ni: {
-    width: sizes.navItemW,
-    height: sizes.navItemH,
-    borderRadius: sizes.navItemH / 2,
+    width: sizes.navItemCircle,
+    height: sizes.navItemCircle,
+    borderRadius: sizes.navItemCircle / 2,
+    borderCurve: 'circular',
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   niOn: { backgroundColor: colors.limeTint },
-  count: { position: 'absolute', top: -3, right: 2 },
+  count: { position: 'absolute', top: -4, right: -6 },
   // No label under the button (icon only, labelled for screen readers); the bottom padding keeps it raised as before.
   fabw: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -30, paddingBottom: 16 },
   fabShadow: { width: sizes.fab, height: sizes.fab, borderRadius: sizes.fab / 2 },

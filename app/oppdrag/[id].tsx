@@ -4,6 +4,7 @@ import nb from '@/i18n/nb';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import type { ScreenStatus } from '@/components/ui/ScreenState';
 import { TaskDetailScreen } from '@/screens/TaskDetailScreen';
+import { OfferDetailScreen } from '@/screens/OfferDetailScreen';
 
 export default function ListingDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,9 +18,12 @@ export default function ListingDetailRoute() {
     return <FallbackScreen status="empty" emptyText={nb.moderation.closed} title="Oppdrag" />;
   }
 
-  // Only oppdrag exist (rule 1) – any other listing type is treated as not found.
   if (listing && listing.type === 'TASK_REQUEST') {
     return <TaskDetailScreen listing={listing} onBack={goBack} />;
+  }
+  // «Tilbyr hjelp» (0076)
+  if (listing && listing.type === 'SERVICE_OFFER') {
+    return <OfferDetailScreen listing={listing} onBack={goBack} />;
   }
 
   let status: ScreenStatus = 'loading';

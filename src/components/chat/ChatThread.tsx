@@ -1,9 +1,11 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import type { Message } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { formatTime } from '@/lib/datetime';
 import { colors, radius, shadow, text } from '@/theme/theme';
 import { Avatar, Button, FadeUp, Icon, ScaleIn, type IconKey } from '@/components/ui';
+import { VoiceBubble } from './Voice';
 
 /** Reactions offered on tap (stored as emoji; drawn as icons like the design). */
 export const REACTIONS: { emoji: string; icon: IconKey; color: string; filled?: boolean }[] = [
@@ -76,6 +78,7 @@ type RowProps = {
 /** `.mrow` – bubble with tap → reaction popover, reaction chips, ticks, status line. */
 export function MessageRow({ m, mine, meId, showAvatar, firstOfGroup, avatar, pinned, selected, statusText, onSelect, onReact, onLongPress, onRetry }: RowProps) {
   const isImg = m.kind === 'IMAGE' && !!m.attachmentUrl;
+  const isVoice = m.kind === 'AUDIO' && !!m.attachmentUrl;
   const reactions = Object.entries(m.reactions ?? {}).filter(([, ids]) => ids.length);
   const tick: IconKey | null = !mine || m.failed ? null : m.pending ? 'clock' : m.delivery === 'SENT' ? 'check' : 'checks';
   return (
@@ -111,7 +114,7 @@ export function MessageRow({ m, mine, meId, showAvatar, firstOfGroup, avatar, pi
         ) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isImg ? nb.chat.imageA11y : undefined}
+          accessibilityLabel={isImg ? nb.chat.imageA11y : isVoice ? nb.chat.voiceMessage : undefined}
           accessibilityState={{ expanded: selected }}
           onPress={onSelect}
           onLongPress={onLongPress}
@@ -132,6 +135,8 @@ export function MessageRow({ m, mine, meId, showAvatar, firstOfGroup, avatar, pi
           ) : null}
           {isImg ? (
             <Image source={{ uri: m.attachmentUrl }} style={styles.photo} accessibilityIgnoresInvertColors />
+          ) : isVoice ? (
+            <VoiceBubble uri={m.attachmentUrl!} ms={m.audioMs ?? 0} mine={mine} />
           ) : (
             <Text style={[text.bubble, { color: mine ? colors.white : colors.ink }]}>{m.text}</Text>
           )}

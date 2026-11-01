@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,8 @@ import {
   useAgreementByProposal,
   useAgreementTimeProposal,
   useCancelAgreement,
+  useConfirmAttendance,
+  useProposalsForListing,
   useListing,
   useProfile,
   useProposal,
@@ -27,10 +29,18 @@ import {
   parseDurationHours,
   removeCalendarEvent,
 } from '@/lib/deviceCalendar';
+import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { colors, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
+import { AttendanceCard, showAttendance } from '@/components/rescue/AttendanceCard';
+import { NoShowSheet } from '@/components/rescue/NoShowSheet';
+import { NoShowEntryCard } from '@/components/rescue/NoShowEntryCard';
+import { SafetyTip } from '@/components/SafetyTip';
+import { RescuePanel } from '@/components/rescue/RescuePanel';
+import { attendanceOf, canReportNoShow } from '@/domain/noShow';
+import { isOpenListing } from '@/domain/editing';
 import {
   Avatar,
   Button,
@@ -52,12 +62,19 @@ import {
   SubHeader,
   TextLink,
   type IconKey,
+  pullRefreshControl,
+  usePullRefresh,
 } from '@/components/ui';
 
 type Step = { key: keyof typeof nb.avtaleSum.steps; icon: IconKey; state: 'done' | 'cur' | 'x' | '' };
 
 /** Avtalesammendrag (design/screens/Avtale.dc.html). */
-export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
+/**
+ * `bekreft` + `svar=ja`: «Jeg kommer» tapped on the push (PushBridge) – confirm straight away.
+ * `redning`: opened from «X kan ikke likevel» / «X kan i dag» – the rescue panel is the point.
+ */
+export function AvtaleSammendragScreen({ proposalId, answerYes }: { proposalId: string; answerYes?: boolean }) {
+  const pull = usePullRefresh();
   const router = useRouter();
   const me = useCurrentUser();
   const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
@@ -68,6 +85,22 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const { data: helper } = useProfile(helperId);
   const { data: client } = useProfile(clientId);
   const cancel = useCancelAgreement(proposalId, proposal?.conversationId ?? '');
+  const confirmAttendance = useConfirmAttendance(proposalId);
+  const offers = useProposalsForListing(proposal?.listingId ?? '');
+  const [noShowOpen, setNoShowOpen] = useState(false);
+  // captured once: render stays pure, and minutes don't matter for «within 24 hours»
+  const [openedAt] = useState(() => Date.now());
+  // «Jeg kommer» from the push: once, and only for the helper of an open avtale
+  const answered = useRef(false);
+  useEffect(() => {
+    if (!answerYes || answered.current || !proposal || !agreement || agreement.cancelledAt) return;
+    if (proposal.fromProfileId !== me.id || attendanceOf(agreement) !== 'none') return;
+    answered.current = true;
+    confirmAttendance.mutate(undefined, {
+      onSuccess: () => toast.success(nb.rescue.confirmed, { icon: 'check', bottom: 150 }),
+      onError: (e) => toast.error(serverMessage(e, nb.toast.genericError), { bottom: 150 }),
+    });
+  }, [answerYes, proposal, agreement, me.id, confirmAttendance]);
   const { data: timeProposal } = useAgreementTimeProposal(proposalId);
   const proposeTime = useProposeAgreementTime(proposalId, proposal?.conversationId ?? '');
   const respondTime = useRespondAgreementTime(proposalId, proposal?.conversationId ?? '');
@@ -125,12 +158,22 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const canMoveTime = !cancelled && !finished && ls !== 'COMPLETION_SENT';
   const pendingTime = canMoveTime && timeProposal?.status === 'PENDING' ? timeProposal : null;
   const errorText = (e: unknown) => (serverMessage(e, nb.toast.genericError));
+  // the job day: owner can call in «Hjelperen kom ikke»; after a cancel the rescue panel helps on
+  const canNoShow = canReportNoShow(proposal, agreement, me.id, finished || ls === 'COMPLETION_SENT');
+  const offerPost = listing?.type === 'SERVICE_OFFER';
+  // on a «Tilbyr hjelp» post the other tilbud are the helper's own, to other people (0076)
+  const otherOffers = offerPost ? 0 : (offers.data ?? []).filter((p) => p.id !== proposalId && (p.status === 'SENT' || p.status === 'REVISION_PENDING')).length;
+  const showRescue = cancelled && !iAmHelper && !!listing && !offerPost && isOpenListing(listing.status);
+  const showDay = !cancelled && !finished && !!agreement && showAttendance(agreement);
+  // the helper cancelling within 24 hours of the job counts half (0074)
+  const lateCancel = iAmHelper && !!start && start.getTime() - openedAt < 24 * 60 * 60 * 1000;
 
   const sendTime = (whenText: string, iso: string) => {
     proposeTime.mutate(
       { scheduledAt: iso, scheduledText: whenText },
       {
         onSuccess: () => {
+          haptics.success();
           setTimeSheet(false);
           toast.success(nb.avtaleSum.newTimeSent(first), { icon: 'cal', bottom: 150 });
         },
@@ -144,6 +187,7 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
       { id: pendingTime.id, answer },
       {
         onSuccess: (r) => {
+          if (answer === 'ACCEPT') haptics.success();
           if (answer === 'ACCEPT') toast.success(nb.avtaleSum.timeAccepted(r.scheduledText), { icon: 'cal', bottom: 150 });
           else toast.info(answer === 'DECLINE' ? nb.avtaleSum.timeDeclined : nb.avtaleSum.timeWithdrawn, { icon: 'x', bottom: 150 });
         },
@@ -157,6 +201,7 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
       { when: againWhen.trim() || undefined, note: againNote.trim() || undefined },
       {
         onSuccess: (newId) => {
+          haptics.success();
           setAgainSheet(false);
           setAgainWhen('');
           setAgainNote('');
@@ -204,6 +249,7 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
   const confirmCancel = async () => {
     try {
       await cancel.mutateAsync(reason ?? undefined);
+      haptics.warning();
       setDialog(false);
       toast.info(nb.avtaleSum.cancelledToast(first), { icon: 'ban', bottom: 150 });
     } catch {
@@ -217,6 +263,7 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
     <View style={styles.flex}>
       <Screen
         scroll
+        scrollProps={{ refreshControl: pullRefreshControl(pull) }}
         header={
           <SubHeader
             title={nb.avtaleSum.title}
@@ -252,6 +299,31 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
             {when ? <Pill label={when} tone="line" icon="cal" size="lg" /> : null}
           </View>
         </FadeUp>
+
+        {/* the helper didn't come / cancelled: find someone else today */}
+        {showRescue && listing ? (
+          <View style={[styles.px, styles.mt14]}>
+            <RescuePanel cancelledId={proposalId} listing={listing} />
+          </View>
+        ) : null}
+
+        {/* job day: confirm, on the way, arrived */}
+        {showDay && agreement ? (
+          <View style={[styles.px, styles.mt14]}>
+            <AttendanceCard
+              proposalId={proposalId}
+              agreement={agreement}
+              iAmHelper={iAmHelper}
+              otherFirst={first}
+              onWrite={openChat}
+              onFindOther={canNoShow ? () => setNoShowOpen(true) : undefined}
+              onCantCome={() => {
+                setReason(null);
+                setDialog(true);
+              }}
+            />
+          </View>
+        ) : null}
 
         {/* a proposed new time waits for the other person */}
         {pendingTime ? (
@@ -386,6 +458,13 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
           </View>
         </FadeUp>
 
+        {/* first job with someone new: one calm safety tip, until it's hidden */}
+        {!cancelled && !finished && other ? (
+          <View style={[styles.px, styles.mt14]}>
+            <SafetyTip proposalId={proposalId} counterpartId={other.id} first={first} iAmHelper={iAmHelper} />
+          </View>
+        ) : null}
+
         {/* progress */}
         <FadeUp delay={150} style={[styles.px, styles.mt14]}>
           <View style={[styles.card, styles.progressCard, shadow.card]}>
@@ -422,6 +501,18 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
           <QuickAction icon="shield" bg={colors.bg} fg={colors.ink} label={nb.avtaleSum.shareTrusted} onPress={() => safePush('/trygge-kontakter')} />
         </FadeUp>
 
+        {/* the owner, on the job day: the way out when the helper doesn't come */}
+        {canNoShow && !iAmHelper && attendanceOf(agreement) !== 'arrived' ? (
+          <View style={[styles.px, styles.mt18]}>
+            <NoShowEntryCard
+              helperFirst={first}
+              timeText={agreement?.scheduledAt ? `kl. ${formatTime(agreement.scheduledAt)}` : undefined}
+              attendance={attendanceOf(agreement)}
+              onWrite={openChat}
+              onReport={() => setNoShowOpen(true)}
+            />
+          </View>
+        ) : null}
         {!cancelled ? (
           <FadeUp delay={300} style={[styles.px, styles.mt18]}>
             <Button label={nb.avtaleSum.cancel} icon="ban" variant="dangerGhost" onPress={() => { setReason(null); setDialog(true); }} />
@@ -457,6 +548,7 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
         cta={nb.avtaleSum.newTimeSend}
         busy={proposeTime.isPending}
         onSend={sendTime}
+        current={agreement?.scheduledAt ?? proposal.scheduledAt}
       />
       <Sheet
         visible={againSheet}
@@ -477,6 +569,16 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
         </View>
       </Sheet>
 
+      <NoShowSheet
+        visible={noShowOpen}
+        onClose={() => setNoShowOpen(false)}
+        proposalId={proposalId}
+        helperFirst={first}
+        otherOffers={otherOffers}
+        offerPost={offerPost}
+        initialReason={agreement?.ownerWarnedAt && attendanceOf(agreement) === 'none' ? 'NO_REPLY' : undefined}
+        onDone={() => void refetch()}
+      />
       <Dialog
         visible={dialog}
         onClose={() => !cancel.isPending && setDialog(false)}
@@ -491,6 +593,12 @@ export function AvtaleSammendragScreen({ proposalId }: { proposalId: string }) {
                 <Chip key={r} label={r} size="sm" selected={reason === r} onPress={() => setReason(reason === r ? null : r)} />
               ))}
             </View>
+            {lateCancel ? (
+              <View style={styles.lateNote}>
+                <Icon name="alert" size={16} color={colors.warnDark} />
+                <Text style={styles.lateNoteText}>{nb.rescue.lateCancelNote}</Text>
+              </View>
+            ) : null}
             <Button
               label={nb.avtaleSum.cancel}
               variant="danger"
@@ -696,5 +804,7 @@ const styles = StyleSheet.create({
   qaText: { fontFamily: text.label.fontFamily, fontSize: 13, lineHeight: 16, color: colors.ink, textAlign: 'center' },
   bottom: { height: 150 },
   dlg: { gap: 10, alignSelf: 'stretch' },
+  lateNote: { flexDirection: 'row', gap: 8, padding: 12, borderRadius: radius.card, backgroundColor: colors.warnTint },
+  lateNoteText: { ...text.meta, flex: 1, color: colors.warnDark },
   reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 6, marginBottom: 10 },
 });

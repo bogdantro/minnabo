@@ -33,3 +33,13 @@ test('tapping Fellesskap navigates to it', async () => {
   await fireEvent.press(screen.getByText('Fellesskap'));
   expect(navigation.navigate).toHaveBeenCalledWith('fellesskap');
 });
+
+test('the active tab sits in a perfect circle (equal sides, half radius, never squeezed)', async () => {
+  const { StyleSheet } = require('react-native');
+  await renderWithProviders(<TabBar {...props()} />);
+  const s = StyleSheet.flatten(screen.getByTestId('nav-active-bubble').props.style);
+  expect(s.width).toBe(s.height);
+  expect(s.borderRadius).toBe(s.width / 2);
+  expect(s.flexShrink).toBe(0);
+  expect(s.backgroundColor).toBeTruthy();
+});

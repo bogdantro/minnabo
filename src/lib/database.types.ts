@@ -1113,6 +1113,7 @@ export type Database = {
       messages: {
         Row: {
           attachment_path: string | null
+          audio_ms: number | null
           author_id: string
           client_token: string | null
           conversation_id: string
@@ -1126,6 +1127,7 @@ export type Database = {
         }
         Insert: {
           attachment_path?: string | null
+          audio_ms?: number | null
           author_id: string
           client_token?: string | null
           conversation_id: string
@@ -1139,6 +1141,7 @@ export type Database = {
         }
         Update: {
           attachment_path?: string | null
+          audio_ms?: number | null
           author_id?: string
           client_token?: string | null
           conversation_id?: string
@@ -4067,7 +4070,7 @@ export type Database = {
         | "PAUSED"
         | "ARCHIVED"
       listing_type: "TASK_REQUEST" | "SERVICE_OFFER"
-      message_kind: "TEXT" | "PROPOSAL" | "SYSTEM" | "IMAGE"
+      message_kind: "TEXT" | "PROPOSAL" | "SYSTEM" | "IMAGE" | "AUDIO"
       notice_kind: "GIVEAWAY" | "LOST_FOUND" | "TOOL_LEND" | "GENERAL"
       notification_kind:
         | "NEW_MESSAGE"
@@ -4254,7 +4257,7 @@ export const Constants = {
         "ARCHIVED",
       ],
       listing_type: ["TASK_REQUEST", "SERVICE_OFFER"],
-      message_kind: ["TEXT", "PROPOSAL", "SYSTEM", "IMAGE"],
+      message_kind: ["TEXT", "PROPOSAL", "SYSTEM", "IMAGE", "AUDIO"],
       notice_kind: ["GIVEAWAY", "LOST_FOUND", "TOOL_LEND", "GENERAL"],
       notification_kind: [
         "NEW_MESSAGE",

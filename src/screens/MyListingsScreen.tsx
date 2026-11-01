@@ -6,6 +6,7 @@ import Animated, { FadeOutRight, LinearTransition } from 'react-native-reanimate
 import type { Listing, ListingStatus, Proposal } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
+import { EmptyScene } from '@/components/ui/EmptyScene';
 import { canEditListing, editListingHref } from '@/domain/editing';
 import { useMyListings, useReceivedProposals, useSetListingStatus } from '@/api/queries';
 import { haptics } from '@/lib/haptics';
@@ -34,6 +35,9 @@ import {
   SubHeader,
   type IconName,
   type PillTone,
+  pullRefreshControl,
+  usePullRefresh,
+  Segmented,
 } from '@/components/ui';
 
 type Group = 'aktiv' | 'pauset' | 'arkivert';
@@ -70,8 +74,11 @@ const isPending = (p: Proposal) => p.status === 'SENT' || p.status === 'REVISION
 
 /** Mine oppføringer (design/screens/MineOppforinger.dc.html). */
 export function MyListingsScreen() {
+  const pull = usePullRefresh();
   const router = useRouter();
-  const { data, isLoading, isError, refetch } = useMyListings('TASK_REQUEST');
+  // my oppdrag, or what I offer («Tilbyr hjelp», 0076)
+  const [kind, setKind] = useState<'need' | 'offer'>('need');
+  const { data, isLoading, isError, refetch } = useMyListings(kind === 'offer' ? 'SERVICE_OFFER' : 'TASK_REQUEST');
   const { data: received } = useReceivedProposals();
   const setStatus = useSetListingStatus();
 
@@ -106,7 +113,8 @@ export function MyListingsScreen() {
       },
     );
   };
-  const activeStatus = (l: Listing): ListingStatus => (pendingFor(l.id).length ? 'RECEIVING_OFFERS' : 'PUBLISHED');
+  // an offer is simply open again (0076 keeps it out of the oppdrag states)
+  const activeStatus = (l: Listing): ListingStatus => (l.type === 'TASK_REQUEST' && pendingFor(l.id).length ? 'RECEIVING_OFFERS' : 'PUBLISHED');
   const activate = (l: Listing) => change(l, activeStatus(l), nb.mine.toastActive(l.title), 'play');
 
   const empty = nb.mine.empty[group];
@@ -115,6 +123,7 @@ export function MyListingsScreen() {
     <Screen
       scroll
       spacer="foot"
+      scrollProps={{ refreshControl: pullRefreshControl(pull) }}
       header={
         <SubHeader
           title={nb.mine.title}
@@ -124,7 +133,13 @@ export function MyListingsScreen() {
       }
       footer={
         <StickyFooter>
-          <Button label={nb.mine.newListing} variant="ink" size="lg" icon="plus" onPress={() => safePush('/legg-ut')} />
+          <Button
+            label={kind === 'offer' ? nb.offer.offerCta : nb.mine.newListing}
+            variant="ink"
+            size="lg"
+            icon={kind === 'offer' ? 'hand' : 'plus'}
+            onPress={() => safePush(kind === 'offer' ? '/legg-ut/tilbyr' : '/legg-ut')}
+          />
         </StickyFooter>
       }
     >
@@ -133,6 +148,21 @@ export function MyListingsScreen() {
           {nb.mine.heading}
         </Text>
         <Text style={[text.meta, styles.mt8]}>{nb.mine.sub}</Text>
+      </FadeUp>
+
+      <FadeUp delay={60} style={[styles.px, styles.mt14]}>
+        <Segmented
+          accessibilityLabel={nb.mine.heading}
+          value={kind}
+          onChange={(k) => {
+            setKind(k);
+            setGroup('aktiv');
+          }}
+          options={[
+            { value: 'need', label: nb.offer.mineTabNeed },
+            { value: 'offer', label: nb.offer.mineTabOffer },
+          ]}
+        />
       </FadeUp>
 
       <FadeUp delay={80} style={[styles.px, styles.minis]}>
@@ -180,9 +210,7 @@ export function MyListingsScreen() {
           <ErrorState onRetry={() => void refetch()} />
         ) : shown.length === 0 ? (
           <FadeUp style={styles.empty}>
-            <View style={[styles.emptyIcon, shadow.card]}>
-              <Icon name={GROUPS.find((g) => g.id === group)!.icon} size={24} color={colors.mute} />
-            </View>
+            <EmptyScene icon={GROUPS.find((g) => g.id === group)!.icon} tone="lime" />
             <Text style={styles.emptyTitle}>{empty.title}</Text>
             <Text style={[text.meta, styles.emptyText]}>{empty.text}</Text>
             <Button label={nb.mine.newListing} variant="ink" size="sm" icon="plus" block={false} align="center" onPress={() => safePush('/legg-ut')} style={styles.mt6} />
@@ -225,7 +253,18 @@ export function MyListingsScreen() {
                 sub={nb.mine.editSub}
                 onPress={() => {
                   setSheetId(null);
-                  safePush(editListingHref(sel.id, '/mine'));
+                  safePush(sel.type === 'SERVICE_OFFER' ? `/legg-ut/tilbyr?rediger=${sel.id}` : editListingHref(sel.id, '/mine'));
+                }}
+              />
+            ) : null}
+            {sel.type === 'TASK_REQUEST' ? (
+              <Act
+                icon="repeat"
+                title={nb.mine.postAgain}
+                sub={nb.mine.postAgainSub}
+                onPress={() => {
+                  setSheetId(null);
+                  safePush(`/legg-ut?kopier=${sel.id}`);
                 }}
               />
             ) : null}

@@ -4,6 +4,7 @@ import type { PublicProfile } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { shortDate } from '@/lib/datetime';
 import { toast } from '@/lib/toast';
+import { rescheduleSuggestions } from '@/lib/reschedule';
 import { colors, radius, text } from '@/theme/theme';
 import {
   Avatar,
@@ -111,6 +112,7 @@ export function TimeSheet({
   subtitle,
   cta,
   busy,
+  current,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -122,7 +124,10 @@ export function TimeSheet({
   subtitle?: string;
   cta?: string;
   busy?: boolean;
+  /** the agreed time now: one-tap suggestions keep the same time of day ("I morgen samme tid") */
+  current?: string;
 }) {
+  const quick = useMemo(() => rescheduleSuggestions(current, new Date()), [current]);
   const days = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 7 }, (_, i) => {
@@ -145,7 +150,33 @@ export function TimeSheet({
   };
   return (
     <Sheet visible={visible} onClose={onClose} title={title ?? nb.chat.proposeTime} titleSize="h2" subtitle={subtitle ?? nb.chat.timeSheetSub(first)}>
-      <Text style={[text.label, styles.mb10]}>{nb.chat.day}</Text>
+      {quick.length ? (
+        <View style={styles.quickWrap}>
+          <Text style={[text.label, styles.mb10]}>{nb.chat.quickTimes}</Text>
+          <View style={styles.quick}>
+            {quick.map((q) => (
+              <Pressable
+                key={q.iso}
+                accessibilityRole="button"
+                accessibilityLabel={`${q.label}, ${q.when}`}
+                disabled={busy}
+                onPress={() => onSend(q.when, q.iso)}
+                style={({ pressed }) => [styles.quickBtn, pressed && styles.quickPressed]}
+              >
+                <Icon name="clock" size={16} color={colors.cyanDeep} />
+                <View style={styles.quickBody}>
+                  <Text style={[text.label, styles.quickLabel]}>{q.label}</Text>
+                  <Text style={text.meta}>{q.when}</Text>
+                </View>
+                <Icon name="send" size={16} color={colors.cyanDeep} />
+              </Pressable>
+            ))}
+          </View>
+          <Text style={[text.label, styles.mb10]}>{nb.chat.orPick}</Text>
+        </View>
+      ) : (
+        <Text style={[text.label, styles.mb10]}>{nb.chat.day}</Text>
+      )}
       <View style={styles.dayrow}>
         {days.map((d) => {
           const on = day === d.key;
@@ -329,6 +360,12 @@ export function PinSheet({ visible, pinned, onClose, onToggle }: { visible: bool
 }
 
 const styles = StyleSheet.create({
+  quickWrap: { marginBottom: 6 },
+  quick: { gap: 8, marginBottom: 18 },
+  quickBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, borderRadius: radius.card, backgroundColor: colors.cyanTint },
+  quickPressed: { opacity: 0.8 },
+  quickBody: { flex: 1, minWidth: 0, gap: 2 },
+  quickLabel: { fontSize: 14.5, color: colors.cyanDeep },
   flex: { flex: 1, minWidth: 0, gap: 3 },
   dim: { opacity: 0.5 },
   pressed: { transform: [{ scale: 0.95 }] },

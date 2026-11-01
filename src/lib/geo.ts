@@ -84,6 +84,43 @@ export async function detectKommune(): Promise<DetectResult> {
   }
 }
 
+/** A fix less precise than this can't honestly name the street. */
+const PLACE_MAX_ACCURACY_M = 250;
+
+/**
+ * «Jeg er framme»: roughly where the phone is, as words – "Storgata, Lillehammer".
+ * Never a house number or coordinates. Null when there is no permission, no precise
+ * enough fix, or no street name (web has no reverse geocoding).
+ */
+export async function approximatePlace(): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Location = require('expo-location') as typeof import('expo-location');
+    const current = await Location.getForegroundPermissionsAsync();
+    if (!current.granted) {
+      if (current.canAskAgain === false) return null;
+      const asked = await Location.requestForegroundPermissionsAsync();
+      if (!asked.granted) return null;
+    }
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
+    if (!pos || (pos.coords.accuracy ?? Infinity) > PLACE_MAX_ACCURACY_M) return null;
+    const hit = (await Location.reverseGeocodeAsync({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }))[0];
+    return placeText(hit?.street, hit?.district, hit?.city);
+  } catch (e) {
+    reportError(e, { where: 'approximatePlace' });
+    return null;
+  }
+}
+
+/** ('Storgata', undefined, 'Lillehammer') → 'Storgata, Lillehammer'; no street → the district; nothing → null. */
+export function placeText(street?: string | null, district?: string | null, city?: string | null): string | null {
+  const near = street?.trim() || district?.trim();
+  if (!near) return null;
+  const town = city?.trim();
+  return (town && town !== near ? `${near}, ${town}` : near).slice(0, 80);
+}
+
 /** What to tell the person for each way "Bruk posisjonen min" can fail. */
 export function locationErrorText(error: LocationError): string {
   switch (error) {

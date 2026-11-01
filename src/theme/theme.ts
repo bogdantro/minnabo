@@ -167,6 +167,7 @@ export const colors = {
   onInk72: 'rgba(255,255,255,0.72)',
   onInk90: 'rgba(255,255,255,0.9)',   // "Før" label on photos
   onInk12: 'rgba(255,255,255,0.12)',
+  onInk25: 'rgba(255,255,255,0.25)',  // talemelding track on my own (dark) bubble
   confettiGreen: '#63E08A',
   confettiLime: '#C6F43C',
   // oppdrag home
@@ -374,7 +375,7 @@ export const sizes = {
   listingThumbW: 96, listingThumbMinH: 118,
   minTouch: 44,
   buttonText: 44, saveButton: 38, rowIcon: 40, sectionIcon: 34, chipIcon: 30, count: 19, dot: 10,
-  navItemW: 48, navItemH: 32, navIcon: 22, fabIcon: 26, toggleKnob: 26, rangeThumb: 28, rangeTrack: 6,
+  navItemCircle: 40, navIcon: 22, fabIcon: 26, toggleKnob: 26, rangeThumb: 28, rangeTrack: 6,
   day: 46, segment: 40, tab: 46, progress: 6, grabberW: 42, grabberH: 5, toastIcon: 28,
   stateIllW: 170, stateIllH: 150, stateTile: 80, rowMin: 60, amountSuffixRight: 16,
   multilineMin: 112, spacerNav: 128, spacerFoot: 140, headerTop: 10,
@@ -481,6 +482,7 @@ export const icons = {
   bookmark: 'Bookmark', tag: 'Tag', brief: 'Briefcase', info: 'Info', alert: 'TriangleAlert',
   wifioff: 'WifiOff', refresh: 'RotateCw', play: 'Play', pause: 'Pause', home: 'Home',
   phone: 'Smartphone', mail: 'Mail', building: 'Building2', file: 'FileText', download: 'Download',
+  userX: 'UserX', msgOff: 'MessageCircleOff',
   eye: 'Eye', sun: 'Sun', zap: 'Zap', repeat: 'Repeat', smile: 'Smile', thumb: 'ThumbsUp',
   pinned: 'Pin', gift: 'Gift', map: 'Map', logout: 'LogOut', chart: 'BarChart3', archive: 'Archive',
   list: 'ListChecks', award: 'Award', hand: 'Handshake', key: 'Key', globe: 'Globe', mic: 'Mic',

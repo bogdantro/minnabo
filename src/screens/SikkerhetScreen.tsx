@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueries } from '@tanstack/react-query';
 import Animated, { FadeOutLeft, LinearTransition } from 'react-native-reanimated';
 import type { PublicProfile } from '@/domain/types';
 import nb from '@/i18n/nb';
+import { appLock, lockAvailable, unlock, useAppLockEnabled } from '@/lib/appLock';
 import { apiClient } from '@/api/client';
 import { profileKeys, useBlockedProfileIds, useListing, useMyAgreements, useProfile, useReports, useToggleBlock } from '@/api/queries';
 import { reportStage, type ReportStage } from '@/domain/reports';
 import { dayMonth } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
+import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { useTrustedContacts } from '@/lib/trustedContacts';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -25,6 +27,7 @@ import {
   Screen,
   SectionHeader,
   SubHeader,
+  Toggle,
   type IconName,
   Pill,
 } from '@/components/ui';
@@ -40,6 +43,25 @@ export function SikkerhetScreen() {
   const { data: blockedIds = [] } = useBlockedProfileIds();
   const { data: myReports = [] } = useReports();
   const toggleBlock = useToggleBlock();
+  const [lockOn] = useAppLockEnabled();
+  const [canLock, setCanLock] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void lockAvailable().then((v) => alive && setCanLock(v));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  // turning the lock on needs one Face ID first – so it can't lock out someone it doesn't recognise
+  const toggleLock = async (on: boolean) => {
+    if (on && !(await unlock())) {
+      toast.error(nb.appLock.notConfirmed);
+      return;
+    }
+    await appLock.setEnabled(on);
+    haptics.light();
+    toast.success(on ? nb.appLock.on : nb.appLock.off, { icon: 'lock' });
+  };
   const [ask, setAsk] = useState<PublicProfile | null>(null);
   const [tip, setTip] = useState<number | null>(0);
 
@@ -113,6 +135,22 @@ export function SikkerhetScreen() {
           />
         </ListGroup>
       </FadeUp>
+
+      {/* only on a phone with Face ID / fingerprint set up */}
+      {canLock ? (
+        <FadeUp style={[styles.px, styles.lockRow]}>
+          <View style={[styles.lockCard, shadow.card]}>
+            <View style={styles.lockIc}>
+              <Icon name="lock" size={18} color={colors.ink} />
+            </View>
+            <View style={styles.lockBody}>
+              <Text style={[text.label, styles.lockTitle]}>{nb.appLock.setting}</Text>
+              <Text style={text.meta}>{nb.appLock.settingSub}</Text>
+            </View>
+            <Toggle value={lockOn} onValueChange={(v) => void toggleLock(v)} accessibilityLabel={nb.appLock.setting} />
+          </View>
+        </FadeUp>
+      ) : null}
 
       {myReports.length ? (
         <>
@@ -255,6 +293,11 @@ function NextJobTrip() {
 }
 
 const styles = StyleSheet.create({
+  lockRow: { marginTop: 14 },
+  lockCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: radius.card, backgroundColor: colors.white },
+  lockIc: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.limeTint },
+  lockBody: { flex: 1, minWidth: 0, gap: 2 },
+  lockTitle: { fontSize: 14.5 },
   flex: { flex: 1, minWidth: 0 },
   px: { paddingHorizontal: screenPadding },
   pt6: { paddingTop: 6 },

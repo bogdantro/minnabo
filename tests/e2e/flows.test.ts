@@ -1,6 +1,7 @@
 import { apiClient } from '@/api/client';
 import { chatRepository } from '@mocks/data/chatRepository';
 import { profileRepository } from '@mocks/data/profileRepository';
+import { repositories } from '@mocks/data/repositories';
 
 const ME = profileRepository.currentUserId;
 
@@ -61,11 +62,16 @@ test('flow 1: task request -> proposal -> accept -> complete -> review', async (
  */
 test('flow 2: service offer -> contact -> request -> proposal -> accept -> complete -> review', async () => {
   const results = await apiClient.listListings({ filter: { type: 'SERVICE_OFFER' } });
-  const offer = results.find((l) => l.title === 'Jeg kan klippe plenen din')!;
-  expect(offer.type).toBe('SERVICE_OFFER');
-
+  const found = results.find((l) => l.title === 'Jeg kan klippe plenen din')!;
+  expect(found.type).toBe('SERVICE_OFFER');
+  const offer = found;
+  // the nabo who needs help asks first
   const conv = await apiClient.startConversationForListing(offer.id);
   await apiClient.sendMessage(conv.id, 'Hei! Kan du sende meg et tilbud?');
+
+  // On an offer the helper (its owner) sends the tilbud (0076). The mock has one signed-in
+  // user, so from here it plays the helper: the offer becomes 'mine' for the send.
+  repositories.listings.replace({ ...found, owner: { ...found.owner, id: ME } });
 
   // the provider (listing owner) sends the proposal
   const proposal = chatRepository.sendProposal({
@@ -75,14 +81,15 @@ test('flow 2: service offer -> contact -> request -> proposal -> accept -> compl
     scheduledText: 'Onsdag ettermiddag',
   });
 
-  // in this conversation the provider is the current user (they own the mock),
-  // so the requester side accepts via RECIPIENT
+  // the nabo who asked accepts
   const { agreement } = await apiClient.respondToProposal(proposal.id, 'ACCEPT', 'RECIPIENT');
   expect(agreement).toBeDefined();
 
   await apiClient.confirmCompletion(proposal.id, ME);
-  await apiClient.confirmCompletion(proposal.id, offer.owner.id);
+  await apiClient.confirmCompletion(proposal.id, found.owner.id);
   expect(profileRepository.isFullyCompleted(proposal.id)).toBe(true);
+  // the offer stays open for the next nabo – an avtale never closes it (0076)
+  expect(repositories.listings.get(offer.id)?.status).toBe(found.status);
 
   const review = await apiClient.submitReview({
     agreementProposalId: proposal.id,

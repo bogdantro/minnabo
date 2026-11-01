@@ -79,6 +79,8 @@ const sortListings = (items: Listing[], sort?: ListingSort): Listing[] => {
   }
 };
 
+const OFFER_KEEPS: ListingStatus[] = ['AGREED', 'OFFER_ACCEPTED', 'IN_PROGRESS', 'COMPLETION_SENT', 'COMPLETED', 'REVIEWED', 'RECEIVING_OFFERS'];
+
 export const repositories = {
   listings: {
     list(filter?: ListingFilter, sort?: ListingSort): Listing[] {
@@ -101,6 +103,9 @@ export const repositories = {
       return all().filter((l) => l.owner.id === profileId && l.status !== 'REMOVED');
     },
     setStatus(id: string, status: ListingStatus): void {
+      // like keep_offer_open (0076): an avtale never closes a «Tilbyr hjelp» post
+      const l = all().find((x) => x.id === id);
+      if (l?.type === 'SERVICE_OFFER' && OFFER_KEEPS.includes(status)) return;
       statusOverrides = { ...statusOverrides, [id]: status };
     },
     /** Edit: swap in the new version (status stays whatever setStatus says). */

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import nb from '@/i18n/nb';

@@ -3,9 +3,9 @@
  * change both together. The final legal wording is checked by a lawyer (docs/LEFT_OUT.md).
  */
 export const TERMS = {
-  version: '1.0',
+  version: '1.1',
   /** ISO date of the last change to the text */
-  updated: '2026-10-13',
+  updated: '2026-10-31',
   readMinutes: 8,
   /** youngest age that can create an account (Vipps requires 15) */
   minAge: 15,
@@ -34,7 +34,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
   {
     title: 'Om tjenesten',
     blocks: [
-      `MinNabo er en digital møteplass for småjobber i Innlandet. Privatpersoner kan legge ut oppdrag når de trenger hjelp, og andre kan gi tilbud på oppdragene. Tjenesten leveres av ${owner.name}, org.nr. ${owner.orgNr}, ${owner.address} («MinNabo», «vi»).`,
+      `MinNabo er en digital møteplass for småjobber i Innlandet. Privatpersoner kan legge ut oppdrag når de trenger hjelp, og andre kan gi tilbud på oppdragene. De kan også fortelle hva de selv kan hjelpe med («Tilbyr hjelp»). Tjenesten leveres av ${owner.name}, org.nr. ${owner.orgNr}, ${owner.address} («MinNabo», «vi»).`,
       'MinNabo formidler kontakt mellom brukere. Vi er ikke part i avtalene dere inngår, vi utfører ikke jobbene, og vi er ikke arbeidsgiver for de som tar oppdrag.',
       'Når du oppretter en konto, godtar du disse vilkårene og vår personvernerklæring.',
       { link: { label: 'Les personvernerklæringen', route: '/personvern' } },
@@ -61,7 +61,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       `Er du mellom ${TERMS.minAge} og 18 år, får du automatisk en ungdomskonto når du logger inn med Vipps.`,
       {
         list: [
-          'En ungdomskonto kan bare gi tilbud på oppdrag. Den kan ikke legge ut egne oppdrag.',
+          'En ungdomskonto kan bare gi tilbud på oppdrag. Den kan ikke legge ut egne oppdrag eller «Tilbyr hjelp».',
           'Du trenger ikke samtykke fra foresatte for å opprette en ungdomskonto. Alderen bekreftes med Vipps.',
           'Vi anbefaler at du avtaler jobber i dagslys, gjerne hos folk du kjenner, og deler jobbdagen med en voksen med Trygg tur i appen.',
           'Når du fyller 18 år, blir kontoen automatisk gjort om til en vanlig konto.',
@@ -72,12 +72,12 @@ export const TERMS_SECTIONS: TermsSection[] = [
   {
     title: 'Oppdrag og tilbud',
     blocks: [
-      'MinNabo har én type oppføring: oppdrag («Trenger hjelp»). Andre brukere kan gi tilbud med pris, tidspunkt og en kort melding.',
+      'MinNabo har to typer oppføringer: oppdrag («Trenger hjelp») og «Tilbyr hjelp». På et oppdrag kan andre brukere gi tilbud med pris, tidspunkt og en kort melding. På «Tilbyr hjelp» tar naboer kontakt i chatten, og den som tilbyr hjelpen, sender tilbudet.',
       {
         list: [
-          'Beskriv oppdraget ærlig og konkret, med riktig kategori og et realistisk tidspunkt.',
+          'Beskriv oppdraget eller hjelpen du tilbyr ærlig og konkret, med riktig kategori og et realistisk tidspunkt.',
           'Bare omtrentlig sted vises offentlig. Eksakt adresse deler du selv i chatten etter at dere har avtalt jobben.',
-          'En avtale er inngått når oppdragsgiveren godtar et tilbud. Da ser dere begge avtalen i appen, og dere ser hverandres telefonnummer.',
+          'En avtale er inngått når den som skal få hjelp, godtar et tilbud. Da ser dere begge avtalen i appen, og dere ser hverandres telefonnummer.',
           'Må du avlyse, gi beskjed så tidlig som mulig. Gjentatte avlysninger vises på profilen din og kan påvirke kontoen.',
         ],
       },
@@ -131,7 +131,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
     blocks: [
       {
         list: [
-          'Alle kan rapportere oppdrag, meldinger og profiler. Rapporter behandles av MinNabos moderatorer, normalt innen 12 timer.',
+          'Alle kan rapportere oppdrag, «Tilbyr hjelp», meldinger (også talemeldinger) og profiler. Rapporter behandles av MinNabos moderatorer, normalt innen 12 timer.',
           'Ved brudd på vilkårene kan vi skjule innhold, gi en advarsel, suspendere kontoen midlertidig eller stenge den permanent.',
           'Innhold som flere har rapportert, kan bli skjult automatisk, og en konto som flere har rapportert, kan bli suspendert automatisk, til en moderator har sett på saken.',
           'Ved alvorlige forhold kan vi kontakte politiet.',
@@ -183,7 +183,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
     title: 'Endringer',
     blocks: [
       `Vi kan endre vilkårene, for eksempel når tjenesten utvikles eller regelverket endres. Ved vesentlige endringer varsler vi deg i appen minst ${TERMS.noticeDays} dager før endringene gjelder. Bruker du MinNabo etter det, godtar du de nye vilkårene.`,
-      'Dette er første versjon av vilkårene.',
+      'Siste endring (31. oktober 2026): «Tilbyr hjelp» er lagt til.',
     ],
   },
   {

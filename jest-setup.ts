@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { cleanup, configure } from '@testing-library/react-native';
 
+// Tests never use the shell's app settings: after `set -a; source .env` (npm run db:push) the
+// real Vipps client id etc. would otherwise leak in, and `npm run release` would fail its tests.
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith('EXPO_PUBLIC_')) delete process.env[key];
+}
+
 // RNTL 14 + react-query settle slowly on a loaded machine; give waitFor room.
 configure({ asyncUtilTimeout: 8000 });
 
@@ -154,6 +160,8 @@ afterEach(() => {
   }
   try {
     require('@mocks/data/profileRepository').profileRepository._reset();
+    require('@mocks/data/reviewDutyStore').reviewDutyStore._reset();
+    require('@mocks/data/noShowStore').noShowStore._reset();
   } catch {
     /* not loaded */
   }
@@ -299,6 +307,33 @@ jest.mock('expo-image-picker', () => ({
     .mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///lib.jpg', mimeType: 'image/jpeg', fileSize: 1000 }] }),
 }));
 
+// Talemeldinger: a recorder that has recorded 4.2 s, and a player that does nothing.
+// Tests set `global.__recordedMs` to try other lengths.
+jest.mock('expo-audio', () => {
+  const recorder = {
+    uri: 'file:///rec.m4a',
+    prepareToRecordAsync: jest.fn().mockResolvedValue(undefined),
+    record: jest.fn(),
+    stop: jest.fn().mockResolvedValue(undefined),
+  };
+  const player = { replace: jest.fn(), play: jest.fn(), pause: jest.fn(), seekTo: jest.fn().mockResolvedValue(undefined) };
+  return {
+    RecordingPresets: { HIGH_QUALITY: {}, LOW_QUALITY: {} },
+    requestRecordingPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+    setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
+    useAudioRecorder: () => recorder,
+    useAudioRecorderState: () => ({
+      canRecord: true,
+      isRecording: false,
+      durationMillis: (globalThis as { __recordedMs?: number }).__recordedMs ?? 4200,
+      mediaServicesDidReset: false,
+      url: null,
+    }),
+    useAudioPlayer: () => player,
+    useAudioPlayerStatus: () => ({ playing: false, currentTime: 0, duration: 0 }),
+  };
+});
+
 jest.mock('expo-location', () => ({
   Accuracy: { Low: 1, Lowest: 0, Balanced: 3 },
   getForegroundPermissionsAsync: jest.fn().mockResolvedValue({ granted: true, canAskAgain: true }),
@@ -345,6 +380,7 @@ jest.mock('react-native-svg', () => {
     Path: make(),
     Circle: make(),
     Rect: make(),
+    Ellipse: make(),
     Line: make(),
     G: make(),
     Polyline: make(),
@@ -414,4 +450,11 @@ jest.mock('expo-web-browser', () => ({
   openAuthSessionAsync: jest.fn().mockResolvedValue({ type: 'dismiss' }),
   dismissAuthSession: jest.fn(),
   maybeCompleteAuthSession: jest.fn(),
+}));
+
+// App lock: a phone with Face ID set up that recognises its owner. Tests override per call.
+jest.mock('expo-local-authentication', () => ({
+  hasHardwareAsync: jest.fn().mockResolvedValue(true),
+  isEnrolledAsync: jest.fn().mockResolvedValue(true),
+  authenticateAsync: jest.fn().mockResolvedValue({ success: true }),
 }));

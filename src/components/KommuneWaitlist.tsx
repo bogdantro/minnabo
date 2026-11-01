@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
 import { useJoinKommuneWaitlist } from '@/api/queries';
 import { INNLANDET_KOMMUNER, isLaunchKommune } from '@/data/kommuner';
 import { colors, radius, text } from '@/theme/theme';
-import { Button, Chip, FadeUp, Icon, Input, TextLink } from '@/components/ui';
+import { Button, Chip, FadeUp, Icon, Input } from '@/components/ui';
 
 /**
  * `initial`: what the person searched for in the list above; used until they type here.
@@ -46,7 +46,25 @@ export function KommuneWaitlist({ initial }: { initial?: string }) {
       </FadeUp>
     );
   }
-  if (!open) return <TextLink label={nb.waitlist.link} icon="bell" onPress={() => setOpen(true)} />;
+  if (!open) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${nb.waitlist.linkTitle} ${nb.waitlist.linkSub}`}
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+      >
+        <View style={styles.linkIcon}>
+          <Icon name="bell" size={16} color={colors.cyanDeep} />
+        </View>
+        <View style={styles.flex}>
+          <Text style={[text.label, styles.linkTitle]}>{nb.waitlist.linkTitle}</Text>
+          <Text style={text.meta}>{nb.waitlist.linkSub}</Text>
+        </View>
+        <Icon name="arrow" size={16} color={colors.cyanDeep} />
+      </Pressable>
+    );
+  }
 
   return (
     <FadeUp style={styles.box}>
@@ -77,6 +95,20 @@ export function KommuneWaitlist({ initial }: { initial?: string }) {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0, gap: 2 },
+  link: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: radius.m,
+    backgroundColor: colors.surface2,
+  },
+  pressed: { opacity: 0.7 },
+  linkIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.cyanTint, alignItems: 'center', justifyContent: 'center' },
+  linkTitle: { fontSize: 14, lineHeight: 18 },
   box: { gap: 10, padding: 14, borderRadius: radius.m, backgroundColor: colors.surface2 },
   sub: { color: colors.ink2, marginTop: -4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

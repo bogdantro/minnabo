@@ -1,4 +1,5 @@
 import type { IconName } from '@/components/ui/Icon';
+import { haptics } from './haptics';
 
 export type ToastKind = 'success' | 'error' | 'info';
 export type ToastAction = { label: string; onPress: () => void };
@@ -29,7 +30,10 @@ function push(kind: ToastKind, text: string, extra?: Extra) {
 /** Imperative toast API. `<ToastHost/>` (mounted at the app root) renders them. */
 export const toast = {
   success: (text: string, extra?: Extra) => push('success', text, extra),
-  error: (text: string, extra?: Extra) => push('error', text, extra),
+  error: (text: string, extra?: Extra) => {
+    haptics.error();
+    return push('error', text, extra);
+  },
   info: (text: string, extra?: Extra) => push('info', text, extra),
   subscribe: (fn: Listener): (() => void) => {
     listeners.add(fn);

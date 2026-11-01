@@ -11,6 +11,7 @@ import Animated, {
 import { colors, motion, radius, shadow, sizes } from '@/theme/theme';
 import { Icon } from './Icon';
 import { PressableScale } from './PressableScale';
+import { haptics } from '@/lib/haptics';
 
 export type ToggleProps = {
   value: boolean;
@@ -46,7 +47,10 @@ export function Toggle({ value, onValueChange, accessibilityLabel, disabled, siz
       accessibilityState={{ checked: value, disabled }}
       disabled={disabled}
       hitSlop={6}
-      onPress={() => onValueChange(!value)}
+      onPress={() => {
+        haptics.select();
+        onValueChange(!value);
+      }}
       style={disabled ? styles.disabled : null}
     >
       <Animated.View style={[styles.track, sm && styles.trackSm, track]}>
@@ -86,7 +90,10 @@ export function Checkbox({ checked, onChange, accessibilityLabel }: CheckboxProp
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked }}
       hitSlop={9}
-      onPress={() => onChange(!checked)}
+      onPress={() => {
+        haptics.select();
+        onChange(!checked);
+      }}
     >
       {box}
     </Pressable>
@@ -117,7 +124,10 @@ export function OptionCard({ selected, onPress, children, role = 'radio', access
       accessibilityRole={role}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: selected, selected }}
-      onPress={onPress}
+      onPress={() => {
+        haptics.select();
+        onPress();
+      }}
       scaleTo={0.985}
       style={[styles.opt, selected && styles.optOn, style]}
     >

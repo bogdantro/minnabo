@@ -15,6 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { NoticeboardPost } from '@/domain/types';
 import nb from '@/i18n/nb';
+import { NeighbourhoodHighlights } from '@/components/NeighbourhoodHighlights';
 import { useListings, useNeighbourhoodInfo, useNoticeboard, useProfile, useToggleNeighbourhood } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
@@ -44,6 +45,8 @@ import {
   Tabs,
   type IconName,
   TextLink,
+  pullRefreshControl,
+  usePullRefresh,
 } from '@/components/ui';
 
 type Tab = 'oppdrag' | 'oppslag';
@@ -63,6 +66,7 @@ export function NeighbourhoodScreen() {
 }
 
 function NabolagPage({ place, kommuneParam }: { place: string; kommuneParam?: string }) {
+  const pull = usePullRefresh();
   const router = useRouter();
   const me = useCurrentUser();
   const scope = useLocationScope();
@@ -136,6 +140,7 @@ function NabolagPage({ place, kommuneParam }: { place: string; kommuneParam?: st
     <Screen
       scroll
       spacer="none"
+      scrollProps={{ refreshControl: pullRefreshControl(pull) }}
       header={
         <SubHeader
           title={nb.neighbourhood.title}
@@ -238,6 +243,9 @@ function NabolagPage({ place, kommuneParam }: { place: string; kommuneParam?: st
           )}
         </View>
       </FadeUp>
+
+      {/* opt-in only: the neighbours who helped most this month */}
+      <NeighbourhoodHighlights kommune={kommune} style={[styles.mx, styles.mt16]} />
 
       {/* tabs */}
       <FadeUp delay={200} style={styles.mt22}>
@@ -387,6 +395,7 @@ function Float({ children, amp, delay = 0 }: { children: ReactNode; amp: number;
 }
 
 const styles = StyleSheet.create({
+  mx: { marginHorizontal: screenPadding },
   px: { paddingHorizontal: screenPadding },
   abs: { position: 'absolute' },
   mt6: { marginTop: 6 },

@@ -8,7 +8,7 @@ import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
-import { profileKeys, useListing, useProposalsForListing, useReplyMinutes } from '@/api/queries';
+import { profileKeys, useListing, useProposalsForListing, useReliability, useReplyMinutes } from '@/api/queries';
 import { replyTime } from '@/lib/datetime';
 import { agreedDate } from '@/lib/deviceCalendar';
 import { safePush } from '@/lib/nav';
@@ -193,6 +193,12 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
                           <Text style={[styles.mkText, { color: colors.okText }]}>{nb.sammenlign.lowest}</Text>
                         </View>
                       ) : null}
+                      {r.p.availableTodayAt ? (
+                        <View style={[styles.mk, styles.mkLow]}>
+                          <Icon name="check" size={12} color={colors.okText} />
+                          <Text style={[styles.mkText, { color: colors.okText }]}>{nb.rescue.canToday}</Text>
+                        </View>
+                      ) : null}
                       {best ? (
                         <View style={[styles.mk, styles.mkBest]}>
                           <Icon name="star" size={12} color={colors.bestText} filled />
@@ -229,6 +235,14 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
                   </Cell>
                   <Cell label={nb.sammenlign.jobs}>
                     <Text style={styles.cellB}>{String(r.from?.completedTasks ?? 0)}</Text>
+                  </Cell>
+                  <Cell label={nb.sammenlign.showsUp}>
+                    <ShowsUpValue profileId={r.p.fromProfileId} />
+                  </Cell>
+                  <Cell label={nb.sammenlign.livesIn}>
+                    <Text style={styles.cellB} numberOfLines={1}>
+                      {r.from?.location.place || r.from?.location.municipality || '–'}
+                    </Text>
                   </Cell>
                   <Cell label={nb.sammenlign.reply}>
                     <ReplyValue profileId={r.p.fromProfileId} />
@@ -303,6 +317,17 @@ export function SammenlignTilbudScreen({ listingId }: { listingId: string }) {
 const whenKey = (p: Proposal) => agreedDate(p)?.getTime() ?? Number.MAX_SAFE_INTEGER;
 
 /** "Svartid" – the helper's median reply time, "–" until there is enough history. */
+/** «Møter opp» – share of avtaler the helper turned up for (0074 counts no-shows); «Ny» before 3. */
+function ShowsUpValue({ profileId }: { profileId: string }) {
+  const r = useReliability(profileId).data;
+  if (r?.showsUp == null) return <Text style={styles.cellB}>{nb.sammenlign.tooFew}</Text>;
+  return (
+    <Text style={[styles.cellB, r.showsUp >= 95 ? { color: colors.okText } : r.showsUp < 80 ? { color: colors.warn } : null]}>
+      {`${r.showsUp} %`}
+    </Text>
+  );
+}
+
 function ReplyValue({ profileId }: { profileId: string }) {
   const minutes = useReplyMinutes(profileId).data;
   return <Text style={styles.cellB}>{minutes != null ? replyTime(minutes) : '–'}</Text>;

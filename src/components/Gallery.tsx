@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   View,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import type { ListingImage } from '@/domain/types';
 import { tokens } from '@/theme';
 import nb from '@/i18n/nb';

@@ -5,6 +5,8 @@
 import type { LucideIcon } from 'lucide-react-native';
 import {
   Hammer,
+  UserX,
+  MessageCircleOff,
   AppWindow,
   Car,
   ShoppingCart,
@@ -172,6 +174,8 @@ export const iconComponents: Record<IconKey, LucideIcon> = {
   eye: Eye,
   sun: Sun,
   zap: Zap,
+  userX: UserX,
+  msgOff: MessageCircleOff,
   repeat: Repeat,
   smile: Smile,
   thumb: ThumbsUp,

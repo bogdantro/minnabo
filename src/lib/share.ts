@@ -1,5 +1,6 @@
 import { Share } from 'react-native';
 import * as Linking from 'expo-linking';
+import { SITE } from '@/config/links';
 import { track } from './reporting';
 
 /** Share a deep link to a listing via the OS share sheet. */
@@ -22,7 +23,8 @@ export async function shareInvite(referrerId: string): Promise<void> {
   const url = Linking.createURL('/velkommen', { queryParams: { ref: referrerId } });
   try {
     await Share.share({
-      message: `Bli med på MinNabo – hjelp naboene dine med småjobber. ${url}`,
+      // the website link works for someone without the app; the second opens the app with the invite
+      message: `Bli med på MinNabo – nabohjelp i Innlandet. Last ned appen: ${SITE}\nHar du appen? Åpne invitasjonen: ${url}`,
       url,
     });
     track('invite_shared', { referrerId });

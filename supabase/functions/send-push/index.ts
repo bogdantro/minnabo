@@ -29,6 +29,8 @@ const KIND_KEY: Record<string, Key> = {
   NOTICE_REPLY: 'board',
   NABOLAG_POST: 'board',
   MODERATION: 'mod',
+  JOB_DAY: 'time',
+  NO_SHOW: 'decided',
 };
 
 // Same defaults as DEFAULT_NOTIFICATION_PREFS in src/api/ApiClient.ts.
@@ -44,6 +46,16 @@ type Push = { profileId: string; key: Key; title: string; body: string; route: s
  * The app registers the buttons under this name: REVIEW_CATEGORY in src/components/PushBridge.tsx.
  */
 const REVIEW_CATEGORY = 'review';
+// One-tap answers (0074), registered in the app's PushBridge.tsx with the same names:
+// «Jeg kommer» on «Bekreft at du kommer», «Ja, jeg kan i dag» on «Oppdraget er ledig igjen».
+const ATTEND_CATEGORY = 'attend';
+const AVAILABLE_CATEGORY = 'available';
+const categoryFor = (route?: string | null) =>
+  !route ? undefined
+    : route.startsWith('/vurder/') ? REVIEW_CATEGORY
+    : route.includes('?bekreft=1') ? ATTEND_CATEGORY
+    : route.includes('?ledig=1') ? AVAILABLE_CATEGORY
+    : undefined;
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('POST only', { status: 405 });
@@ -81,7 +93,7 @@ async function fromMessage(db: any, id: string): Promise<Push[]> {
     db.from('profiles').select('display_name').eq('id', m.author_id).maybeSingle(),
     db.from('conversation_participants').select('profile_id, muted').eq('conversation_id', m.conversation_id).neq('profile_id', m.author_id),
   ]);
-  const body = m.kind === 'IMAGE' ? '📷 Bilde' : String(m.text ?? '').slice(0, 140);
+  const body = m.kind === 'IMAGE' ? '📷 Bilde' : m.kind === 'AUDIO' ? '🎤 Talemelding' : String(m.text ?? '').slice(0, 140);
   return (others ?? [])
     .filter((o: any) => !o.muted)
     .map((o: any) => ({
@@ -135,7 +147,7 @@ async function deliver(db: any, p: Push): Promise<number> {
         priority: 'high',
         ...(typeof badge === 'number' ? { badge } : {}),
         data: { route: p.route },
-        ...(p.route?.startsWith('/vurder/') ? { categoryId: REVIEW_CATEGORY } : {}),
+        ...(categoryFor(p.route) ? { categoryId: categoryFor(p.route) } : {}),
       })),
     ),
   });

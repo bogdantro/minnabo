@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "235865425266",
+    "project_id": "minnabo-8dbf4",
+    "storage_bucket": "minnabo-8dbf4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:235865425266:android:3c276f2bcf3fe1cc2189eb",
+        "android_client_info": {
+          "package_name": "no.minnabo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBc67HPwQHtmMTTOgyCjM069P9N6eoM18E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

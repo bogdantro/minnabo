@@ -7,6 +7,7 @@ import { draftStore } from '@/data/draftStore';
 import { useCreateListing, useUpdateListing } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { categoryArtId } from '@/domain/categories';
+import { urgentDayLabel } from '@/domain/urgent';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -150,6 +151,7 @@ export function PreviewScreen() {
             schedule={when}
             priceLabel={price.label}
             priceValue={price.value}
+            urgent={!!listing.urgentUntil}
             saved={false}
             onToggleSave={() => undefined}
           />
@@ -162,6 +164,7 @@ export function PreviewScreen() {
             <View style={styles.frameBody}>
               <View style={styles.row6}>
                 <Pill label={nb.preview.openTask} tone="need" dot />
+                {listing.urgentUntil ? <Pill label={nb.card.urgentUntil(urgentDayLabel(listing.urgentUntil))} icon="zap" tone="warn" /> : null}
                 <Pill label={listing.category.label} />
               </View>
               <Text style={text.h3}>{listing.title}</Text>

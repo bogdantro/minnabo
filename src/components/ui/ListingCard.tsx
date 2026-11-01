@@ -2,11 +2,13 @@ import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { colors, motion, radius, shadow, sizes, text, type CategoryId } from '@/theme/theme';
+import { heroTransition } from '@/lib/heroTransition';
+import { haptics } from '@/lib/haptics';
 import { CategoryArt } from './CategoryArt';
 import { Icon, type IconName } from './Icon';
 import { Pill } from './Pill';
 import { PressableScale } from './PressableScale';
-import { Stars, VerifiedIcon } from './Badges';
+import { ReliableLine, Stars, VerifiedIcon } from './Badges';
 
 export type ListingCardProps = {
   title: string;
@@ -28,6 +30,12 @@ export type ListingCardProps = {
   priceValue: string;
   /** Extra neutral pill next to "Trenger hjelp" (Dugnad, Gjentakende …). */
   extraBadge?: { label: string; icon?: IconName };
+  /** need = an oppdrag («Trenger hjelp»), offer = a nabo offering help («Tilbyr hjelp», 0076). */
+  kind?: 'need' | 'offer';
+  /** the helper has turned up for all of 5+ jobs (offer cards) */
+  reliable?: boolean;
+  /** «Haster» pill after "Trenger hjelp" (an oppdrag shown first until its deadline). */
+  urgent?: boolean;
   /** Replaces the "Trenger hjelp" pill, e.g. "Tilbud sendt" (dark). */
   statusBadge?: { label: string; tone: 'dark' | 'ok' | 'warn' | 'neutral' };
   online?: boolean;
@@ -36,6 +44,8 @@ export type ListingCardProps = {
   onToggleSave?: () => void;
   /** Heart label override, e.g. "Fjern Bære sofa fra lagrede" (Lagrede). */
   saveLabel?: string;
+  /** The oppdrag id: tapping the card lets its photo grow into the detail gallery (lib/heroTransition). */
+  heroId?: string;
   onPress?: () => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
@@ -64,7 +74,10 @@ export function SaveButton({ saved, onPress, label, style }: { saved: boolean; o
       accessibilityLabel={label ?? (saved ? 'Fjern fra lagrede' : 'Lagre')}
       accessibilityState={{ selected: saved }}
       hitSlop={3}
-      onPress={onPress}
+      onPress={() => {
+        haptics.light();
+        onPress();
+      }}
       style={[styles.save, saved && styles.saveOn, style]}
     >
       <AnimatedView style={anim}>
@@ -99,16 +112,31 @@ export function ListingCard({
   priceLabel,
   priceValue,
   extraBadge,
+  kind = 'need',
+  reliable = false,
+  urgent,
   statusBadge,
   online,
   saved = false,
   onToggleSave,
   saveLabel,
+  heroId,
   onPress,
   testID,
   style,
 }: ListingCardProps) {
-  const a11y = [title, ownerName, place, schedule, [priceLabel, priceValue].filter(Boolean).join(' ')]
+  const thumb = useRef<View>(null);
+  // Navigate at once; meanwhile measure the photo and start its flight (the overlay lands it in the
+  // gallery). The card stays mounted under the new screen, so measuring after the push is fine – and
+  // navigation never waits on a measurement.
+  const press = () => {
+    onPress?.();
+    if (!heroId || !photoUri) return;
+    thumb.current?.measureInWindow?.((x, y, width, height) => {
+      if (width > 0) heroTransition.start(heroId, photoUri, { x, y, width, height, radius: radius.thumb });
+    });
+  };
+  const a11y = [title, urgent ? 'Haster' : null, ownerName, place, schedule, [priceLabel, priceValue].filter(Boolean).join(' ')]
     .filter(Boolean)
     .join(', ');
 
@@ -117,11 +145,11 @@ export function ListingCard({
       <PressableScale
         accessibilityRole="button"
         accessibilityLabel={a11y}
-        onPress={onPress}
+        onPress={press}
         scaleTo={0.985}
         style={styles.inner}
       >
-        <View style={styles.thumb}>
+        <View ref={thumb} collapsable={false} style={styles.thumb}>
           <CategoryArt category={category} uri={photoUri} radius={radius.thumb} style={StyleSheet.absoluteFill} />
           {online ? <View style={styles.online} /> : null}
         </View>
@@ -130,8 +158,9 @@ export function ListingCard({
             {statusBadge ? (
               <Pill label={statusBadge.label} tone={statusBadge.tone} />
             ) : (
-              <Pill label="Trenger hjelp" tone="need" dot />
+              <Pill label={kind === 'offer' ? 'Tilbyr hjelp' : 'Trenger hjelp'} tone={kind} dot />
             )}
+            {urgent ? <Pill label="Haster" icon="zap" tone="warn" /> : null}
             {extraBadge ? <Pill label={extraBadge.label} icon={extraBadge.icon} tone="neutral" /> : null}
           </View>
           <Text style={[text.cardTitle, styles.title]} numberOfLines={1}>
@@ -151,6 +180,7 @@ export function ListingCard({
               ) : null}
             </View>
           ) : null}
+          {reliable ? <ReliableLine /> : null}
           {place ? <Meta icon="pin">{place}</Meta> : null}
           {schedule ? <Meta icon={scheduleIcon}>{schedule}</Meta> : null}
           <View style={styles.price}>

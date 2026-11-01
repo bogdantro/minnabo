@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { categoryArtId } from '@/domain/categories';
 import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
-import { useListing, useMyAgreements, useProfile, useProposal, useSubmitReview } from '@/api/queries';
+import { reviewStreak } from '@/domain/reviewStreak';
+import { useListing, useMyAgreements, usePendingReviews, useProfile, useProposal, useSubmitReview } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { shortDate } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
@@ -44,6 +45,9 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
   const counterpartId = proposal ? (proposal.fromProfileId === me.id ? proposal.toProfileId : proposal.fromProfileId) : '';
   const { data: other } = useProfile(counterpartId);
   const agenda = useMyAgreements();
+  // owed (0072): no way back until the stars are given – ReviewGate sends every other screen here
+  const pending = usePendingReviews();
+  const required = !!pending.data?.some((p) => p.proposalId === proposalId);
   const [rating, setRating] = useState(initialRating >= 1 && initialRating <= 5 ? Math.round(initialRating) : 0);
   const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
@@ -62,6 +66,7 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
   const word = nb.review.words[rating];
   const toggleTag = (t: string) => setTags((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
   // "Vil du anbefale …?" is stored as `recommends`; "Ja" also shows the "Anbefales" tag.
+  const streak = reviewStreak(agenda.data, proposalId);
   const finalTags = rec === 'ja' && !tags.includes('Anbefales') ? [...tags, 'Anbefales'] : tags;
 
   const send = () => {
@@ -94,7 +99,7 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
         header={
           <SubHeader
             title={done ? nb.review.doneTitle : nb.review.formTitle}
-            onBack={done ? undefined : () => (router.canGoBack() ? router.back() : router.replace('/avtaler'))}
+            onBack={done || required ? undefined : () => (router.canGoBack() ? router.back() : router.replace('/avtaler'))}
           />
         }
       >
@@ -114,6 +119,15 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
               <FadeUp delay={200}>
                 <Text style={[text.body, styles.muted, styles.center]}>{nb.review.thanksSub(first)}</Text>
               </FadeUp>
+              {/* a small thank-you, never a nag: only how many of the finished jobs you have reviewed */}
+              {streak ? (
+                <FadeUp delay={230} style={styles.streak} testID="review-streak">
+                  <Icon name={streak.reviewed === streak.total ? 'check' : 'star'} size={16} color={colors.okText} />
+                  <Text style={[text.label, styles.streakText]}>
+                    {streak.reviewed === streak.total ? nb.review.streakAll(streak.total) : nb.review.streak(streak.reviewed, streak.total)}
+                  </Text>
+                </FadeUp>
+              ) : null}
             </View>
             <FadeUp delay={250} style={[styles.px, styles.mt22]}>
               <Text style={[text.eyebrow, styles.mb10]}>{nb.review.howShown}</Text>
@@ -257,7 +271,7 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
             </FadeUp>
 
             <FadeUp delay={300} style={[styles.px, styles.mt16]}>
-              <Note>{already ? nb.review.already : nb.review.note}</Note>
+              <Note icon={required ? 'info' : undefined}>{already ? nb.review.already : required ? nb.review.required : nb.review.note}</Note>
             </FadeUp>
           </View>
         )}
@@ -351,6 +365,8 @@ const styles = StyleSheet.create({
   bottom: { height: 170 },
   foot: { gap: 6 },
   doneHero: { marginTop: 10, alignItems: 'center', gap: 8 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, minHeight: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.okTint },
+  streakText: { fontSize: 14, color: colors.okText },
   okbadge: { width: 104, height: 104, borderRadius: 34, backgroundColor: colors.star, alignItems: 'center', justifyContent: 'center' },
   display: { fontFamily: text.h1.fontFamily, fontSize: 36, lineHeight: 39, letterSpacing: -0.9, color: colors.ink, marginTop: 14 },
   review: { padding: 18, borderRadius: radius.listingCard, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.hairline, overflow: 'hidden' },

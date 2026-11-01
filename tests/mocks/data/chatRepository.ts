@@ -228,8 +228,9 @@ export const chatRepository = {
     // the seeded counterpart is treated as present — catches your own sent
     // messages up to READ too, so the delivery ticks reflect a live thread.
     const list = messages[conversationId] ?? [];
+    const now = new Date().toISOString();
     messages[conversationId] = list.map((m) =>
-      m.kind === 'SYSTEM' || m.delivery === 'READ' ? m : { ...m, delivery: 'READ' },
+      m.kind === 'SYSTEM' || m.delivery === 'READ' ? m : { ...m, delivery: 'READ', readAt: now },
     );
   },
 
@@ -280,6 +281,23 @@ export const chatRepository = {
     return msg;
   },
 
+  sendVoice(conversationId: string, attachmentUrl: string, audioMs: number): Message {
+    const msg: Message = {
+      id: nextId('m'),
+      conversationId,
+      authorProfileId: CURRENT_USER_ID,
+      text: '',
+      kind: 'AUDIO',
+      attachmentUrl,
+      audioMs: Math.round(audioMs),
+      createdAt: new Date().toISOString(),
+      delivery: 'SENT',
+    };
+    messages[conversationId] = [...(messages[conversationId] ?? []), msg];
+    touchConversation(conversationId, '🎤 Talemelding', true);
+    return msg;
+  },
+
   sendProposal(input: {
     conversationId: string;
     listingId: string;
@@ -291,6 +309,14 @@ export const chatRepository = {
     caveats?: string;
   }): Proposal {
     const conv = chatRepository.getConversation(input.conversationId);
+    // like send_proposal (0076): on an offer the helper (owner) sends; on an oppdrag the owner never does
+    const listing = repositories.listings.get(input.listingId);
+    if (listing?.type === 'SERVICE_OFFER' && listing.owner.id !== CURRENT_USER_ID) {
+      throw new UserError('Det er den som tilbyr hjelpen som sender tilbud her. Skriv en melding om hva du trenger.');
+    }
+    if (listing?.type === 'TASK_REQUEST' && listing.owner.id === CURRENT_USER_ID) {
+      throw new UserError('Eieren av oppføringen kan ikke sende tilbud på den.');
+    }
     const proposal: Proposal = {
       id: nextId('p'),
       listingId: input.listingId,
@@ -453,6 +479,20 @@ export const chatRepository = {
 
   getAgreement(proposalId: string): AgreementSnapshot | undefined {
     return agreements.find((a) => a.proposalId === proposalId);
+  },
+  /** tests + the no-show mocks: change fields on an agreement / a proposal */
+  patchAgreement(proposalId: string, patch: Partial<AgreementSnapshot>): void {
+    agreements = agreements.map((a) => (a.proposalId === proposalId ? { ...a, ...patch } : a));
+  },
+  patchProposal(proposalId: string, patch: Partial<Proposal>): void {
+    proposals = proposals.map((p) => (p.id === proposalId ? { ...p, ...patch } : p));
+  },
+  addSystemMessage(conversationId: string, text: string): void {
+    messages[conversationId] = [
+      ...(messages[conversationId] ?? []),
+      { id: nextId('m'), conversationId, authorProfileId: 'system', text, kind: 'SYSTEM', createdAt: new Date().toISOString(), delivery: 'READ' },
+    ];
+    touchConversation(conversationId, text);
   },
 
   /** Accepted proposals the current user is part of, with a listing title. */

@@ -41,6 +41,11 @@ const CURRENT_USER_ID = profiles.mb.id;
 export const profileRepository = {
   currentUserId: CURRENT_USER_ID,
 
+  /** every profile, me included (my editable copy) */
+  allProfiles(): PublicProfile[] {
+    return [editableProfile, ...Object.values(profiles).filter((p) => p.id !== CURRENT_USER_ID)];
+  },
+
   getProfile(id: string): PublicProfile | undefined {
     if (id === CURRENT_USER_ID) return editableProfile;
     return Object.values(profiles).find((p) => p.id === id);
@@ -78,7 +83,7 @@ export const profileRepository = {
     editableProfile.paused = true;
   },
 
-  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'availableForJobs' | 'categorySlugs' | 'languages' | 'hasCar' | 'availabilityText' | 'homeNotes' | 'portfolio'>> & {
+  updateProfile(patch: Partial<Pick<PublicProfile, 'displayName' | 'presentation' | 'paused' | 'availableForJobs' | 'categorySlugs' | 'languages' | 'hasCar' | 'availabilityText' | 'homeNotes' | 'portfolio' | 'highlightOptIn' | 'availableWeekdays'>> & {
     place?: string;
     municipality?: string;
     avatarPath?: string | null;
@@ -96,6 +101,8 @@ export const profileRepository = {
     if (patch.availabilityText !== undefined) editableProfile.availabilityText = patch.availabilityText.trim() || undefined;
     if (patch.homeNotes !== undefined) editableProfile.homeNotes = patch.homeNotes || undefined;
     if (patch.portfolio !== undefined) editableProfile.portfolio = patch.portfolio;
+    if (patch.highlightOptIn !== undefined) editableProfile.highlightOptIn = patch.highlightOptIn;
+    if (patch.availableWeekdays !== undefined) editableProfile.availableWeekdays = patch.availableWeekdays.length ? patch.availableWeekdays : undefined;
     if (patch.place !== undefined) {
       editableProfile.location = { ...editableProfile.location, place: patch.place };
     }

@@ -18,6 +18,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { AppNotification, NotificationKind } from "@/domain/types";
 import nb from "@/i18n/nb";
+import { EmptyScene } from "@/components/ui/EmptyScene";
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -47,7 +48,8 @@ import {
   ListRow,
   RowSkeleton,
   ScaleIn,
-  Screen,
+  ListScreen,
+  useListPaging,
   SubHeader,
   Toggle,
   type IconKey,
@@ -85,6 +87,8 @@ const KIND: Record<NotificationKind, { cat: Cat; icon: IconKey; tone: Tone }> =
     REVIEW_RECEIVED: { cat: "other", icon: "star", tone: TONES.star },
     MODERATION: { cat: "other", icon: "shield", tone: TONES.ok },
     AGREEMENT_CANCELLED: { cat: "deal", icon: "ban", tone: TONES.danger },
+    JOB_DAY: { cat: "deal", icon: "clock", tone: TONES.warn },
+    NO_SHOW: { cat: "deal", icon: "alert", tone: TONES.danger },
   };
 const kindOf = (k: NotificationKind) =>
   KIND[k] ?? { cat: "other" as const, icon: "bell" as const, tone: TONES.cyan };
@@ -118,10 +122,13 @@ export function NotificationsScreen() {
     (n) => inCat(n, filter) && (!only || isUnread(n)),
   );
 
+  // A long history renders a page at a time (the day cards stay whole, the rows inside are paged).
+  const { shown, more } = useListPaging(visible.length, `${filter}|${only}`);
+  const page = visible.slice(0, shown);
   let idx = 0;
   const groups = GROUPS.map((g) => ({
     g,
-    items: visible
+    items: page
       .filter((n) => groupOf(n.createdAt) === g)
       .map((n) => ({ n, i: idx++ })),
   })).filter((g) => g.items.length > 0);
@@ -148,8 +155,11 @@ export function NotificationsScreen() {
     filter === "all" ? null : nb.notifications.filters[filter].toLowerCase();
 
   return (
-    <Screen
-      scroll
+    <ListScreen
+      data={isLoading || isError ? [] : groups}
+      keyExtractor={(g) => g.g}
+      gap={0}
+      onEndReached={more}
       header={
         <SubHeader
           title={nb.notifications.title}
@@ -167,162 +177,166 @@ export function NotificationsScreen() {
           }
         />
       }
-      scrollProps={{
-        refreshControl: (
-          <RefreshControl
-            refreshing={isFetching && !isLoading}
-            onRefresh={() => refetch()}
-            tintColor={colors.limeDeep}
-          />
-        ),
-      }}
-    >
-      <FadeUp style={styles.sumbar}>
-        <View style={styles.ucount} accessibilityLiveRegion="polite">
-          <View style={[styles.bub, unreadN === 0 && styles.bubZero]}>
-            <Text style={[styles.bubText, unreadN === 0 && styles.bubTextZero]}>
-              {unreadN}
-            </Text>
-          </View>
-          <Text style={styles.ucountText}>
-            {nb.notifications.unread(unreadN)}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="switch"
-          accessibilityState={{ checked: only }}
-          accessibilityLabel={nb.notifications.onlyUnread}
-          onPress={() => setOnly((o) => !o)}
-          style={styles.onlybtn}
-        >
-          <Text style={styles.onlyText}>{nb.notifications.onlyUnread}</Text>
-          <View
-            pointerEvents="none"
-            importantForAccessibility="no-hide-descendants"
-          >
-            <Toggle
-              size="sm"
-              value={only}
-              onValueChange={setOnly}
-              accessibilityLabel={nb.notifications.onlyUnread}
-            />
-          </View>
-        </Pressable>
-      </FadeUp>
+      refreshControl={
+        <RefreshControl
+          refreshing={isFetching && !isLoading}
+          onRefresh={() => refetch()}
+          tintColor={colors.limeDeep}
+        />
+      }
+      listHeader={
+        <View>
+            <FadeUp style={styles.sumbar}>
+              <View style={styles.ucount} accessibilityLiveRegion="polite">
+                <View style={[styles.bub, unreadN === 0 && styles.bubZero]}>
+                  <Text style={[styles.bubText, unreadN === 0 && styles.bubTextZero]}>
+                    {unreadN}
+                  </Text>
+                </View>
+                <Text style={styles.ucountText}>
+                  {nb.notifications.unread(unreadN)}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityState={{ checked: only }}
+                accessibilityLabel={nb.notifications.onlyUnread}
+                onPress={() => setOnly((o) => !o)}
+                style={styles.onlybtn}
+              >
+                <Text style={styles.onlyText}>{nb.notifications.onlyUnread}</Text>
+                <View
+                  pointerEvents="none"
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  <Toggle
+                    size="sm"
+                    value={only}
+                    onValueChange={setOnly}
+                    accessibilityLabel={nb.notifications.onlyUnread}
+                  />
+                </View>
+              </Pressable>
+            </FadeUp>
 
-      <FadeUp delay={100} style={styles.chips}>
-        <View
-          accessibilityRole="tablist"
-          accessibilityLabel={nb.notifications.filterLabel}
-        >
-          <ChipRow>
-            {FILTERS.map((f) => {
-              const on = filter === f;
-              const n = items.filter((x) => inCat(x, f)).length;
-              const dot =
-                f !== "all" && items.some((x) => inCat(x, f) && isUnread(x));
-              return (
-                <Chip
-                  key={f}
-                  label={nb.notifications.filters[f]}
-                  selected={on}
-                  onPress={() => setFilter(f)}
-                  accessibilityLabel={`${nb.notifications.filters[f]}, ${n}`}
-                  style={styles.fchip}
-                  trailing={
-                    <View style={styles.trail}>
-                      {dot ? <View style={styles.ud} /> : null}
-                      <View style={[styles.n, on && styles.nOn]}>
-                        <Text style={[styles.nText, on && styles.nTextOn]}>
-                          {n}
-                        </Text>
-                      </View>
-                    </View>
-                  }
-                />
-              );
-            })}
-          </ChipRow>
+            <FadeUp delay={100} style={styles.chips}>
+              <View
+                accessibilityRole="tablist"
+                accessibilityLabel={nb.notifications.filterLabel}
+              >
+                <ChipRow>
+                  {FILTERS.map((f) => {
+                    const on = filter === f;
+                    const n = items.filter((x) => inCat(x, f)).length;
+                    const dot =
+                      f !== "all" && items.some((x) => inCat(x, f) && isUnread(x));
+                    return (
+                      <Chip
+                        key={f}
+                        label={nb.notifications.filters[f]}
+                        selected={on}
+                        onPress={() => setFilter(f)}
+                        accessibilityLabel={`${nb.notifications.filters[f]}, ${n}`}
+                        style={styles.fchip}
+                        trailing={
+                          <View style={styles.trail}>
+                            {dot ? <View style={styles.ud} /> : null}
+                            <View style={[styles.n, on && styles.nOn]}>
+                              <Text style={[styles.nText, on && styles.nTextOn]}>
+                                {n}
+                              </Text>
+                            </View>
+                          </View>
+                        }
+                      />
+                    );
+                  })}
+                </ChipRow>
+              </View>
+            </FadeUp>
         </View>
-      </FadeUp>
-
-      {isLoading ? (
-        <View style={styles.skel}>
-          <RowSkeleton />
-          <RowSkeleton />
-          <RowSkeleton />
-          <RowSkeleton />
+      }
+      empty={
+        <View>
+            {isLoading ? (
+              <View style={styles.skel}>
+                <RowSkeleton />
+                <RowSkeleton />
+                <RowSkeleton />
+                <RowSkeleton />
+              </View>
+            ) : isError ? (
+              <View style={styles.errorBox}>
+                <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
+              </View>
+            ) : visible.length === 0 ? (
+              <ScaleIn style={styles.emptyPad}>
+                <View style={[styles.empty, shadow.card]}>
+                  <EmptyScene icon="bell" tone="cyan" />
+                  <Text style={[text.h3, styles.emptyTitle]}>
+                    {nb.notifications.emptyTitle}
+                  </Text>
+                  <Text style={[text.meta, styles.center, styles.emptySub]}>
+                    {only
+                      ? nb.notifications.emptyOnly(filterName)
+                      : nb.notifications.emptyAll}
+                  </Text>
+                  {filter !== "all" || only ? (
+                    <Button
+                      label={nb.notifications.showAll}
+                      variant="ghost"
+                      size="sm"
+                      block={false}
+                      onPress={() => {
+                        setFilter("all");
+                        setOnly(false);
+                      }}
+                      style={styles.emptyBtn}
+                    />
+                  ) : null}
+                </View>
+              </ScaleIn>
+          ) : null}
         </View>
-      ) : isError ? (
-        <View style={styles.errorBox}>
-          <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
-        </View>
-      ) : visible.length === 0 ? (
-        <ScaleIn style={styles.emptyPad}>
-          <View style={[styles.empty, shadow.card]}>
-            <View style={styles.emptyIcon}>
-              <Icon name="bell" size={32} color={colors.cyanDeep} />
-            </View>
-            <Text style={[text.h3, styles.emptyTitle]}>
-              {nb.notifications.emptyTitle}
-            </Text>
-            <Text style={[text.meta, styles.center, styles.emptySub]}>
-              {only
-                ? nb.notifications.emptyOnly(filterName)
-                : nb.notifications.emptyAll}
-            </Text>
-            {filter !== "all" || only ? (
-              <Button
-                label={nb.notifications.showAll}
-                variant="ghost"
-                size="sm"
-                block={false}
-                onPress={() => {
-                  setFilter("all");
-                  setOnly(false);
-                }}
-                style={styles.emptyBtn}
+      }
+      renderItem={({ item: { g, items: rows } }) => (
+        <FadeUp>
+          <View style={styles.grp}>
+            <Text style={text.eyebrow}>{nb.notifications.groups[g]}</Text>
+            <View style={styles.grpLine} />
+          </View>
+          <View style={[styles.nlist, shadow.card]}>
+            {rows.map(({ n, i }, k) => (
+              <NotificationRow
+                key={n.id}
+                n={n}
+                unread={isUnread(n)}
+                first={k === 0}
+                index={i}
+                onPress={() => open(n)}
               />
-            ) : null}
+            ))}
           </View>
-        </ScaleIn>
-      ) : (
-        groups.map(({ g, items: rows }) => (
-          <FadeUp key={g}>
-            <View style={styles.grp}>
-              <Text style={text.eyebrow}>{nb.notifications.groups[g]}</Text>
-              <View style={styles.grpLine} />
-            </View>
-            <View style={[styles.nlist, shadow.card]}>
-              {rows.map(({ n, i }, k) => (
-                <NotificationRow
-                  key={n.id}
-                  n={n}
-                  unread={isUnread(n)}
-                  first={k === 0}
-                  index={i}
-                  onPress={() => open(n)}
-                />
-              ))}
-            </View>
-          </FadeUp>
-        ))
+        </FadeUp>
       )}
-
-      <View style={styles.prefs}>
-        <ListGroup>
-          <ListRow
-            title={nb.notifications.prefsTitle}
-            subtitle={nb.notifications.prefsSub}
-            icon="sliders"
-            iconBg={colors.warnTint}
-            iconColor={colors.warn}
-            onPress={() => safePush("/varslinger")}
-          />
-        </ListGroup>
-      </View>
-      <View style={styles.bottom} />
-    </Screen>
+      listFooter={
+        <View>
+            <View style={styles.prefs}>
+              <ListGroup>
+                <ListRow
+                  title={nb.notifications.prefsTitle}
+                  subtitle={nb.notifications.prefsSub}
+                  icon="sliders"
+                  iconBg={colors.warnTint}
+                  iconColor={colors.warn}
+                  onPress={() => safePush("/varslinger")}
+                />
+              </ListGroup>
+            </View>
+          <View style={styles.bottom} />
+        </View>
+      }
+    />
   );
 }
 

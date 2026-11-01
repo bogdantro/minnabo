@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { ConsentRecord } from '@/api/ApiClient';
 import nb from '@/i18n/nb';
-import { useConsentRecords, useSetTipsConsent } from '@/api/queries';
+import { useConsentRecords, useProfile, useSetTipsConsent, useUpdateProfile } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { exportMyData } from '@/lib/dataExport';
 import { daysAgo, dayMonthYear, formatTime } from '@/lib/datetime';
@@ -50,6 +50,8 @@ export function PersonvernScreen() {
   const me = useCurrentUser();
   const { data: rows, isLoading } = useConsentRecords();
   const setTips = useSetTipsConsent();
+  const update = useUpdateProfile();
+  const highlightOn = !!useProfile(me.id).data?.highlightOptIn;
   const [open, setOpen] = useState<number | null>(0);
   const [ex, setEx] = useState<'idle' | 'busy' | 'done'>('idle');
   const [pct, setPct] = useState(0);
@@ -69,6 +71,18 @@ export function PersonvernScreen() {
       },
       onError: () => toast.error(nb.toast.genericError),
     });
+
+  const toggleHighlight = (on: boolean) =>
+    update.mutate(
+      { highlightOptIn: on },
+      {
+        onSuccess: () => {
+          haptics.light();
+          toast.success(on ? nb.highlights.optInOn : nb.highlights.optInOff, { icon: 'check' });
+        },
+        onError: () => toast.error(nb.toast.genericError),
+      },
+    );
 
   const startExport = async () => {
     setEx('busy');
@@ -105,6 +119,17 @@ export function PersonvernScreen() {
           </View>
           <Toggle value={tipsOn} onValueChange={toggleTips} disabled={setTips.isPending || !rows} accessibilityLabel={nb.personvern.tipsTitle} />
         </FadeUp>
+
+        {/* youth accounts are never ranked, so they don't get the switch */}
+        {!me.isYouth ? (
+          <FadeUp delay={90} style={[styles.card, styles.pad, styles.row12, shadow.card]}>
+            <View style={styles.flex}>
+              <Text style={styles.b15}>{nb.highlights.optInTitle}</Text>
+              <Text style={[text.meta, styles.mt3]}>{nb.highlights.optInSub}</Text>
+            </View>
+            <Toggle value={highlightOn} onValueChange={toggleHighlight} disabled={update.isPending} accessibilityLabel={nb.highlights.optInTitle} />
+          </FadeUp>
+        ) : null}
 
         <FadeUp delay={120}>
           <Text style={[text.eyebrow, styles.mb10]}>{nb.personvern.logTitle}</Text>

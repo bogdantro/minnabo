@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
@@ -7,7 +8,10 @@ import type { CategoryId } from '@/theme/theme';
 import type { IconName } from '@/components/ui';
 import { CATEGORIES, categoryArtId, categoryLabel } from '@/domain/categories';
 import { milestonesFor } from '@/domain/milestones';
+import { alwaysShowsUp } from '@/domain/reliability';
+import { weekdaysLabel } from '@/domain/offer';
 import nb from '@/i18n/nb';
+import { CompletenessCard } from '@/components/profile/CompletenessCard';
 import {
   useConversations,
   useEndorsements,
@@ -21,6 +25,7 @@ import {
   usePortfolio,
   useReliability,
   useReplyMinutes,
+  useInviteCount,
 } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useMyAccount } from '@/auth/identity';
@@ -50,6 +55,8 @@ import {
   Tabs,
   TextLink,
   Toggle,
+  pullRefreshControl,
+  usePullRefresh,
 } from '@/components/ui';
 
 type Tab = 'om' | 'rev' | 'port';
@@ -68,6 +75,7 @@ function artForSkill(skill: string): CategoryId {
 
 /** Profil (design/screens/Profil.dc.html) – own profile with a public preview, or someone else's. */
 export function ProfileScreen({ profileId, initialTab }: { profileId?: string; initialTab?: 'om' | 'rev' | 'port' }) {
+  const pull = usePullRefresh();
   const router = useRouter();
   const myId = useSession().userId ?? '';
   const me = useCurrentUser();
@@ -85,6 +93,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   const update = useUpdateProfile();
   const replyMinutes = useReplyMinutes(id || undefined).data;
   const rel = useReliability(id || undefined).data;
+  const invited = useInviteCount(id || undefined).data ?? 0;
   const { data: portfolioItems } = usePortfolio(id || undefined);
 
   const [tab, setTab] = useState<Tab>(initialTab ?? 'om');
@@ -176,7 +185,14 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   );
 
   const score = profile.reliability?.score;
-  const milestones = milestonesFor({ completedTasks: profile.completedTasks, replyMinutes, rating: profile.rating });
+  const milestones = milestonesFor({
+    completedTasks: profile.completedTasks,
+    replyMinutes,
+    rating: profile.rating,
+    alwaysShowsUp: alwaysShowsUp(rel),
+    invitedCount: invited,
+    sameKommune: !isSelf && !!me.municipality && me.municipality === profile.location.municipality,
+  });
   // Last-12-months figures when the backend has them (0044); the old overall score otherwise.
   type RelBar = { label: string; icon: IconName; value: number };
   const relBars = (
@@ -189,6 +205,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   const pills: { label: string; icon: IconName }[] = [
     ...(profile.languages?.length ? [{ label: profile.languages.join(', '), icon: 'globe' as IconName }] : []),
     ...(profile.hasCar ? [{ label: nb.profile.hasCar, icon: 'transport' as IconName }] : []),
+    ...(weekdaysLabel(profile.availableWeekdays) ? [{ label: nb.availability.free(weekdaysLabel(profile.availableWeekdays)!), icon: 'cal' as IconName }] : []),
     ...(profile.availabilityText ? [{ label: profile.availabilityText, icon: 'clock' as IconName }] : []),
   ];
   const statTiles = [
@@ -205,6 +222,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
     <Screen
       scroll
       spacer="none"
+      scrollProps={{ refreshControl: pullRefreshControl(pull) }}
       header={
         <SubHeader
           title={nb.profile.title}
@@ -253,11 +271,11 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
           </View>
           {isPub && profile.paused ? <Pill label={nb.profile.onVacation} tone="warn" icon="moon" /> : null}
         </FadeUp>
-        {/* earned badges: oppdrag fullført, quick replies, high vurderinger */}
+        {/* nabo-merker: første jobb / oppdrag fullført, møter alltid opp, i nabolaget ditt, svarer raskt, toppvurdert, verver */}
         {milestones.length ? (
           <FadeUp delay={120} style={styles.badges}>
             {milestones.map((m) => (
-              <Pill key={m.key} label={m.label} tone={m.key === 'jobs' ? 'ok' : 'neutral'} icon={m.icon} />
+              <Pill key={m.key} label={m.label} tone={m.key === 'jobs' || m.key === 'first' || m.key === 'reliable' ? 'ok' : 'neutral'} icon={m.icon} />
             ))}
           </FadeUp>
         ) : null}
@@ -305,6 +323,9 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
           </FadeUp>
         )}
       </View>
+
+      {/* own profile: how complete it is, and the one next step (a better profile gets more tilbud) */}
+      {isSelf && !preview ? <CompletenessCard profile={profile} portfolioCount={portfolioItems?.length ?? 0} /> : null}
 
       {/* stats */}
       <FadeUp delay={200} style={[styles.px, styles.row10, styles.mt22]}>

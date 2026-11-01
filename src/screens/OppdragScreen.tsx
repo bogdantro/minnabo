@@ -13,6 +13,9 @@ import { colors, radius, screenPadding, shadow, text, type CategoryId } from '@/
 import { HomeTopBar } from '@/components/TopBar';
 import { LocationSheet } from '@/components/LocationSheet';
 import { OppdragCard } from '@/components/OppdragCard';
+import { DraftCard } from '@/components/DraftCard';
+import { SeasonalRow } from '@/components/SeasonalRow';
+import { JobDayCard } from '@/components/JobDayCard';
 import {
   Button,
   CategoryArt,
@@ -27,6 +30,7 @@ import {
   ScaleIn,
   Screen,
   SectionHeader,
+  Segmented,
 } from '@/components/ui';
 
 const SHOWN = 6;
@@ -44,16 +48,21 @@ export function OppdragScreen() {
   // Captured once per visit so the 'nye' count is stable while scrolling.
   const [openedAt] = useState(() => Date.now());
 
-  const jobs = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
+  // «Trenger hjelp» (oppdrag) or «Tilbyr hjelp» (naboer who offer, 0076)
+  const [kind, setKind] = useState<'need' | 'offer'>('need');
+  const tasks = useListings({ type: 'TASK_REQUEST', municipalities }, 'NEWEST');
+  const offers = useListings({ type: 'SERVICE_OFFER', municipalities }, 'NEWEST', kind === 'offer');
+  const jobs = kind === 'offer' ? offers : tasks;
   const others = useMemo(() => (jobs.data ?? []).filter((l) => l.owner.id !== me.id), [jobs.data, me.id]);
   const shown = useMemo(
     () => (cat ? others.filter((l) => categoryArtId(l.category.slug) === cat) : others).slice(0, SHOWN),
     [others, cat],
   );
+  // «Oppdrag for meg» counts oppdrag only, whichever tab is open
   const newForMe = useMemo(() => {
     const since = openedAt - NEW_WINDOW_MS;
-    return others.filter((l) => !dismissed.has(l.id) && Date.parse(l.createdAt) >= since).length;
-  }, [others, dismissed, openedAt]);
+    return (tasks.data ?? []).filter((l) => l.owner.id !== me.id && !dismissed.has(l.id) && Date.parse(l.createdAt) >= since).length;
+  }, [tasks.data, me.id, dismissed, openedAt]);
 
   const loading = jobs.isLoading || !ready;
   const refreshing = jobs.isFetching && !jobs.isLoading;
@@ -72,11 +81,15 @@ export function OppdragScreen() {
       scroll
       spacer="nav"
       header={
-        <HomeTopBar
-          avatar={{ uri: me.avatarUrl, initials: me.initials }}
-          onProfilePress={() => safePush('/profil')}
-          onNotificationsPress={() => safePush('/varsler')}
-        />
+        <View>
+          <HomeTopBar
+            avatar={{ uri: me.avatarUrl, initials: me.initials }}
+            onProfilePress={() => safePush('/profil')}
+            onNotificationsPress={() => safePush('/varsler')}
+          />
+          {/* the job day: pinned under the top bar while scrolling */}
+          <JobDayCard />
+        </View>
       }
       scrollProps={{
         refreshControl: (
@@ -119,6 +132,9 @@ export function OppdragScreen() {
         </Pressable>
       </FadeUp>
 
+      {/* a half-written oppdrag is never forgotten */}
+      <DraftCard style={[styles.px, styles.mt12]} />
+
       <FadeUp delay={150} style={[styles.px, styles.mt12]}>
         <Pressable
           accessibilityRole="search"
@@ -136,6 +152,9 @@ export function OppdragScreen() {
         </Pressable>
       </FadeUp>
 
+      {/* what neighbours usually need this time of year – one tap starts Legg ut with it chosen */}
+      {kind === 'need' ? <SeasonalRow style={styles.mt18} /> : null}
+
       <FadeUp delay={200} style={styles.mt18}>
         <ChipRow>
           <Chip label={nb.oppdrag.all} icon="annet" selected={cat === null} onPress={() => setCat(null)} />
@@ -151,7 +170,25 @@ export function OppdragScreen() {
         </ChipRow>
       </FadeUp>
 
-      <SectionHeader icon="clip" title={nb.oppdrag.needsTitle} subtitle={nb.oppdrag.needsSub} />
+      <View style={[styles.px, styles.mt18]}>
+        <Segmented
+          accessibilityLabel={nb.oppdrag.title}
+          value={kind}
+          onChange={(k) => {
+            setKind(k);
+            setCat(null);
+          }}
+          options={[
+            { value: 'need', label: nb.offer.segNeed },
+            { value: 'offer', label: nb.offer.segOffer },
+          ]}
+        />
+      </View>
+      {kind === 'need' ? (
+        <SectionHeader icon="clip" title={nb.oppdrag.needsTitle} subtitle={nb.oppdrag.needsSub} />
+      ) : (
+        <SectionHeader icon="hand" title={nb.offer.offersTitle} subtitle={nb.offer.offersSub} />
+      )}
 
       <View style={styles.list}>
         {loading ? (
@@ -162,6 +199,15 @@ export function OppdragScreen() {
           <View style={styles.errorBox}>
             <ErrorState onRetry={() => void jobs.refetch()} retrying={jobs.isFetching} />
           </View>
+        ) : shown.length === 0 && kind === 'offer' ? (
+          <ScaleIn style={[styles.empty, shadow.card]}>
+            <View style={[styles.emptyIcon, styles.emptyIconOffer]}>
+              <Icon name="hand" size={26} color={colors.cyanDeep} />
+            </View>
+            <Text style={styles.emptyTitle}>{nb.offer.emptyOffers(municipality ?? '')}</Text>
+            <Text style={[text.meta, styles.center, styles.emptyBody]}>{nb.offer.emptyOffersBody}</Text>
+            <Button label={nb.offer.offerCta} icon="hand" variant="ink" size="sm" block={false} align="center" onPress={() => safePush('/legg-ut/tilbyr')} style={styles.emptyCta} />
+          </ScaleIn>
         ) : shown.length === 0 ? (
           <ScaleIn style={[styles.empty, shadow.card]}>
             <View style={[styles.emptyIcon, !municipality && styles.emptyIconPin]}>
@@ -190,10 +236,13 @@ export function OppdragScreen() {
           ))
         )}
         <Button
-          label={nb.oppdrag.seeAll}
+          label={kind === 'offer' ? nb.offer.seeAllOffers : nb.oppdrag.seeAll}
           variant="ghost"
           iconRight="arrow"
-          onPress={() => safePush(cat ? `/oppdrag-liste?category=${slugForArtId(cat)}` : '/oppdrag-liste')}
+          onPress={() => {
+            const q = [kind === 'offer' ? 'type=tilbud' : '', cat ? `category=${slugForArtId(cat)}` : ''].filter(Boolean).join('&');
+            safePush(q ? `/oppdrag-liste?${q}` : '/oppdrag-liste');
+          }}
           style={styles.seeAll}
         />
       </View>
@@ -320,6 +369,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   emptyIconPin: { backgroundColor: colors.cyanTint },
+  emptyIconOffer: { backgroundColor: colors.cyanTint },
   emptyTitle: { ...text.h3, fontSize: 18, lineHeight: 22, textAlign: 'center' },
   emptyBody: { maxWidth: 270 },
   emptyCta: { marginTop: 8 },

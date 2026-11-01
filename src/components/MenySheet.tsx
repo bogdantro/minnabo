@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import nb from '@/i18n/nb';
+import { shareInvite } from '@/lib/share';
 import { signOut } from '@/auth/session';
 import { toast } from '@/lib/toast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -355,6 +356,16 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
             subtitle={nb.meny.safety.sub}
             onPress={() => go('/sikkerhet')}
           />
+          {me.id ? (
+            <ListRow
+              icon="gift"
+              iconBg={colors.limeTint}
+              iconColor={colors.limeDeep}
+              title={nb.meny.invite.title}
+              subtitle={nb.meny.invite.sub}
+              onPress={() => void shareInvite(me.id)}
+            />
+          ) : null}
         </Rows>
 
         <Section delay={500}>{nb.meny.settings}</Section>

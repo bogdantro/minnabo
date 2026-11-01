@@ -124,3 +124,28 @@ export async function pickAndUploadMany(opts: {
   onStart?.(ok.length);
   return Promise.all(ok.map((a) => uploadUri(bucket, folder, a.uri)));
 }
+
+/** Sound formats a recording can come out as: m4a on phones, webm in a browser. */
+const AUDIO_TYPES: Record<string, string> = { m4a: 'audio/mp4', mp4: 'audio/mp4', aac: 'audio/aac', webm: 'audio/webm', caf: 'audio/x-caf' };
+
+/** A voice clip larger than this is not a 2-minute talemelding. */
+const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Upload a finished recording to the private chat-attachments bucket under `{folder}/…`.
+ * The file type is read from the recording's own ending ("…/rec.m4a" → audio/mp4).
+ */
+export async function uploadVoice(uri: string, folder: string): Promise<PickResult> {
+  const res = await fetch(uri);
+  const blob = await res.blob();
+  const ext = (/\.([a-z0-9]+)(?:\?|$)/i.exec(uri)?.[1] ?? '').toLowerCase();
+  // a browser recording is a blob: link without an ending – its own type says what it is
+  const type = AUDIO_TYPES[ext] ?? (blob.type.startsWith('audio/') ? blob.type.split(';')[0] : 'audio/mp4');
+  const ending = Object.entries(AUDIO_TYPES).find(([, t]) => t === type)?.[0] ?? 'm4a';
+  const bytes = await blob.arrayBuffer();
+  if (bytes.byteLength > MAX_AUDIO_BYTES) throw new UserError('Talemeldingen er for lang.');
+  const path = `${folder}/${Date.now()}-${rand()}.${ending}`;
+  const { error } = await supabase.storage.from('chat-attachments').upload(path, bytes, { contentType: type, upsert: true });
+  if (error) throw backendError(error);
+  return { path, publicUrl: '', localUri: uri, bytes: bytes.byteLength };
+}

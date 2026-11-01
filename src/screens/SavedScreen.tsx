@@ -21,6 +21,7 @@ import {
 import { categoryArtId, categoryBySlug } from '@/domain/categories';
 import { isOpenListing, isTakenListing } from '@/domain/editing';
 import nb from '@/i18n/nb';
+import { EmptyScene } from '@/components/ui/EmptyScene';
 import { dayMonth } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
@@ -332,9 +333,7 @@ function SearchCard({ search: s }: { search: SavedSearchRecord }) {
 function EmptyCard({ icon, bg, fg, title, body, cta }: { icon: IconName; bg: string; fg: string; title: string; body: string; cta: ReactNode }) {
   return (
     <FadeUp style={styles.empty}>
-      <View style={[styles.emptyIcon, { backgroundColor: bg }]}>
-        <Icon name={icon} size={24} color={fg} />
-      </View>
+      <EmptyScene icon={icon} tone={bg === colors.cyanTint ? 'cyan' : 'lime'} />
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={[text.meta, styles.emptyText]}>{body}</Text>
       <View style={styles.mt6}>{cta}</View>

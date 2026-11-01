@@ -116,7 +116,8 @@ test('category logic: defaults, required questions and intake rows', () => {
   expect(rows).toContainEqual({ label: 'Hva skal bæres?', value: 'Møbler, Esker' });
   expect(rows).toContainEqual({ label: 'Etasjer å bære', value: '2 etg.' });
   expect(rows).toContainEqual({ label: 'Antall hjelpere', value: '2 personer' });
-  expect(rows).toContainEqual({ label: 'Haster', value: 'Ja' });
+  // urgency is its own field (urgentUntil, 0071), not a detail row
+  expect(rows).not.toContainEqual({ label: 'Haster', value: 'Ja' });
   // settings for the backend
   expect(extrasFor({ ...s1, who: 'verif', priceMode: 'offer', amount: '1200', km: 7 })).toMatchObject({
     offerAudience: 'ALL', // «Kun verifiserte» is gone: with Vipps login everyone is verified

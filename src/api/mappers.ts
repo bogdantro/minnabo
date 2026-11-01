@@ -44,6 +44,8 @@ export type ProfileRow = {
   purpose?: string | null;
   paused?: boolean | null;
   available_for_jobs?: boolean | null;
+  highlight_opt_in?: boolean | null;
+  available_weekdays?: number[] | null;
   created_at?: string | null;
   languages?: string[] | null;
   has_car?: boolean | null;
@@ -75,6 +77,7 @@ export type ListingRow = {
   max_distance_km?: number | null;
   estimated_minutes?: number | null;
   edited_at?: string | null;
+  urgent_until?: string | null;
   invited_profile_id?: string | null;
   admin_hidden?: boolean | null;
   hidden_reason?: string | null;
@@ -93,6 +96,7 @@ export type ListingRow = {
   service_offer_details?: {
     about: string;
     experience_years: number | null;
+    experience_months?: number | null;
     completed_jobs: number | null;
     services: string[];
     availability_text: string | null;
@@ -122,6 +126,8 @@ export type ProposalRow = {
   responded_at?: string | null;
   seen_at?: string | null;
   expires_at?: string | null;
+  rescue_from?: string | null;
+  available_today_at?: string | null;
 };
 
 export type MessageRow = {
@@ -132,6 +138,7 @@ export type MessageRow = {
   text: string;
   proposal_id: string | null;
   attachment_path: string | null;
+  audio_ms?: number | null;
   created_at: string;
   reactions?: Record<string, string[]> | null;
   pinned?: boolean | null;
@@ -150,6 +157,12 @@ export type AgreementRow = {
   duration_text?: string | null;
   cancelled_at?: string | null;
   cancel_reason?: string | null;
+  helper_confirmed_at?: string | null;
+  helper_status?: 'ON_THE_WAY' | 'ARRIVED' | null;
+  helper_status_at?: string | null;
+  helper_status_place?: string | null;
+  confirm_requested_at?: string | null;
+  owner_warned_at?: string | null;
 };
 
 export type ReviewRow = {
@@ -232,6 +245,8 @@ export function toProfile(row: ProfileRow): PublicProfile {
     purpose: (row.purpose as PublicProfile['purpose']) ?? undefined,
     paused: row.paused ?? undefined,
     availableForJobs: row.available_for_jobs ?? undefined,
+    highlightOptIn: row.highlight_opt_in ?? undefined,
+    availableWeekdays: row.available_weekdays?.length ? row.available_weekdays : undefined,
     memberSinceDate: row.created_at ?? undefined,
     languages: row.languages?.length ? row.languages : undefined,
     hasCar: row.has_car ?? undefined,
@@ -279,6 +294,7 @@ export function toListing(row: ListingRow): Listing {
     maxDistanceKm: row.max_distance_km ?? undefined,
     estimatedMinutes: row.estimated_minutes ?? undefined,
     editedAt: row.edited_at ?? undefined,
+    urgentUntil: row.urgent_until ?? undefined,
     invitedProfileId: row.invited_profile_id ?? undefined,
     moderation:
       row.admin_hidden || row.pending_review
@@ -300,6 +316,9 @@ export function toListing(row: ListingRow): Listing {
       ? {
           about: row.service_offer_details.about,
           experienceYears: row.service_offer_details.experience_years ?? undefined,
+          experienceMonths:
+            row.service_offer_details.experience_months ??
+            (row.service_offer_details.experience_years != null ? row.service_offer_details.experience_years * 12 : undefined),
           completedJobs: row.service_offer_details.completed_jobs ?? undefined,
           services: row.service_offer_details.services ?? [],
           availabilityText: row.service_offer_details.availability_text ?? undefined,
@@ -330,6 +349,8 @@ export function toProposal(row: ProposalRow): Proposal {
     respondedAt: row.responded_at ?? undefined,
     seenAt: row.seen_at ?? undefined,
     expiresAt: row.expires_at ?? undefined,
+    rescueFrom: row.rescue_from ?? undefined,
+    availableTodayAt: row.available_today_at ?? undefined,
   };
 }
 
@@ -342,7 +363,8 @@ export function toMessage(row: MessageRow): Message {
     kind: row.kind,
     proposalId: row.proposal_id ?? undefined,
     // the path in the private bucket – SupabaseApiClient swaps it for a signed link
-    attachmentUrl: row.kind === 'IMAGE' ? row.attachment_path ?? undefined : undefined,
+    attachmentUrl: row.kind === 'IMAGE' || row.kind === 'AUDIO' ? row.attachment_path ?? undefined : undefined,
+    audioMs: row.kind === 'AUDIO' ? row.audio_ms ?? 0 : undefined,
     createdAt: row.created_at,
     // stored on the server = "Sendt"; "Levert" / "Lest" are added by withReadState
     delivery: 'SENT',
@@ -371,7 +393,7 @@ export function withReadState(
   return messages.map((m) => {
     if (m.authorProfileId !== meId || m.kind === 'SYSTEM') return m;
     const at = Date.parse(m.createdAt);
-    if (readAt != null && at <= readAt) return { ...m, delivery: 'READ' as const };
+    if (readAt != null && at <= readAt) return { ...m, delivery: 'READ' as const, readAt: new Date(readAt).toISOString() };
     if (deliveredAt != null && at <= deliveredAt) return { ...m, delivery: 'DELIVERED' as const };
     return m;
   });
@@ -390,6 +412,12 @@ export function toAgreement(row: AgreementRow): AgreementSnapshot {
     durationText: row.duration_text ?? undefined,
     cancelledAt: row.cancelled_at ?? undefined,
     cancelReason: row.cancel_reason ?? undefined,
+    helperConfirmedAt: row.helper_confirmed_at ?? undefined,
+    helperStatus: row.helper_status ?? undefined,
+    helperStatusAt: row.helper_status_at ?? undefined,
+    helperStatusPlace: row.helper_status_place ?? undefined,
+    confirmRequestedAt: row.confirm_requested_at ?? undefined,
+    ownerWarnedAt: row.owner_warned_at ?? undefined,
   };
 }
 
@@ -593,11 +621,13 @@ export function toConversation(row: ConversationRow, meId: string, meta?: Conver
   const preview = last
     ? last.kind === 'IMAGE'
       ? '📷 Bilde'
-      : last.kind === 'PROPOSAL'
-        ? lastByMe
-          ? 'Du sendte et tilbud'
-          : 'Sendte et tilbud'
-        : (last.text ?? '').slice(0, 120) || row.last_message_preview
+      : last.kind === 'AUDIO'
+        ? '🎤 Talemelding'
+        : last.kind === 'PROPOSAL'
+          ? lastByMe
+            ? 'Du sendte et tilbud'
+            : 'Sendte et tilbud'
+          : (last.text ?? '').slice(0, 120) || row.last_message_preview
     : row.last_message_preview;
   const lastAt = last && Date.parse(last.created_at) > Date.parse(row.last_message_at) ? last.created_at : row.last_message_at;
   // The receipt on my own last message: how far the other person has got.

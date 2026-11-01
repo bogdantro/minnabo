@@ -1,4 +1,5 @@
-import { Image, type ImageStyle, type StyleProp } from 'react-native';
+import { type ImageStyle, type StyleProp } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { colors } from '@/theme/theme';
 

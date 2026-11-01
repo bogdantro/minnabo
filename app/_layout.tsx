@@ -33,6 +33,10 @@ import { ToastHost } from '@/components/ToastHost';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { AccountGuard } from '@/components/AccountGuard';
 import { PushBridge } from '@/components/PushBridge';
+import { NotificationsReadOnVisit } from '@/components/NotificationsReadOnVisit';
+import { HeroOverlay } from '@/components/HeroOverlay';
+import { AppLockGate } from '@/components/AppLockGate';
+import { ReviewGate } from '@/components/ReviewGate';
 import { OfflineOutbox } from '@/lib/outbox';
 import { queryClientRef } from '@/auth/queryClientRef';
 
@@ -61,10 +65,11 @@ const queryClient = new QueryClient({
 
 queryClientRef.current = queryClient;
 
-const persister = createAsyncStoragePersister({
+const savedCache = createAsyncStoragePersister({
   storage: AsyncStorage,
   key: 'minnabo.queryCache.v3',
 });
+const persister = savedCache;
 
 // Bump when the cached shape changes; drops any older persisted cache on start.
 const CACHE_BUSTER = '3';
@@ -113,12 +118,16 @@ export default function RootLayout() {
               </MaintenanceGate>
               <AccountGuard />
               <PushBridge />
+              <NotificationsReadOnVisit />
+              <ReviewGate />
               <InboxRealtime />
               <PlatformRealtime />
               <CategorySync />
               <OfflineOutbox />
               <OfflineBanner />
               <SafeTripBanner />
+              <HeroOverlay />
+              <AppLockGate />
               <ToastHost />
             </AppErrorBoundary>
           </BottomSheetModalProvider>

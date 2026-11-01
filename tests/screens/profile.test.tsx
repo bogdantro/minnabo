@@ -51,7 +51,9 @@ test('edit profile hydrates with the current values; save is enabled only when d
 
   await fireEvent.changeText(screen.getByLabelText('Presentasjon'), 'Hjelper gjerne med hagen.');
   expect(screen.getByText('Ulagrede endringer')).toBeTruthy();
-  await fireEvent.press(screen.getByRole('button', { name: 'Søre Ål' }));
+  // Område is a search: "sore al" finds «Søre Ål» (accents and æøå don't matter)
+  await fireEvent.changeText(await screen.findByLabelText('Søk etter område'), 'sore al');
+  await fireEvent.press(await screen.findByRole('radio', { name: 'Søre Ål' }));
   expect(screen.getByText('Søre Ål, Lillehammer')).toBeTruthy();
 
   await fireEvent.press(screen.getByRole('button', { name: 'Lagre endringer' }));
@@ -59,6 +61,18 @@ test('edit profile hydrates with the current values; save is enabled only when d
   const me = profileRepository.getProfile(profileRepository.currentUserId);
   expect(me?.presentation).toBe('Hjelper gjerne med hagen.');
   expect(me?.location.place).toBe('Søre Ål');
+});
+
+test('the område search lists the nabolag from the database, not a built-in list', async () => {
+  await renderWithProviders(<EditProfileScreen />);
+  await waitFor(() => expect(screen.getByLabelText('Visningsnavn').props.value).toBe('Marius B.'));
+  // «Vingnes» is a nabolag in the database but was never in the app's own list
+  await fireEvent.changeText(await screen.findByLabelText('Søk etter område'), 'ving');
+  expect(await screen.findByRole('radio', { name: 'Vingnes' })).toBeTruthy();
+  expect(screen.getByRole('radio', { name: 'Vingrom' })).toBeTruthy();
+  expect(screen.queryByRole('radio', { name: 'Sentrum' })).toBeNull();
+  await fireEvent.changeText(screen.getByLabelText('Søk etter område'), 'Oslo');
+  expect(screen.getByText('Fant ikke «Oslo» i Lillehammer. Velg «Hele Lillehammer» om området ditt mangler.')).toBeTruthy();
 });
 
 test('edit profile blocks saving a blank display name', async () => {

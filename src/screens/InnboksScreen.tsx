@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 're
 import { useFocusEffect, useRouter } from 'expo-router';
 import type { Conversation } from '@/domain/types';
 import nb from '@/i18n/nb';
+import { EmptyScene } from '@/components/ui/EmptyScene';
 import { useConversations, useMarkConversationsRead } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { daysAgo, formatTime, shortDate } from '@/lib/datetime';
@@ -23,7 +24,7 @@ import {
   Pill,
   RowSkeleton,
   ScaleIn,
-  Screen,
+  ListScreen,
 } from '@/components/ui';
 
 type Filter = 'alle' | 'uleste';
@@ -79,11 +80,18 @@ export function InnboksScreen() {
     if (!needle) return true;
     return `${c.counterpart.displayName} ${c.listing.title} ${c.lastMessagePreview}`.toLowerCase().includes(needle);
   });
+  // one flat list for the FlatList: a heading row per day group, then its conversations
+  type Row =
+    | { kind: 'group'; key: string; g: (typeof GROUPS)[number] }
+    | { kind: 'conv'; key: string; c: (typeof convs)[number]; i: number; first: boolean };
+  const rows: Row[] = [];
   let idx = 0;
-  const groups = GROUPS.map((g) => ({
-    g,
-    rows: list.filter((c) => groupOf(c.lastMessageAt) === g).map((c) => ({ c, i: idx++ })),
-  })).filter((g) => g.rows.length);
+  for (const g of GROUPS) {
+    const inGroup = list.filter((c) => groupOf(c.lastMessageAt) === g);
+    if (!inGroup.length) continue;
+    rows.push({ kind: 'group', key: `g-${g}`, g });
+    inGroup.forEach((c, n) => rows.push({ kind: 'conv', key: c.id, c, i: idx++, first: n === 0 }));
+  }
 
   const markAll = () => {
     const ids = convs.filter(isUnread).map((c) => c.id);
@@ -111,8 +119,12 @@ export function InnboksScreen() {
   };
 
   return (
-    <Screen
-      scroll
+    <ListScreen
+      data={isLoading || isError ? [] : rows}
+      keyExtractor={(r) => r.key}
+      resetKey={`${filter}|${needle}`}
+      gap={0}
+      spacer="nav"
       header={
         <HomeTopBar
           avatar={{ uri: me.avatarUrl, initials: me.initials }}
@@ -120,136 +132,131 @@ export function InnboksScreen() {
           onNotificationsPress={() => safePush('/varsler')}
         />
       }
-      scrollProps={{
-        keyboardShouldPersistTaps: 'handled',
-        refreshControl: <RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.limeDeep} />,
-      }}
-    >
-      <FadeUp style={[styles.px, styles.head]}>
-        <View style={styles.headText}>
-          <Text style={text.h1} accessibilityRole="header">
-            {nb.inbox.title}
-          </Text>
-          <Text style={text.meta} accessibilityLiveRegion="polite">
-            {nb.inbox.sub(unreadMsgs, unreadN)}
-          </Text>
-        </View>
-        <Button
-          label={nb.inbox.markAll}
-          icon="checks"
-          variant="ghost"
-          size="sm"
-          block={false}
-          disabled={unreadN === 0}
-          onPress={markAll}
-        />
-      </FadeUp>
+      refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.limeDeep} />}
+      listHeader={
+        <View>
+            <FadeUp style={[styles.px, styles.head]}>
+              <View style={styles.headText}>
+                <Text style={text.h1} accessibilityRole="header">
+                  {nb.inbox.title}
+                </Text>
+                <Text style={text.meta} accessibilityLiveRegion="polite">
+                  {nb.inbox.sub(unreadMsgs, unreadN)}
+                </Text>
+              </View>
+              <Button
+                label={nb.inbox.markAll}
+                icon="checks"
+                variant="ghost"
+                size="sm"
+                block={false}
+                disabled={unreadN === 0}
+                onPress={markAll}
+              />
+            </FadeUp>
 
-      <FadeUp delay={100} style={[styles.px, styles.mt16]}>
-        <View style={[styles.search, shadow.card, focused && styles.searchFocus]}>
-          <Icon name="search" size={20} color={colors.mute} />
-          <TextInput
-            value={q}
-            onChangeText={setQ}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder={nb.inbox.searchPlaceholder}
-            placeholderTextColor={colors.placeholder}
-            accessibilityLabel={nb.inbox.searchPlaceholder}
-            returnKeyType="search"
-            style={styles.searchInput}
-          />
-          {q ? (
-            <ScaleIn>
-              <IconButton icon="x" iconSize={16} variant="ghost" accessibilityLabel={nb.inbox.clear} onPress={() => setQ('')} />
-            </ScaleIn>
+            <FadeUp delay={100} style={[styles.px, styles.mt16]}>
+              <View style={[styles.search, shadow.card, focused && styles.searchFocus]}>
+                <Icon name="search" size={20} color={colors.mute} />
+                <TextInput
+                  value={q}
+                  onChangeText={setQ}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  placeholder={nb.inbox.searchPlaceholder}
+                  placeholderTextColor={colors.placeholder}
+                  accessibilityLabel={nb.inbox.searchPlaceholder}
+                  returnKeyType="search"
+                  style={styles.searchInput}
+                />
+                {q ? (
+                  <ScaleIn>
+                    <IconButton icon="x" iconSize={16} variant="ghost" accessibilityLabel={nb.inbox.clear} onPress={() => setQ('')} />
+                  </ScaleIn>
+                ) : null}
+              </View>
+            </FadeUp>
+
+            <FadeUp delay={150} style={styles.mt12}>
+              <View accessibilityRole="tablist" accessibilityLabel={nb.inbox.filterLabel}>
+                <ChipRow>
+                  <Chip label={nb.inbox.filterAll} selected={filter === 'alle'} onPress={() => setFilter('alle')} />
+                  <Chip
+                    label={nb.inbox.filterUnread}
+                    selected={filter === 'uleste'}
+                    onPress={() => setFilter('uleste')}
+                    accessibilityLabel={`${nb.inbox.filterUnread}, ${unreadN}`}
+                    trailing={unreadN ? <Pill label={String(unreadN)} tone={filter === 'uleste' ? 'accent' : 'neutral'} /> : undefined}
+                  />
+                </ChipRow>
+              </View>
+            </FadeUp>
+
+            <MinNaboRow />
+        </View>
+      }
+      empty={
+        <View style={styles.px}>
+          {isLoading ? (
+            <View style={styles.mt18}>
+              <RowSkeleton />
+              <RowSkeleton />
+              <RowSkeleton />
+            </View>
+          ) : isError ? (
+            <View style={styles.errorBox}>
+              <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
+            </View>
+          ) : null}
+          {!isLoading && !isError && list.length === 0 ? (
+            needle ? (
+              <ScaleIn style={[styles.dash, styles.mt26]}>
+                <View style={[styles.emptyIc, { backgroundColor: colors.cyanTint }]}>
+                  <Icon name="search" size={22} color={colors.cyanDeep} />
+                </View>
+                <Text style={[text.label, styles.f155, styles.center]}>{nb.inbox.noHits(q.trim())}</Text>
+                <Text style={[text.meta, styles.center]}>{nb.inbox.noHitsSub}</Text>
+                <Button label={nb.inbox.clearSearch} variant="ghost" size="sm" block={false} align="center" onPress={() => setQ('')} />
+              </ScaleIn>
+            ) : filter === 'uleste' ? (
+              <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
+                <EmptyScene icon="checks" tone="lime" />
+                <Text style={styles.caughtTitle}>{nb.inbox.caughtUp}</Text>
+                <Text style={[text.meta, styles.center]}>{nb.inbox.caughtUpSub}</Text>
+                <Button label={nb.inbox.showAll} variant="ghost" size="sm" block={false} align="center" onPress={() => setFilter('alle')} style={styles.mt4} />
+              </ScaleIn>
+            ) : (
+              <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
+                <EmptyScene icon="msg" tone="cyan" />
+                <Text style={styles.caughtTitle}>{nb.inbox.emptyTitle}</Text>
+                <Text style={[text.meta, styles.center]}>{nb.inbox.emptySub}</Text>
+                <Button label={nb.inbox.findJob} size="sm" block={false} align="center" onPress={() => router.replace('/')} style={styles.mt4} />
+              </ScaleIn>
+            )
           ) : null}
         </View>
-      </FadeUp>
-
-      <FadeUp delay={150} style={styles.mt12}>
-        <View accessibilityRole="tablist" accessibilityLabel={nb.inbox.filterLabel}>
-          <ChipRow>
-            <Chip label={nb.inbox.filterAll} selected={filter === 'alle'} onPress={() => setFilter('alle')} />
-            <Chip
-              label={nb.inbox.filterUnread}
-              selected={filter === 'uleste'}
-              onPress={() => setFilter('uleste')}
-              accessibilityLabel={`${nb.inbox.filterUnread}, ${unreadN}`}
-              trailing={unreadN ? <Pill label={String(unreadN)} tone={filter === 'uleste' ? 'accent' : 'neutral'} /> : undefined}
-            />
-          </ChipRow>
-        </View>
-      </FadeUp>
-
-      <MinNaboRow />
-
-      <View style={styles.px}>
-        {isLoading ? (
-          <View style={styles.mt18}>
-            <RowSkeleton />
-            <RowSkeleton />
-            <RowSkeleton />
-          </View>
-        ) : isError ? (
-          <View style={styles.errorBox}>
-            <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
-          </View>
+      }
+      renderItem={({ item: r }) =>
+        r.kind === 'group' ? (
+          <Text style={[text.eyebrow, styles.grp, styles.px]}>{nb.inbox.groups[r.g]}</Text>
         ) : (
-          groups.map(({ g, rows }) => (
-            <View key={g}>
-              <Text style={[text.eyebrow, styles.grp]}>{nb.inbox.groups[g]}</Text>
-              <View style={styles.gap10}>
-                {rows.map(({ c, i }) => (
-                  <FadeUp key={c.id} delay={Math.min(i + 3, 10) * 50}>
-                    <ConvCard c={c} unread={isUnread(c)} onPress={() => safePush(`/chat/${c.id}`)} />
-                  </FadeUp>
-                ))}
-              </View>
+          // only the first screenful fades in; later pages appear at once
+          <FadeUp delay={r.i < 8 ? Math.min(r.i + 3, 10) * 50 : 0} style={[styles.px, r.first ? null : styles.rowGap]}>
+            <ConvCard c={r.c} unread={isUnread(r.c)} onPress={() => safePush(`/chat/${r.c.id}`)} />
+          </FadeUp>
+        )
+      }
+      listFooter={
+        <View style={styles.px}>
+          <FadeUp delay={400} style={styles.safety}>
+            <View style={styles.safetyIc}>
+              <Icon name="shield" size={16} color={colors.ok} />
             </View>
-          ))
-        )}
-
-        {!isLoading && !isError && list.length === 0 ? (
-          needle ? (
-            <ScaleIn style={[styles.dash, styles.mt26]}>
-              <View style={[styles.emptyIc, { backgroundColor: colors.cyanTint }]}>
-                <Icon name="search" size={22} color={colors.cyanDeep} />
-              </View>
-              <Text style={[text.label, styles.f155, styles.center]}>{nb.inbox.noHits(q.trim())}</Text>
-              <Text style={[text.meta, styles.center]}>{nb.inbox.noHitsSub}</Text>
-              <Button label={nb.inbox.clearSearch} variant="ghost" size="sm" block={false} align="center" onPress={() => setQ('')} />
-            </ScaleIn>
-          ) : filter === 'uleste' ? (
-            <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
-              <View style={[styles.emptyIc, styles.caughtIc]}>
-                <Icon name="checks" size={28} color={colors.ok} />
-              </View>
-              <Text style={styles.caughtTitle}>{nb.inbox.caughtUp}</Text>
-              <Text style={[text.meta, styles.center]}>{nb.inbox.caughtUpSub}</Text>
-              <Button label={nb.inbox.showAll} variant="ghost" size="sm" block={false} align="center" onPress={() => setFilter('alle')} style={styles.mt4} />
-            </ScaleIn>
-          ) : (
-            <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
-              <View style={[styles.emptyIc, { backgroundColor: colors.cyanTint }]}>
-                <Icon name="msg" size={24} color={colors.cyanDeep} />
-              </View>
-              <Text style={styles.caughtTitle}>{nb.inbox.emptyTitle}</Text>
-              <Text style={[text.meta, styles.center]}>{nb.inbox.emptySub}</Text>
-              <Button label={nb.inbox.findJob} size="sm" block={false} align="center" onPress={() => router.replace('/')} style={styles.mt4} />
-            </ScaleIn>
-          )
-        ) : null}
-
-        <FadeUp delay={400} style={styles.safety}>
-          <View style={styles.safetyIc}>
-            <Icon name="shield" size={16} color={colors.ok} />
-          </View>
-          <Text style={[text.meta, styles.flex]}>{nb.inbox.safety}</Text>
-        </FadeUp>
-      </View>
-      <View style={styles.spacerNav} />
-    </Screen>
+            <Text style={[text.meta, styles.flex]}>{nb.inbox.safety}</Text>
+          </FadeUp>
+        </View>
+      }
+    />
   );
 }
 
@@ -317,12 +324,12 @@ function ConvCard({ c, unread, onPress }: { c: Conversation; unread: boolean; on
 }
 
 const styles = StyleSheet.create({
+  rowGap: { marginTop: 10 },
   flex: { flex: 1 },
   px: { paddingHorizontal: screenPadding },
   center: { textAlign: 'center' },
   pressed: { transform: [{ scale: 0.985 }] },
   f155: { fontSize: 15.5 },
-  gap10: { gap: 10 },
   mt4: { marginTop: 4 },
   mt12: { marginTop: 12 },
   mt16: { marginTop: 16 },
@@ -397,5 +404,4 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   safetyIc: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.okTint, alignItems: 'center', justifyContent: 'center' },
-  spacerNav: { height: 130 },
 });

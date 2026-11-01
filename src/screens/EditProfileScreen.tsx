@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 import { useRouter } from 'expo-router';
 import type { PublicProfile } from '@/domain/types';
 import nb from '@/i18n/nb';
+import { WeekdayPicker } from '@/components/WeekdayPicker';
 import { categoryArtId } from '@/domain/categories';
 import { PortfolioManager } from '@/components/profile/PortfolioManager';
 import { useSession } from '@/auth/session';
@@ -12,7 +13,8 @@ import { useVippsIdentity } from '@/auth/identity';
 import { useProfile, useUpdateProfile } from '@/api/queries';
 import { KommuneWaitlist } from '@/components/KommuneWaitlist';
 import { DisplayNamePicker } from '@/components/DisplayNamePicker';
-import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE, profileAreas } from '@/data/kommuner';
+import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE } from '@/data/kommuner';
+import { AreaSearch } from '@/components/AreaSearch';
 import { pickAndUpload } from '@/lib/uploads';
 import { toast } from '@/lib/toast';
 import { haptics } from '@/lib/haptics';
@@ -60,10 +62,11 @@ type Form = {
   languages: string[];
   hasCar: boolean;
   availability: string;
+  days: number[];
 };
 
 const snap = (f: Form) =>
-  JSON.stringify([f.dn, f.bio, f.kom, f.area, f.notes, f.avatarPath, f.portfolio, [...f.skills].sort(), [...f.languages].sort(), f.hasCar, f.availability]);
+  JSON.stringify([f.dn, f.bio, f.kom, f.area, f.notes, f.avatarPath, f.portfolio, [...f.skills].sort(), [...f.languages].sort(), f.hasCar, f.availability, [...f.days].sort()]);
 
 function initialForm(profile: PublicProfile): Form {
   // no fallback: saving must never move someone to a kommune they didn't choose
@@ -81,6 +84,7 @@ function initialForm(profile: PublicProfile): Form {
     languages: profile.languages ?? [],
     hasCar: !!profile.hasCar,
     availability: profile.availabilityText ?? '',
+    days: profile.availableWeekdays ?? [],
   };
 }
 
@@ -117,7 +121,6 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
   const bioBad = len > BIO_MAX;
   const canSave = dirty && !dnBad && !bioBad && !update.isPending;
   // Keep the saved place selectable even when it isn't one of the quick picks.
-  const areas = Array.from(new Set([...profileAreas(form.kom), ...(form.area ? [form.area] : [])]));
   const placeLabel = form.area === WHOLE_KOMMUNE ? form.kom : `${form.area}, ${form.kom}`;
   const avatarUri = preview === undefined ? profile.avatarUrl : preview ?? undefined;
   const photoNote =
@@ -164,6 +167,8 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
         languages: form.languages,
         hasCar: form.hasCar,
         availabilityText: form.availability.trim(),
+        // only when changed, so saving never touches a column the server may not have yet
+        ...(JSON.stringify([...form.days].sort()) !== JSON.stringify([...(profile.availableWeekdays ?? [])].sort()) ? { availableWeekdays: form.days } : {}),
         ...(form.avatarPath !== undefined ? { avatarPath: form.avatarPath } : {}),
       },
       {
@@ -317,11 +322,7 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
             </Field>
             {form.kom ? (
             <Field label={nb.editProfile.area} hint={nb.editProfile.areaHint}>
-              <View style={styles.wrap8}>
-                {areas.map((a) => (
-                  <Chip key={a} size="sm" label={a} selected={form.area === a} onPress={() => set({ area: a })} />
-                ))}
-              </View>
+              <AreaSearch kommune={form.kom} value={form.area} onChange={(a) => set({ area: a })} />
               <View style={styles.seen}>
                 <View style={styles.areaDot}>
                   <View style={styles.areaCenter} />
@@ -381,6 +382,9 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
               <Text style={[text.bodySemi, styles.flex]}>{nb.editProfile.hasCar}</Text>
               <Toggle value={form.hasCar} onValueChange={(hasCar) => set({ hasCar })} accessibilityLabel={nb.editProfile.hasCar} />
             </View>
+            <Field label={nb.editProfile.days} hint={nb.editProfile.optional}>
+              <WeekdayPicker value={form.days} onChange={(days) => set({ days })} />
+            </Field>
             <Field label={nb.editProfile.availability} hint={nb.editProfile.optional}>
               <Input
                 value={form.availability}
@@ -442,7 +446,7 @@ function EditProfileForm({ profile, userId }: { profile: PublicProfile; userId: 
             accessibilityRole="radio"
             accessibilityState={{ selected: form.kom === k }}
             onPress={() => {
-              if (k !== form.kom) set({ kom: k, area: profileAreas(k)[0] });
+              if (k !== form.kom) set({ kom: k, area: WHOLE_KOMMUNE });
               setKomOpen(false);
             }}
             style={styles.komRow}

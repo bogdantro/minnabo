@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image } from '@/components/ui/Image';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -16,6 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
+import { rememberInviter } from '@/lib/invite';
 import { colors, motion, radius, shadow, text } from '@/theme/theme';
 import { Avatar } from '@/components/ui/Avatar';
 import { Stars } from '@/components/ui/Badges';
@@ -72,6 +74,11 @@ function Dot({ active, label, onPress }: { active: boolean; label: string; onPre
 
 /** Onboarding · Velkommen (design/screens/Main.dc.html). */
 export function WelcomeScreen() {
+  // «Inviter en nabo»: the link is /velkommen?ref=<inviter> – kept until the profile exists
+  const { ref } = useLocalSearchParams<{ ref?: string }>();
+  useEffect(() => {
+    void rememberInviter(typeof ref === 'string' ? ref : undefined);
+  }, [ref]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -201,7 +208,6 @@ export function WelcomeScreen() {
 
         <View style={styles.actions}>
           <Button label={nb.welcome.start} size="lg" iconRight="arrow" onPress={() => router.push('/logg-inn')} />
-          <Text style={[text.meta, styles.center]}>{nb.welcome.region}</Text>
         </View>
       </View>
     </View>

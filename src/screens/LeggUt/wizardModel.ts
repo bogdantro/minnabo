@@ -4,6 +4,7 @@ import type { Listing, PublicProfile } from '@/domain/types';
 import { nok, groupThousands } from '@/domain/price';
 import { categoryArtId, categoryBySlug, slugForArtId, categoryLabel } from '@/domain/categories';
 import { type CategoryId } from '@/theme/theme';
+import { isUrgent, URGENCY_DAYS, urgentDeadline, type Urgency } from '@/domain/urgent';
 import { EQUIPMENT, FORMS, TIMES_OF_DAY, type EquipKey, type IntakeField } from './wizardConfig';
 
 export type WhenMode = 'fast' | 'flex' | 'innen';
@@ -21,8 +22,10 @@ export type WizardState = {
   answers: Record<string, Answer>;
   /** how many helpers are needed */
   helpers: number;
-  /** "Haster" – shown as a tag on the oppdrag */
+  /** «Det haster» – shown first in the feed until the end of the chosen day */
   urgent: boolean;
+  /** how soon (undefined in drafts from before the choice existed = 'days3') */
+  urgency?: Urgency;
   /** Editing an older oppdrag: its free-text time, kept until new days are picked. */
   keepWhen?: string;
   photos: string[];
@@ -92,7 +95,7 @@ export function answerText(f: IntakeField, a: Answer | undefined): string | null
   return String(a);
 }
 
-/** Category answers + helpers + urgency → `task.intake` label/value pairs. */
+/** Category answers + helpers → `task.intake` label/value pairs (urgency is its own field). */
 export function intakeOf(s: WizardState): { label: string; value: string }[] {
   const cat = s.cat ?? 'annet';
   const rows = FORMS[cat].fields
@@ -102,7 +105,6 @@ export function intakeOf(s: WizardState): { label: string; value: string }[] {
     })
     .filter((x): x is { label: string; value: string } => !!x);
   if (s.helpers > 1) rows.push({ label: 'Antall hjelpere', value: `${s.helpers} personer` });
-  if (s.urgent) rows.push({ label: 'Haster', value: 'Ja' });
   return rows;
 }
 
@@ -175,6 +177,23 @@ export function whenLabel(s: WizardState, days: DayItem[]): string {
   return `Fleksibel · ${sel.length} dager, ${da.getDate()}.–${db.getDate()}. ${MONTHS[db.getMonth()]}`;
 }
 
+// ---------------------------------------------------------------- haste
+
+export const urgencyOf = (s: WizardState): Urgency => s.urgency ?? 'days3';
+
+/**
+ * Turning «Det haster» on (or picking how soon) sets «Når» to "Innen" the deadline day,
+ * so the oppdrag's time and its haste deadline always agree.
+ */
+export function applyUrgency(u: Urgency, days: DayItem[]): Partial<WizardState> {
+  const last = days[Math.min(URGENCY_DAYS[u], days.length - 1)];
+  return { urgent: true, urgency: u, whenMode: 'innen', days: [last.iso], keepWhen: undefined };
+}
+
+/** ISO deadline for the backend, or null when it doesn't haste. */
+export const urgentUntilOf = (s: WizardState, from: Date): string | null =>
+  s.urgent ? urgentDeadline(urgencyOf(s), from).toISOString() : null;
+
 export const hoursLabel = (h: number) => `ca. ${h} ${h === 1 ? 'time' : 'timer'}`;
 export const fmtKr = (n: number) => `${groupThousands(n)} kr`;
 
@@ -229,7 +248,7 @@ export function summary(s: WizardState, days: DayItem[]) {
   ];
   const stedTid: SummaryRow[] = [
     { k: 'Sted', v: `${placeLine(s)} (omtrentlig)`, step: 4 },
-    { k: 'Når', v: whenLabel(s, days) + (tod.length ? ` · ${tod.join(', ')}` : ''), step: 5 },
+    { k: 'Når', v: (s.urgent ? 'Haster · ' : '') + whenLabel(s, days) + (tod.length ? ` · ${tod.join(', ')}` : ''), step: 5 },
     { k: 'Varighet', v: hoursLabel(s.hours), step: 5 },
   ];
   const prisPraktisk: SummaryRow[] = [
@@ -279,6 +298,8 @@ export function buildListing(s: WizardState, days: DayItem[]): Listing {
     owner: placeholderOwner,
     createdAt: new Date().toISOString(),
     status: 'PUBLISHED',
+    // days[0] is today (upcomingDays), so the preview shows the same deadline that gets saved
+    urgentUntil: urgentUntilOf(s, days.length ? new Date(`${days[0].iso}T12:00:00`) : new Date()) ?? undefined,
     task: {
       description: s.desc.trim(),
       equipment: eqOn.length ? eqOn.join(', ') : undefined,
@@ -292,7 +313,7 @@ export function buildListing(s: WizardState, days: DayItem[]): Listing {
 }
 
 /** Settings stored next to the listing ("Hvem kan gi tilbud", km, private estimate, the form itself). */
-export function extrasFor(s: WizardState): ListingExtras {
+export function extrasFor(s: WizardState, from = new Date()): ListingExtras {
   const amt = Number(s.amount) || 0;
   return {
     // Always everyone: with Vipps-only login all naboer are verified, so «Kun verifiserte»
@@ -301,6 +322,7 @@ export function extrasFor(s: WizardState): ListingExtras {
     maxDistanceKm: s.km,
     privateEstimateMinor: s.priceMode === 'offer' && amt > 0 ? amt * 100 : null,
     estimatedMinutes: s.hours * 60,
+    urgentUntil: urgentUntilOf(s, from),
     wizard: s,
   };
 }
@@ -322,10 +344,8 @@ export function wizardFromListing(l: Listing, privateEstimateMinor: number | nul
   // Read the category answers back from the detail rows ("Hva skal males?: Gjerde").
   const answers = { ...base.answers };
   let helpers = base.helpers;
-  let urgent = false;
   for (const row of l.task?.intake ?? []) {
     if (row.label === 'Antall hjelpere') helpers = parseInt(row.value, 10) || helpers;
-    if (row.label === 'Haster') urgent = row.value === 'Ja';
     const f = FORMS[cat].fields.find((x) => x.label === row.label);
     if (!f) continue;
     if (f.kind === 'number') {
@@ -343,7 +363,8 @@ export function wizardFromListing(l: Listing, privateEstimateMinor: number | nul
     cat,
     answers,
     helpers,
-    urgent,
+    // old «Haster: Ja» detail rows never put an oppdrag first; only a live deadline counts
+    urgent: isUrgent(l),
     repeat: l.task?.recurrence,
     title: l.title,
     desc: l.task?.description ?? '',

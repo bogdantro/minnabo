@@ -22,8 +22,8 @@ This is a visual + interaction redesign, plus two product changes (see "Product 
 When the design and these docs disagree, the `.dc.html` file wins. When unsure, ask instead of guessing.
 
 ## Product rules (never break)
-1. **Only one listing type: oppdrag** ("Trenger hjelp"). There are no service offers / "Folk som tilbyr hjelp". Remove any such UI you find.
-2. **Legg ut** (raised centre tab button) opens the post-oppdrag wizard directly – no type-choice screen.
+1. **Two listing types** (changed 2026-10-31): **oppdrag** ("Trenger hjelp", TASK_REQUEST) and **«Tilbyr hjelp»** (SERVICE_OFFER) – a nabo posting what they can do. On an offer the *helper* (its owner) sends the tilbud in the chat; an avtale never closes the offer (0076). Oppdrag-only features (haste, «Ledig igjen», Oppdrag for meg) stay oppdrag-only.
+2. **Legg ut** (raised centre tab button) asks «Hva vil du legge ut?» – «Jeg trenger hjelp» (oppdrag wizard) or «Jeg kan hjelpe» (offer wizard, /legg-ut/tilbyr). Other «Legg ut oppdrag» buttons go straight to the oppdrag wizard.
 3. **Login is Vipps only.** No phone/e-mail/OTP/BankID login. Vipps is never used for payment.
 4. **No payment UI ever.** Show the payment note near every price/offer:
    "Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling."

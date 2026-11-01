@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
 import { useActiveCategories } from '@/hooks/useCategories';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GuardianSheet } from '@/components/GuardianSheet';

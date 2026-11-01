@@ -70,17 +70,18 @@ test('setup validates each step before moving on', async () => {
 
   await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'Ola Nordmann');
   await fireEvent.press(screen.getByText('Neste'));
-  expect(screen.getByText('Steg 2 av 3')).toBeTruthy();
-  await fireEvent.press(screen.getByText('Neste'));
-  expect(screen.getByText('Velg ett alternativ for å gå videre')).toBeTruthy();
+  // straight to the kommune: no «Hva ønsker du?» step any more – everyone can get and give help
+  expect(screen.getByText('Steg 2 av 2')).toBeTruthy();
+  expect(screen.getByText('Hvilken kommune er du i?')).toBeTruthy();
+  expect(screen.queryByText('Begge deler')).toBeNull();
+  await fireEvent.press(screen.getByText('Fullfør'));
+  expect(screen.getByText(nb.setup.errLocateFirst)).toBeTruthy();
 });
 
-/** Steps 1–2 of Oppsett with a typed name (an account without a Vipps name), up to «Hvor bor du?». */
+/** Step 1 of Oppsett with a typed name (an account without a Vipps name), up to the kommune. */
 async function toPlaceStep() {
   await renderWithProviders(<SetupScreen />);
   await fireEvent.changeText(screen.getByLabelText('Visningsnavn'), 'Ola Nordmann');
-  await fireEvent.press(screen.getByText('Neste'));
-  await fireEvent.press(screen.getByText('Begge deler'));
   await fireEvent.press(screen.getByText('Neste'));
 }
 
@@ -91,13 +92,13 @@ function savedProfile(): Record<string, unknown> | undefined {
   return i < 0 ? undefined : from.mock.results[i].value.upsert.mock.calls[0]?.[0];
 }
 
-test('setup walks navn → bruk → sted and writes the profile', async () => {
+test('setup walks navn → kommune and writes the profile (purpose «begge deler»)', async () => {
   await toPlaceStep();
   await fireEvent.press(screen.getByText(nb.setup.locIdle));
   await screen.findAllByText('Fant deg: Lillehammer kommune');
   await fireEvent.press(screen.getByText('Fullfør'));
   await waitFor(() => expect(screen.getByText('Velkommen til nabolaget, Ola!')).toBeTruthy());
-  expect(savedProfile()).toMatchObject({ display_name: 'Ola Nordmann', municipality: 'Lillehammer' });
+  expect(savedProfile()).toMatchObject({ display_name: 'Ola Nordmann', municipality: 'Lillehammer', purpose: 'BOTH' });
 });
 
 test('"Bruk posisjonen min" picks the kommune and keeps the kommune list out of the way', async () => {
@@ -153,8 +154,6 @@ test('with a Vipps name the visningsnavn can only be that name or its short form
   expect(screen.queryByPlaceholderText(nb.setup.namePlaceholder)).toBeNull();
 
   await fireEvent.press(screen.getByRole('radio', { name: 'Ola N.' }));
-  await fireEvent.press(screen.getByText('Neste'));
-  await fireEvent.press(screen.getByText('Begge deler'));
   await fireEvent.press(screen.getByText('Neste'));
   await fireEvent.press(screen.getByText(nb.setup.locIdle));
   await screen.findAllByText('Fant deg: Lillehammer kommune');

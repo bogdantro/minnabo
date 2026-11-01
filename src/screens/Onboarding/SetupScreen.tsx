@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import nb from '@/i18n/nb';
-import type { Purpose } from '@/domain/types';
+import { sendPendingInvite } from '@/lib/invite';
 import { displayNameOptions } from '@/domain/displayName';
 import { supabase } from '@/lib/supabase';
 import { useVippsIdentity } from '@/auth/identity';
@@ -45,7 +46,6 @@ import {
   ListRow,
   Note,
   OptionCard,
-  PaymentNote,
   Pill,
   Radio,
   ScaleIn,
@@ -62,15 +62,9 @@ import {
 
 const logo = require('../../../assets/logo-icon.png');
 
-type Step = 1 | 2 | 3 | 4;
+// navn → kommune → ferdig. «Hva ønsker du?» is gone: everyone can both get and give help.
+type Step = 1 | 2 | 3;
 type Photo = { path: string; url: string } | null;
-
-
-const ROLES: { id: Purpose; icon: IconKey; tileBg: string; tileFg: string }[] = [
-  { id: 'NEED_HELP', icon: 'clip', tileBg: colors.limeTint, tileFg: colors.limeDeep },
-  { id: 'WANT_JOBS', icon: 'hand', tileBg: colors.cyanTint, tileFg: colors.cyanDeep },
-  { id: 'BOTH', icon: 'repeat', tileBg: colors.lime, tileFg: colors.ink },
-];
 
 const CONFETTI = [
   colors.lime,
@@ -160,7 +154,6 @@ export function SetupScreen() {
   const [photo, setPhoto] = useState<Photo>(null);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [role, setRole] = useState<Purpose | null>(null);
   const [kommune, setKommune] = useState<string | null>(null);
   const [locState, setLocState] = useState<'idle' | 'busy' | 'done'>('idle');
   const [located, setLocated] = useState<string | null>(null);
@@ -219,7 +212,7 @@ export function SetupScreen() {
           id: supabaseUserId,
           display_name: name,
           initials: initialsOf(name) || 'N',
-          purpose: role,
+          purpose: 'BOTH',
           municipality: kommune,
           // Område is chosen later (Innstillinger, Nabolag) – onboarding only asks for the kommune
           place: kommune,
@@ -235,6 +228,8 @@ export function SetupScreen() {
     if (error) {
       throw error;
     }
+    // came through «Inviter en nabo»? the inviter gets their «Verver» merke (never blocks Oppsett)
+    void sendPendingInvite();
 
     queryClient.invalidateQueries({
       queryKey: profileKeys.profile(supabaseUserId),
@@ -259,8 +254,7 @@ export function SetupScreen() {
       if (name.length < 2) return fail(nb.setup.errNameShort);
       if (name.length > 30) return fail(nb.setup.errNameLong);
     }
-    if (step === 2 && !role) return fail(nb.setup.errRole);
-    if (step === 3) {
+    if (step === 2) {
       if (!kommune) return fail(manual ? nb.setup.errKommune : nb.setup.errLocateFirst);
       if (!(await save())) return;
     }
@@ -337,8 +331,8 @@ export function SetupScreen() {
   }
 };
 
-  if (step === 4) {
-    return <Done name={name} role={role ?? 'BOTH'} kommune={kommune ?? ''} hasPhoto={!!photo} />;
+  if (step === 3) {
+    return <Done name={name} kommune={kommune ?? ''} hasPhoto={!!photo} />;
   }
 
   const initials = initialsOf(name) || '?';
@@ -367,7 +361,7 @@ export function SetupScreen() {
             ) : null}
             <Shake shakeKey={shakeN}>
               <Button
-                label={step === 3 ? nb.setup.finish : nb.setup.next}
+                label={step === 2 ? nb.setup.finish : nb.setup.next}
                 variant="ink"
                 size="lg"
                 iconRight="arrow"
@@ -379,7 +373,7 @@ export function SetupScreen() {
         }
       >
         <View style={styles.prog}>
-          <StepProgress step={step} total={3} showLabel={false} />
+          <StepProgress step={step} total={2} showLabel={false} />
         </View>
 
         <SlideIn key={step} direction={dir} style={styles.body}>
@@ -477,69 +471,6 @@ export function SetupScreen() {
           ) : null}
 
           {step === 2 ? (
-            <>
-              <Text style={text.eyebrow}>{nb.setup.s2Eyebrow}</Text>
-              <Text style={[text.h1, styles.title]} accessibilityRole="header">
-                {nb.setup.s2Title}
-              </Text>
-              <Text style={[text.body, styles.lead]}>{nb.setup.s2Body}</Text>
-              <View style={styles.roles} accessibilityRole="radiogroup" accessibilityLabel={nb.setup.s2Title}>
-                {ROLES.map((r) => {
-                  const on = role === r.id;
-                  const copy = nb.setup.roles[r.id];
-                  return (
-                    <OptionCard
-                      key={r.id}
-                      selected={on}
-                      onPress={() => {
-                        setRole(r.id);
-                        setErr(null);
-                      }}
-                      accessibilityLabel={`${copy.title}. ${copy.desc}`}
-                      style={[
-                        styles.rcard,
-                        shadow.card,
-                        on && r.id === 'NEED_HELP' && [styles.rNeed, shadow.roleNeedOn],
-                        on && r.id === 'WANT_JOBS' && [styles.rOffer, shadow.roleOfferOn],
-                        on && r.id === 'BOTH' && [styles.rBoth, shadow.roleBothOn],
-                      ]}
-                    >
-                      <View style={[styles.rt, { backgroundColor: r.tileBg }]}>
-                        <Icon name={r.icon} size={28} color={r.tileFg} />
-                      </View>
-                      <View style={styles.rb}>
-                        <Text style={text.roleTitle}>{copy.title}</Text>
-                        <Text style={text.roleDesc}>{copy.desc}</Text>
-                        <View style={styles.rpills}>
-                          {r.id !== 'WANT_JOBS' ? (
-                            <Pill
-                              label={r.id === 'BOTH' ? nb.setup.pillNeedShort : nb.setup.pillNeed}
-                              tone="need"
-                              dot
-                              size="sm"
-                              style={styles.rpill}
-                            />
-                          ) : null}
-                          {r.id !== 'NEED_HELP' ? (
-                            <Pill label={nb.setup.pillOffer} tone="offer" dot size="sm" style={styles.rpill} />
-                          ) : null}
-                        </View>
-                      </View>
-                      <View style={[styles.rchk, on && styles.rchkOn]}>
-                        {on ? (
-                          <ScaleIn>
-                            <Icon name="check" size={16} color={colors.lime} strokeWidth={3} />
-                          </ScaleIn>
-                        ) : null}
-                      </View>
-                    </OptionCard>
-                  );
-                })}
-              </View>
-            </>
-          ) : null}
-
-          {step === 3 ? (
             <>
               <Text style={text.eyebrow}>{nb.setup.s3Eyebrow}</Text>
               <Text style={[text.h1, styles.title]} accessibilityRole="header">
@@ -701,12 +632,10 @@ export function SetupScreen() {
 /** Final step: celebration with confetti and a summary of the choices. */
 function Done({
   name,
-  role,
   kommune,
   hasPhoto,
 }: {
   name: string;
-  role: Purpose;
   kommune: string;
   hasPhoto: boolean;
 }) {
@@ -715,7 +644,6 @@ function Done({
   const first = name.split(/\s+/)[0] || name;
   const summary: { icon: IconKey; t: string }[] = [
     { icon: 'user', t: name },
-    { icon: role === 'WANT_JOBS' ? 'hand' : role === 'NEED_HELP' ? 'clip' : 'repeat', t: nb.setup.roles[role].summary },
     { icon: 'pin', t: nb.setup.locDone(kommune) },
   ];
   if (hasPhoto) summary.push({ icon: 'camera', t: nb.setup.photoAdded });
@@ -729,7 +657,7 @@ function Done({
   const float = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
 
   return (
-    <Screen scroll contentStyle={[styles.done, { paddingTop: insets.top + 64, paddingBottom: Math.max(40, insets.bottom + 16) }]}>
+    <Screen scroll contentStyle={[styles.done, { paddingTop: insets.top + 64, paddingBottom: Math.max(64, insets.bottom + 40) }]}>
       <ScaleIn delay={50}>
         <View style={styles.celebRing} />
         <View style={[styles.celeb, shadow.logoTile]}>
@@ -747,7 +675,7 @@ function Done({
         </Text>
       </FadeUp>
       <FadeUp delay={250}>
-        <Text style={[text.body, styles.center, styles.doneSub]}>{nb.setup.doneSub[role](kommune)}</Text>
+        <Text style={[text.body, styles.center, styles.doneSub]}>{nb.setup.doneSub.BOTH(kommune)}</Text>
       </FadeUp>
       <FadeUp delay={300} style={styles.sumrow}>
         {summary.map((s) => (
@@ -760,7 +688,6 @@ function Done({
       <FadeUp delay={400} style={styles.doneActions}>
         <Button label={nb.setup.explore} size="lg" iconRight="arrow" onPress={() => router.replace('/')} />
         <Button label={nb.setup.firstPost} variant="ghost" icon="plus" onPress={() => router.replace('/legg-ut')} />
-        <PaymentNote text={nb.setup.paymentNote} style={styles.noteCenter} />
       </FadeUp>
       <Confetti count={34} colors={CONFETTI} />
     </Screen>
@@ -815,32 +742,6 @@ const styles = StyleSheet.create({
     paddingRight: 14,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  roles: { gap: 12, marginTop: 22 },
-  rcard: {
-    gap: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: colors.line,
-  },
-  rNeed: { borderColor: colors.limeDot },
-  rOffer: { borderColor: colors.cyan },
-  rBoth: { borderColor: colors.ink },
-  rt: { width: 58, height: 58, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  rb: { flex: 1, minWidth: 0, gap: 5 },
-  rpills: { flexDirection: 'row', gap: 6, marginTop: 3 },
-  rpill: { height: 22 },
-  rchk: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.control,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rchkOn: { backgroundColor: colors.ink, borderColor: colors.ink },
   loccard: {
     marginTop: 22,
     flexDirection: 'row',

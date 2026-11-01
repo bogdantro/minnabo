@@ -3,6 +3,9 @@ import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import { useIsSaved } from '@/api/queries';
+import { isUrgent } from '@/domain/urgent';
+import { isOffer, offerAvailability } from '@/domain/offer';
+import { useAlwaysShowsUp } from './ReliableBadge';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import nb from '@/i18n/nb';
@@ -11,7 +14,8 @@ import { ListingCard, type ListingCardProps } from './ui/ListingCard';
 /** Price row of the card: "Budsjett 400 kr", "Fra 300 kr", "Ønsker tilbud", "Frivillig". */
 export function listingPrice(l: Listing): { label: string; value: string } {
   if (l.task?.isDugnad) return { label: '', value: nb.card.volunteer };
-  if (!l.price || l.priceMode === 'BY_AGREEMENT') return { label: '', value: nb.card.wantsOffers };
+  // an offer without a price is agreed in the chat; an oppdrag without one wants tilbud
+  if (!l.price || l.priceMode === 'BY_AGREEMENT') return { label: '', value: isOffer(l) ? nb.card.byAgreement : nb.card.wantsOffers };
   if (l.priceMode === 'FROM') return { label: nb.card.from, value: formatPrice(l.price) };
   return { label: nb.card.budget, value: formatPrice(l.price) };
 }
@@ -24,6 +28,7 @@ export function listingPlace(l: Listing): string {
 }
 
 export function listingSchedule(l: Listing): string | undefined {
+  if (isOffer(l)) return offerAvailability(l);
   const parts = [l.task?.scheduledText, l.task?.durationText].filter(Boolean);
   return parts.length ? parts.join(' · ') : undefined;
 }
@@ -53,6 +58,8 @@ export type OppdragCardProps = {
 export function OppdragCard({ listing, onPress, statusBadge, showVerified, isNew, style, testID }: OppdragCardProps) {
   const [saved, toggle] = useIsSaved(listing.id);
   const price = listingPrice(listing);
+  // on «Tilbyr hjelp» the owner is the helper, so their track record belongs on the card
+  const reliable = useAlwaysShowsUp(isOffer(listing) ? listing.owner.id : undefined);
 
   const onToggleSave = () => {
     toggle();
@@ -78,9 +85,13 @@ export function OppdragCard({ listing, onPress, statusBadge, showVerified, isNew
       priceLabel={price.label}
       priceValue={price.value}
       extraBadge={extraBadge(listing) ?? (isNew ? { label: nb.seAlle.isNew } : undefined)}
+      kind={isOffer(listing) ? 'offer' : 'need'}
+      urgent={isUrgent(listing)}
+      reliable={reliable}
       statusBadge={statusBadge}
       saved={saved}
       onToggleSave={onToggleSave}
+      heroId={onPress ? undefined : listing.id}
       onPress={onPress ?? (() => safePush(`/oppdrag/${listing.id}`))}
     />
   );

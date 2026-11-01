@@ -1,5 +1,7 @@
 import { CATEGORIES, type CategoryRow } from '@/domain/categories';
 import { UserError } from '@/lib/errors';
+import { isOpenListing } from '@/domain/editing';
+import { isUrgent } from '@/domain/urgent';
 import type {
   AgendaItem,
   AgreementSnapshot,
@@ -59,6 +61,7 @@ import type {
   NotificationPrefs,
   ListListingsParams,
   NeighbourhoodInfo,
+  NeighbourhoodHighlight,
   NabolagSummary,
   MinNaboMessage,
   ReviseProposalPatch,
@@ -75,6 +78,12 @@ import type {
   UpdateProfilePatch,
 } from '@/api/ApiClient';
 import { DEFAULT_APP_SETTINGS } from '@/api/ApiClient';
+import type { PendingReview } from '@/api/ApiClient';
+import { reviewDutyStore } from '@mocks/data/reviewDutyStore';
+import { noShowStore } from '@mocks/data/noShowStore';
+import { noShowWindowOpen } from '@/domain/noShow';
+import type { HelperStatus, NoShowReason, NoShowReport } from '@/domain/types';
+import type { RescueResult } from '@/api/ApiClient';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const delay = (ms: number) =>
@@ -128,11 +137,24 @@ export class MockApiClient implements ApiClient {
 
   async createListing(listing: Listing, extras?: ListingExtras): Promise<Listing> {
     await delay(300);
+    // like 0072: a finished job must be reviewed before a new oppdrag
+    const owed = reviewDutyStore.list();
+    if (owed.length) {
+      throw new UserError(`Gi en vurdering av ${owed[0].otherName.split(' ')[0]} først. Stjerner er nok – kommentar er valgfritt.`);
+    }
+    // like 0071: one hasteoppdrag at a time
+    if (
+      extras?.urgentUntil &&
+      repositories.listings.ownedBy(profileRepository.currentUserId).some((l) => isOpenListing(l.status) && isUrgent(l))
+    ) {
+      throw new UserError('Du har allerede et hasteoppdrag ute. Du kan ha ett om gangen – vent til fristen er ute, eller fjern «Det haster» på det andre oppdraget.');
+    }
     const full: Listing = {
       ...listing,
       offerAudience: extras?.offerAudience ?? 'ALL',
       maxDistanceKm: extras?.maxDistanceKm,
       estimatedMinutes: extras?.estimatedMinutes,
+      urgentUntil: extras?.urgentUntil ?? undefined,
     };
     repositories.listings.add(full);
     repositories.listings.setEditData(full.id, {
@@ -140,6 +162,27 @@ export class MockApiClient implements ApiClient {
       privateEstimateMinor: extras?.privateEstimateMinor ?? null,
     });
     return full;
+  }
+
+  async updateOffer(listingId: string, listing: Listing): Promise<Listing> {
+    await delay(200);
+    const cur = repositories.listings.get(listingId);
+    if (!cur || cur.owner.id !== profileRepository.currentUserId || cur.type !== 'SERVICE_OFFER') throw new UserError('Ikke tilgang.');
+    if (listing.title.trim().length < 5) throw new UserError('Tittelen må ha minst 5 tegn.');
+    if ((listing.offer?.about ?? '').trim().length < 20) throw new UserError('Fortell litt mer om hva du kan hjelpe med (minst 20 tegn).');
+    const next: Listing = {
+      ...cur,
+      title: listing.title.trim(),
+      category: listing.category,
+      price: listing.price,
+      priceMode: listing.priceMode,
+      location: { ...cur.location, municipality: listing.location.municipality, place: listing.location.place },
+      images: listing.images,
+      offer: listing.offer,
+      editedAt: new Date().toISOString(),
+    };
+    repositories.listings.replace(next);
+    return next;
   }
 
   async updateListing(listingId: string, listing: Listing, extras: ListingExtras): Promise<Listing> {
@@ -162,6 +205,9 @@ export class MockApiClient implements ApiClient {
       offerAudience: extras.offerAudience,
       maxDistanceKm: extras.maxDistanceKm,
       estimatedMinutes: extras.estimatedMinutes,
+      // like 0071: an edit never pushes the deadline later
+      urgentUntil:
+        extras.urgentUntil && cur.urgentUntil && extras.urgentUntil > cur.urgentUntil ? cur.urgentUntil : (extras.urgentUntil ?? undefined),
       editedAt: new Date().toISOString(),
     };
     repositories.listings.replace(next);
@@ -260,6 +306,13 @@ export class MockApiClient implements ApiClient {
     return chatRepository.sendAttachment(conversationId, attachmentUrl);
   }
 
+  async sendVoice(conversationId: string, attachmentUrl: string, durationMs: number): Promise<Message> {
+    await delay(150);
+    // like the 0077 insert rule: a voice message carries its file and length (max 2 min + slack)
+    if (!attachmentUrl || !(durationMs >= 0 && durationMs <= 180_000)) throw new UserError('Talemeldingen kunne ikke sendes.');
+    return chatRepository.sendVoice(conversationId, attachmentUrl, durationMs);
+  }
+
   async toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message[]> {
     await delay(60);
     return chatRepository.toggleReaction(conversationId, messageId, emoji);
@@ -289,6 +342,11 @@ export class MockApiClient implements ApiClient {
 
   async sendProposal(input: SendProposalInput): Promise<Proposal> {
     await delay(150);
+    // like 0074: two no-shows in 90 days pause new tilbud
+    const pause = noShowStore.pauseUntil();
+    if (pause && Date.parse(pause) > Date.now()) {
+      throw new UserError('Du kan gi tilbud igjen ' + new Date(pause).toLocaleDateString('nb-NO') + '. Du har uteblitt fra to avtaler de siste 90 dagene.');
+    }
     return chatRepository.sendProposal(input);
   }
 
@@ -318,7 +376,124 @@ export class MockApiClient implements ApiClient {
 
   async cancelAgreement(proposalId: string, reason?: string): Promise<Proposal> {
     await delay(150);
-    return chatRepository.cancelAgreement(proposalId, reason);
+    const before = chatRepository.getProposal(proposalId);
+    const a = chatRepository.getAgreement(proposalId);
+    const out = chatRepository.cancelAgreement(proposalId, reason);
+    // like 0074: the helper calling it off within 24 hours counts half, and the others are asked again
+    if (before && before.fromProfileId === profileRepository.currentUserId && a?.scheduledAt && Date.parse(a.scheduledAt) < Date.now() + 24 * 3_600_000) {
+      noShowStore.add({
+        id: 'ns-' + Date.now(), proposalId, reason: 'HELPER_CANCELLED', status: 'COUNTED', weight: 0.5,
+        countsAt: new Date().toISOString(), createdAt: new Date().toISOString(), explanation: reason,
+        reporterName: '', reportedName: '', iAmReported: true, listingTitle: repositories.listings.get(before.listingId)?.title ?? '',
+      });
+      this.askOthers(before.id, before.listingId);
+    }
+    return out;
+  }
+
+  // --- no-show rescue (mirrors 0074) ---
+
+  private askOthers(fromId: string, listingId: string): number {
+    const others = chatRepository.proposalsForListing(listingId).filter((p) => p.id !== fromId && (p.status === 'SENT' || p.status === 'REVISION_PENDING'));
+    for (const o of others) chatRepository.patchProposal(o.id, { rescueFrom: fromId, availableTodayAt: undefined });
+    return others.length;
+  }
+
+  private makeUrgentToday(listingId: string): boolean {
+    const l = repositories.listings.get(listingId);
+    if (!l) return false;
+    const mine = repositories.listings.ownedBy(profileRepository.currentUserId);
+    if (mine.some((x) => x.id !== listingId && isOpenListing(x.status) && isUrgent(x))) return false;
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    repositories.listings.replace({ ...l, urgentUntil: end.toISOString() });
+    repositories.listings.setStatus(listingId, 'RECEIVING_OFFERS');
+    return true;
+  }
+
+  async reportHelperNoShow(proposalId: string, reason: Exclude<NoShowReason, 'HELPER_CANCELLED'>, makeUrgent: boolean): Promise<RescueResult> {
+    await delay(150);
+    const p = chatRepository.getProposal(proposalId);
+    const a = chatRepository.getAgreement(proposalId);
+    if (!p || p.toProfileId !== profileRepository.currentUserId) throw new UserError('Bare den som la ut oppdraget kan melde fra om dette.');
+    if (p.status !== 'ACCEPTED' || !a || a.cancelledAt) throw new UserError('Avtalen er ikke aktiv lenger.');
+    if (!noShowWindowOpen(a)) throw new UserError('Du kan melde fra fra morgenen på jobbdagen.');
+    const label = { NO_SHOW: 'Hjelperen kom ikke', NO_REPLY: 'Hjelperen svarte ikke', LATE: 'Hjelperen kom for sent' }[reason];
+    const id = 'ns-' + Date.now();
+    noShowStore.add({
+      id, proposalId, reason, status: 'PENDING', weight: reason === 'LATE' ? 0.5 : 1,
+      countsAt: new Date(Date.now() + 48 * 3_600_000).toISOString(), createdAt: new Date().toISOString(),
+      reporterName: profileRepository.getProfile(profileRepository.currentUserId)?.displayName.split(' ')[0] ?? '',
+      reportedName: profileRepository.getProfile(p.fromProfileId)?.displayName.split(' ')[0] ?? '',
+      iAmReported: false, listingTitle: repositories.listings.get(p.listingId)?.title ?? '',
+    });
+    chatRepository.cancelAgreement(proposalId, label);
+    const urgent = makeUrgent ? this.makeUrgentToday(p.listingId) : false;
+    return { urgent, others: this.askOthers(proposalId, p.listingId), reportId: id };
+  }
+
+  async makeRescueUrgent(proposalId: string): Promise<void> {
+    await delay(100);
+    const p = chatRepository.getProposal(proposalId);
+    if (!p || p.toProfileId !== profileRepository.currentUserId || p.status !== 'CANCELLED') throw new UserError('Ikke tilgang.');
+    if (!this.makeUrgentToday(p.listingId)) throw new UserError('Du har allerede et hasteoppdrag ute. Du kan ha ett om gangen.');
+  }
+
+  async confirmStillAvailable(proposalId: string): Promise<void> {
+    await delay(100);
+    const p = chatRepository.getProposal(proposalId);
+    if (!p || p.fromProfileId !== profileRepository.currentUserId) throw new UserError('Ikke tilgang.');
+    if (p.status !== 'SENT' && p.status !== 'REVISION_PENDING') throw new UserError('Tilbudet er ikke åpent lenger.');
+    chatRepository.patchProposal(proposalId, { availableTodayAt: p.availableTodayAt ?? new Date().toISOString() });
+  }
+
+  private helperAgreement(proposalId: string) {
+    const p = chatRepository.getProposal(proposalId);
+    const a = chatRepository.getAgreement(proposalId);
+    if (!p || p.fromProfileId !== profileRepository.currentUserId) throw new UserError('Ikke tilgang.');
+    if (p.status !== 'ACCEPTED' || !a || a.cancelledAt) throw new UserError('Avtalen er ikke aktiv lenger.');
+    return { p, a };
+  }
+
+  async confirmAttendance(proposalId: string): Promise<void> {
+    await delay(100);
+    const { p, a } = this.helperAgreement(proposalId);
+    if (a.helperConfirmedAt) return;
+    chatRepository.patchAgreement(proposalId, { helperConfirmedAt: new Date().toISOString() });
+    chatRepository.addSystemMessage(p.conversationId, 'Avtalen er bekreftet');
+  }
+
+  async setHelperStatus(proposalId: string, status: HelperStatus, place?: string): Promise<void> {
+    await delay(100);
+    const { p, a } = this.helperAgreement(proposalId);
+    const now = new Date().toISOString();
+    // like 0078: only «framme» carries a place, clipped to 80 characters
+    const helperStatusPlace = status === 'ARRIVED' ? place?.trim().slice(0, 80) || undefined : undefined;
+    chatRepository.patchAgreement(proposalId, { helperStatus: status, helperStatusAt: now, helperConfirmedAt: a.helperConfirmedAt ?? now, helperStatusPlace });
+    chatRepository.addSystemMessage(p.conversationId, status === 'ON_THE_WAY' ? 'Hjelperen er på vei' : 'Hjelperen er framme');
+  }
+
+  async getNoShowReport(id: string): Promise<NoShowReport> {
+    await delay(80);
+    const r = noShowStore.get(id);
+    if (!r) throw new UserError('Fant ikke saken.');
+    return r;
+  }
+
+  async explainNoShow(id: string, text: string): Promise<void> {
+    await delay(100);
+    const r = noShowStore.get(id);
+    if (!r || !r.iAmReported) throw new UserError('Ikke tilgang.');
+    if (r.status !== 'PENDING') throw new UserError('Du har allerede svart på denne.');
+    if (Date.parse(r.countsAt) <= Date.now()) throw new UserError('Fristen på 48 timer er ute.');
+    if (text.trim().length < 10) throw new UserError('Skriv litt mer om hva som skjedde.');
+    noShowStore.patch(id, { status: 'DISPUTED', explanation: text.trim(), explainedAt: new Date().toISOString() });
+  }
+
+  async getMyTilbudPause(): Promise<string | null> {
+    await delay(40);
+    const until = noShowStore.pauseUntil();
+    return until && Date.parse(until) > Date.now() ? until : null;
   }
 
   async getAgreement(proposalId: string): Promise<AgreementSnapshot | null> {
@@ -602,7 +777,15 @@ export class MockApiClient implements ApiClient {
 
   async submitReview(input: SubmitReviewInput): Promise<Review> {
     await delay(200);
+    // like submit_review (0060): stars are required, the text is not
+    if (!input.rating || input.rating < 1 || input.rating > 5) throw new UserError('Velg mellom 1 og 5 stjerner.');
+    reviewDutyStore.done(input.agreementProposalId);
     return profileRepository.submitReview(input);
+  }
+
+  async listPendingReviews(): Promise<PendingReview[]> {
+    await delay(60);
+    return reviewDutyStore.list();
   }
 
   async reportNoShow(_agreementProposalId: string, profileId: string): Promise<void> {
@@ -739,6 +922,33 @@ export class MockApiClient implements ApiClient {
   }
 
   // --- nabolag ---
+
+  private invites = new Map<string, string>();
+
+  async recordInvite(inviterId: string): Promise<boolean> {
+    await delay(40);
+    const me = profileRepository.currentUserId;
+    // like 0081: not yourself, an existing inviter, and only the first answer counts
+    if (inviterId === me || !profileRepository.getProfile(inviterId) || this.invites.has(me)) return false;
+    this.invites.set(me, inviterId);
+    return true;
+  }
+
+  async inviteCount(profileId: string): Promise<number> {
+    await delay(30);
+    return [...this.invites.values()].filter((id) => id === profileId).length;
+  }
+
+  async neighbourhoodHighlights(municipality: string): Promise<NeighbourhoodHighlight[]> {
+    await delay(60);
+    // stand-in for 0080: opted-in adults in the kommune, most finished jobs first, at most three
+    return profileRepository
+      .allProfiles()
+      .filter((p) => p.highlightOptIn && p.youthAge == null && p.location.municipality === municipality && (p.completedTasks ?? 0) > 0)
+      .sort((a, b) => (b.completedTasks ?? 0) - (a.completedTasks ?? 0))
+      .slice(0, 3)
+      .map((p) => ({ profileId: p.id, jobs: p.completedTasks ?? 0 }));
+  }
 
   async getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo> {
     await delay(80);

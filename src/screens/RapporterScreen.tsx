@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { serverMessage } from '@/lib/errors';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useRouter } from 'expo-router';
 import type { ReportTargetType } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';

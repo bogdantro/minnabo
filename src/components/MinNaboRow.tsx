@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Image } from "@/components/ui/Image";
 import nb from "@/i18n/nb";
 import { useMinNaboThread } from "@/api/queries";
 import { safePush } from "@/lib/nav";

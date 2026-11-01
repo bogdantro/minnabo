@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { serverMessage } from '@/lib/errors';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import nb from '@/i18n/nb';
 import { useAddPortfolioItem, usePortfolio, useRemovePortfolioItem } from '@/api/queries';
 import { confirm } from '@/lib/confirm';

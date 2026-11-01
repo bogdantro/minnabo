@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MinNaboMessage } from '@/api/ApiClient';
@@ -86,7 +87,8 @@ export function MinNaboScreen() {
             <View style={[styles.logobox, shadow.card]}>
               <Image source={logo} style={styles.logo} accessibilityIgnoresInvertColors />
             </View>
-            <Pill label={nb.minnabo.official} tone="ok" icon="check" />
+            {/* Pill aligns itself to the start by default – centre it like the rest of the intro */}
+            <Pill label={nb.minnabo.official} tone="ok" icon="check" style={styles.selfCenter} />
             <Text style={[text.meta, styles.center]}>{nb.minnabo.lead}</Text>
           </View>
 
@@ -205,6 +207,7 @@ const styles = StyleSheet.create({
   // Full width, then centred line by line: a shrink-wrapped Text in a centred column can
   // end up narrower than its lines and look left-aligned under the logo.
   center: { textAlign: 'center', alignSelf: 'stretch', paddingHorizontal: 12 },
+  selfCenter: { alignSelf: 'center' },
   white: { color: colors.white },
   rowMine: { alignItems: 'flex-end', gap: 4 },
   rowTheirs: { alignItems: 'flex-start', gap: 4 },

@@ -23,6 +23,16 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** Read receipt: today → "kl. 14:02", yesterday → "i går kl. 14:02", older → "12.10 kl. 14:02". */
+export function seenWhen(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  const days = Math.round((startOfDay(now).getTime() - startOfDay(d).getTime()) / 86_400_000);
+  const t = `kl. ${formatTime(iso)}`;
+  if (days <= 0) return t;
+  if (days === 1) return `i går ${t}`;
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${t}`;
+}
+
 /**
  * "for 20 min siden", "for 3 t siden", "i går", "for 4 dager siden" (cards).
  * `long`: "for 20 minutter siden", "for 3 timer siden" (detail info grid).

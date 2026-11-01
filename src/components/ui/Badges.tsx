@@ -1,8 +1,21 @@
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import nb from '@/i18n/nb';
 import { colors, sizes, text } from '@/theme/theme';
 import { Icon, VerifiedIcon } from './Icon';
 
 export { VerifiedIcon };
+
+/** «✓ Møter alltid opp» – a small green line next to a helper's name (see domain/reliability). */
+export function ReliableLine({ style }: { style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={[styles.reliable, style]} accessibilityLabel={nb.reliability.alwaysA11y} testID="reliable-badge">
+      <Icon name="check" size={13} color={colors.okText} />
+      <Text style={styles.reliableText} numberOfLines={1}>
+        {nb.reliability.always}
+      </Text>
+    </View>
+  );
+}
 
 /** `.count` – red unread counter. Position it yourself (absolute) on the host. */
 export function CountBadge({ count, style }: { count: number; style?: StyleProp<ViewStyle> }) {
@@ -66,6 +79,8 @@ export function Stars({ rating, count, style }: { rating: number; count?: number
 }
 
 const styles = StyleSheet.create({
+  reliable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  reliableText: { ...text.metaBold, fontSize: 12.5, color: colors.okText },
   count: {
     minWidth: sizes.count,
     height: sizes.count,

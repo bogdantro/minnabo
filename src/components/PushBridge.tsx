@@ -14,10 +14,25 @@ import nb from '@/i18n/nb';
 export const REVIEW_CATEGORY = 'review';
 const STAR_ACTIONS: Record<string, number> = { 'stars-5': 5, 'stars-4': 4 };
 
-/** '/vurder/p1' + 'stars-5' → '/vurder/p1?stjerner=5'. Anything else stays as it was. */
+/**
+ * One-tap answers on job-day pushes (0074). Must match ATTEND_CATEGORY / AVAILABLE_CATEGORY in
+ * send-push. The button only adds `svar=ja`; the screen that opens does the rest, so a
+ * tap can never do something the person can't see.
+ */
+export const ATTEND_CATEGORY = 'attend';
+export const AVAILABLE_CATEGORY = 'available';
+const YES = 'svar-ja';
+
+/**
+ * '/vurder/p1' + 'stars-5' → '/vurder/p1?stjerner=5'
+ * '/avtale/p1?bekreft=1' + 'svar-ja' → '/avtale/p1?bekreft=1&svar=ja'
+ * Anything else stays as it was.
+ */
 export function reviewRouteFor(route: string, action: string): string {
   const stars = STAR_ACTIONS[action];
-  return stars && route.startsWith('/vurder/') ? `${route}?stjerner=${stars}` : route;
+  if (stars && route.startsWith('/vurder/')) return `${route}?stjerner=${stars}`;
+  if (action === YES && (route.includes('?bekreft=1') || route.includes('?ledig=1'))) return `${route}&svar=ja`;
+  return route;
 }
 
 /** Keeps the number on the app icon in step with what is unread (pushes set it while the app is closed). */
@@ -81,6 +96,12 @@ export function PushBridge() {
       { identifier: 'stars-5', buttonTitle: nb.reviewReminder.fiveStars, options: { opensAppToForeground: true } },
       { identifier: 'stars-4', buttonTitle: nb.reviewReminder.fourStars, options: { opensAppToForeground: true } },
       { identifier: 'write', buttonTitle: nb.reviewReminder.write, options: { opensAppToForeground: true } },
+    ])?.catch(() => undefined);
+    void Notifications.setNotificationCategoryAsync?.(ATTEND_CATEGORY, [
+      { identifier: YES, buttonTitle: nb.rescue.pushAttend, options: { opensAppToForeground: true } },
+    ])?.catch(() => undefined);
+    void Notifications.setNotificationCategoryAsync?.(AVAILABLE_CATEGORY, [
+      { identifier: YES, buttonTitle: nb.rescue.pushAvailable, options: { opensAppToForeground: true } },
     ])?.catch(() => undefined);
     const targetOf = (r: import('expo-notifications').NotificationResponse) =>
       reviewRouteFor(routeOf(r.notification.request.content.data), r.actionIdentifier);

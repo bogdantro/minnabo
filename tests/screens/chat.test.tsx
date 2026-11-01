@@ -72,12 +72,13 @@ test('tapping a quick reply sends it', async () => {
   const before = chatRepository.getMessages('c-sara').length;
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
 
-  await fireEvent.press(await screen.findByLabelText('Passer fint!'));
+  // on c-sara I'm the helper and there is no avtale yet
+  await fireEvent.press(await screen.findByLabelText('Når passer det for deg?'));
 
   await waitFor(() =>
     expect(chatRepository.getMessages('c-sara').length).toBe(before + 1),
   );
-  expect(chatRepository.getMessages('c-sara').at(-1)?.text).toBe('Passer fint!');
+  expect(chatRepository.getMessages('c-sara').at(-1)?.text).toBe('Når passer det for deg?');
 });
 
 test('a reaction renders as a chip and can be toggled off', async () => {

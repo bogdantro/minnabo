@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Listing, Proposal } from '@/domain/types';
+import type { Listing, Proposal, PublicProfile } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
-import { chatKeys, usePriceGuidance, useProfile, useStartConversation } from '@/api/queries';
+import { chatKeys, usePriceGuidance, useProfile, useStartConversation, useTilbudPause } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { shortDate } from '@/lib/datetime';
@@ -51,20 +51,29 @@ export type GiTilbudSheetProps = {
   onOpenChat: (conversationId: string | null) => void;
   /** Edit an open tilbud instead of sending a new one (prefilled; "Lagre endringene"). */
   editing?: Proposal | null;
+  /**
+   * «Tilbyr hjelp» (0076): the helper owns the post and sends the tilbud to the nabo who asked –
+   * pass that nabo here (default: the oppdrag's owner) and the chat it happens in.
+   */
+  recipient?: PublicProfile;
+  conversationId?: string;
 };
 
 /**
  * Gi tilbud (Oppdragsdetaljer.dc.html sheet): form → preview → sent.
  * Sends through the existing conversation + proposal API.
  */
-export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, editing }: GiTilbudSheetProps) {
+export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, editing, recipient, conversationId }: GiTilbudSheetProps) {
   const qc = useQueryClient();
   const me = useCurrentUser();
   const { userId } = useSession();
   const myProfile = useProfile(userId ?? '');
   const startConversation = useStartConversation();
+  // two no-shows in 90 days: no new tilbud for a while (0074) – say so before the form, not after
+  const pause = useTilbudPause(visible && !editing);
+  const pausedUntil = !editing ? pause.data : null;
 
-  const owner = listing.owner;
+  const owner = recipient ?? listing.owner;
   const first = owner.displayName.split(' ')[0];
   const budget = listing.price && listing.priceMode !== 'BY_AGREEMENT' ? Math.round(listing.price.amountMinor / 100) : null;
   const place = listing.location.place || listing.location.municipality;
@@ -150,7 +159,7 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
         qc.invalidateQueries({ queryKey: ['proposals'] });
       } else {
         if (!userId) throw new Error('not signed in');
-        const conv = await startConversation.mutateAsync(listing.id);
+        const conv = conversationId ? { id: conversationId } : await startConversation.mutateAsync(listing.id);
         await apiClient.sendProposal({
           conversationId: conv.id,
           listingId: listing.id,
@@ -171,7 +180,7 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
       setStep(3);
       onSent(id);
     } catch (e) {
-      toast.error(editing ? serverMessage(e, nb.giTilbud.sendFailed) : nb.giTilbud.sendFailed);
+      toast.error(serverMessage(e, nb.giTilbud.sendFailed));
     } finally {
       setSending(false);
     }
@@ -184,7 +193,22 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
 
   return (
     <Sheet visible={visible} onClose={close} scroll heightRatio={0.94} dismissible={!sending} testID="gi-tilbud">
-      {step === 1 ? (
+      {pausedUntil ? (
+        <FadeUp>
+          <View style={styles.pause} testID="tilbud-pause">
+            <View style={styles.pauseIc}>
+              <Icon name="pause" size={24} color={colors.warnDark} />
+            </View>
+            <Text style={[text.h2, styles.pauseCenter]} accessibilityRole="header">
+              {nb.rescue.pauseTitle}
+            </Text>
+            <Text style={[text.body, styles.pauseCenter, styles.pauseBody]}>
+              {nb.rescue.pauseBody(new Date(pausedUntil).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' }))}
+            </Text>
+            <Button label={nb.giTilbud.close} variant="ghost" onPress={close} style={styles.pauseBtn} />
+          </View>
+        </FadeUp>
+      ) : step === 1 ? (
         <FadeUp>
           <View style={styles.head}>
             <View style={styles.headTitles}>
@@ -499,6 +523,11 @@ function Steps({ n }: { n: 1 | 2 }) {
 }
 
 const styles = StyleSheet.create({
+  pause: { alignItems: 'center', gap: 10, paddingTop: 24, paddingBottom: 16 },
+  pauseIc: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.warnTint, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  pauseCenter: { textAlign: 'center' },
+  pauseBody: { color: colors.ink2, maxWidth: 320 },
+  pauseBtn: { alignSelf: 'stretch', marginTop: 8 },
   flex: { flex: 1, minWidth: 0, gap: 3 },
   center: { textAlign: 'center' },
   stretch: { alignSelf: 'stretch' },

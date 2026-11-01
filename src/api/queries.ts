@@ -5,8 +5,20 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query';
-import type { Listing, ListingFilter, ListingSort, ListingStatus, Message } from '@/domain/types';
+import type {
+  AgreementSnapshot,
+  HelperStatus,
+  Listing,
+  ListingFilter,
+  ListingSort,
+  ListingStatus,
+  Message,
+  NoShowReason,
+  Proposal,
+  SkillEndorsement,
+} from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
+import { urgentFirst } from '@/domain/urgent';
 import { DEFAULT_APP_SETTINGS } from './ApiClient';
 import type { AppSettings, PartnerThanks, ConsentRecord, MinNaboMessage, MySettings, NabolagSummary, NeighbourhoodInfo, NotificationPrefs } from './ApiClient';
 import { apiClient } from './client';
@@ -27,11 +39,39 @@ export const chatKeys = {
   agreement: (conversationId: string) => ['agreement', conversationId] as const,
 };
 
+// ------------------------------------------------------------
+// Instant feel: a toggle changes what is on screen at once; if the server says no, it is
+// put back as it was (and the screen's own error toast explains). The server's answer
+// replaces the guess when it arrives.
+// ------------------------------------------------------------
+function optimistic<V, D>(
+  qc: ReturnType<typeof useQueryClient>,
+  key: readonly unknown[],
+  change: (old: D, v: V) => D,
+) {
+  return {
+    onMutate: async (v: V) => {
+      await qc.cancelQueries({ queryKey: key });
+      const before = qc.getQueryData<D>(key);
+      if (before !== undefined) qc.setQueryData<D>(key, change(before, v));
+      return { before };
+    },
+    onError: (_e: unknown, _v: V, ctx?: { before?: D }) => {
+      if (ctx?.before !== undefined) qc.setQueryData<D>(key, ctx.before);
+    },
+  };
+}
+
+/** ['a', 'b'] + 'b' -> ['a']; ['a'] + 'b' -> ['a', 'b'] */
+export const flipId = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+
 /** `enabled: false` waits, e.g. until the kommune is known (no filter = every oppdrag). */
 export function useListings(filter?: ListingFilter, sort?: ListingSort, enabled = true) {
   return useQuery({
     queryKey: listingKeys.list(filter, sort),
     queryFn: () => apiClient.listListings({ filter, sort }),
+    // «Det haster»: hasteoppdrag go first in the newest-first feed (Oppdrag, Se alle)
+    select: sort === 'NEWEST' ? (l: Listing[]) => urgentFirst(l) : undefined,
     placeholderData: keepPreviousData,
     enabled,
   });
@@ -163,7 +203,11 @@ export function useMinNaboVote() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ broadcastId, option }: { broadcastId: string; option: number }) => apiClient.voteMinNaboPoll(broadcastId, option),
-    onSuccess: () => qc.invalidateQueries({ queryKey: minnaboKeys.thread }),
+    // the vote shows at once; the real counts come with the refetch
+    ...optimistic<{ broadcastId: string; option: number }, MinNaboMessage[]>(qc, minnaboKeys.thread, (msgs, { broadcastId, option }) =>
+      msgs.map((m) => (m.broadcastId === broadcastId ? { ...m, myVote: option } : m)),
+    ),
+    onSettled: () => qc.invalidateQueries({ queryKey: minnaboKeys.thread }),
   });
 }
 
@@ -212,6 +256,99 @@ export function useProposalsForListing(listingId: string) {
     queryFn: () => apiClient.listProposalsForListing(listingId),
     enabled: !!listingId,
   });
+}
+
+// ------------------------------------------------------------
+// No-show rescue and the job day (0074)
+// ------------------------------------------------------------
+
+export const noShowKeys = {
+  report: (id: string) => ['noShowReport', id] as const,
+  pause: ['tilbudPause'] as const,
+};
+
+/** Everything a rescue or a job-day change touches: the avtale, its tilbud, the oppdrag, the chat. */
+function useRefreshAgreement(proposalId: string) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: chatKeys.proposal(proposalId) });
+    void qc.invalidateQueries({ queryKey: ['agreement'] });
+    void qc.invalidateQueries({ queryKey: ['proposals'] });
+    void qc.invalidateQueries({ queryKey: ['listings'] });
+    void qc.invalidateQueries({ queryKey: ['listing'] });
+    void qc.invalidateQueries({ queryKey: ['messages'] });
+    void qc.invalidateQueries({ queryKey: ['my-agreements'] });
+  };
+}
+
+export function useReportHelperNoShow(proposalId: string) {
+  const refresh = useRefreshAgreement(proposalId);
+  return useMutation({
+    mutationFn: (v: { reason: Exclude<NoShowReason, 'HELPER_CANCELLED'>; makeUrgent: boolean }) =>
+      apiClient.reportHelperNoShow(proposalId, v.reason, v.makeUrgent),
+    onSuccess: refresh,
+  });
+}
+
+export function useMakeRescueUrgent(proposalId: string) {
+  const refresh = useRefreshAgreement(proposalId);
+  return useMutation({ mutationFn: () => apiClient.makeRescueUrgent(proposalId), onSuccess: refresh });
+}
+
+const agreementKey = (proposalId: string) => ['agreement', 'proposal', proposalId] as const;
+
+export function useConfirmStillAvailable(proposalId: string) {
+  const qc = useQueryClient();
+  const refresh = useRefreshAgreement(proposalId);
+  return useMutation({
+    mutationFn: () => apiClient.confirmStillAvailable(proposalId),
+    ...optimistic<void, Proposal>(qc, chatKeys.proposal(proposalId), (p) => ({ ...p, availableTodayAt: p.availableTodayAt ?? new Date().toISOString() })),
+    onSettled: refresh,
+  });
+}
+
+export function useConfirmAttendance(proposalId: string) {
+  const qc = useQueryClient();
+  const refresh = useRefreshAgreement(proposalId);
+  return useMutation({
+    mutationFn: () => apiClient.confirmAttendance(proposalId),
+    ...optimistic<void, AgreementSnapshot>(qc, agreementKey(proposalId), (a) => ({ ...a, helperConfirmedAt: a.helperConfirmedAt ?? new Date().toISOString() })),
+    onSettled: refresh,
+  });
+}
+
+export function useSetHelperStatus(proposalId: string) {
+  const qc = useQueryClient();
+  const refresh = useRefreshAgreement(proposalId);
+  return useMutation({
+    // a plain status, or «framme» with the place the helper chose to share
+    mutationFn: (v: HelperStatus | { status: HelperStatus; place?: string }) =>
+      typeof v === 'string' ? apiClient.setHelperStatus(proposalId, v) : apiClient.setHelperStatus(proposalId, v.status, v.place),
+    ...optimistic<HelperStatus | { status: HelperStatus; place?: string }, AgreementSnapshot>(qc, agreementKey(proposalId), (a, v) => {
+      const now = new Date().toISOString();
+      const s = typeof v === 'string' ? v : v.status;
+      const place = typeof v === 'string' ? undefined : v.place;
+      return { ...a, helperStatus: s, helperStatusAt: now, helperConfirmedAt: a.helperConfirmedAt ?? now, helperStatusPlace: s === 'ARRIVED' ? place : undefined };
+    }),
+    onSettled: refresh,
+  });
+}
+
+export function useNoShowReport(id: string) {
+  return useQuery({ queryKey: noShowKeys.report(id), queryFn: () => apiClient.getNoShowReport(id), enabled: !!id });
+}
+
+export function useExplainNoShow(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => apiClient.explainNoShow(id, text),
+    onSuccess: () => qc.invalidateQueries({ queryKey: noShowKeys.report(id) }),
+  });
+}
+
+/** ISO until when I can't give tilbud (two no-shows in 90 days), or null. */
+export function useTilbudPause(enabled = true) {
+  return useQuery({ queryKey: noShowKeys.pause, queryFn: () => apiClient.getMyTilbudPause(), enabled, staleTime: 60_000 });
 }
 
 export function useCancelAgreement(proposalId: string, conversationId: string) {
@@ -342,11 +479,44 @@ export function useSendAttachment(conversationId: string, meId: string) {
   });
 }
 
-export function useToggleReaction(conversationId: string) {
+/**
+ * A talemelding: the clip shows in the thread at once (playable from the phone), then is
+ * uploaded and sent. `upload` is passed in so the screen decides where the file goes.
+ */
+export function useSendVoice(conversationId: string, meId: string) {
+  const opt = useOptimisticSend(conversationId);
+  return useMutation({
+    mutationFn: async ({ uri, durationMs, upload }: { uri: string; durationMs: number; upload: (uri: string) => Promise<{ path: string }> }) => {
+      const temp = optimisticMessage(conversationId, meId, { kind: 'AUDIO', attachmentUrl: uri, audioMs: Math.round(durationMs) });
+      opt.add(temp);
+      try {
+        const { path } = await upload(uri);
+        await apiClient.sendVoice(conversationId, path, durationMs);
+        opt.remove(temp.id);
+        opt.settle();
+      } catch (e) {
+        opt.markFailed(temp.id);
+        throw e;
+      }
+    },
+  });
+}
+
+/** `meId` lets the reaction show at once (reactions are stored per user id). */
+export function useToggleReaction(conversationId: string, meId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string }) =>
       apiClient.toggleReaction(conversationId, messageId, emoji),
+    ...optimistic<{ messageId: string; emoji: string }, Message[]>(qc, chatKeys.messages(conversationId), (msgs, { messageId, emoji }) =>
+      msgs.map((m) => {
+        if (m.id !== messageId || !meId) return m;
+        const who = m.reactions?.[emoji] ?? [];
+        const next = { ...(m.reactions ?? {}), [emoji]: who.includes(meId) ? who.filter((x) => x !== meId) : [...who, meId] };
+        if (!next[emoji].length) delete next[emoji];
+        return { ...m, reactions: Object.keys(next).length ? next : undefined };
+      }),
+    ),
     onSuccess: (messages) => {
       qc.setQueryData<Message[]>(chatKeys.messages(conversationId), messages);
     },
@@ -463,7 +633,18 @@ export const profileKeys = {
   reviews: (id: string) => ['reviews', id] as const,
   myListings: (type?: string) => ['myListings', type ?? 'all'] as const,
   completion: (id: string) => ['completion', id] as const,
+  pendingReviews: ['pendingReviews'] as const,
 };
+
+/** Finished jobs I must review before posting or giving tilbud again (0072). */
+export function usePendingReviews(enabled = true) {
+  return useQuery({
+    queryKey: profileKeys.pendingReviews,
+    queryFn: () => apiClient.listPendingReviews(),
+    enabled,
+    staleTime: 30_000,
+  });
+}
 
 export function useProfile(id: string) {
   return useQuery({
@@ -655,8 +836,11 @@ export function useConfirmCompletion(agreementProposalId: string) {
   return useMutation({
     mutationFn: (byProfileId: string) =>
       apiClient.confirmCompletion(agreementProposalId, byProfileId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: profileKeys.completion(agreementProposalId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: profileKeys.completion(agreementProposalId) });
+      // the second confirmation makes a review due
+      void qc.invalidateQueries({ queryKey: profileKeys.pendingReviews });
+    },
   });
 }
 
@@ -667,6 +851,11 @@ export function useSubmitReview() {
       apiClient.submitReview(input),
     onSuccess: (review) => {
       qc.invalidateQueries({ queryKey: profileKeys.reviews(review.toProfileId) });
+      // this one is no longer owed – drop it at once so the gate lets go
+      qc.setQueryData<{ proposalId: string }[]>(profileKeys.pendingReviews, (old) =>
+        old?.filter((p) => p.proposalId !== review.agreementProposalId),
+      );
+      void qc.invalidateQueries({ queryKey: profileKeys.pendingReviews });
     },
   });
 }
@@ -683,6 +872,13 @@ export function useToggleEndorsement(profileId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (skill: string) => apiClient.toggleEndorsement(profileId, skill),
+    ...optimistic<string, SkillEndorsement[]>(qc, [...profileKeys.profile(profileId), 'endorsements'], (list, skill) => {
+      const has = list.find((e) => e.skill === skill);
+      if (!has) return [...list, { skill, count: 1, byMe: true }];
+      return list
+        .map((e) => (e.skill === skill ? { ...e, byMe: !e.byMe, count: e.count + (e.byMe ? -1 : 1) } : e))
+        .filter((e) => e.count > 0);
+    }),
     onSuccess: (endorsements) => {
       qc.setQueryData([...profileKeys.profile(profileId), 'endorsements'], endorsements);
     },
@@ -700,6 +896,7 @@ export function useToggleFollow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (profileId: string) => apiClient.toggleFollow(profileId),
+    ...optimistic<string, string[]>(qc, ['follows'], flipId),
     onSuccess: (ids) => qc.setQueryData(['follows'], ids),
   });
 }
@@ -833,6 +1030,26 @@ export function useNeighbourhoodInfo(municipality?: string | null, place?: strin
   });
 }
 
+/** «Verver»: how many neighbours joined through this person's invite link. */
+export function useInviteCount(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['invite-count', profileId],
+    queryFn: () => apiClient.inviteCount(profileId!),
+    enabled: !!profileId,
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** «Mest hjelpsomme denne måneden» for a kommune – changes slowly, so it is kept for 30 minutes. */
+export function useNeighbourhoodHighlights(municipality?: string | null) {
+  return useQuery({
+    queryKey: ['neighbourhood-highlights', municipality ?? ''],
+    queryFn: () => apiClient.neighbourhoodHighlights(municipality ?? ''),
+    enabled: !!municipality,
+    staleTime: 30 * 60_000,
+  });
+}
+
 /** Bli med / Forlat – optimistic count ±1, reconciled with the server. */
 export function useToggleNeighbourhood(municipality: string, place: string, myId: string) {
   const qc = useQueryClient();
@@ -885,6 +1102,7 @@ export function useToggleSavedNotice() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (noticeId: string) => apiClient.toggleSavedNotice(noticeId),
+    ...optimistic<string, string[]>(qc, ['saved-notices'], flipId),
     onSuccess: (ids) => qc.setQueryData(['saved-notices'], ids),
   });
 }
@@ -972,6 +1190,7 @@ export function useToggleSavedListing() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (listingId: string) => apiClient.toggleSavedListing(listingId),
+    ...optimistic<string, string[]>(qc, savedKeys.listings, flipId),
     onSuccess: (ids) => qc.setQueryData(savedKeys.listings, ids),
   });
 }
@@ -1017,7 +1236,8 @@ export function useRemoveSavedSearch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.removeSavedSearch(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: savedKeys.searches }),
+    ...optimistic<string, { id: string }[]>(qc, savedKeys.searches, (list, id) => list.filter((s) => s.id !== id)),
+    onSettled: () => qc.invalidateQueries({ queryKey: savedKeys.searches }),
   });
 }
 

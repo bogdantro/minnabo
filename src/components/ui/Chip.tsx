@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } fr
 import { colors, radius, screenPadding, sizes, text, type CategoryId } from '@/theme/theme';
 import { Icon, type IconName } from './Icon';
 import { PressableScale } from './PressableScale';
+import { haptics } from '@/lib/haptics';
 
 export type ChipProps = {
   label: string;
@@ -54,7 +55,14 @@ export function Chip({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected }}
-      onPress={onPress}
+      onPress={
+        onPress
+          ? () => {
+              haptics.select();
+              onPress();
+            }
+          : undefined
+      }
       scaleTo={0.95}
       style={[
         styles.base,

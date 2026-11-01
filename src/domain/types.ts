@@ -78,6 +78,10 @@ export type PublicProfile = {
   youthAge?: number;
   /** Meny "Tilgjengelig for småjobber" – off = no match notifications */
   availableForJobs?: boolean;
+  /** weekdays usually free, 0 = søndag … 6 = lørdag (0082) – «Ledig helg» */
+  availableWeekdays?: number[];
+  /** Personvern «Vis meg blant de mest hjelpsomme» (0080) – off unless the person turns it on */
+  highlightOptIn?: boolean;
   /** "about my home" — pets, stairs, parking; reused across the person's tasks */
   homeNotes?: string;
   /** neighbour endorsements of specific skills */
@@ -217,6 +221,8 @@ export type TaskDetails = {
 export type ServiceOfferDetails = {
   about: string;
   experienceYears?: number;
+  /** Erfaring in total months (0076); 18 = 1 år og 6 mnd */
+  experienceMonths?: number;
   completedJobs?: number;
   services: string[];
   availabilityText?: string;
@@ -298,6 +304,8 @@ export type Listing = {
   estimatedMinutes?: number;
   /** ISO – set when the owner edited it after publishing */
   editedAt?: string;
+  /** ISO – «Haster»: shown first in the feed until this moment (see domain/urgent.ts) */
+  urgentUntil?: string;
   /**
    * Set by MinNabo's moderation; only the owner ever receives a hidden oppdrag.
    * `pendingReview`: a first oppdrag waiting for approval (shown as "Venter på godkjenning", not as hidden).
@@ -333,6 +341,10 @@ export type Proposal = {
   seenAt?: string;
   /** ISO – "Tilbudet gjelder til …" */
   expiresAt?: string;
+  /** the avtale whose helper didn't come (0074) – this tilbud was asked «Gjelder den fortsatt?» */
+  rescueFrom?: string;
+  /** ISO – the sender answered «Ja, jeg kan i dag» */
+  availableTodayAt?: string;
 };
 
 export type AgreementSnapshot = {
@@ -348,6 +360,42 @@ export type AgreementSnapshot = {
   /** set when one of the parties called the agreement off */
   cancelledAt?: string;
   cancelReason?: string;
+  /** ISO – «Bekreft at du kommer» (0074) */
+  helperConfirmedAt?: string;
+  /** «Jeg er på vei» / «Jeg er framme» */
+  helperStatus?: HelperStatus;
+  helperStatusAt?: string;
+  /** «Jeg er framme» with a place the helper chose to share: street + town, never a number (0078) */
+  helperStatusPlace?: string;
+  /** ISO – when the helper was asked to confirm */
+  confirmRequestedAt?: string;
+  /** ISO – the owner was told the helper hasn't confirmed / answered */
+  ownerWarnedAt?: string;
+};
+
+export type HelperStatus = 'ON_THE_WAY' | 'ARRIVED';
+
+/** What the owner says happened (0074). HELPER_CANCELLED = the helper called it off close to the job. */
+export type NoShowReason = 'NO_SHOW' | 'NO_REPLY' | 'LATE' | 'HELPER_CANCELLED';
+/** PENDING: the helper has 48 hours to explain · DISPUTED: explained, MinNabo decides · COUNTED / DISMISSED */
+export type NoShowStatus = 'PENDING' | 'DISPUTED' | 'COUNTED' | 'DISMISSED';
+
+export type NoShowReport = {
+  id: string;
+  proposalId: string;
+  reason: NoShowReason;
+  status: NoShowStatus;
+  /** 1 = a full no-show, 0.5 = mild (late, or cancelled within 24 hours) */
+  weight: number;
+  /** ISO – when it counts if not explained */
+  countsAt: string;
+  createdAt: string;
+  explanation?: string;
+  explainedAt?: string;
+  reporterName: string;
+  reportedName: string;
+  iAmReported: boolean;
+  listingTitle: string;
 };
 
 /** CLIENT = the one who posted the oppdrag, HELPER = the one who gave the tilbud. */
@@ -412,14 +460,18 @@ export type Message = {
   authorProfileId: string;
   /** plain text body; empty when kind !== 'TEXT' */
   text: string;
-  kind: 'TEXT' | 'PROPOSAL' | 'SYSTEM' | 'IMAGE';
+  kind: 'TEXT' | 'PROPOSAL' | 'SYSTEM' | 'IMAGE' | 'AUDIO';
   proposalId?: string;
-  /** image url when kind === 'IMAGE' */
+  /** image url when kind === 'IMAGE', sound file when kind === 'AUDIO' */
   attachmentUrl?: string;
+  /** length of a voice message (AUDIO) in milliseconds */
+  audioMs?: number;
   /** storage path of a chat photo that is still being sent (retry / outbox) */
   attachmentPath?: string;
   createdAt: string;
   delivery: MessageDelivery;
+  /** ISO – when the other person had read up to this message (READ only), for «Sett kl. 14:02» */
+  readAt?: string;
   /** client-side only: an optimistic message still in flight */
   pending?: boolean;
   /** client-side only: the send failed and can be retried */
@@ -499,7 +551,11 @@ export type NotificationKind =
   | 'NEW_MATCH'
   | 'NOTICE_REPLY'
   /** a new oppslag in one of my nabolag (0067) */
-  | 'NABOLAG_POST';
+  | 'NABOLAG_POST'
+  /** job-day messages: confirm, on the way, not answered (0074) */
+  | 'JOB_DAY'
+  /** a no-show report, its explanation or MinNabo's decision (0074) */
+  | 'NO_SHOW';
 
 export type AppNotification = {
   id: string;

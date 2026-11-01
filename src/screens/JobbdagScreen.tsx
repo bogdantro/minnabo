@@ -12,13 +12,12 @@ import {
   useListing,
   useProfile,
   useProposal,
-  useReportNoShow,
-  useSendMessage,
+  useProposalsForListing,
+  useSetHelperStatus,
   useUpdateJobWorkspace,
   useSharedContact,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { confirm } from '@/lib/confirm';
 import { formatTime } from '@/lib/datetime';
 import { parseDurationHours } from '@/lib/deviceCalendar';
 import { haptics } from '@/lib/haptics';
@@ -28,13 +27,21 @@ import { pickAndUploadMany } from '@/lib/uploads';
 import { colors, fonts, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import { TryggTurCard } from '@/components/TryggTurCard';
+import { AttendanceCard, showAttendance } from '@/components/rescue/AttendanceCard';
+import { NoShowSheet } from '@/components/rescue/NoShowSheet';
+import { ArrivedSheet } from '@/components/rescue/ArrivedSheet';
+import { NoShowEntryCard } from '@/components/rescue/NoShowEntryCard';
+import { attendanceOf, canReportNoShow } from '@/domain/noShow';
+import { serverMessage } from '@/lib/errors';
 import { BeforeAfter } from '@/components/BeforeAfter';
+import { checklistSuggestions } from '@/domain/checklist';
 import {
   AmountInput,
   Avatar,
   Button,
   CategoryArt,
   Checkbox,
+  Chip,
   ErrorText,
   FadeUp,
   Field,
@@ -78,12 +85,15 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
   const contact = useSharedContact(otherId || undefined).data;
   const { data: ws } = useJobWorkspace(proposalId);
   const update = useUpdateJobWorkspace(proposalId);
-  const noShow = useReportNoShow();
-  const sendMessage = useSendMessage(proposal?.conversationId ?? '', me.id);
+  const helperStatus = useSetHelperStatus(proposalId);
+  const offers = useProposalsForListing(proposal?.listingId ?? '');
+  const [noShowOpen, setNoShowOpen] = useState(false);
 
   const [tab, setTab] = useState<Tab>('sjekk');
   const [now, setNow] = useState(() => Date.now());
   const [newItem, setNewItem] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [arrivedOpen, setArrivedOpen] = useState(false);
   const [matOpen, setMatOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -126,6 +136,7 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
   const pct = estMs ? Math.min(100, Math.round((tracked / estMs) * 100)) : 0;
   const items = ws?.checklist ?? [];
   const done = items.filter((x) => x.done).length;
+  const suggested = checklistSuggestions(listing, items.map((x) => x.text));
   const mats = ws?.materials ?? [];
   const sum = mats.reduce((a, m) => a + m.amountKr, 0);
   const sumOf = (payer: MaterialPayer) => mats.filter((m) => (m.payer ?? 'CLIENT') === payer).reduce((a, m) => a + m.amountKr, 0);
@@ -161,6 +172,21 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
     update.mutate({ kind: 'toggleChecklist', itemId: id });
     if (it && !it.done && items.every((x) => x.id === id || x.done)) toast.success(nb.jobWorkspace.allDoneToast, { icon: 'check', bottom: 150 });
   };
+  // «Fra oppdraget»: what the owner ticked when posting (Plen, Hekk …) becomes the list in one tap
+  // one after another: each answer replaces the cached list, so parallel calls could land out of order
+  const addSuggested = async (texts: string[]) => {
+    if (adding) return;
+    setAdding(true);
+    haptics.light();
+    try {
+      for (const t of texts) await update.mutateAsync({ kind: 'addChecklist', text: t });
+      toast.success(texts.length > 1 ? nb.jobWorkspace.suggestAddedMany(texts.length) : nb.jobWorkspace.addedToast, { icon: 'plus', bottom: 150 });
+    } catch (e) {
+      toast.error(serverMessage(e, nb.jobWorkspace.suggestFailed));
+    } finally {
+      setAdding(false);
+    }
+  };
   const addItem = () => {
     const t = newItem.trim();
     if (!t) return;
@@ -190,18 +216,17 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
       setUploading(false);
     }
   };
-  const status = (t: string) => {
-    sendMessage.mutate(t);
-    toast.success(nb.avtale.statusSent, { bottom: 150 });
-  };
-  const reportNoShow = async () => {
-    const ok = await confirm({ title: nb.avtale.noShowConfirmTitle, message: nb.avtale.noShowConfirmBody, confirmLabel: nb.avtale.noShowConfirm, destructive: true });
-    if (!ok || !otherId) return;
-    noShow.mutate(
-      { agreementProposalId: proposalId, profileId: otherId },
-      { onSuccess: () => toast.success(nb.avtale.noShowToast), onError: () => toast.error(nb.toast.genericError) },
-    );
-  };
+  // «Jeg er på vei» / «Jeg er framme» are real states the owner sees (0074) – and still a line in the chat
+  const status = (s: 'ON_THE_WAY' | 'ARRIVED') =>
+    // «framme» asks first whether to share roughly where the helper is (ArrivedSheet)
+    s === 'ARRIVED' ? setArrivedOpen(true) : helperStatus.mutate(s, {
+      onSuccess: () => toast.success(nb.avtale.statusSent, { bottom: 150 }),
+      onError: (e) => toast.error(serverMessage(e, nb.toast.genericError), { bottom: 150 }),
+    });
+  const canNoShow = canReportNoShow(proposal, agreement, me.id, false);
+  const offerPost = listing?.type === 'SERVICE_OFFER';
+  const otherOffers = offerPost ? 0 : (offers.data ?? []).filter((p) => p.id !== proposalId && (p.status === 'SENT' || p.status === 'REVISION_PENDING')).length;
+  const dayCard = !!agreement && showAttendance(agreement);
   const phone = contact?.phone?.replace(/\s/g, '');
 
   return (
@@ -315,6 +340,24 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
                   </View>
                   <Text style={styles.alldoneText}>{nb.jobWorkspace.allDone}</Text>
                 </ScaleIn>
+              ) : null}
+              {suggested.length ? (
+                <FadeUp style={[styles.card, styles.suggest, shadow.card]} testID="checklist-suggest">
+                  <View style={styles.suggestHead}>
+                    <View style={styles.flex1}>
+                      <Text style={styles.suggestEyebrow}>{nb.jobWorkspace.suggestTitle}</Text>
+                      <Text style={text.meta}>{nb.jobWorkspace.suggestSub}</Text>
+                    </View>
+                    {suggested.length > 1 ? (
+                      <Button label={nb.jobWorkspace.suggestAll} icon="plus" variant="ink" size="sm" block={false} loading={adding} onPress={() => void addSuggested(suggested)} />
+                    ) : null}
+                  </View>
+                  <View style={styles.suggestChips}>
+                    {suggested.map((t) => (
+                      <Chip key={t} label={t} icon="plus" size="sm" accessibilityLabel={nb.jobWorkspace.suggestA11y(t)} onPress={adding ? undefined : () => void addSuggested([t])} />
+                    ))}
+                  </View>
+                </FadeUp>
               ) : null}
               <View style={[styles.card, styles.list, shadow.card]}>
                 {items.length === 0 ? <Text style={[text.meta, styles.emptyLine]}>{nb.jobWorkspace.emptyTasks}</Text> : null}
@@ -454,10 +497,22 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
         {/* safety + contact (existing job-day tools) */}
         <FadeUp delay={200} style={[styles.px, styles.mt22, styles.gap12]}>
           <Text style={text.eyebrow}>{nb.jobWorkspace.safety}</Text>
-          <View style={styles.row8}>
-            <Button label={nb.avtale.enRoute} icon="nav" variant="ghost" size="sm" block={false} onPress={() => status('Jeg er på vei 🚗')} style={styles.grow} />
-            <Button label={nb.avtale.arrived} icon="pin" variant="ghost" size="sm" block={false} onPress={() => status('Jeg er framme 👋')} style={styles.grow} />
-          </View>
+          {dayCard && agreement ? (
+            <AttendanceCard
+              proposalId={proposalId}
+              agreement={agreement}
+              iAmHelper={iAmHelper}
+              otherFirst={first}
+              onWrite={() => safePush(`/chat/${proposal.conversationId}`)}
+              onFindOther={canNoShow ? () => setNoShowOpen(true) : undefined}
+              onCantCome={() => safePush(`/avtale/${proposalId}`)}
+            />
+          ) : iAmHelper ? (
+            <View style={styles.row8}>
+              <Button label={nb.avtale.enRoute} icon="nav" variant="ghost" size="sm" block={false} disabled={helperStatus.isPending || attendanceOf(agreement) === 'arrived'} onPress={() => status('ON_THE_WAY')} style={styles.grow} />
+              <Button label={nb.avtale.arrived} icon="pin" variant="ghost" size="sm" block={false} disabled={helperStatus.isPending || attendanceOf(agreement) === 'arrived'} onPress={() => status('ARRIVED')} style={styles.grow} />
+            </View>
+          ) : null}
           {phone ? (
             <View style={styles.row8}>
               <Button label={nb.avtale.call} icon="phone" variant="ghost" size="sm" block={false} onPress={() => Linking.openURL(`tel:${phone}`)} style={styles.grow} />
@@ -472,7 +527,15 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
               place: listing ? listing.location.place || listing.location.municipality : undefined,
             }}
           />
-          <Button label={nb.avtale.reportNoShow} variant="text" loading={noShow.isPending} onPress={reportNoShow} />
+          {canNoShow && !iAmHelper && attendanceOf(agreement) !== 'arrived' ? (
+            <NoShowEntryCard
+              helperFirst={first}
+              timeText={agreement?.scheduledAt ? `kl. ${formatTime(agreement.scheduledAt)}` : undefined}
+              attendance={attendanceOf(agreement)}
+              onWrite={() => safePush(`/chat/${proposal.conversationId}`)}
+              onReport={() => setNoShowOpen(true)}
+            />
+          ) : null}
         </FadeUp>
         <View style={styles.bottom} />
       </Screen>
@@ -482,6 +545,16 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
         <Text style={[text.meta, styles.center, styles.f12, styles.mt6]}>{nb.jobWorkspace.finishNote(first)}</Text>
       </StickyFooter>
 
+      {iAmHelper ? <ArrivedSheet visible={arrivedOpen} onClose={() => setArrivedOpen(false)} proposalId={proposalId} otherFirst={first} /> : null}
+      <NoShowSheet
+        visible={noShowOpen}
+        onClose={() => setNoShowOpen(false)}
+        proposalId={proposalId}
+        helperFirst={first}
+        otherOffers={otherOffers}
+        offerPost={offerPost}
+        onDone={() => router.replace(`/avtale/${proposalId}`)}
+      />
       <MaterialSheet
         visible={matOpen}
         onClose={() => setMatOpen(false)}
@@ -719,6 +792,10 @@ const styles = StyleSheet.create({
   okIc: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.ok, alignItems: 'center', justifyContent: 'center' },
   alldoneText: { flex: 1, fontFamily: text.label.fontFamily, fontSize: 14.5, lineHeight: 19, color: colors.okText },
   list: { overflow: 'hidden' },
+  suggest: { padding: 16, gap: 12, borderWidth: 1.5, borderColor: colors.limeTint },
+  suggestHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  suggestEyebrow: { ...text.eyebrow, color: colors.limeDeep, marginBottom: 2 },
+  suggestChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   emptyLine: { padding: 16 },
   who: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   whoShared: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.track, alignItems: 'center', justifyContent: 'center' },

@@ -3,6 +3,9 @@ import type {
   AgendaItem,
   AgreementSnapshot,
   AgreementTimeProposal,
+  HelperStatus,
+  NoShowReason,
+  NoShowReport,
   GuardianLinks,
   PriceRange,
   AppNotification,
@@ -93,6 +96,21 @@ export type ListingExtras = {
   estimatedMinutes?: number;
   /** the wizard form as entered, so "Rediger" reopens it exactly */
   wizard?: unknown;
+  /** ISO – «Det haster» deadline; null = not urgent (rules in 0071_urgent_oppdrag.sql) */
+  urgentUntil?: string | null;
+};
+
+/** What «Hjelperen kom ikke» did: urgent = it is a hasteoppdrag now, others = tilbud asked again. */
+export type RescueResult = { urgent: boolean; others: number; reportId?: string };
+
+/** A finished job the person must review before posting or giving tilbud again (0072). */
+export type PendingReview = {
+  proposalId: string;
+  listingId: string;
+  listingTitle: string;
+  otherId: string;
+  otherName: string;
+  completedAt: string;
 };
 
 /** What edit mode needs that isn't on the public listing. */
@@ -273,7 +291,14 @@ export type UpdateProfilePatch = {
   availabilityText?: string;
   homeNotes?: string;
   portfolio?: string[];
+  /** «Når er du vanligvis ledig?» – 0 = søndag … 6 = lørdag; [] clears it */
+  availableWeekdays?: number[];
+  /** Personvern: show me in «Mest hjelpsomme denne måneden» on Nabolag */
+  highlightOptIn?: boolean;
 };
+
+/** «Mest hjelpsomme denne måneden»: a helper who opted in and how many jobs they finished this month. */
+export type NeighbourhoodHighlight = { profileId: string; jobs: number };
 
 /** Public offer count on an oppdrag – a number only, never who. */
 export type OfferCount = { count: number; mine: boolean };
@@ -308,6 +333,8 @@ export interface ApiClient {
   /** Owner edits an oppdrag (until a tilbud is accepted). Open offers get a notification. */
   updateListing(listingId: string, listing: Listing, extras: ListingExtras): Promise<Listing>;
   getListingEditData(listingId: string): Promise<ListingEditData>;
+  /** Owner edits a «Tilbyr hjelp» post (0076): text, price, place, days, photos. */
+  updateOffer(listingId: string, listing: Listing): Promise<Listing>;
   /** Signed-in user's account state – suspended accounts are signed out. */
   getAppSettings(): Promise<AppSettings>;
   /** public.categories: order, on/off, labels and tile colours set on the website. */
@@ -341,6 +368,8 @@ export interface ApiClient {
   sendMessage(conversationId: string, text: string): Promise<Message>;
   /** `attachmentPath`: the photo's path in the private chat-attachments bucket. */
   sendAttachment(conversationId: string, attachmentPath: string): Promise<Message>;
+  /** A talemelding: `attachmentPath` is the sound file in chat-attachments, `durationMs` its length (max 2 min). */
+  sendVoice(conversationId: string, attachmentPath: string, durationMs: number): Promise<Message>;
   toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message[]>;
   setPinnedMessage(conversationId: string, messageId: string | null): Promise<Message[]>;
 
@@ -362,6 +391,25 @@ export interface ApiClient {
   getAgreement(proposalId: string): Promise<AgreementSnapshot | null>;
   /** Either party calls off an accepted agreement (ACCEPTED → CANCELLED). */
   cancelAgreement(proposalId: string, reason?: string): Promise<Proposal>;
+  /**
+   * «Hjelperen kom ikke» (owner, from the job morning): files the report, cancels the avtale,
+   * opens the oppdrag again, optionally makes it urgent for today, asks the other tilbud (0074).
+   */
+  reportHelperNoShow(proposalId: string, reason: Exclude<NoShowReason, 'HELPER_CANCELLED'>, makeUrgent: boolean): Promise<RescueResult>;
+  /** Make the reopened oppdrag a hasteoppdrag for today, after the avtale was cancelled. */
+  makeRescueUrgent(proposalId: string): Promise<void>;
+  /** «Ja, jeg kan i dag» – the sender of another tilbud says it still stands. */
+  confirmStillAvailable(proposalId: string): Promise<void>;
+  /** «Bekreft at du kommer» (helper). */
+  confirmAttendance(proposalId: string): Promise<void>;
+  /** «Jeg er på vei» / «Jeg er framme» (helper). */
+  /** `place`: only with ARRIVED, when the helper chose to share roughly where they are (0078). */
+  setHelperStatus(proposalId: string, status: HelperStatus, place?: string): Promise<void>;
+  getNoShowReport(id: string): Promise<NoShowReport>;
+  /** The helper's side, within 48 hours. */
+  explainNoShow(id: string, text: string): Promise<void>;
+  /** ISO until when I can't give tilbud (two no-shows in 90 days), or null. */
+  getMyTilbudPause(): Promise<string | null>;
   getAgreementForConversation(conversationId: string): Promise<AgreementSnapshot | null>;
   /** The open "nytt tidspunkt" proposal on an avtale, if any. */
   getAgreementTimeProposal(proposalId: string): Promise<AgreementTimeProposal | null>;
@@ -434,6 +482,8 @@ export interface ApiClient {
     byProfileId: string,
   ): Promise<CompletionConfirmation[]>;
   submitReview(input: SubmitReviewInput): Promise<Review>;
+  /** Finished jobs I still have to review (0072) – oldest first. Until then no new oppdrag or tilbud. */
+  listPendingReviews(): Promise<PendingReview[]>;
   reportNoShow(agreementProposalId: string, profileId: string): Promise<void>;
   listEndorsements(profileId: string): Promise<SkillEndorsement[]>;
   toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]>;
@@ -488,6 +538,12 @@ export interface ApiClient {
 
   // nabolag
   getNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
+  /** Up to three opted-in helpers in a kommune with the most finished jobs this month (0080). */
+  neighbourhoodHighlights(municipality: string): Promise<NeighbourhoodHighlight[]>;
+  /** The new profile says who invited it (0081); false when it doesn't count (too old, self, already set). */
+  recordInvite(inviterId: string): Promise<boolean>;
+  /** How many neighbours joined through this person's invite link – for «Verver». */
+  inviteCount(profileId: string): Promise<number>;
   joinNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
   leaveNeighbourhood(municipality: string, place: string): Promise<NeighbourhoodInfo>;
   /** My thread with «MinNabo», oldest first. */

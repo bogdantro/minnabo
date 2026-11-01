@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ModerationBanner } from '@/components/ModerationBanner';
 import { useCategoryCatalog } from '@/hooks/useCategories';
 import {
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,11 +11,14 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Listing } from '@/domain/types';
 import { categoryArtId, categoryLabel, categoryArtColors } from '@/domain/categories';
 import nb from '@/i18n/nb';
 import { canEditListing, canEditProposal, editListingHref, isOpenListing, isTakenListing } from '@/domain/editing';
+import { isUrgent, urgentDayLabel } from '@/domain/urgent';
+import { heroTransition, useHeroFlight } from '@/lib/heroTransition';
 import {
   useIsSaved,
   useListingOfferCount,
@@ -52,6 +54,7 @@ import {
 
 const logo = require('../../assets/logo-icon.png');
 const GAL_H = 268;
+const GAL_RADIUS = 30;
 const km = (d: number) => d.toLocaleString('nb-NO', { maximumFractionDigits: 1 });
 
 /** Oppdragsdetaljer (design/screens/Oppdragsdetaljer.dc.html). */
@@ -107,7 +110,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
   ];
 
   const practical: { icon: IconKey; title: string; sub?: string }[] = [
-    ...(task?.intake ?? []).map((a) => ({ icon: 'info' as const, title: a.label, sub: a.value })),
+    ...(task?.intake ?? []).filter((a) => a.label !== 'Haster').map((a) => ({ icon: 'info' as const, title: a.label, sub: a.value })),
     ...(task?.meetingNote ? [{ icon: 'users' as const, title: nb.detail.meeting, sub: task.meetingNote }] : []),
     // home notes only once you have an avtale with the owner (0057) – never on the public page
     ...(homeNotes ? [{ icon: 'home' as const, title: nb.detail.home, sub: homeNotes }] : []),
@@ -165,6 +168,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
         <FadeUp delay={100} style={[styles.px, styles.titleBlock]}>
           <View style={styles.row8}>
             <Pill label={nb.detail.open} tone="need" dot size="lg" />
+            {isUrgent(listing) ? <Pill label={nb.card.urgentUntil(urgentDayLabel(listing.urgentUntil!))} icon="zap" tone="warn" size="lg" /> : null}
             <Pill label={categoryLabel(cat)} tone="neutral" icon={cat} size="lg" />
             {task?.isDugnad ? <Pill label={nb.card.dugnad} tone="neutral" icon="users" size="lg" /> : null}
             {task?.recurrence ? <Pill label={nb.detail.repeats[task.recurrence]} tone="neutral" icon="repeat" size="lg" /> : null}
@@ -427,6 +431,23 @@ function Gallery({ listing, saved, onSave }: { listing: Listing; saved: boolean;
   const imgs = listing.images;
   const n = imgs.length;
   const cat = categoryArtId(listing.category.slug);
+  // the photo flying in from the tapped card (HeroOverlay): tell it where to land, hide ours till then
+  const frame = useRef<View>(null);
+  const flight = useHeroFlight();
+  const incoming = !!flight && flight.id === listing.id;
+  const reportLanding = () => {
+    if (!n || !heroTransition.pendingFor(listing.id)) return;
+    frame.current?.measureInWindow?.((x, y, width, height) => {
+      if (width > 0) heroTransition.land(listing.id, { x, y, width, height, radius: GAL_RADIUS });
+    });
+  };
+  // the card's measurement can finish after our first layout: land as soon as the flight exists
+  const waiting = incoming && !flight?.to;
+  useEffect(() => {
+    if (waiting) reportLanding();
+    // reportLanding only reads refs and the store
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiting]);
 
   const go = (to: number) => {
     const next = (to + n) % n;
@@ -436,9 +457,15 @@ function Gallery({ listing, saved, onSave }: { listing: Listing; saved: boolean;
   const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => setI(Math.round(e.nativeEvent.contentOffset.x / w));
 
   return (
-    <View style={[styles.gal, shadow.medium, { backgroundColor: categoryArtColors(cat).bg }]} accessibilityLabel={nb.detail.galleryLabel}>
+    <View
+      ref={frame}
+      collapsable={false}
+      onLayout={reportLanding}
+      style={[styles.gal, shadow.medium, { backgroundColor: categoryArtColors(cat).bg }]}
+      accessibilityLabel={nb.detail.galleryLabel}
+    >
       {n ? (
-        <ScrollView ref={ref} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onEnd}>
+        <ScrollView ref={ref} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onEnd} style={incoming ? styles.hidden : undefined}>
           {imgs.map((img) => (
             <CategoryArt key={img.id} category={cat} uri={img.url} width={w} height={GAL_H} />
           ))}
@@ -522,7 +549,8 @@ const styles = StyleSheet.create({
   midText: { fontFamily: text.label.fontFamily, fontSize: 17, color: colors.ink },
   avbtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 
-  gal: { height: GAL_H, borderRadius: 30, overflow: 'hidden', marginTop: 4 },
+  gal: { height: GAL_H, borderRadius: GAL_RADIUS, overflow: 'hidden', marginTop: 4 },
+  hidden: { opacity: 0 },
   gtop: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 8 },
   savedBtn: { backgroundColor: colors.savedBg },
   gnav: { position: 'absolute', top: GAL_H / 2 - 22 },

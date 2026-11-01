@@ -17,6 +17,7 @@ import { formatPrice } from '@/domain/price';
 import { isExpiredProposal, isTakenListing } from '@/domain/editing';
 import { useIsFocused } from 'expo-router';
 import nb from '@/i18n/nb';
+import { quickReplies, replyStage } from '@/domain/quickReplies';
 import {
   useAgreement,
   useBlockedProfileIds,
@@ -27,6 +28,7 @@ import {
   useProposalsForListing,
   useRespondToProposal,
   useSendAttachment,
+  useSendVoice,
   useSendMessage,
   useSetPinnedMessage,
   useToggleBlock,
@@ -36,13 +38,14 @@ import { useConversationChannel, usePresence, useTypingChannel } from '@/api/rea
 import { ImageViewer } from '@/components/ImageViewer';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatDayLabel, isSameDay } from '@/lib/calendar';
-import { formatTime, shortDate } from '@/lib/datetime';
+import { formatTime, seenWhen, shortDate } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { useMutedConversation } from '@/lib/mutedConversations';
 import { safePush } from '@/lib/nav';
 import { outbox } from '@/lib/outbox';
 import { toast } from '@/lib/toast';
-import { pickAndUpload, pickAndUploadMany } from '@/lib/uploads';
+import { pickAndUpload, pickAndUploadMany, uploadVoice } from '@/lib/uploads';
+import type { VoiceClip } from '@/components/chat/Voice';
 import { colors, motion, radius, shadow, text } from '@/theme/theme';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import { AgreementBanner, BlockedBar, ChatTopBar, Composer, ListingStrip, PinBar } from '@/components/chat/ChatTop';
@@ -73,7 +76,8 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   const [muted, toggleMute] = useMutedConversation(c.id);
   const sendMessage = useSendMessage(c.id, me.id);
   const sendAttachment = useSendAttachment(c.id, me.id);
-  const toggleReaction = useToggleReaction(c.id);
+  const sendVoiceMessage = useSendVoice(c.id, me.id);
+  const toggleReaction = useToggleReaction(c.id, me.id);
   const setPinned = useSetPinnedMessage(c.id);
   const respond = useRespondToProposal(c.id);
 
@@ -99,8 +103,16 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   const activeAgreement = agreement && !agreement.cancelledAt ? agreement : null;
   const first = c.counterpart.displayName.split(' ')[0];
   const verified = !!counterpart?.verifications.some((v) => v.verified);
-  const canOffer = !!listing && !isOwner && !activeAgreement;
-  const offerCount = isOwner ? (proposals.data ?? []).filter((p) => p.status !== 'DRAFT').length : undefined;
+  // On an oppdrag the visitor sends the tilbud; on a «Tilbyr hjelp» post the helper (its owner)
+  // sends it to the nabo who asked (0076).
+  const isOfferPost = listing?.type === 'SERVICE_OFFER';
+  const canOffer = !!listing && (isOfferPost ? isOwner : !isOwner) && !activeAgreement;
+  // Hurtigsvar follow the conversation: «Er på vei!» for the helper on the job day, «Takk for jobben!» after
+  const iAmHelper = isOfferPost ? isOwner : !isOwner;
+  const jobDone = !isOfferPost && !!activeAgreement && (listing?.status === 'COMPLETED' || listing?.status === 'REVIEWED');
+  // none until the oppdrag has loaded: before that we can't tell who is the helper
+  const replies = listing ? quickReplies(replyStage(activeAgreement, jobDone, new Date()), iAmHelper, activeAgreement?.scheduledAt) : [];
+  const offerCount = isOwner && !isOfferPost ? (proposals.data ?? []).filter((p) => p.status !== 'DRAFT').length : undefined;
 
   // Send pending declines when leaving the screen.
   useEffect(() => {
@@ -150,6 +162,19 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
     }
     sendAttachment.mutate({ path, preview }, { onError: () => toast.error(nb.toast.genericError) });
   };
+  // a talemelding needs its file uploaded first, so it can't wait in the offline outbox
+  const sendVoice = (clip: VoiceClip) => {
+    atBottom.current = true;
+    setSelected(null);
+    if (!online) {
+      toast.error(nb.chat.voiceOffline, { icon: 'mic', bottom: 150 });
+      return;
+    }
+    sendVoiceMessage.mutate(
+      { uri: clip.uri, durationMs: clip.durationMs, upload: (u) => uploadVoice(u, me.id) },
+      { onError: (e) => toast.error(serverMessage(e, nb.chat.voiceSendFailed), { bottom: 150 }) },
+    );
+  };
   const pickImage = async (source: 'camera' | 'library') => {
     setUploading(true);
     try {
@@ -169,6 +194,10 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
     }
   };
   const retry = (m: Message) => {
+    if (m.kind === 'AUDIO' && m.attachmentUrl) {
+      sendVoice({ uri: m.attachmentUrl, durationMs: m.audioMs ?? 0 });
+      return;
+    }
     if (m.kind === 'IMAGE' && (m.attachmentPath || m.attachmentUrl)) {
       sendAttachment.mutate({ path: m.attachmentPath ?? m.attachmentUrl!, preview: m.attachmentUrl });
     }
@@ -228,7 +257,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   // Last own message gets the Sendt / Levert / Lest line.
   let lastMine = -1;
   list.forEach((m, i) => {
-    if (m.authorProfileId === me.id && (m.kind === 'TEXT' || m.kind === 'IMAGE')) lastMine = i;
+    if (m.authorProfileId === me.id && (m.kind === 'TEXT' || m.kind === 'IMAGE' || m.kind === 'AUDIO')) lastMine = i;
   });
 
   const renderMessage = (m: Message, i: number) => {
@@ -298,7 +327,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           avatar={{ initials: c.counterpart.initials, uri: c.counterpart.avatarUrl, seed: c.counterpart.id }}
           pinned={!!m.pinned}
           selected={selected === m.id}
-          statusText={i === lastMine ? (m.pending ? nb.chat.sending : STATUS[m.delivery]) : undefined}
+          statusText={i === lastMine ? (m.pending ? nb.chat.sending : m.delivery === 'READ' && m.readAt ? nb.chat.seenAt(seenWhen(m.readAt)) : STATUS[m.delivery]) : undefined}
           onSelect={() => {
             // a photo opens in fullscreen (hold it to pin)
             if (m.kind === 'IMAGE' && m.attachmentUrl) {
@@ -350,7 +379,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           />
         ) : null}
         <ListingStrip c={c} listing={listing} agreed={!!activeAgreement} offerCount={offerCount} onOpen={() => safePush(c.notice ? '/oppslagstavle' : `/oppdrag/${c.listing.id}`)} />
-        {pinnedMessage ? <PinBar textValue={pinnedMessage.kind === 'IMAGE' ? `📷 ${nb.chat.image}` : pinnedMessage.text} onUnpin={unpin} /> : null}
+        {pinnedMessage ? <PinBar textValue={pinnedMessage.kind === 'IMAGE' ? `📷 ${nb.chat.image}` : pinnedMessage.kind === 'AUDIO' ? `🎤 ${nb.chat.voiceMessage}` : pinnedMessage.text} onUnpin={unpin} /> : null}
       </View>
 
       <View style={styles.flex}>
@@ -399,6 +428,8 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
             setSheet('share');
           }}
           onTyping={notifyTyping}
+          replies={replies}
+          onVoice={sendVoice}
         />
       )}
 
@@ -435,6 +466,8 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
       {listing && canOffer ? (
         <GiTilbudSheet
           listing={listing}
+          recipient={isOfferPost ? (counterpart ?? c.counterpart) : undefined}
+          conversationId={isOfferPost ? c.id : undefined}
           visible={sheet === 'offer'}
           onClose={closeSheet('offer')}
           onSent={() => undefined}

@@ -98,3 +98,12 @@ test('Avslå is held for "Angre" and only then sent', async () => {
     jest.useRealTimers();
   }
 });
+
+test('Sammenlign shows who turns up, where they live and who can today – side by side', async () => {
+  chatRepository.patchProposal('p-gjerde-emma', { availableTodayAt: new Date().toISOString() });
+  await renderWithProviders(<SammenlignTilbudScreen listingId="l-male-gjerdet" />);
+  await settle();
+  expect(screen.getAllByText('Møter opp').length).toBe(3);
+  expect(screen.getAllByText('Bor i').length).toBe(3);
+  expect(screen.getByText('Kan i dag')).toBeTruthy();
+});

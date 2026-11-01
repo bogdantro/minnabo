@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Image } from '@/components/ui/Image';
 import type { PortfolioItem } from '@/domain/types';
 import { monthYear } from '@/lib/datetime';
 import nb from '@/i18n/nb';

@@ -1,15 +1,18 @@
-import { useEffect, type ReactNode, type RefObject } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode, type RefObject } from 'react';
 import {
-  Image,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  type ListRenderItem,
+  type RefreshControlProps,
   type ScrollViewProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Image } from './Image';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +20,7 @@ import { useIsOffline } from '@/lib/offline';
 import { colors, safeTopExtra, screenPadding, sizes, text } from '@/theme/theme';
 import { Avatar } from './Avatar';
 import { IconButton } from './IconButton';
+import { KommuneBanner } from '../KommuneBanner';
 
 const logo = require('../../../assets/logo-icon.png');
 
@@ -73,6 +77,8 @@ export function Screen({
   return (
     <View testID={testID} style={[styles.screen, { backgroundColor: white ? colors.white : colors.bg }]}>
       {header}
+      {/* no kommune on the profile: asked for under the header of every screen */}
+      {header ? <KommuneBanner /> : null}
       <CachedContent>
       {scroll ? (
         <ScrollView
@@ -82,13 +88,118 @@ export function Screen({
           // iOS: keep the focused field (e.g. the price) above the keyboard.
           automaticallyAdjustKeyboardInsets
           {...scrollProps}
-          contentContainerStyle={[contentStyle, { paddingBottom: bottom }]}
+          // only set when there is a nav/foot spacer, so a screen's own paddingBottom in contentStyle is kept
+          contentContainerStyle={[contentStyle, bottom ? { paddingBottom: bottom } : null]}
         >
           {children}
         </ScrollView>
       ) : (
         <View style={[styles.flex, contentStyle, bottom ? { paddingBottom: bottom } : null]}>{children}</View>
       )}
+      </CachedContent>
+      {footer}
+    </View>
+  );
+}
+
+/** Rows rendered at first and added per "page" as the list nears its end. */
+export const LIST_PAGE = 20;
+
+/**
+ * How many rows of a long list to render: one page at first, one more per `more()`, never more
+ * than there are. A new `resetKey` (filter, search) starts from the first page again.
+ */
+export function useListPaging(length: number, resetKey = '') {
+  const [paging, setPaging] = useState({ key: resetKey, n: LIST_PAGE });
+  const n = paging.key === resetKey ? paging.n : LIST_PAGE;
+  if (paging.key !== resetKey) setPaging({ key: resetKey, n: LIST_PAGE });
+  const shown = Math.min(n, length);
+  const more = () => {
+    if (n < length) setPaging({ key: resetKey, n: n + LIST_PAGE });
+  };
+  return { shown, more };
+}
+
+export type ListScreenProps<T> = {
+  data: readonly T[];
+  renderItem: ListRenderItem<T>;
+  keyExtractor: (item: T, index: number) => string;
+  /** Everything above the rows (title, filters …) – scrolls with the list. */
+  listHeader?: ReactElement | null;
+  /** Shown instead of rows when `data` is empty (also the loading skeleton / error). */
+  empty?: ReactElement | null;
+  /** Below the last row. */
+  listFooter?: ReactElement | null;
+  /** Space between rows. */
+  gap?: number;
+  white?: boolean;
+  spacer?: 'nav' | 'foot' | 'none';
+  header?: ReactNode;
+  footer?: ReactNode;
+  refreshControl?: ReactElement<RefreshControlProps>;
+  /** Change it to start again from the first page (a new filter or search). */
+  resetKey?: string;
+  /** 'on-drag' closes the keyboard when the list is scrolled (Søk). */
+  keyboardDismissMode?: 'none' | 'on-drag' | 'interactive';
+  /**
+   * The screen pages its rows itself (e.g. Varsler: rows inside day cards, see useListPaging).
+   * Then every item in `data` is rendered and this is called near the end.
+   */
+  onEndReached?: () => void;
+  testID?: string;
+};
+
+/**
+ * `Screen` for long lists: the same frame (header, kommune banner, offline grey, footer), but the rows
+ * live in a FlatList, so only what is on screen is drawn. Rows arrive `LIST_PAGE` at a time as the
+ * person scrolls, which keeps the first paint fast on a list of hundreds.
+ */
+export function ListScreen<T>({
+  data,
+  renderItem,
+  keyExtractor,
+  listHeader,
+  empty,
+  listFooter,
+  gap = 12,
+  white = false,
+  spacer = 'none',
+  header,
+  footer,
+  refreshControl,
+  resetKey = '',
+  keyboardDismissMode,
+  onEndReached,
+  testID,
+}: ListScreenProps<T>) {
+  const insets = useSafeAreaInsets();
+  const { shown, more } = useListPaging(data.length, resetKey);
+  const bottom =
+    spacer === 'nav' ? sizes.spacerNav + insets.bottom : spacer === 'foot' ? sizes.spacerFoot + insets.bottom : 0;
+  return (
+    <View testID={testID} style={[styles.screen, { backgroundColor: white ? colors.white : colors.bg }]}>
+      {header}
+      {header ? <KommuneBanner /> : null}
+      <CachedContent>
+        <FlatList
+          data={onEndReached ? data : data.slice(0, shown)}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={empty}
+          ListFooterComponent={listFooter}
+          ItemSeparatorComponent={gap ? () => <View style={{ height: gap }} /> : undefined}
+          onEndReached={onEndReached ?? more}
+          onEndReachedThreshold={0.6}
+          initialNumToRender={10}
+          windowSize={9}
+          removeClippedSubviews
+          refreshControl={refreshControl}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={keyboardDismissMode}
+          contentContainerStyle={{ paddingBottom: bottom }}
+        />
       </CachedContent>
       {footer}
     </View>

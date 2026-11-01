@@ -13,6 +13,7 @@ import {
   useJobWorkspace,
   useListing,
   useMyAgreements,
+  usePortfolio,
   useProfile,
   useProposal,
 } from '@/api/queries';
@@ -23,6 +24,7 @@ import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
+import { Image } from '@/components/ui/Image';
 import {
   Avatar,
   Button,
@@ -63,6 +65,7 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
   const confirm = useConfirmCompletion(proposalId);
   const addPortfolio = useAddPortfolioItem();
   const [inPortfolio, setInPortfolio] = useState(false);
+  const { data: myPortfolio } = usePortfolio(me.id);
   const [issue, setIssue] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [openedAt] = useState(() => Date.now());
@@ -87,8 +90,10 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
   const afterPhoto = [...(ws?.photos ?? [])].reverse().find((p) => p.phase === 'AFTER');
   const beforePhoto = (ws?.photos ?? []).find((p) => p.phase === 'BEFORE');
   const canPortfolio = done && proposal.fromProfileId === me.id && !!afterPhoto && !!listing;
+  // read from the real portfolio too, so coming back to this screen never adds the same photos twice
+  const savedInPortfolio = inPortfolio || (!!afterPhoto && !!myPortfolio?.some((p) => p.afterUrl === afterPhoto.url));
   const toPortfolio = () => {
-    if (!afterPhoto || !listing || addPortfolio.isPending || inPortfolio) return;
+    if (!afterPhoto || !listing || addPortfolio.isPending || savedInPortfolio) return;
     addPortfolio.mutate(
       {
         beforePath: beforePhoto?.url,
@@ -223,12 +228,17 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
             <View style={[styles.card, styles.pad, styles.portfolio, shadow.card]}>
               <Text style={[text.label, styles.f145]}>{nb.completion.portfolioTitle}</Text>
               <Text style={text.meta}>{beforePhoto ? nb.completion.portfolioSubBoth : nb.completion.portfolioSub}</Text>
+              {/* exactly the photos that will be shown on the profile */}
+              <View style={styles.pfRow}>
+                {beforePhoto ? <PortfolioThumb uri={beforePhoto.url} label={nb.jobWorkspace.before} /> : null}
+                {afterPhoto ? <PortfolioThumb uri={afterPhoto.url} label={nb.jobWorkspace.after} /> : null}
+              </View>
               <Button
-                label={inPortfolio ? nb.completion.portfolioDone : nb.completion.portfolioAdd}
-                icon={inPortfolio ? 'check' : 'image'}
-                variant={inPortfolio ? 'ghost' : 'ink'}
+                label={savedInPortfolio ? nb.completion.portfolioDone : nb.completion.portfolioAdd}
+                icon={savedInPortfolio ? 'check' : 'image'}
+                variant={savedInPortfolio ? 'ghost' : 'ink'}
                 size="sm"
-                disabled={inPortfolio}
+                disabled={savedInPortfolio}
                 loading={addPortfolio.isPending}
                 onPress={toPortfolio}
               />
@@ -434,6 +444,11 @@ const styles = StyleSheet.create({
   display: { fontFamily: text.h1.fontFamily, fontSize: 38, lineHeight: 41, letterSpacing: -1, color: colors.ink, marginTop: 10 },
   card: { backgroundColor: colors.white, borderRadius: radius.card },
   portfolio: { gap: 8 },
+  pfRow: { flexDirection: 'row', gap: 8, marginVertical: 4 },
+  pfThumb: { flex: 1, aspectRatio: 4 / 3, borderRadius: 14, overflow: 'hidden' },
+  pfImg: { width: '100%', height: '100%' },
+  pfTag: { position: 'absolute', left: 8, top: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.white },
+  pfTagText: { ...text.pill, color: colors.ink },
   pad: { padding: 18 },
   duo: { paddingTop: 22, paddingHorizontal: 18, paddingBottom: 18 },
   duoRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
@@ -478,3 +493,14 @@ const styles = StyleSheet.create({
   opt: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: radius.option, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.white },
   optIc: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
 });
+
+function PortfolioThumb({ uri, label }: { uri: string; label: string }) {
+  return (
+    <View style={styles.pfThumb}>
+      <Image source={{ uri }} style={styles.pfImg} accessibilityLabel={label} />
+      <View style={styles.pfTag}>
+        <Text style={styles.pfTagText}>{label}</Text>
+      </View>
+    </View>
+  );
+}

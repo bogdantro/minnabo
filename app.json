@@ -3,7 +3,7 @@
     "name": "MinNabo",
     "slug": "minnabo",
     "scheme": "minnabo",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,6 +20,7 @@
     },
     "android": {
       "package": "no.minnabo.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,7 +29,6 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
@@ -59,14 +59,19 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/sounds/minnabo.wav"]
+          "sounds": [
+            "./assets/sounds/minnabo.wav"
+          ],
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#0A1740"
         }
       ],
       [
         "expo-image-picker",
         {
           "photosPermission": "MinNabo trenger tilgang til bildene dine for å legge ved bilder i oppdrag og samtaler.",
-          "cameraPermission": "MinNabo trenger tilgang til kameraet for å ta bilder til oppdrag og samtaler."
+          "cameraPermission": "MinNabo trenger tilgang til kameraet for å ta bilder til oppdrag og samtaler.",
+          "microphonePermission": false
         }
       ],
       [
@@ -77,7 +82,21 @@
           "isAndroidForegroundServiceEnabled": false
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "MinNabo bruker mikrofonen når du spiller inn en talemelding i chatten.",
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "MinNabo bruker Face ID for å låse opp appen når du har slått på låsen."
+        }
+      ]
     ],
     "extra": {
       "router": {},

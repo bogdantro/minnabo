@@ -30,7 +30,7 @@ import {
   Radio,
   RangeSlider,
   ScaleIn,
-  Screen,
+  ListScreen,
   Sheet,
   Toggle,
   TextLink,
@@ -186,193 +186,203 @@ export function SearchScreen({
   };
 
   return (
-    <Screen
-      scroll
-      spacer="none"
-      scrollProps={{ keyboardDismissMode: 'on-drag' }}
-      header={
-        <View style={[styles.sbar, { paddingTop: insets.top + safeTopExtra }]}>
-          <IconButton icon="back" accessibilityLabel={nb.sok.back} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
-          <View style={[styles.search, shadow.card, focused && [styles.searchFocus, shadow.focus]]}>
-            <Icon name="search" size={18} color={colors.mute} />
-            <TextInput
-              value={q}
-              onChangeText={(v) => {
-                setQ(v);
-                setSavedId(null);
-              }}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              placeholder={nb.sok.ph}
-              placeholderTextColor={colors.mute}
-              accessibilityLabel={nb.sok.a11y}
-              returnKeyType="search"
-              autoFocus={!initialQuery && !initialCategory}
-              style={[text.input, styles.input]}
-            />
-            {q ? (
-              <ScaleIn>
-                <Pressable accessibilityRole="button" accessibilityLabel={nb.sok.clear} onPress={() => setQ('')} style={styles.clr}>
-                  <Icon name="x" size={16} color={colors.ink2} />
-                </Pressable>
-              </ScaleIn>
-            ) : null}
-          </View>
-        </View>
-      }
-    >
-      <FadeUp delay={100} style={styles.mt12}>
-        <ChipRow style={styles.filterRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={nb.sok.openFilters}
-            onPress={() => {
-              setDraft(f);
-              setSheet(true);
-            }}
-            style={[styles.fbtn, active.length > 0 && styles.fbtnOn]}
-          >
-            <Icon name="sliders" size={18} color={active.length ? colors.white : colors.ink} />
-            <Text style={[text.segment, { color: active.length ? colors.white : colors.ink }]}>{nb.sok.filters}</Text>
-            {active.length ? (
-              <View style={styles.fc}>
-                <Text style={[text.count, { color: colors.ink, fontSize: 11.5, lineHeight: 20 }]}>{active.length}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-          {active.map((a) => (
-            <ScaleIn key={a.label}>
-              <Pressable accessibilityRole="button" accessibilityLabel={nb.sok.removeFilter(a.label)} onPress={a.remove} style={styles.achip}>
-                <Text style={[text.chipSm, { fontSize: 13.5 }]}>{a.label}</Text>
-                <View style={styles.xx}>
-                  <Icon name="x" size={14} />
-                </View>
-              </Pressable>
-            </ScaleIn>
-          ))}
-          {active.length > 1 ? <TextLink label={nb.sok.reset} icon={null} onPress={() => set(NO_FILTERS)} style={styles.resetLink} /> : null}
-          {active.length === 0 ? <Text style={[text.meta, styles.hint]}>{nb.sok.filterHint}</Text> : null}
-        </ChipRow>
-      </FadeUp>
-
-      {showSuggest ? (
-        <View>
-          {recent.items.length ? (
-            <>
-              <View style={styles.recentHead}>
-                <Text style={[text.sectionTitle, { fontSize: 18 }]}>{nb.sok.recent}</Text>
-                <TextLink label={nb.sok.clearRecent} icon={null} onPress={recent.clear} />
-              </View>
-              <FadeUp delay={150} style={styles.px}>
-                <ListGroup>
-                  {recent.items.map((r) => (
-                    <View key={r} style={styles.rrow}>
-                      <Pressable accessibilityRole="button" onPress={() => runQuery(r)} style={styles.rq}>
-                        <Icon name="clock" size={18} color={colors.faint} />
-                        <Text style={[text.bodySemi, styles.flex]}>{r}</Text>
-                      </Pressable>
-                      <IconButton icon="x" iconSize={16} variant="ghost" accessibilityLabel={nb.sok.removeRecent(r)} onPress={() => recent.remove(r)} />
-                    </View>
-                  ))}
-                </ListGroup>
-              </FadeUp>
-            </>
-          ) : null}
-          <View style={styles.popHead}>
-            <View style={styles.popIcon}>
-              <Icon name="zap" size={16} color={colors.limeDeep} />
+    <View style={styles.flex}>
+      <ListScreen
+        data={loading || jobs.isError ? [] : results}
+        keyExtractor={(l) => l.id}
+        resetKey={`${q}|${JSON.stringify(f)}`}
+        keyboardDismissMode="on-drag"
+        header={
+          <View style={[styles.sbar, { paddingTop: insets.top + safeTopExtra }]}>
+            <IconButton icon="back" accessibilityLabel={nb.sok.back} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+            <View style={[styles.search, shadow.card, focused && [styles.searchFocus, shadow.focus]]}>
+              <Icon name="search" size={18} color={colors.mute} />
+              <TextInput
+                value={q}
+                onChangeText={(v) => {
+                  setQ(v);
+                  setSavedId(null);
+                }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                placeholder={nb.sok.ph}
+                placeholderTextColor={colors.mute}
+                accessibilityLabel={nb.sok.a11y}
+                returnKeyType="search"
+                autoFocus={!initialQuery && !initialCategory}
+                style={[text.input, styles.input]}
+              />
+              {q ? (
+                <ScaleIn>
+                  <Pressable accessibilityRole="button" accessibilityLabel={nb.sok.clear} onPress={() => setQ('')} style={styles.clr}>
+                    <Icon name="x" size={16} color={colors.ink2} />
+                  </Pressable>
+                </ScaleIn>
+              ) : null}
             </View>
-            <Text style={[text.sectionTitle, { fontSize: 18 }]} accessibilityRole="header">
-              {nb.sok.popular(municipality ?? '')}
-            </Text>
           </View>
-          <FadeUp delay={200} style={[styles.px, styles.wrap]}>
-            {nb.sok.popularTerms.map((p) => (
-              <Pressable key={p} accessibilityRole="button" onPress={() => runQuery(p)} style={styles.pop}>
-                <Icon name="arrowur" size={14} color={colors.limeDeep} />
-                <Text style={text.chip}>{p}</Text>
-              </Pressable>
-            ))}
-          </FadeUp>
-        </View>
-      ) : null}
-      {loading ? (
-        <View style={styles.mt26}>
-          <ListingListSkeleton count={3} />
-        </View>
-      ) : jobs.isError ? (
-        <View style={styles.errorBox}>
-          <ErrorState onRetry={() => void jobs.refetch()} retrying={jobs.isFetching} />
-        </View>
-      ) : results.length ? (
-        <View>
-          <View style={styles.resHead}>
-            <View style={[styles.flex, { gap: 3 }]}>
-              <Text style={[text.h3, { fontSize: 19 }]}>{nb.sok.count(results.length, where)}</Text>
-              <Text style={text.meta}>{nb.sok.sortLine(term, nb.sok.sorts[f.sort].label)}</Text>
-            </View>
-            <Button
-              label={savedId ? nb.sok.saved : nb.sok.saveSearch}
-              icon={savedId ? 'check' : 'bookmark'}
-              variant="ghost"
-              size="sm"
-              block={false}
-              accessibilityLabel={savedId ? nb.sok.savedA11y : nb.sok.saveSearch}
-              onPress={toggleSaved}
-            />
-          </View>
-          <View style={[styles.px, styles.gap12]}>
-            {results.map((l, i) => (
-              <FadeUp key={l.id} delay={Math.min(i, 9) * 50}>
-                <OppdragCard listing={l} showVerified />
-              </FadeUp>
-            ))}
-          </View>
-          <View style={[styles.px, styles.mt18]}>
-            <PaymentNote style={styles.noteCenter} />
-          </View>
-        </View>
-      ) : (
-        <ScaleIn style={[styles.px, styles.mt26]}>
-          <Card pad style={styles.empty}>
-            <View style={styles.emptyIll}>
-              <View style={styles.emptyOuter} />
-              <View style={[styles.emptyInner, shadow.medium]}>
-                <Icon name="search" size={32} color={colors.cyanDeep} />
-              </View>
-              <View style={styles.emptyX}>
-                <Icon name="x" size={14} color={colors.ink} />
-              </View>
-            </View>
-            <Text style={[text.h3, styles.center]}>{term ? nb.sok.emptyQ(term) : nb.sok.emptyFilters}</Text>
-            <Text style={[text.meta, styles.center, { maxWidth: 280 }]}>{nb.sok.emptyBody}</Text>
-            {active.length ? (
-              <Button label={nb.sok.removeAll} icon="refresh" variant="ink" size="sm" block={false} align="center" onPress={() => set(NO_FILTERS)} />
-            ) : null}
-            <Text style={[text.eyebrow, styles.mt12]}>{nb.sok.tryInstead}</Text>
-            <View style={[styles.wrap, { justifyContent: 'center' }]}>
-              {nb.sok.trySuggestions.map((p) => (
+        }
+        listHeader={
+          <View>
+            <FadeUp delay={100} style={styles.mt12}>
+              <ChipRow style={styles.filterRow}>
                 <Pressable
-                  key={p}
                   accessibilityRole="button"
+                  accessibilityLabel={nb.sok.openFilters}
                   onPress={() => {
-                    setQ(p);
-                    set(NO_FILTERS);
+                    setDraft(f);
+                    setSheet(true);
                   }}
-                  style={styles.pop}
+                  style={[styles.fbtn, active.length > 0 && styles.fbtnOn]}
                 >
-                  <Icon name="search" size={14} color={colors.limeDeep} />
-                  <Text style={text.chip}>{p}</Text>
+                  <Icon name="sliders" size={18} color={active.length ? colors.white : colors.ink} />
+                  <Text style={[text.segment, { color: active.length ? colors.white : colors.ink }]}>{nb.sok.filters}</Text>
+                  {active.length ? (
+                    <View style={styles.fc}>
+                      <Text style={[text.count, { color: colors.ink, fontSize: 11.5, lineHeight: 20 }]}>{active.length}</Text>
+                    </View>
+                  ) : null}
                 </Pressable>
-              ))}
+                {active.map((a) => (
+                  <ScaleIn key={a.label}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={nb.sok.removeFilter(a.label)} onPress={a.remove} style={styles.achip}>
+                      <Text style={[text.chipSm, { fontSize: 13.5 }]}>{a.label}</Text>
+                      <View style={styles.xx}>
+                        <Icon name="x" size={14} />
+                      </View>
+                    </Pressable>
+                  </ScaleIn>
+                ))}
+                {active.length > 1 ? <TextLink label={nb.sok.reset} icon={null} onPress={() => set(NO_FILTERS)} style={styles.resetLink} /> : null}
+                {active.length === 0 ? <Text style={[text.meta, styles.hint]}>{nb.sok.filterHint}</Text> : null}
+              </ChipRow>
+            </FadeUp>
+            {showSuggest ? (
+              <View>
+                {recent.items.length ? (
+                  <>
+                    <View style={styles.recentHead}>
+                      <Text style={[text.sectionTitle, { fontSize: 18 }]}>{nb.sok.recent}</Text>
+                      <TextLink label={nb.sok.clearRecent} icon={null} onPress={recent.clear} />
+                    </View>
+                    <FadeUp delay={150} style={styles.px}>
+                      <ListGroup>
+                        {recent.items.map((r) => (
+                          <View key={r} style={styles.rrow}>
+                            <Pressable accessibilityRole="button" onPress={() => runQuery(r)} style={styles.rq}>
+                              <Icon name="clock" size={18} color={colors.faint} />
+                              <Text style={[text.bodySemi, styles.flex]}>{r}</Text>
+                            </Pressable>
+                            <IconButton icon="x" iconSize={16} variant="ghost" accessibilityLabel={nb.sok.removeRecent(r)} onPress={() => recent.remove(r)} />
+                          </View>
+                        ))}
+                      </ListGroup>
+                    </FadeUp>
+                  </>
+                ) : null}
+                <View style={styles.popHead}>
+                  <View style={styles.popIcon}>
+                    <Icon name="zap" size={16} color={colors.limeDeep} />
+                  </View>
+                  <Text style={[text.sectionTitle, { fontSize: 18 }]} accessibilityRole="header">
+                    {nb.sok.popular(municipality ?? '')}
+                  </Text>
+                </View>
+                <FadeUp delay={200} style={[styles.px, styles.wrap]}>
+                  {nb.sok.popularTerms.map((p) => (
+                    <Pressable key={p} accessibilityRole="button" onPress={() => runQuery(p)} style={styles.pop}>
+                      <Icon name="arrowur" size={14} color={colors.limeDeep} />
+                      <Text style={text.chip}>{p}</Text>
+                    </Pressable>
+                  ))}
+                </FadeUp>
+              </View>
+            ) : null}
+            {!loading && !jobs.isError && results.length ? (
+              <View style={styles.resHead}>
+                          <View style={[styles.flex, { gap: 3 }]}>
+                            <Text style={[text.h3, { fontSize: 19 }]}>{nb.sok.count(results.length, where)}</Text>
+                            <Text style={text.meta}>{nb.sok.sortLine(term, nb.sok.sorts[f.sort].label)}</Text>
+                          </View>
+                          <Button
+                            label={savedId ? nb.sok.saved : nb.sok.saveSearch}
+                            icon={savedId ? 'check' : 'bookmark'}
+                            variant="ghost"
+                            size="sm"
+                            block={false}
+                            accessibilityLabel={savedId ? nb.sok.savedA11y : nb.sok.saveSearch}
+                            onPress={toggleSaved}
+                          />
+                        </View>
+            ) : null}
+          </View>
+        }
+        empty={
+          loading ? (
+            <View style={styles.mt26}>
+              <ListingListSkeleton count={3} />
             </View>
-            <View style={styles.divider} />
-            <Text style={text.meta}>{nb.sok.notFound}</Text>
-            <Button label={nb.sok.post} icon="plus" onPress={() => router.push('/legg-ut')} />
-          </Card>
-        </ScaleIn>
-      )}
-      <View style={styles.bottomSpace} />
+          ) : jobs.isError ? (
+            <View style={styles.errorBox}>
+              <ErrorState onRetry={() => void jobs.refetch()} retrying={jobs.isFetching} />
+            </View>
+          ) : (
+            <ScaleIn style={[styles.px, styles.mt26]}>
+              <Card pad style={styles.empty}>
+                <View style={styles.emptyIll}>
+                  <View style={styles.emptyOuter} />
+                  <View style={[styles.emptyInner, shadow.medium]}>
+                    <Icon name="search" size={32} color={colors.cyanDeep} />
+                  </View>
+                  <View style={styles.emptyX}>
+                    <Icon name="x" size={14} color={colors.ink} />
+                  </View>
+                </View>
+                <Text style={[text.h3, styles.center]}>{term ? nb.sok.emptyQ(term) : nb.sok.emptyFilters}</Text>
+                <Text style={[text.meta, styles.center, { maxWidth: 280 }]}>{nb.sok.emptyBody}</Text>
+                {active.length ? (
+                  <Button label={nb.sok.removeAll} icon="refresh" variant="ink" size="sm" block={false} align="center" onPress={() => set(NO_FILTERS)} />
+                ) : null}
+                <Text style={[text.eyebrow, styles.mt12]}>{nb.sok.tryInstead}</Text>
+                <View style={[styles.wrap, { justifyContent: 'center' }]}>
+                  {nb.sok.trySuggestions.map((p) => (
+                    <Pressable
+                      key={p}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setQ(p);
+                        set(NO_FILTERS);
+                      }}
+                      style={styles.pop}
+                    >
+                      <Icon name="search" size={14} color={colors.limeDeep} />
+                      <Text style={text.chip}>{p}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <View style={styles.divider} />
+                <Text style={text.meta}>{nb.sok.notFound}</Text>
+                <Button label={nb.sok.post} icon="plus" onPress={() => router.push('/legg-ut')} />
+              </Card>
+            </ScaleIn>
+          )
+        }
+        renderItem={({ item: l, index: i }) => (
+          <FadeUp delay={i < 10 ? i * 50 : 0} style={styles.px}>
+            <OppdragCard listing={l} showVerified />
+          </FadeUp>
+        )}
+        listFooter={
+          <View>
+            {results.length && !loading && !jobs.isError ? (
+              <View style={[styles.px, styles.mt18]}>
+                <PaymentNote style={styles.noteCenter} />
+              </View>
+            ) : null}
+            <View style={styles.bottomSpace} />
+          </View>
+        }
+      />
 
       <Sheet
         visible={sheet}
@@ -461,7 +471,7 @@ export function SearchScreen({
           style={styles.apply}
         />
       </Sheet>
-    </Screen>
+    </View>
   );
 }
 

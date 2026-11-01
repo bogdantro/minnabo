@@ -4,6 +4,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 import { colors, fonts, motion, radius, screenPadding, shadow, sizes, text } from '@/theme/theme';
 import { CountBadge } from './Badges';
 import { Icon, type IconName } from './Icon';
+import { haptics } from '@/lib/haptics';
 
 export type SegmentOption<T extends string> = { value: T; label: string; count?: number; icon?: IconName };
 
@@ -29,7 +30,10 @@ export function Segmented<T extends string>({ options, value, onChange, accessib
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
             accessibilityLabel={o.count ? `${o.label}, ${o.count}` : o.label}
-            onPress={() => onChange(o.value)}
+            onPress={() => {
+              if (o.value !== value) haptics.select();
+              onChange(o.value);
+            }}
             style={[styles.segItem, on && styles.segOn, on && shadow.segment]}
           >
             {o.icon ? <Icon name={o.icon} size={16} color={on ? colors.ink : colors.ink2} /> : null}
@@ -78,7 +82,10 @@ export function Tabs<T extends string>({ tabs, value, onChange, inset = true, ba
             key={t.value}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            onPress={() => onChange(t.value)}
+            onPress={() => {
+              if (t.value !== value) haptics.select();
+              onChange(t.value);
+            }}
             style={styles.tab}
           >
             <View style={styles.tabRow}>

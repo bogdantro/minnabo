@@ -38,3 +38,17 @@ test('materials: add one through the sheet and see the sum', async () => {
   await waitFor(() => expect(screen.getByText('Flyttebokser')).toBeTruthy());
   expect(screen.getAllByText('250 kr').length).toBeGreaterThan(0);
 });
+
+test('checklist: «Fra oppdraget» adds what the owner ticked, then disappears', async () => {
+  const { listings } = jest.requireActual('@mocks/data/seed') as typeof import('@mocks/data/seed');
+  const l = listings.find((x) => x.id === 'l-flytting')!;
+  l.category = { ...l.category, slug: 'flytting' };
+  l.task = { ...l.task!, intake: [{ label: 'Hva skal bæres?', value: 'Møbler, Esker' }] };
+  await renderWithProviders(<JobbdagScreen proposalId={ID} />);
+  await screen.findByText('Arbeidstid i dag');
+  expect(await screen.findByText('Fra oppdraget')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Legg til alle'));
+  expect(await screen.findByLabelText('Møbler')).toBeTruthy();
+  expect(screen.getByLabelText('Esker')).toBeTruthy();
+  await waitFor(() => expect(screen.queryByText('Fra oppdraget')).toBeNull());
+});

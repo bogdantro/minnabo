@@ -271,6 +271,9 @@ test('my messages are "Lest" up to the other person\'s read time, "Levert" after
     '2026-10-06T10:02:00Z',
   );
   expect(out.map((m: { delivery: string }) => m.delivery)).toEqual(['READ', 'DELIVERED', 'DELIVERED']);
+  // a read message carries when it was read, for «Sett kl. 14:02»
+  expect(out[0].readAt).toBe('2026-10-06T10:02:00.000Z');
+  expect(out[2].readAt).toBeUndefined();
   // never read by the other person → nothing is "Lest"
   expect(withReadState([msg('a', 'me', '2026-10-06T10:00:00Z')], 'me', null)[0].delivery).toBe('DELIVERED');
 });
