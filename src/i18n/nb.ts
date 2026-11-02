@@ -797,6 +797,18 @@ const nb = {
     time: 'Klokkeslett',
     caveats: 'Forbehold (valgfritt)',
     caveatsPh: 'F.eks. «Utsettes ved regn.»',
+    // on a «Tilbyr hjelp» post the helper answers a neighbour who asked: the post's price, not a budget
+    offerAmount: 'Din pris',
+    offerPrice: (v: string) => `I innlegget: ${v}`,
+    offerSame: 'Som i innlegget',
+    offerUnder: (v: string) => `${v} under prisen i innlegget`,
+    offerOver: (v: string) => `${v} over prisen i innlegget`,
+    offerMessagePh: 'Skriv hva du kan gjøre, og når du kan komme.',
+    offerTemplates: (first: string, day: string | null) => [
+      day ? `Hei ${first}! Jeg kan komme ${day.toLowerCase()}.` : `Hei ${first}! Jeg kan hjelpe deg med dette.`,
+      'Prisen gjelder det du spurte om.',
+      'Jeg tar med eget utstyr.',
+    ],
     formNote: 'Tilbudet er ikke bindende før dere har avtalt i chatten. Pris og betaling avtales direkte mellom dere – MinNabo håndterer ikke betaling.',
     toPreview: 'Se over tilbudet',
     errAmount: 'Skriv inn et beløp over 0 kr.',
@@ -1908,6 +1920,12 @@ const nb = {
   },
 
   fellesskap: {
+    partnerCtaEyebrow: 'For bedrifter',
+    partnerCtaTitle: (k: string) => (k ? `Driver du en bedrift i ${k}?` : 'Driver du en bedrift?'),
+    partnerCtaBody: 'Bli partner med MinNabo: bli synlig for naboene og støtt lokale lag og foreninger.',
+    partnerCtaButton: 'Bli partner',
+    partnerCtaNote: 'Du fullfører på minnaboapp.no',
+    partnerCtaA11y: 'Bli partner med MinNabo. Åpner minnaboapp.no',
     eyebrow: (k: string) => (k ? `Fellesskap i ${k}` : 'Fellesskap'),
     title: 'Sammen gjør vi en forskjell',
     lead: 'Naboer som hjelper naboer, og lokale bedrifter som støtter nærmiljøet.',
@@ -2415,6 +2433,7 @@ const nb = {
   },
   card: {
     budget: 'Budsjett',
+    fixed: 'Fast pris',
     from: 'Fra',
     wantsOffers: 'Ønsker tilbud',
     byAgreement: 'Etter avtale',

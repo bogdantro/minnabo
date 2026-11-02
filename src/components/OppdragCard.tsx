@@ -17,7 +17,8 @@ export function listingPrice(l: Listing): { label: string; value: string } {
   // an offer without a price is agreed in the chat; an oppdrag without one wants tilbud
   if (!l.price || l.priceMode === 'BY_AGREEMENT') return { label: '', value: isOffer(l) ? nb.card.byAgreement : nb.card.wantsOffers };
   if (l.priceMode === 'FROM') return { label: nb.card.from, value: formatPrice(l.price) };
-  return { label: nb.card.budget, value: formatPrice(l.price) };
+  // an oppdrag's fixed amount is the owner's budget; a «Tilbyr hjelp» post's is the helper's own price
+  return { label: isOffer(l) ? nb.card.fixed : nb.card.budget, value: formatPrice(l.price) };
 }
 
 /** "Nordre Ål · 1,2 km" – approximate area only (product rule 6). */

@@ -134,7 +134,10 @@ export function ListingStrip({
   }, [open, rot]);
   const chev = useAnimatedStyle(() => ({ transform: [{ rotate: `${rot.value}deg` }] }));
   const cat = categoryArtId(listing?.category.slug ?? 'annet');
-  const price = c.notice ? '' : listing ? listingPrice(listing).value : nb.chat.wantsOffers;
+  const isOfferPost = (listing?.type ?? c.listing.type) === 'SERVICE_OFFER';
+  // an offer's «Fra 450 kr» needs its «Fra»; an oppdrag's budget reads fine as the amount alone
+  const lp = listing ? listingPrice(listing) : null;
+  const price = c.notice ? '' : lp ? (isOfferPost && lp.label === nb.card.from ? `${lp.label} ${lp.value}` : lp.value) : nb.chat.wantsOffers;
   return (
     <View style={[styles.lst, shadow.card]}>
       <Pressable
@@ -148,6 +151,8 @@ export function ListingStrip({
         <View style={styles.lstT}>
           {c.notice ? (
             <Pill label={nb.chat.notice} tone="offer" icon="pinned" size="sm" style={styles.selfStart} />
+          ) : isOfferPost ? (
+            <Pill label={nb.offer.pill} tone="offer" dot size="sm" style={styles.selfStart} />
           ) : (
             <Pill label={nb.chat.needHelp} tone="need" dot size="sm" style={styles.selfStart} />
           )}

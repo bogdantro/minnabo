@@ -119,7 +119,10 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
     return new Date(d.getFullYear(), d.getMonth(), d.getDate(), t ? Number(t[1]) : 10, t ? Number(t[2]) : 0).toISOString();
   };
   const quick = budget ? [budget - 50, budget, budget + 50].filter((v) => v > 0) : [];
-  const templates = nb.giTilbud.templates(first, day, place);
+  // a «Tilbyr hjelp» post: the helper answers the neighbour who asked, with the post's own price
+  const onOffer = listing.type === 'SERVICE_OFFER';
+  const templates = onOffer ? nb.giTilbud.offerTemplates(first, day) : nb.giTilbud.templates(first, day, place);
+  const sameText = onOffer ? nb.giTilbud.offerSame : nb.giTilbud.same;
 
   const close = () => {
     if (sending) return;
@@ -229,12 +232,12 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
                 {ownerLine}
               </Text>
             </View>
-            <Pill label={nb.giTilbud.task} tone="need" dot />
+            {onOffer ? <Pill label={nb.offer.pill} tone="offer" dot /> : <Pill label={nb.giTilbud.task} tone="need" dot />}
           </View>
 
           <Field
-            label={nb.giTilbud.amount}
-            hint={budget ? nb.giTilbud.budget(kr(budget)) : undefined}
+            label={onOffer ? nb.giTilbud.offerAmount : nb.giTilbud.amount}
+            hint={budget ? (onOffer ? nb.giTilbud.offerPrice(kr(budget)) : nb.giTilbud.budget(kr(budget))) : undefined}
             error={errAmt}
             shakeKey={tries}
           >
@@ -269,7 +272,7 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
                 })}
                 {a > 0 && diff != null ? (
                   <Text style={[text.help, styles.amtHint]}>
-                    {diff === 0 ? nb.giTilbud.same : diff < 0 ? nb.giTilbud.under(kr(-diff)) : nb.giTilbud.over(kr(diff))}
+                    {diff === 0 ? sameText : diff < 0 ? nb.giTilbud.under(kr(-diff)) : nb.giTilbud.over(kr(diff))}
                   </Text>
                 ) : null}
               </View>
@@ -296,7 +299,7 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
                 setErrMsg(null);
               }}
               multiline
-              placeholder={nb.giTilbud.messagePh}
+              placeholder={onOffer ? nb.giTilbud.offerMessagePh : nb.giTilbud.messagePh}
               error={!!errMsg}
               accessibilityLabel={nb.giTilbud.message(first)}
               style={styles.textarea}
@@ -429,7 +432,13 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
               </View>
               {diff != null ? (
                 <Pill
-                  label={diff === 0 ? nb.giTilbud.same : diff < 0 ? nb.giTilbud.underBudget(kr(-diff)) : nb.giTilbud.overBudget(kr(diff))}
+                  label={
+                    diff === 0
+                      ? sameText
+                      : diff < 0
+                        ? (onOffer ? nb.giTilbud.offerUnder : nb.giTilbud.underBudget)(kr(-diff))
+                        : (onOffer ? nb.giTilbud.offerOver : nb.giTilbud.overBudget)(kr(diff))
+                  }
                   tone={diff > 0 ? 'warn' : 'need'}
                 />
               ) : null}

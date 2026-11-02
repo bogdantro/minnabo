@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { categoryLabel } from '@/domain/categories';
 import { seasonalCategories } from '@/domain/seasonal';
+import { useActiveCategories } from '@/hooks/useCategories';
 import nb from '@/i18n/nb';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
@@ -16,7 +17,10 @@ const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'au
  */
 export function SeasonalRow({ style }: { style?: StyleProp<ViewStyle> }) {
   const [now] = useState(() => new Date());
-  const cats = seasonalCategories(now);
+  // only categories that are switched on (Admin › Innstillinger on the website)
+  const active = useActiveCategories();
+  const cats = seasonalCategories(now).filter((c) => active.includes(c));
+  if (!cats.length) return null;
   return (
     <View style={style} testID="seasonal-row">
       <View style={styles.head}>

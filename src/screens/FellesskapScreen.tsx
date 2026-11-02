@@ -22,6 +22,7 @@ import { ImpressionWatcher, impressionLogged, logPartnerClick, logPartnerImpress
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
 import { safePush } from '@/lib/nav';
+import { openWebsite } from '@/config/links';
 import { colors, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { HomeTopBar } from '@/components/TopBar';
 import { ThanksButton, ThanksCount } from '@/components/PartnerThanks';
@@ -520,6 +521,32 @@ export function FellesskapScreen() {
         </>
       )}
 
+      {/* businesses become partners on the website (packages and payment live there, never in the app) */}
+      {!me.isYouth ? (
+        <View style={[styles.px, styles.mt22]}>
+          <View style={styles.pcta} testID="partner-cta">
+            <View style={styles.pctaTop}>
+              <View style={styles.pctaIc}>
+                <Icon name="building" size={22} color={colors.ink} />
+              </View>
+              <View style={styles.pctaBody}>
+                <Text style={styles.pctaEyebrow}>{nb.fellesskap.partnerCtaEyebrow}</Text>
+                <Text style={[text.label, styles.pctaTitle]}>{nb.fellesskap.partnerCtaTitle(municipality ?? '')}</Text>
+              </View>
+            </View>
+            <Text style={[text.body, styles.pctaText]}>{nb.fellesskap.partnerCtaBody}</Text>
+            <Button
+              label={nb.fellesskap.partnerCtaButton}
+              iconRight="arrow"
+              variant="lime"
+              accessibilityLabel={nb.fellesskap.partnerCtaA11y}
+              onPress={() => openWebsite('bedrifter')}
+            />
+            <Text style={styles.pctaNote}>{nb.fellesskap.partnerCtaNote}</Text>
+          </View>
+        </View>
+      ) : null}
+
       <SectionHeader icon="gift" title={nb.fellesskap.donTitle} subtitle={nb.fellesskap.donSub} style={styles.mt34} />
       <View style={styles.px}>
         {donations.length === 0 ? (
@@ -609,6 +636,15 @@ const styles = StyleSheet.create({
   mt26: { marginTop: 26 },
   mt30: { marginTop: 30 },
   mt34: { marginTop: 34 },
+  mt22: { marginTop: 22 },
+  pcta: { borderRadius: radius.card, backgroundColor: colors.ink, padding: 18, gap: 12 },
+  pctaTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  pctaIc: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
+  pctaBody: { flex: 1, minWidth: 0, gap: 2 },
+  pctaEyebrow: { ...text.eyebrow, color: colors.lime },
+  pctaTitle: { fontSize: 16.5, lineHeight: 21, color: colors.white },
+  pctaText: { fontSize: 14.5, lineHeight: 20, color: colors.onInk78 },
+  pctaNote: { ...text.meta, color: colors.onInk62, textAlign: 'center' },
   gap3: { gap: 3 },
   gap12: { gap: 12 },
   row4: { flexDirection: 'row', alignItems: 'center', gap: 4 },

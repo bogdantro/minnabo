@@ -14,6 +14,8 @@ export const WEBSITE = {
   personvern: `${SITE}/personvern/`,
   /** help + contact form */
   hjelp: `${SITE}/hjelp/`,
+  /** «For bedrifter»: packages and partner sign-up (payment happens there, never in the app) */
+  bedrifter: `${SITE}/for-bedrifter/`,
 } as const;
 
 export type WebsitePage = keyof typeof WEBSITE;
