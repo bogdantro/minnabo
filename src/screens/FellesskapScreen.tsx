@@ -157,7 +157,8 @@ export function FellesskapScreen() {
   const local = !ready
     ? []
     : partners.filter(
-        (p) => !p.featured && (municipalities.length === 0 || (p.municipality !== null && municipalities.includes(p.municipality))),
+        // no kommune = «Hele Innlandet» in admin: shown in every kommune
+        (p) => !p.featured && (municipalities.length === 0 || !p.municipality || municipalities.includes(p.municipality)),
       );
   const heroes = local.filter((p) => p.localHero);
   const supporters = local.filter((p) => !p.localHero);
@@ -424,7 +425,6 @@ export function FellesskapScreen() {
                 >
                   <PartnerLogo uri={p.logoUrl} />
                   <View style={styles.pbody}>
-                    <Pill label={nb.fellesskap.heroBadge} tone="need" icon="heart" size="sm" style={styles.pill22} />
                     <Text style={styles.pname}>{p.name}</Text>
                     <Text style={text.meta}>{p.tagline}</Text>
                   </View>
@@ -490,23 +490,26 @@ export function FellesskapScreen() {
                   accessible
                   accessibilityLabel={`${s.name}, ${supporterLine(s)}`}
                 >
-                  <View style={styles.scardLogo}>
-                    <Icon name="building" size={22} color={colors.faint} />
-                  </View>
+                  {s.logoUrl ? (
+                    <View style={styles.scardLogoImg} testID={`supporter-logo-${s.id}`}>
+                      <Image source={{ uri: s.logoUrl }} resizeMode="contain" style={styles.logoImg} accessibilityIgnoresInvertColors />
+                    </View>
+                  ) : (
+                    <View style={styles.scardLogo}>
+                      <Icon name="building" size={22} color={colors.faint} />
+                    </View>
+                  )}
                   <View style={styles.gap3}>
-                    <Text style={[text.label, { fontSize: 14.5 }]} numberOfLines={1}>
+                    {/* two lines, so a longer company name is never cut to nothing */}
+                    <Text style={[text.label, styles.scardName]} numberOfLines={2}>
                       {s.name}
                     </Text>
-                    <Text style={[text.meta, { fontSize: 12.5 }]} numberOfLines={1}>
-                      {supporterLine(s)}
-                    </Text>
+                    {supporterLine(s) ? (
+                      <Text style={[text.meta, { fontSize: 12.5 }]} numberOfLines={2}>
+                        {supporterLine(s)}
+                      </Text>
+                    ) : null}
                   </View>
-                  {s.municipality ? (
-                    <View style={styles.row4}>
-                      <Icon name="pin" size={14} color={colors.faint} />
-                      <Text style={[text.meta, { fontSize: 12 }]}>{s.municipality}</Text>
-                    </View>
-                  ) : null}
                 </View>
               ))}
             </Animated.View>
@@ -587,9 +590,6 @@ export function FellesskapScreen() {
       <Sheet visible={!!sheet} onClose={() => setSheet(null)}>
         {sheet ? (
           <View>
-            <View style={styles.sheetHead}>
-              <Pill label={nb.fellesskap.heroBadge} tone="need" icon="heart" />
-            </View>
             <View style={styles.sheetTop}>
               <ScaleIn>
                 <PartnerLogo uri={sheet.logoUrl} size={84} />
@@ -799,6 +799,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scardLogoImg: { width: 44, height: 44, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line },
+  scardName: { fontSize: 14.5, lineHeight: 18 },
   dots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 4 },
   dotI: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.dashed },
   dotOn: { width: 24, backgroundColor: colors.ink },
