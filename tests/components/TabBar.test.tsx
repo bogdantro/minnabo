@@ -18,12 +18,11 @@ const state = {
 
 const props = (): TabBarProps => ({ state, navigation });
 
-test('renders the four tab labels; Legg ut is an icon-only button with an accessible name', async () => {
+test('renders the tab labels, and «Legg ut» under the raised button (asked 2026-11-03)', async () => {
   await renderWithProviders(<TabBar {...props()} />);
-  for (const l of ['Oppdrag', 'Fellesskap', 'Innboks', 'Meny']) {
+  for (const l of ['Oppdrag', 'Fellesskap', 'Legg ut', 'Innboks', 'Meny']) {
     expect(screen.getByText(l)).toBeTruthy();
   }
-  expect(screen.queryByText('Legg ut')).toBeNull();
   expect(screen.getByLabelText('Legg ut')).toBeTruthy();
 });
 

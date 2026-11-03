@@ -13,6 +13,8 @@ import {
 } from 'expo-audio';
 import nb from '@/i18n/nb';
 import { haptics } from '@/lib/haptics';
+import { reportError } from '@/lib/reporting';
+import { toast } from '@/lib/toast';
 import { colors, radius, shadow, text } from '@/theme/theme';
 import { Icon } from '@/components/ui';
 
@@ -142,36 +144,70 @@ function PulseDot() {
   return <Animated.View style={[styles.dot, style]} />;
 }
 
+/** Only a real address may reach the native player: a bare storage path (signing failed) made it throw. */
+export const playableUri = (uri: string): boolean => /^(https?|file):\/\//i.test(uri);
+
 /**
  * A talemelding in the thread: play/pause, progress and the length. Nothing is loaded until
  * the first tap, so a long chat with many clips stays light.
+ *
+ * Tapping play closed the whole app (reported 2026-11-03): in a release build an error thrown in a
+ * tap handler is fatal. So every call into the native player is guarded and shown as a message, the
+ * player is created with the clip instead of being swapped with replace(), and the audio mode is set
+ * before playing instead of at the same moment.
  */
 export function VoiceBubble({ uri, ms, mine }: { uri: string; ms: number; mine: boolean }) {
-  const player = useAudioPlayer(null);
+  // null until the first tap; a new source creates a fresh player (no replace())
+  const [source, setSource] = useState<{ uri: string } | null>(null);
+  const player = useAudioPlayer(source);
   const status = useAudioPlayerStatus(player);
-  const [loaded, setLoaded] = useState(false);
+  const loaded = source !== null;
   const total = status.duration > 0 ? status.duration * 1000 : ms;
   const at = loaded ? status.currentTime * 1000 : 0;
   const ended = loaded && total > 0 && at >= total - 50;
   const frac = total > 0 && !ended ? Math.min(1, at / total) : 0;
   const playing = loaded && status.playing;
 
-  const toggle = () => {
-    haptics.light();
-    // plays even with the iPhone's silent switch on – the person tapped play on purpose
-    void setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
-    if (!loaded) {
-      player.replace({ uri });
-      setLoaded(true);
+  const failed = (e: unknown) => {
+    reportError(e, { where: 'VoiceBubble' });
+    toast.error(nb.chat.voicePlayFailed);
+  };
+
+  // start the clip once the player for it exists
+  const startOnLoad = useRef(false);
+  useEffect(() => {
+    if (!source || !startOnLoad.current) return;
+    startOnLoad.current = false;
+    try {
       player.play();
+    } catch (e) {
+      failed(e);
+    }
+  }, [player, source]);
+
+  const toggle = async () => {
+    haptics.light();
+    if (!playableUri(uri)) {
+      failed(new Error('Voice clip without a playable address'));
       return;
     }
-    if (playing) {
-      player.pause();
-      return;
+    try {
+      if (!loaded) {
+        // plays even with the iPhone's silent switch on – the person tapped play on purpose
+        await setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
+        startOnLoad.current = true;
+        setSource({ uri });
+        return;
+      }
+      if (playing) {
+        player.pause();
+        return;
+      }
+      if (ended) await player.seekTo(0);
+      player.play();
+    } catch (e) {
+      failed(e);
     }
-    if (ended) void player.seekTo(0);
-    player.play();
   };
 
   const fg = mine ? colors.white : colors.ink;
@@ -180,7 +216,7 @@ export function VoiceBubble({ uri, ms, mine }: { uri: string; ms: number; mine: 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={playing ? nb.chat.voicePause : nb.chat.voicePlay(formatClip(ms))}
-        onPress={toggle}
+        onPress={() => void toggle()}
         hitSlop={6}
         style={({ pressed }) => [styles.play, mine ? styles.playMine : styles.playTheirs, pressed && styles.pressed]}
       >

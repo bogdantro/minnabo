@@ -3,9 +3,9 @@
  * change both together. The final legal wording is checked by a lawyer (docs/LEFT_OUT.md).
  */
 export const TERMS = {
-  version: '1.1',
+  version: '1.2',
   /** ISO date of the last change to the text */
-  updated: '2026-10-31',
+  updated: '2026-11-03',
   readMinutes: 8,
   /** youngest age that can create an account (Vipps requires 15) */
   minAge: 15,
@@ -19,7 +19,7 @@ export const TERMS = {
 export const TERMS_SUMMARY = [
   'Du logger inn med Vipps. Vipps brukes aldri til betaling.',
   'Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.',
-  'Under 18 år? Du får en ungdomskonto som bare kan gi tilbud.',
+  'Under 18 år? Du får en ungdomskonto som kan gi tilbud og fortelle hva du kan hjelpe med.',
   'Vær ærlig og hyggelig. Brudd kan føre til utestengelse.',
 ];
 
@@ -61,7 +61,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       `Er du mellom ${TERMS.minAge} og 18 år, får du automatisk en ungdomskonto når du logger inn med Vipps.`,
       {
         list: [
-          'En ungdomskonto kan bare gi tilbud på oppdrag. Den kan ikke legge ut egne oppdrag eller «Tilbyr hjelp».',
+          'En ungdomskonto kan gi tilbud på oppdrag og fortelle hva den kan hjelpe med («Tilbyr hjelp») innenfor hage, dyrepass, datahjelp og snømåking. Den kan ikke legge ut egne oppdrag.',
           'Du trenger ikke samtykke fra foresatte for å opprette en ungdomskonto. Alderen bekreftes med Vipps.',
           'Vi anbefaler at du avtaler jobber i dagslys, gjerne hos folk du kjenner, og deler jobbdagen med en voksen med Trygg tur i appen.',
           'Når du fyller 18 år, blir kontoen automatisk gjort om til en vanlig konto.',
@@ -183,7 +183,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
     title: 'Endringer',
     blocks: [
       `Vi kan endre vilkårene, for eksempel når tjenesten utvikles eller regelverket endres. Ved vesentlige endringer varsler vi deg i appen minst ${TERMS.noticeDays} dager før endringene gjelder. Bruker du MinNabo etter det, godtar du de nye vilkårene.`,
-      'Siste endring (31. oktober 2026): «Tilbyr hjelp» er lagt til.',
+      'Siste endring (3. november 2026): ungdomskontoer kan nå legge ut «Tilbyr hjelp». Forrige endring (31. oktober 2026): «Tilbyr hjelp» er lagt til.',
     ],
   },
   {

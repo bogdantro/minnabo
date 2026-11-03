@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactElement, type ReactNode, type RefObject } from 'react';
 import {
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +18,7 @@ import { Image } from './Image';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { useIsOffline } from '@/lib/offline';
 import { colors, safeTopExtra, screenPadding, sizes, text } from '@/theme/theme';
 import { Avatar } from './Avatar';
@@ -72,10 +75,21 @@ export function Screen({
   testID,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  const keyboard = useKeyboardVisible();
   const bottom =
     spacer === 'nav' ? sizes.spacerNav + insets.bottom : spacer === 'foot' ? sizes.spacerFoot + insets.bottom : 0;
+  // Android draws edge-to-edge, so the window no longer shrinks for the keyboard: the screen lifts itself
+  // and the scroll view keeps the focused field in view. iOS does this with automaticallyAdjustKeyboardInsets.
+  // The footer button is hidden while typing on Android, as the keyboard covers it on iOS – it would
+  // otherwise take the little room left above the keyboard (Legg ut steg 7).
+  const android = Platform.OS === 'android';
+  const Root = android ? KeyboardAvoidingView : View;
   return (
-    <View testID={testID} style={[styles.screen, { backgroundColor: white ? colors.white : colors.bg }]}>
+    <Root
+      testID={testID}
+      behavior={android ? 'padding' : undefined}
+      style={[styles.screen, { backgroundColor: white ? colors.white : colors.bg }]}
+    >
       {header}
       {/* no kommune on the profile: asked for under the header of every screen */}
       {header ? <KommuneBanner /> : null}
@@ -97,8 +111,8 @@ export function Screen({
         <View style={[styles.flex, contentStyle, bottom ? { paddingBottom: bottom } : null]}>{children}</View>
       )}
       </CachedContent>
-      {footer}
-    </View>
+      {android && keyboard ? null : footer}
+    </Root>
   );
 }
 

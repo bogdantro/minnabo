@@ -159,3 +159,16 @@ describe('the rules (as in 0076)', () => {
     expect(chatRepository).toBeTruthy();
   });
 });
+
+// ------------------------------------------------------------
+// Youth accounts may post «Tilbyr hjelp» in the youth categories only (0084)
+// ------------------------------------------------------------
+test('a youth sees only the youth categories in «Tilby hjelp»', async () => {
+  jest
+    .spyOn(apiClient, 'getMyAccount')
+    .mockResolvedValue({ vipps: true, youth: true, age: 16, birthYear: 2010, fullName: 'Emil Nygård', phoneMasked: '+47 ••• •• 518' });
+  await renderWithProviders(<OfferWizard />);
+  await waitFor(() => expect(screen.queryByLabelText('Rengjøring')).toBeNull());
+  for (const c of ['Hage', 'Dyrepass', 'Datahjelp', 'Snømåking']) expect(screen.getByLabelText(c)).toBeTruthy();
+  jest.restoreAllMocks();
+});

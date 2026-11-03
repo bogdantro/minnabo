@@ -80,6 +80,9 @@ function PostButton({ onPress }: { onPress: () => void }) {
           <Icon name="plus" size={sizes.fabIcon} color={colors.ink} strokeWidth={2.4} />
         </Animated.View>
       </View>
+      <Text style={[text.tabLabel, styles.fabLabel]} maxFontSizeMultiplier={1.2}>
+        {nb.tabs.leggUt}
+      </Text>
     </Pressable>
   );
 }
@@ -183,8 +186,10 @@ const styles = StyleSheet.create({
   },
   niOn: { backgroundColor: colors.limeTint },
   count: { position: 'absolute', top: -4, right: -6 },
-  // No label under the button (icon only, labelled for screen readers); the bottom padding keeps it raised as before.
-  fabw: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -30, paddingBottom: 16 },
+  // «Legg ut» under the button (asked 2026-11-03); label (11) + gap (5) take the place of the old 16 px bottom padding,
+  // so the button stays as raised as before.
+  fabw: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -30, gap: 5 },
+  fabLabel: { color: colors.mute },
   fabShadow: { width: sizes.fab, height: sizes.fab, borderRadius: sizes.fab / 2 },
   fab: {
     width: sizes.fab,

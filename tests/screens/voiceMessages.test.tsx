@@ -84,3 +84,38 @@ test('at 2 minutes the talemelding is sent by itself, once', async () => {
   await waitFor(() => expect(chatRepository.getMessages('c-sara')).toHaveLength(before + 1));
   expect(chatRepository.getMessages('c-sara').at(-1)?.audioMs).toBe(120000);
 });
+
+// ------------------------------------------------------------
+// Playing a talemelding closed the app (reported 2026-11-03): an error from the native
+// player in a tap handler is fatal in a release build. It must become a calm message.
+// ------------------------------------------------------------
+describe('playing a talemelding never closes the app', () => {
+  const { VoiceBubble } = jest.requireActual('@/components/chat/Voice') as typeof import('@/components/chat/Voice');
+  const player = () => (Audio.useAudioPlayer as unknown as () => { play: jest.Mock })();
+  const tapPlay = async () => fireEvent.press(screen.getByLabelText(/Spill av talemelding|Spill av/));
+
+  test('a clip without a real address is not handed to the player', async () => {
+    const err = jest.spyOn(toast, 'error');
+    await renderWithProviders(<VoiceBubble uri="conv-1/clip.m4a" ms={4200} mine={false} />);
+    await tapPlay();
+    expect(player().play).not.toHaveBeenCalled();
+    expect(err).toHaveBeenCalledWith('Talemeldingen kunne ikke spilles av akkurat nå. Prøv igjen om litt.');
+  });
+
+  test('a player that throws shows the message instead of crashing', async () => {
+    const err = jest.spyOn(toast, 'error');
+    player().play.mockImplementationOnce(() => {
+      throw new Error('native player failed');
+    });
+    await renderWithProviders(<VoiceBubble uri="https://x.supabase.co/clip.m4a?token=1" ms={4200} mine />);
+    await tapPlay();
+    await waitFor(() => expect(err).toHaveBeenCalled());
+  });
+
+  test('a normal clip sets the audio mode first, then plays', async () => {
+    await renderWithProviders(<VoiceBubble uri="https://x.supabase.co/clip.m4a?token=1" ms={4200} mine={false} />);
+    await tapPlay();
+    await waitFor(() => expect(player().play).toHaveBeenCalledTimes(1));
+    expect(Audio.setAudioModeAsync).toHaveBeenCalledWith({ playsInSilentMode: true });
+  });
+});

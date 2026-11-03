@@ -288,6 +288,9 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
                   </View>
                 ) : null}
                 {owner.memberSince ? <Text style={text.meta}>{nb.detail.memberSince(owner.memberSince)}</Text> : null}
+                {owner.youthAge != null ? (
+                  <Pill label={nb.youth.marker(owner.youthAge)} tone="dark" icon="shield" size="sm" style={styles.youthPill} />
+                ) : null}
               </View>
               <TextLink label={nb.detail.profile} icon="right" onPress={() => safePush(`/profil/${owner.id}`)} />
             </View>
@@ -526,6 +529,7 @@ function AreaMap({ place }: { place: string }) {
 }
 
 const styles = StyleSheet.create({
+  youthPill: { alignSelf: 'flex-start', marginTop: 4 },
   wrap: { flex: 1, backgroundColor: colors.bg },
   px: { paddingHorizontal: screenPadding },
   // CSS `flex: 1` never shrinks below the label; grow from the content width instead.

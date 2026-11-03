@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -145,7 +144,8 @@ export function StartChatScreen({ listingId }: { listingId: string }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.wrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // padding on Android too: it draws edge-to-edge, so the window no longer shrinks for the keyboard
+    <KeyboardAvoidingView style={styles.wrap} behavior="padding">
       {/* header + pinned oppdrag */}
       <View style={styles.chead}>
         <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />

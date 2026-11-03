@@ -6,6 +6,7 @@ import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
 import { listingKeys, profileKeys, useListing } from '@/api/queries';
 import { useActiveCategories } from '@/hooks/useCategories';
+import { YOUTH_CATS } from '@/domain/youth';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSession } from '@/auth/session';
 import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE } from '@/data/kommuner';
@@ -154,7 +155,9 @@ export function OfferWizard() {
   const params = useLocalSearchParams<{ rediger?: string }>();
   const editId = typeof params.rediger === 'string' && params.rediger ? params.rediger : undefined;
   const editing = useListing(editId ?? '');
-  const cats = useActiveCategories();
+  const active = useActiveCategories();
+  // a youth account offers help only in the youth categories – the database checks the same (0084)
+  const cats = me.isYouth ? active.filter((c) => YOUTH_CATS.includes(c)) : active;
   const [f, setF] = useState<Form>(() => empty(me.municipality ?? ''));
   const [seeded, setSeeded] = useState(false);
   const [step, setStep] = useState(1);

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
 import {
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -354,7 +353,8 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   };
 
   return (
-    <KeyboardAvoidingView style={styles.wrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // padding on Android too: it draws edge-to-edge, so the window no longer shrinks for the keyboard
+    <KeyboardAvoidingView style={styles.wrap} behavior="padding">
       <ChatTopBar
         c={c}
         verified={verified}

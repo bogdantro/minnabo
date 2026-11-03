@@ -10,6 +10,7 @@ import { LocationSheet } from '@/components/LocationSheet';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
 import { categoryArtId, categoryLabel } from '@/domain/categories';
+import { YOUTH_CATS } from '@/domain/youth';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useConversations, useListings, useListingsByIds, useProfile, useSentProposals, useStartConversation } from '@/api/queries';
@@ -81,7 +82,6 @@ type Offer = {
 };
 type SheetStep = 'detail' | 'form' | 'busy' | 'done';
 
-const YOUTH_CATS: CategoryId[] = ['hage', 'dyrepass', 'data', 'snomaking'];
 const STATUS_TONE: Record<OfferStatus, 'dark' | 'warn' | 'ok' | 'neutral'> = {
   sendt: 'dark',
   venter: 'warn',
@@ -198,6 +198,11 @@ export function YouthAppScreen() {
   const sentIds = new Set(offers.filter((o) => o.status !== 'trukket').map((o) => o.listingId));
   const pending = offers.filter((o) => o.status === 'sendt' || o.status === 'venter').length;
   const chats = offers.filter((o) => o.status !== 'trukket');
+  // A youth only sees oppdrag, so every chat on a «Tilbyr hjelp» is one a nabo started on the youth's own post (0084)
+  const offerChats = (convs.data ?? []).filter(
+    (c) => c.listing.type === 'SERVICE_OFFER' && !chats.some((o) => o.conversationId === c.id),
+  );
+  const chatCount = chats.length + offerChats.length;
 
   const open = (l: Listing) => {
     setCur(l);
@@ -295,6 +300,16 @@ export function YouthAppScreen() {
                 </Text>
                 <Text style={[text.link, styles.locChange]}>{nb.oppdrag.change}</Text>
               </Pressable>
+            </FadeUp>
+            <FadeUp delay={120} style={[styles.px, styles.mt14]}>
+              <ListGroup>
+                <ListRow
+                  icon="hand"
+                  title={nb.youth.offerCta}
+                  subtitle={nb.youth.offerCtaSub}
+                  onPress={() => router.push('/legg-ut/tilbyr')}
+                />
+              </ListGroup>
             </FadeUp>
             <FadeUp delay={150} style={styles.mt14}>
               <ChipRow>
@@ -397,7 +412,30 @@ export function YouthAppScreen() {
               <Icon name="lock" size={16} color={colors.mute} />
               <Text style={[text.meta, styles.lockNoteText]}>{nb.youth.inboxNote}</Text>
             </FadeUp>
-            {chats.length === 0 ? (
+            {offerChats.map((c, i) => (
+              <FadeUp key={c.id} delay={100 + i * 50}>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel={`${c.counterpart.displayName}, ${c.listing.title}`}
+                  onPress={() => safePush(`/chat/${c.id}`)}
+                  style={styles.orow}
+                >
+                  <Avatar initials={c.counterpart.initials} uri={c.counterpart.avatarUrl} seed={c.counterpart.id} size={48} ring={false} />
+                  <View style={styles.orowBody}>
+                    <Text style={text.cardTitle}>{c.counterpart.displayName}</Text>
+                    <Text style={text.meta} numberOfLines={1}>
+                      {c.listing.title}
+                    </Text>
+                    <Text style={text.meta} numberOfLines={1}>
+                      {c.lastMessageMine ? nb.youth.you : ''}
+                      {c.lastMessagePreview}
+                    </Text>
+                  </View>
+                  {c.unread ? <Pill label={nb.youth.askedYou} tone="dark" /> : null}
+                </Pressable>
+              </FadeUp>
+            ))}
+            {chatCount === 0 ? (
               <Text style={[text.body, styles.empty]}>{nb.youth.noChats}</Text>
             ) : (
               chats.map((c, i) => (
@@ -462,6 +500,7 @@ export function YouthAppScreen() {
             </FadeUp>
             <FadeUp delay={200}>
               <ListGroup>
+                <ListRow icon="hand" title={nb.youth.myPosts} subtitle={nb.youth.myPostsSub} onPress={() => router.push('/mine')} />
                 <ListRow icon="shield" title={nb.youth.safety} subtitle={nb.youth.safetySub} onPress={() => router.push('/sikkerhet')} />
                 <ListRow icon="lock" title={nb.youth.privacy} onPress={() => router.push('/personvern')} />
                 <ListRow icon="users" title={nb.guardian.rowYouth} subtitle={nb.guardian.rowYouthSub} onPress={() => setGuardian(true)} />
@@ -482,7 +521,7 @@ export function YouthAppScreen() {
       <NavFrame>
         <NavItem label={nb.youth.tabs.oppdrag} icon="clip" active={view === 'oppdrag'} onPress={() => go('oppdrag')} />
         <NavItem label={nb.youth.tabs.tilbud} icon="tag" active={view === 'tilbud'} badge={pending} onPress={() => go('tilbud')} />
-        <NavItem label={nb.youth.tabs.innboks} icon="msg" active={view === 'innboks'} badge={chats.length ? 1 : 0} onPress={() => go('innboks')} />
+        <NavItem label={nb.youth.tabs.innboks} icon="msg" active={view === 'innboks'} badge={chatCount ? 1 : 0} onPress={() => go('innboks')} />
         <NavItem label={nb.youth.tabs.profil} icon="user" active={view === 'profil'} onPress={() => go('profil')} />
       </NavFrame>
 

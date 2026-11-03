@@ -9,6 +9,7 @@ import nb from '@/i18n/nb';
 import { EmptyScene } from '@/components/ui/EmptyScene';
 import { canEditListing, editListingHref } from '@/domain/editing';
 import { useMyListings, useReceivedProposals, useSetListingStatus } from '@/api/queries';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
@@ -77,7 +78,10 @@ export function MyListingsScreen() {
   const pull = usePullRefresh();
   const router = useRouter();
   // my oppdrag, or what I offer («Tilbyr hjelp», 0076)
-  const [kind, setKind] = useState<'need' | 'offer'>('need');
+  const [picked, setKind] = useState<'need' | 'offer'>('need');
+  // a youth account has no oppdrag, only what it offers (0084)
+  const youth = useCurrentUser().isYouth;
+  const kind = youth ? 'offer' : picked;
   const { data, isLoading, isError, refetch } = useMyListings(kind === 'offer' ? 'SERVICE_OFFER' : 'TASK_REQUEST');
   const { data: received } = useReceivedProposals();
   const setStatus = useSetListingStatus();
@@ -128,7 +132,11 @@ export function MyListingsScreen() {
         <SubHeader
           title={nb.mine.title}
           onBack={back}
-          right={<IconButton icon="plus" variant="dark" iconSize={18} accessibilityLabel={nb.mine.newListing} onPress={() => safePush('/legg-ut')} />}
+          right={
+            youth ? undefined : (
+              <IconButton icon="plus" variant="dark" iconSize={18} accessibilityLabel={nb.mine.newListing} onPress={() => safePush('/legg-ut')} />
+            )
+          }
         />
       }
       footer={
@@ -150,6 +158,7 @@ export function MyListingsScreen() {
         <Text style={[text.meta, styles.mt8]}>{nb.mine.sub}</Text>
       </FadeUp>
 
+      {youth ? null : (
       <FadeUp delay={60} style={[styles.px, styles.mt14]}>
         <Segmented
           accessibilityLabel={nb.mine.heading}
@@ -164,6 +173,7 @@ export function MyListingsScreen() {
           ]}
         />
       </FadeUp>
+      )}
 
       <FadeUp delay={80} style={[styles.px, styles.minis]}>
         <View style={styles.mini}>

@@ -78,3 +78,41 @@ test('a technical error when sending an offer shows a friendly message, never th
   await waitFor(() => expect(err).toHaveBeenCalled());
   expect(err).toHaveBeenCalledWith(nb.giTilbud.sendFailed);
 });
+
+// ------------------------------------------------------------
+// «Tilbyr hjelp» for youth accounts (asked 2026-11-03, migration 0084)
+// ------------------------------------------------------------
+test('a youth can start «Tilby hjelp» from the oppdrag list and find what they offer under Profil', async () => {
+  const { router } = jest.requireMock('expo-router');
+  await renderWithProviders(<YouthAppScreen />);
+  await fireEvent.press(await screen.findByText('Tilby hjelp'));
+  expect(router.push).toHaveBeenCalledWith('/legg-ut/tilbyr');
+  await fireEvent.press(screen.getAllByText('Profil')[0]);
+  await fireEvent.press(screen.getByText('Det jeg tilbyr'));
+  expect(router.push).toHaveBeenCalledWith('/mine');
+});
+
+test('a chat a nabo started on the youth’s own offer shows in Innboks', async () => {
+  const real = apiClient.listConversations.bind(apiClient);
+  jest.spyOn(apiClient, 'listConversations').mockImplementation(async (opts) => {
+    const list = await real(opts);
+    const base = list[0];
+    return [
+      ...list,
+      {
+        ...base,
+        id: 'conv-offer-1',
+        listing: { ...base.listing, id: 'l-offer-1', title: 'Jeg lufter hunder', type: 'SERVICE_OFFER' },
+        counterpart: { ...base.counterpart, displayName: 'Kari H.' },
+        lastMessagePreview: 'Kan du lufte Bamse på lørdag?',
+        lastMessageMine: false,
+        unread: true,
+      },
+    ];
+  });
+  await renderWithProviders(<YouthAppScreen />);
+  await fireEvent.press(screen.getAllByText('Innboks')[0]);
+  await waitFor(() => expect(screen.getByText('Jeg lufter hunder')).toBeTruthy());
+  expect(screen.getByText('Kan du lufte Bamse på lørdag?')).toBeTruthy();
+  expect(screen.getByText('Spør deg om hjelp')).toBeTruthy();
+});
