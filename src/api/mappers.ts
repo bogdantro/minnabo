@@ -78,6 +78,8 @@ export type ListingRow = {
   estimated_minutes?: number | null;
   edited_at?: string | null;
   urgent_until?: string | null;
+  helpers_needed?: number | null;
+  first_to_followed_until?: string | null;
   invited_profile_id?: string | null;
   admin_hidden?: boolean | null;
   hidden_reason?: string | null;
@@ -92,6 +94,7 @@ export type ListingRow = {
     is_dugnad?: boolean | null;
     recurrence?: string | null;
     intake?: { label: string; value: string }[] | null;
+    scheduled_days?: string[] | null;
   } | null;
   service_offer_details?: {
     about: string;
@@ -142,6 +145,9 @@ export type MessageRow = {
   created_at: string;
   reactions?: Record<string, string[]> | null;
   pinned?: boolean | null;
+  reply_to_id?: string | null;
+  deleted_at?: string | null;
+  transcript?: string | null;
 };
 
 export type AgreementRow = {
@@ -177,6 +183,7 @@ export type ReviewRow = {
   created_at: string;
   reply?: string | null;
   replied_at?: string | null;
+  approval?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
 };
 
 export type NotificationRow = {
@@ -193,6 +200,7 @@ export type ConversationRow = {
   id: string;
   /** null when the conversation is about an oppslag (0041) */
   listing: (Pick<ListingRow, 'id' | 'title' | 'type' | 'place'> & {
+    owner_id?: string | null;
     listing_images?: { storage_path: string; ord: number }[] | null;
   }) | null;
   notice_id?: string | null;
@@ -200,10 +208,10 @@ export type ConversationRow = {
   notice_place?: string | null;
   last_message_preview: string;
   last_message_at: string;
-  conversation_participants: { profile: ProfileRow; profile_id?: string; last_read_at?: string | null; last_delivered_at?: string | null }[];
+  conversation_participants: { profile: ProfileRow; profile_id?: string; last_read_at?: string | null; last_delivered_at?: string | null; archived_at?: string | null }[];
   message_reads?: { profile_id: string; last_read_at: string }[] | null;
   /** newest message only (embedded with order + limit 1) */
-  messages?: { author_id: string; kind: string; created_at: string; text?: string | null }[] | null;
+  messages?: { author_id: string; kind: string; created_at: string; text?: string | null; deleted_at?: string | null }[] | null;
   proposals?: { status: Proposal['status']; created_at: string }[] | null;
 };
 
@@ -295,6 +303,8 @@ export function toListing(row: ListingRow): Listing {
     estimatedMinutes: row.estimated_minutes ?? undefined,
     editedAt: row.edited_at ?? undefined,
     urgentUntil: row.urgent_until ?? undefined,
+    helpersNeeded: row.helpers_needed ?? undefined,
+    firstToFollowedUntil: row.first_to_followed_until ?? undefined,
     invitedProfileId: row.invited_profile_id ?? undefined,
     moderation:
       row.admin_hidden || row.pending_review
@@ -310,6 +320,7 @@ export function toListing(row: ListingRow): Listing {
           isDugnad: row.task_details.is_dugnad ?? undefined,
           recurrence: (row.task_details.recurrence as TaskDetails['recurrence']) ?? undefined,
           intake: row.task_details.intake ?? undefined,
+          scheduledDays: row.task_details.scheduled_days ?? undefined,
         }
       : undefined,
     offer: row.service_offer_details
@@ -363,13 +374,16 @@ export function toMessage(row: MessageRow): Message {
     kind: row.kind,
     proposalId: row.proposal_id ?? undefined,
     // the path in the private bucket – SupabaseApiClient swaps it for a signed link
-    attachmentUrl: row.kind === 'IMAGE' || row.kind === 'AUDIO' ? row.attachment_path ?? undefined : undefined,
+    attachmentUrl: (row.kind === 'IMAGE' || row.kind === 'AUDIO') && !row.deleted_at ? row.attachment_path ?? undefined : undefined,
     audioMs: row.kind === 'AUDIO' ? row.audio_ms ?? 0 : undefined,
     createdAt: row.created_at,
     // stored on the server = "Sendt"; "Levert" / "Lest" are added by withReadState
     delivery: 'SENT',
     reactions: row.reactions ?? undefined,
     pinned: row.pinned ?? undefined,
+    replyToId: row.reply_to_id ?? undefined,
+    deletedAt: row.deleted_at ?? undefined,
+    transcript: row.transcript ?? undefined,
   };
 }
 
@@ -508,6 +522,8 @@ export type NoticeRow = {
   done_at?: string | null;
   edited_at?: string | null;
   neighbourhood_id?: string | null;
+  is_dugnad?: boolean | null;
+  event_at?: string | null;
 };
 
 export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
@@ -526,6 +542,8 @@ export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
     doneAt: row.done_at ?? undefined,
     editedAt: row.edited_at ?? undefined,
     neighbourhoodId: row.neighbourhood_id ?? undefined,
+    isDugnad: row.is_dugnad || undefined,
+    eventAt: row.event_at ?? undefined,
   };
 }
 
@@ -542,6 +560,7 @@ export function toReview(row: ReviewRow): Review {
     createdAt: row.created_at,
     reply: row.reply ?? undefined,
     repliedAt: row.replied_at ?? undefined,
+    approval: row.approval ?? undefined,
   };
 }
 
@@ -619,7 +638,9 @@ export function toConversation(row: ConversationRow, meId: string, meta?: Conver
   // Show the real last message. The copy on the conversation row can lag behind
   // (it did for every plain chat message before 0045).
   const preview = last
-    ? last.kind === 'IMAGE'
+    ? last.deleted_at
+      ? 'Meldingen ble slettet'
+      : last.kind === 'IMAGE'
       ? '📷 Bilde'
       : last.kind === 'AUDIO'
         ? '🎤 Talemelding'
@@ -643,6 +664,11 @@ export function toConversation(row: ConversationRow, meId: string, meta?: Conver
     .slice()
     .sort((a, b) => a.ord - b.ord)[0];
   const isNotice = !row.listing;
+  // On an oppdrag the owner gets help; on a «Tilbyr hjelp» the owner is the helper.
+  const iOwn = row.listing?.owner_id ? row.listing.owner_id === meId : undefined;
+  const role: Conversation['role'] =
+    iOwn === undefined ? undefined : (row.listing?.type === 'SERVICE_OFFER') === iOwn ? 'helper' : 'client';
+  const mine = row.conversation_participants.find((p) => (p.profile_id ?? p.profile?.id) === meId);
 
   return {
     id: row.id,
@@ -674,6 +700,8 @@ export function toConversation(row: ConversationRow, meId: string, meta?: Conver
     // "Du: …" in front of my own text or photo (a tilbud already says "Du sendte et tilbud")
     lastMessageMine: lastByMe === undefined ? undefined : lastByMe && lastKind !== 'SYSTEM' && lastKind !== 'PROPOSAL',
     statusTag: statusTag(latestProposal?.status),
+    archived: !!mine?.archived_at,
+    role,
   };
 }
 

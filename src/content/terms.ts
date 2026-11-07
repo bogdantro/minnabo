@@ -3,9 +3,9 @@
  * change both together. The final legal wording is checked by a lawyer (docs/LEFT_OUT.md).
  */
 export const TERMS = {
-  version: '1.2',
+  version: '1.4',
   /** ISO date of the last change to the text */
-  updated: '2026-11-03',
+  updated: '2026-11-07',
   readMinutes: 8,
   /** youngest age that can create an account (Vipps requires 15) */
   minAge: 15,
@@ -61,7 +61,8 @@ export const TERMS_SECTIONS: TermsSection[] = [
       `Er du mellom ${TERMS.minAge} og 18 år, får du automatisk en ungdomskonto når du logger inn med Vipps.`,
       {
         list: [
-          'En ungdomskonto kan gi tilbud på oppdrag og fortelle hva den kan hjelpe med («Tilbyr hjelp») innenfor hage, dyrepass, datahjelp og snømåking. Den kan ikke legge ut egne oppdrag.',
+          'En ungdomskonto kan gi tilbud på oppdrag, fortelle hva den kan hjelpe med («Tilbyr hjelp»), skrive på Oppslagstavla, lagre søk og gi vurderinger. Den kan ikke legge ut egne oppdrag eller bli med i nabolag.',
+          'Vurderinger som en ungdomskonto gir eller får, sjekkes av MinNabo før de vises. Vi kan avvise en vurdering som bryter reglene.',
           'Du trenger ikke samtykke fra foresatte for å opprette en ungdomskonto. Alderen bekreftes med Vipps.',
           'Vi anbefaler at du avtaler jobber i dagslys, gjerne hos folk du kjenner, og deler jobbdagen med en voksen med Trygg tur i appen.',
           'Når du fyller 18 år, blir kontoen automatisk gjort om til en vanlig konto.',
@@ -78,6 +79,9 @@ export const TERMS_SECTIONS: TermsSection[] = [
           'Beskriv oppdraget eller hjelpen du tilbyr ærlig og konkret, med riktig kategori og et realistisk tidspunkt.',
           'Bare omtrentlig sted vises offentlig. Eksakt adresse deler du selv i chatten etter at dere har avtalt jobben.',
           'En avtale er inngått når den som skal få hjelp, godtar et tilbud. Da ser dere begge avtalen i appen, og dere ser hverandres telefonnummer.',
+          'Et oppdrag kan trenge flere hjelpere. Det ligger ute til den som la det ut, har godtatt så mange tilbud som trengs, eller sier fra at det ikke trengs flere.',
+          'Spørsmål og svar på en «Tilbyr hjelp» er synlige for alle som ser oppføringen. De er ikke en melding til hjelperen. Ikke skriv adresse, telefonnummer eller andre personopplysninger der.',
+          'Velger du «Send til faste hjelpere først», ser bare hjelperne du følger, oppdraget de første to timene. Deretter blir det synlig for alle.',
           'Må du avlyse, gi beskjed så tidlig som mulig. Gjentatte avlysninger vises på profilen din og kan påvirke kontoen.',
         ],
       },
@@ -92,6 +96,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
           'Det er gratis å bruke MinNabo som privatperson.',
           'Dere avtaler selv pris, betalingsmåte og tidspunkt for betaling. MinNabo tar ikke imot, holder eller overfører penger mellom brukere.',
           'Dere er selv ansvarlige for eventuelle plikter knyttet til skatt og rapportering.',
+          'Oversikten «Avtalt sum» viser bare prisene dere avtalte i appen, ikke hva som faktisk ble betalt.',
           'Vær varsom hvis noen ber om forskuddsbetaling. Si fra til oss med «Rapporter» i appen.',
         ],
       },
@@ -106,6 +111,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
           'Vurderinger skal være ærlige, saklige og bygge på egen erfaring med jobben.',
           'Det er ikke lov å kjøpe, bytte eller presse frem vurderinger.',
           'Vi kan fjerne teksten i en vurdering som bryter vilkårene. Vi skriver aldri om det noen har skrevet.',
+          'Etter en fullført jobb kan dere sende hverandre et takkekort. Det vises på profilen til den som får det, og skal være ærlig og saklig som en vurdering.',
         ],
       },
     ],
@@ -131,7 +137,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
     blocks: [
       {
         list: [
-          'Alle kan rapportere oppdrag, «Tilbyr hjelp», meldinger (også talemeldinger) og profiler. Rapporter behandles av MinNabos moderatorer, normalt innen 12 timer.',
+          'Alle kan rapportere oppdrag, «Tilbyr hjelp», spørsmål, meldinger (også talemeldinger) og profiler. Rapporter behandles av MinNabos moderatorer, normalt innen 12 timer.',
           'Ved brudd på vilkårene kan vi skjule innhold, gi en advarsel, suspendere kontoen midlertidig eller stenge den permanent.',
           'Innhold som flere har rapportert, kan bli skjult automatisk, og en konto som flere har rapportert, kan bli suspendert automatisk, til en moderator har sett på saken.',
           'Ved alvorlige forhold kan vi kontakte politiet.',
@@ -174,6 +180,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
         list: [
           'Avtaler om jobber inngås mellom brukerne. MinNabo er ikke ansvarlig for utførelsen, eller for skader, tap eller mangler som oppstår.',
           'Brukerne er selv ansvarlige for å ha nødvendig forsikring.',
+          'Dugnader og lån av verktøy avtales mellom naboene. MinNabo er ikke ansvarlig for det som lånes ut, eller for det som skjer på en dugnad.',
           'Vi jobber for at MinNabo alltid skal være tilgjengelig, men kan ikke garantere at tjenesten er uten avbrudd eller feil.',
         ],
       },
@@ -183,7 +190,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
     title: 'Endringer',
     blocks: [
       `Vi kan endre vilkårene, for eksempel når tjenesten utvikles eller regelverket endres. Ved vesentlige endringer varsler vi deg i appen minst ${TERMS.noticeDays} dager før endringene gjelder. Bruker du MinNabo etter det, godtar du de nye vilkårene.`,
-      'Siste endring (3. november 2026): ungdomskontoer kan nå legge ut «Tilbyr hjelp». Forrige endring (31. oktober 2026): «Tilbyr hjelp» er lagt til.',
+      'Siste endring (7. november 2026): ungdomskontoer kan tilby hjelp i alle kategorier, bruke Oppslagstavla, lagre søk og gi vurderinger, og vurderinger som gjelder en ungdomskonto sjekkes før de vises. Spørsmål gjelder nå bare «Tilbyr hjelp». Forrige endring (6. november 2026): flere hjelpere på et oppdrag, spørsmål på oppføringer, takkekort, dugnad og lån av verktøy.',
     ],
   },
   {

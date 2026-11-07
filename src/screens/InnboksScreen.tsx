@@ -4,7 +4,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import type { Conversation } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { EmptyScene } from '@/components/ui/EmptyScene';
-import { useConversations, useMarkConversationsRead } from '@/api/queries';
+import { useArchiveConversation, useConversations, useMarkConversationsRead } from '@/api/queries';
+import { mutedConversations } from '@/lib/mutedConversations';
+import { SwipeRow, type SwipeAction } from '@/components/SwipeRow';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { daysAgo, formatTime, shortDate } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
@@ -27,7 +29,7 @@ import {
   ListScreen,
 } from '@/components/ui';
 
-type Filter = 'alle' | 'uleste';
+type Filter = 'alle' | 'uleste' | 'client' | 'helper' | 'arkiv';
 const GROUPS = ['today', 'yday', 'older'] as const;
 const groupOf = (iso: string) => {
   const d = daysAgo(iso);
@@ -50,6 +52,8 @@ export function InnboksScreen() {
     }, [refetch]),
   );
   const markRead = useMarkConversationsRead();
+  const archive = useArchiveConversation();
+  const [openRow, setOpenRow] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('alle');
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
@@ -69,14 +73,18 @@ export function InnboksScreen() {
     [],
   );
 
-  const convs = useMemo(() => data ?? [], [data]);
+  const everything = useMemo(() => data ?? [], [data]);
+  // archived chats have their own tab; nothing else counts them
+  const convs = useMemo(() => everything.filter((c) => !c.archived), [everything]);
+  const archivedList = useMemo(() => everything.filter((c) => c.archived), [everything]);
   const isUnread = (c: Conversation) => c.unread && !readHere?.has(c.id);
   const unreadN = convs.filter(isUnread).length;
   // messages, when the backend counts them; otherwise one per unread conversation
   const unreadMsgs = convs.filter(isUnread).reduce((n, c) => n + Math.max(c.unreadCount ?? 1, 1), 0);
   const needle = q.trim().toLowerCase();
-  const list = convs.filter((c) => {
+  const list = (filter === 'arkiv' ? archivedList : convs).filter((c) => {
     if (filter === 'uleste' && !isUnread(c)) return false;
+    if ((filter === 'client' || filter === 'helper') && c.role !== filter) return false;
     if (!needle) return true;
     return `${c.counterpart.displayName} ${c.listing.title} ${c.lastMessagePreview}`.toLowerCase().includes(needle);
   });
@@ -92,6 +100,35 @@ export function InnboksScreen() {
     rows.push({ kind: 'group', key: `g-${g}`, g });
     inGroup.forEach((c, n) => rows.push({ kind: 'conv', key: c.id, c, i: idx++, first: n === 0 }));
   }
+
+  const setArchived = (c: Conversation, archived: boolean) => {
+    archive.mutate({ id: c.id, archived }, { onError: () => toast.error(nb.toast.genericError) });
+    toast.success(archived ? nb.inbox.archivedToast : nb.inbox.restoredToast, {
+      icon: 'archive',
+      action: { label: nb.inbox.undo, onPress: () => archive.mutate({ id: c.id, archived: !archived }) },
+    });
+  };
+  const toggleMute = (c: Conversation) => {
+    const on = mutedConversations.toggle(c.id);
+    toast.info(on ? nb.chat.mutedToast : nb.chat.unmutedToast, { icon: 'bell' });
+  };
+  const swipeActions = (c: Conversation): SwipeAction[] => [
+    ...(isUnread(c) ? [{ key: 'read', label: nb.inbox.swipeRead, icon: 'checks' as const, tone: 'cyan' as const, onPress: () => markRead.mutate([c.id]) }] : []),
+    {
+      key: 'mute',
+      label: mutedConversations.has(c.id) ? nb.inbox.swipeUnmute : nb.inbox.swipeMute,
+      icon: 'bell',
+      tone: 'lime',
+      onPress: () => toggleMute(c),
+    },
+    {
+      key: 'archive',
+      label: c.archived ? nb.inbox.swipeRestore : nb.inbox.swipeArchive,
+      icon: 'archive',
+      tone: 'ink',
+      onPress: () => setArchived(c, !c.archived),
+    },
+  ];
 
   const markAll = () => {
     const ids = convs.filter(isUnread).map((c) => c.id);
@@ -188,6 +225,9 @@ export function InnboksScreen() {
                     accessibilityLabel={`${nb.inbox.filterUnread}, ${unreadN}`}
                     trailing={unreadN ? <Pill label={String(unreadN)} tone={filter === 'uleste' ? 'accent' : 'neutral'} /> : undefined}
                   />
+                  <Chip label={nb.inbox.filterClient} selected={filter === 'client'} onPress={() => setFilter('client')} />
+                  <Chip label={nb.inbox.filterHelper} selected={filter === 'helper'} onPress={() => setFilter('helper')} />
+                  {archivedList.length ? <Chip label={nb.inbox.filterArchive} icon="archive" selected={filter === 'arkiv'} onPress={() => setFilter('arkiv')} /> : null}
                 </ChipRow>
               </View>
             </FadeUp>
@@ -218,6 +258,12 @@ export function InnboksScreen() {
                 <Text style={[text.meta, styles.center]}>{nb.inbox.noHitsSub}</Text>
                 <Button label={nb.inbox.clearSearch} variant="ghost" size="sm" block={false} align="center" onPress={() => setQ('')} />
               </ScaleIn>
+            ) : filter === 'client' || filter === 'helper' || filter === 'arkiv' ? (
+              <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
+                <EmptyScene icon="msg" tone="cyan" />
+                <Text style={styles.caughtTitle}>{nb.inbox.emptyFilter[filter]}</Text>
+                <Button label={nb.inbox.showAll} variant="ghost" size="sm" block={false} align="center" onPress={() => setFilter('alle')} style={styles.mt4} />
+              </ScaleIn>
             ) : filter === 'uleste' ? (
               <ScaleIn style={[styles.caught, shadow.card, styles.mt26]}>
                 <EmptyScene icon="checks" tone="lime" />
@@ -242,7 +288,9 @@ export function InnboksScreen() {
         ) : (
           // only the first screenful fades in; later pages appear at once
           <FadeUp delay={r.i < 8 ? Math.min(r.i + 3, 10) * 50 : 0} style={[styles.px, r.first ? null : styles.rowGap]}>
-            <ConvCard c={r.c} unread={isUnread(r.c)} onPress={() => safePush(`/chat/${r.c.id}`)} />
+            <SwipeRow id={r.c.id} openId={openRow} onOpenChange={setOpenRow} actions={swipeActions(r.c)}>
+              <ConvCard c={r.c} unread={isUnread(r.c)} actions={swipeActions(r.c)} onPress={() => safePush(`/chat/${r.c.id}`)} />
+            </SwipeRow>
           </FadeUp>
         )
       }
@@ -260,7 +308,7 @@ export function InnboksScreen() {
   );
 }
 
-function ConvCard({ c, unread, onPress }: { c: Conversation; unread: boolean; onPress: () => void }) {
+function ConvCard({ c, unread, actions, onPress }: { c: Conversation; unread: boolean; actions: SwipeAction[]; onPress: () => void }) {
   const tag =
     c.statusTag === 'NEW_OFFER'
       ? { label: nb.inbox.tagNewOffer, tone: 'need' as const, icon: 'sparkle' as const }
@@ -273,6 +321,9 @@ function ConvCard({ c, unread, onPress }: { c: Conversation; unread: boolean; on
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={`${c.counterpart.displayName}, ${c.listing.title}${unread ? `, ${nb.inbox.unreadA11y}` : ''}`}
+      // the same choices as the swipe, for people who can't swipe
+      accessibilityActions={actions.map((a) => ({ name: a.key, label: a.label }))}
+      onAccessibilityAction={(e) => actions.find((a) => a.key === e.nativeEvent.actionName)?.onPress()}
       onPress={onPress}
       style={({ pressed }) => [styles.conv, unread ? [styles.convUnread, shadow.unreadConv] : shadow.card, pressed && styles.pressed]}
     >

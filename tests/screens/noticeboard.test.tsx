@@ -48,7 +48,7 @@ test('"Lagre" saves an oppslag, and "Svar" adds a public comment under it', asyn
   expect(await screen.findByText('Ingen svar ennå. Bli den første.')).toBeTruthy();
   await fireEvent.changeText(screen.getByLabelText('Ditt svar'), 'Er den fortsatt ledig?');
   await fireEvent.press(screen.getAllByText('Svar').slice(-1)[0]);
-  expect(await screen.findByText('Er den fortsatt ledig?')).toBeTruthy();
+  expect((await screen.findAllByText('Er den fortsatt ledig?')).length).toBeGreaterThan(0);
   await waitFor(() => expect(noticeboardStore.comments('n-seed-1')).toHaveLength(1));
   // the card now counts it
   await waitFor(() => expect(screen.getByText('1 svar')).toBeTruthy());
@@ -59,12 +59,33 @@ test('the owner can edit an oppslag and mark it as done', async () => {
   await renderWithProviders(<NoticeboardScreen />);
   await waitFor(() => expect(screen.getByText('Gis bort: bokhylle')).toBeTruthy());
 
-  await fireEvent.press(screen.getByLabelText('Rediger Gis bort: bokhylle'));
+  await fireEvent.press(screen.getByLabelText('Mer for Gis bort: bokhylle'));
+  await fireEvent.press(await screen.findByText('Rediger oppslaget'));
   await fireEvent.changeText(await screen.findByLabelText('Tittel'), 'Gis bort: hvit bokhylle');
   await fireEvent.press(screen.getByText('Lagre endringer'));
   await waitFor(() => expect(noticeboardStore.get(mine.id)?.title).toBe('Gis bort: hvit bokhylle'));
 
-  await fireEvent.press(await screen.findByLabelText('Marker som avsluttet: Gis bort: hvit bokhylle'));
+  await fireEvent.press(await screen.findByLabelText('Mer for Gis bort: hvit bokhylle'));
+  await fireEvent.press(await screen.findByText('Marker som avsluttet'));
   await waitFor(() => expect(noticeboardStore.get(mine.id)?.doneAt).toBeTruthy());
   expect(await screen.findByText('Avsluttet')).toBeTruthy();
+});
+
+test('Dugnad is a type of its own: choosing it asks for a day, and it lands under Dugnad', async () => {
+  await renderWithProviders(<NoticeboardScreen />);
+  await fireEvent.press(await screen.findByLabelText('Nytt oppslag'));
+  await fireEvent.press(await screen.findByRole('radio', { name: 'Dugnad' }));
+  expect(screen.queryByText('Dette er en dugnad')).toBeNull();
+  await fireEvent.changeText(screen.getByLabelText('Tittel'), 'Dugnad i gata');
+  await fireEvent.changeText(screen.getByLabelText('Tekst'), 'Vi rydder sammen på lørdag.');
+  await fireEvent.press(screen.getByText('Publiser oppslag'));
+  expect(await screen.findByText('Velg en dag for dugnaden.')).toBeTruthy();
+});
+
+test('a heart counts at once and can be taken back', async () => {
+  await renderWithProviders(<NoticeboardScreen />);
+  await fireEvent.press(await screen.findByLabelText('Lik Gis bort: barnesykkel 16", 0 liker'));
+  expect(await screen.findByLabelText('Lik Gis bort: barnesykkel 16", 1 liker')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Lik Gis bort: barnesykkel 16", 1 liker'));
+  expect(await screen.findByLabelText('Lik Gis bort: barnesykkel 16", 0 liker')).toBeTruthy();
 });

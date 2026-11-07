@@ -20,7 +20,8 @@ it('defaults reach to 0 and derives municipalities from the profile kommune', as
   expect(result.current.reach).toBe(0);
   // demo profile (seed u-mb) is Lillehammer
   expect(result.current.municipality).toBe('Lillehammer');
-  expect(result.current.municipalities).toEqual(['Lillehammer']);
+  // Lillehammer counts together with Øyer and Gausdal (KOMMUNE_GROUPS)
+  expect(result.current.municipalities).toEqual(['Lillehammer', 'Øyer', 'Gausdal']);
 });
 
 it('setReach widens the derived set and persists the preference', async () => {

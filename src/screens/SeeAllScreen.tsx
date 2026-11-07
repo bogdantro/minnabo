@@ -12,6 +12,8 @@ import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
 import { LocationSheet } from '@/components/LocationSheet';
 import { OppdragCard } from '@/components/OppdragCard';
+import { NewSinceLine } from '@/components/NewSinceLine';
+import { newSinceIndex, useFeedSeen } from '@/lib/feedSeen';
 import {
   Button,
   Chip,
@@ -85,6 +87,10 @@ export function SeeAllScreen({ initialCategory, kind = 'need' }: { initialCatego
     return seen;
   }, [all]);
   const items = useMemo(() => sortList(cat ? all.filter((l) => categoryArtId(l.category.slug) === cat) : all, sort), [all, cat, sort]);
+  const seen = useFeedSeen(offer ? 'all-offers' : 'all');
+  // the line only means something while the list runs newest first; without distances «Nærmest» does
+  const byDate = sort === 'new' || (sort === 'near' && items.every((l) => l.location.distanceKm == null));
+  const newLine = byDate ? newSinceIndex(items, seen, openedAt) : -1;
   const loading = jobs.isLoading || !ready;
 
   const applyLocation = (k: string, r: Reach) => {
@@ -179,6 +185,7 @@ export function SeeAllScreen({ initialCategory, kind = 'need' }: { initialCatego
         renderItem={({ item: l, index: i }) => (
           // only the first screenful fades in; later pages appear at once
           <FadeUp delay={i < 10 ? (i + 1) * 50 : 0} style={styles.px}>
+            {i === newLine ? <NewSinceLine /> : null}
             <OppdragCard listing={l} statusBadge={undefined} showVerified={false} isNew={Date.parse(l.createdAt) >= openedAt - DAY_MS} />
           </FadeUp>
         )}

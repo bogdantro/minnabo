@@ -13,7 +13,8 @@ export type ListingType = 'TASK_REQUEST' | 'SERVICE_OFFER';
 /** What the user wants to use MinNabo for (onboarding + profile). */
 export type Purpose = 'NEED_HELP' | 'WANT_JOBS' | 'BOTH';
 
-export type PriceMode = 'FIXED' | 'BUDGET' | 'FROM' | 'BY_AGREEMENT';
+/** HOURLY (0086): the amount is kr per hour – «300 kr / t». */
+export type PriceMode = 'FIXED' | 'BUDGET' | 'FROM' | 'BY_AGREEMENT' | 'HOURLY';
 
 export type Category = {
   id: string;
@@ -115,6 +116,74 @@ export type NoticeboardPost = {
   editedAt?: string;
   /** set → only for the members of this nabolag; unset → the whole kommune */
   neighbourhoodId?: string;
+  /** a dugnad people sign up for (0090) */
+  isDugnad?: boolean;
+  /** ISO – when the dugnad is */
+  eventAt?: string;
+  /** hearts on the oppslag (0094) */
+  likes?: number;
+  likedByMe?: boolean;
+};
+
+/** A request to borrow a tool (0090). */
+export type ToolBooking = {
+  id: string;
+  noticeId: string;
+  borrowerId: string;
+  /** yyyy-mm-dd */
+  from: string;
+  to: string;
+  note?: string;
+  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED';
+};
+
+/** A public question on a post, and the owner's answer (0088). */
+export type ListingQuestion = {
+  id: string;
+  listingId: string;
+  authorId: string;
+  body: string;
+  answer?: string;
+  answeredAt?: string;
+  createdAt: string;
+};
+
+export type ThankCardKind = 'STRONG' | 'KIND' | 'SAVED' | 'PRECISE' | 'TIDY';
+
+/** A thank-you card after a finished job (0091), shown on the profile. */
+export type ThankCard = {
+  id: string;
+  proposalId: string;
+  fromProfileId: string;
+  toProfileId: string;
+  card: ThankCardKind;
+  message?: string;
+  createdAt: string;
+};
+
+/** «Året ditt på MinNabo»: my own numbers for one year. */
+export type YearRecap = {
+  year: number;
+  helped: number;
+  gotHelp: number;
+  neighbours: number;
+  topCategory?: string;
+  thanks: number;
+  stars?: number;
+};
+
+/** «Avtalt sum i år»: agreed prices from finished jobs, never what was actually paid (rule 4). */
+export type AgreedSum = {
+  year: number;
+  totalMinor: number;
+  jobs: number;
+  people: { name: string; minor: number; jobs: number }[];
+};
+
+export type PoliceCertificate = {
+  status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  decidedAt?: string;
+  rejectionReason?: string;
 };
 
 /** A public comment under an oppslag. */
@@ -216,6 +285,8 @@ export type TaskDetails = {
   recurrence?: TaskRecurrence;
   /** category-specific intake answers (floors, rooms, pets …) */
   intake?: { label: string; value: string }[];
+  /** yyyy-mm-dd: the days it can be done (0086); undefined on old oppdrag with a free-text time */
+  scheduledDays?: string[];
 };
 
 export type ServiceOfferDetails = {
@@ -306,6 +377,10 @@ export type Listing = {
   editedAt?: string;
   /** ISO – «Haster»: shown first in the feed until this moment (see domain/urgent.ts) */
   urgentUntil?: string;
+  /** «Antall hjelpere» (0086): the oppdrag stays open until this many are agreed */
+  helpersNeeded?: number;
+  /** ISO – «Send til faste hjelpere først»: only the helpers the owner follows see it until then */
+  firstToFollowedUntil?: string;
   /**
    * Set by MinNabo's moderation; only the owner ever receives a hidden oppdrag.
    * `pendingReview`: a first oppdrag waiting for approval (shown as "Venter på godkjenning", not as hidden).
@@ -480,6 +555,12 @@ export type Message = {
   reactions?: Record<string, string[]>;
   /** pinned to the top of the conversation (only one per conversation) */
   pinned?: boolean;
+  /** the message this one answers (0089) */
+  replyToId?: string;
+  /** ISO – the author deleted it; the bubble says «Meldingen ble slettet» */
+  deletedAt?: string;
+  /** a voice message written out as text */
+  transcript?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -500,6 +581,8 @@ export type Review = {
   /** public answer from the person who was reviewed */
   reply?: string;
   repliedAt?: string;
+  /** PENDING: a review a youth gave or got waits for a moderator (0094) */
+  approval?: 'PENDING' | 'APPROVED' | 'REJECTED';
 };
 
 export type ReportTargetType =
@@ -588,6 +671,10 @@ export type Conversation = {
   /** when the last message is mine: sent / delivered / read (the ticks in Innboks) */
   lastMessageDelivery?: MessageDelivery;
   statusTag: ConversationStatusTag;
+  /** I archived it (0089); a new message brings it back */
+  archived?: boolean;
+  /** Innboks filter: 'client' = I get help, 'helper' = I help. Undefined on chats about an oppslag. */
+  role?: 'client' | 'helper';
 };
 
 export type ListingFilter = {
@@ -600,6 +687,10 @@ export type ListingFilter = {
   municipalities?: string[];
   query?: string;
   verifiedOnly?: boolean;
+  /** the rest of Søk's filter, kept so «Kjør søk» on a saved search restores it */
+  when?: 'TODAY' | 'WEEKEND' | 'NEXT_WEEK';
+  minBudgetKr?: number;
+  urgentOnly?: boolean;
 };
 
 export type ListingSort = 'RELEVANCE' | 'DISTANCE' | 'NEWEST' | 'PRICE';

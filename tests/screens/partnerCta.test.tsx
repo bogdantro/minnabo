@@ -10,7 +10,7 @@ test('«Bli partner» under støttespillere sends a business to «For bedrifter�
   const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
   await renderWithProviders(<FellesskapScreen />);
   expect(await screen.findByTestId('partner-cta')).toBeTruthy();
-  expect(screen.getByText('Driver du en bedrift i Lillehammer?')).toBeTruthy();
+  expect(screen.getByText('Driver du en bedrift?')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Bli partner med MinNabo. Åpner minnaboapp.no'));
   expect(open).toHaveBeenCalledWith('https://minnaboapp.no/for-bedrifter/');
 });

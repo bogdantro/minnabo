@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { PublicProfile, Review } from '@/domain/types';
 import nb from '@/i18n/nb';
+import { PoliceCertificateCard } from '@/components/PoliceCertificateCard';
 import { completenessPct, completenessSteps } from '@/domain/profileCompleteness';
 import { useListingsByIds, useProfile, useReviews, useVerify, usePortfolio } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -39,7 +40,7 @@ import {
   type IconName,
 } from '@/components/ui';
 
-type RowId = 'VIPPS' | 'PHONE' | 'EMAIL' | 'BUSINESS';
+type RowId = 'VIPPS' | 'PHONE' | 'EMAIL';
 type Line = { icon: IconName; t: string };
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const RING_R = 30;
@@ -49,7 +50,6 @@ const ROW_ART: Record<RowId, { icon: IconName; bg: string; fg: string }> = {
   VIPPS: { icon: 'shield', bg: colors.vippsIdBg, fg: colors.vippsIdFg },
   PHONE: { icon: 'phone', bg: colors.cyanTint, fg: colors.cyanDeep },
   EMAIL: { icon: 'mail', bg: colors.limeTint, fg: colors.limeDeep },
-  BUSINESS: { icon: 'building', bg: colors.line2, fg: colors.ink2 },
 };
 
 /** "+47 934 56 789" → "+47 9•• •• 789" */
@@ -62,7 +62,7 @@ function maskPhone(phone: string): string {
 export function VerifiseringssenterScreen() {
   const router = useRouter();
   const me = useCurrentUser();
-  const businessOn = useFeatureFlags().businessRegistration;
+  const { policeCertificate: policeOn } = useFeatureFlags();
   const { data: profile, isLoading, isError, refetch } = useProfile(me.id);
   const { data: reviews } = useReviews(me.id);
   const verify = useVerify();
@@ -79,9 +79,9 @@ export function VerifiseringssenterScreen() {
     );
   }
 
-  const v = (k: 'PHONE' | 'EMAIL' | 'BUSINESS') => profile.verifications.find((x) => x.kind === k);
+  const v = (k: 'PHONE' | 'EMAIL') => profile.verifications.find((x) => x.kind === k);
   const isOk = (k: RowId) => k === 'VIPPS' || !!v(k)?.verified;
-  const dateLine = (k: 'PHONE' | 'EMAIL' | 'BUSINESS'): Line[] => {
+  const dateLine = (k: 'PHONE' | 'EMAIL'): Line[] => {
     const at = v(k)?.verifiedAt;
     return at ? [{ icon: 'cal', t: nb.verificationCenter.lines.confirmedOn(longDate(at)) }] : [];
   };
@@ -105,11 +105,6 @@ export function VerifiseringssenterScreen() {
       id: 'EMAIL',
       sub: nb.verificationCenter.fromVippsProfile,
       lines: [{ icon: 'check', t: L.emailFrom }, { icon: 'lock', t: L.emailPrivate }, ...dateLine('EMAIL')],
-    },
-    {
-      id: 'BUSINESS',
-      sub: isOk('BUSINESS') ? (v('BUSINESS')?.explanation ?? '') : nb.verificationCenter.notRegistered,
-      lines: [{ icon: 'info', t: L.bizWho }, { icon: 'info', t: L.bizCheck }, ...dateLine('BUSINESS')],
     },
   ];
   const levels: RowId[] = ['VIPPS', 'PHONE', 'EMAIL'];
@@ -172,12 +167,9 @@ export function VerifiseringssenterScreen() {
           const art = ROW_ART[r.id];
           const ok = isOk(r.id);
           const expanded = open === r.id;
-          const pill =
-            r.id === 'BUSINESS' && !ok
-              ? { label: nb.verificationCenter.notRelevant, tone: 'neutral' as const }
-              : ok
-                ? { label: nb.verificationCenter.verified, tone: 'ok' as const }
-                : { label: nb.verificationCenter.notVerified, tone: 'warn' as const };
+          const pill = ok
+            ? { label: nb.verificationCenter.verified, tone: 'ok' as const }
+            : { label: nb.verificationCenter.notVerified, tone: 'warn' as const };
           return (
             <FadeUp key={r.id} delay={i * 40} style={[styles.vrow, shadow.card]}>
               <Pressable
@@ -206,17 +198,6 @@ export function VerifiseringssenterScreen() {
                       <Text style={styles.liText}>{l.t}</Text>
                     </View>
                   ))}
-                  {r.id === 'BUSINESS' && !ok && businessOn ? (
-                    <Button
-                      label={nb.verificationCenter.registerBusiness}
-                      variant="ghost"
-                      size="sm"
-                      icon="building"
-                      block={false}
-                      onPress={() => safePush('/bedrift')}
-                      style={styles.bodyBtn}
-                    />
-                  ) : null}
                   {(r.id === 'PHONE' || r.id === 'EMAIL') && !ok ? (
                     <Button
                       label={nb.verificationCenter.verifyNow}
@@ -272,6 +253,11 @@ export function VerifiseringssenterScreen() {
 
       <Tips profile={profile} hasContacts={contacts.length > 0} />
       <View style={styles.bottom} />
+      {policeOn ? (
+        <View style={[styles.px, styles.policeWrap]}>
+          <PoliceCertificateCard />
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -464,6 +450,7 @@ function Pulse() {
 }
 
 const styles = StyleSheet.create({
+  policeWrap: { marginTop: 14, marginBottom: 30 },
   flex: { flex: 1, minWidth: 0 },
   px: { paddingHorizontal: screenPadding },
   pt6: { paddingTop: 6 },

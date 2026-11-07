@@ -6,6 +6,7 @@ import {
   keepPreviousData,
 } from '@tanstack/react-query';
 import type {
+  NoticeboardPost,
   AgreementSnapshot,
   HelperStatus,
   Listing,
@@ -16,6 +17,7 @@ import type {
   NoShowReason,
   Proposal,
   SkillEndorsement,
+  ThankCardKind,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { urgentFirst } from '@/domain/urgent';
@@ -170,7 +172,7 @@ export function useUnreadConversationCount(): number {
   });
   // the thread with «MinNabo» counts as one conversation
   const minnabo = useMinNaboUnread() > 0 ? 1 : 0;
-  return (data ?? []).filter((c) => c.unread).length + minnabo;
+  return (data ?? []).filter((c) => c.unread && !c.archived).length + minnabo;
 }
 
 // --- «MinNabo» in Innboks (0066) ---
@@ -445,11 +447,12 @@ function useOptimisticSend(conversationId: string) {
 export function useSendMessage(conversationId: string, meId: string) {
   const opt = useOptimisticSend(conversationId);
   return useMutation({
-    mutationFn: async (text: string) => {
-      const temp = optimisticMessage(conversationId, meId, { text });
+    mutationFn: async (input: string | { text: string; replyToId?: string }) => {
+      const { text, replyToId } = typeof input === 'string' ? { text: input, replyToId: undefined } : input;
+      const temp = optimisticMessage(conversationId, meId, { text, replyToId });
       opt.add(temp);
       try {
-        await apiClient.sendMessage(conversationId, text);
+        await apiClient.sendMessage(conversationId, text, replyToId);
         opt.remove(temp.id);
         opt.settle();
       } catch (e) {
@@ -1107,6 +1110,24 @@ export function useToggleSavedNotice() {
   });
 }
 
+/** The heart moves at once and falls back if saving fails. */
+export function useToggleNoticeLike() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (post: Pick<NoticeboardPost, 'id' | 'likedByMe'>) => apiClient.toggleNoticeLike(post.id, !post.likedByMe),
+    onMutate: async (post) => {
+      await qc.cancelQueries({ queryKey: noticeboardKeys.all });
+      const before = qc.getQueriesData<NoticeboardPost[]>({ queryKey: noticeboardKeys.all });
+      qc.setQueriesData<NoticeboardPost[]>({ queryKey: noticeboardKeys.all }, (list) =>
+        list?.map((p) => (p.id === post.id ? { ...p, likedByMe: !p.likedByMe, likes: Math.max(0, (p.likes ?? 0) + (p.likedByMe ? -1 : 1)) } : p)),
+      );
+      return { before };
+    },
+    onError: (_e, _post, ctx) => ctx?.before.forEach(([key, value]) => qc.setQueryData(key, value)),
+    onSettled: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
+  });
+}
+
 export function useUpdateNoticeboardPost() {
   const qc = useQueryClient();
   return useMutation({
@@ -1378,3 +1399,209 @@ export function useJoinKommuneWaitlist() {
   return useMutation({ mutationFn: (kommune: string) => apiClient.joinKommuneWaitlist(kommune) });
 }
 
+
+// --- helpers on an oppdrag, questions, follow-ups (0086–0088) ---
+
+export const listingExtraKeys = {
+  slots: (id: string) => ['helperSlots', id] as const,
+  questions: (id: string) => ['listingQuestions', id] as const,
+};
+
+export function useHelperSlots(listingId: string, enabled = true) {
+  return useQuery({
+    queryKey: listingExtraKeys.slots(listingId),
+    queryFn: () => apiClient.getHelperSlots(listingId),
+    enabled: enabled && !!listingId,
+  });
+}
+
+export function useCloseHelperSlots(listingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.closeHelperSlots(listingId),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: listingExtraKeys.slots(listingId) });
+      qc.invalidateQueries({ queryKey: listingKeys.detail(listingId) });
+      qc.invalidateQueries({ queryKey: listingKeys.all });
+    },
+  });
+}
+
+export function useListingQuestions(listingId: string) {
+  return useQuery({
+    queryKey: listingExtraKeys.questions(listingId),
+    queryFn: () => apiClient.listListingQuestions(listingId),
+    enabled: !!listingId,
+  });
+}
+
+function useRefreshQuestions(listingId: string) {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: listingExtraKeys.questions(listingId) });
+}
+
+export function useAskQuestion(listingId: string) {
+  const refresh = useRefreshQuestions(listingId);
+  return useMutation({ mutationFn: (body: string) => apiClient.askListingQuestion(listingId, body), onSettled: refresh });
+}
+
+export function useAnswerQuestion(listingId: string) {
+  const refresh = useRefreshQuestions(listingId);
+  return useMutation({
+    mutationFn: ({ id, answer }: { id: string; answer: string }) => apiClient.answerListingQuestion(id, answer),
+    onSettled: refresh,
+  });
+}
+
+export function useDeleteQuestion(listingId: string) {
+  const refresh = useRefreshQuestions(listingId);
+  return useMutation({ mutationFn: (id: string) => apiClient.deleteListingQuestion(id), onSettled: refresh });
+}
+
+// --- chat: delete, archive, transcript (0089) ---
+
+export function useDeleteMessage(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => apiClient.deleteMessage(messageId),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) });
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+export function useArchiveConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => apiClient.setConversationArchived(id, archived),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+  });
+}
+
+export function useTranscribeMessage(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => apiClient.transcribeMessage(messageId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: chatKeys.messages(conversationId) }),
+  });
+}
+
+// --- dugnad and tool loans (0090) ---
+
+export const noticeExtraKeys = {
+  signups: (id: string) => ['dugnadSignups', id] as const,
+  booked: (id: string) => ['toolBooked', id] as const,
+  bookings: (id: string) => ['toolBookings', id] as const,
+};
+
+export function useDugnadSignups(noticeId: string, enabled = true) {
+  return useQuery({
+    queryKey: noticeExtraKeys.signups(noticeId),
+    queryFn: () => apiClient.listDugnadSignups(noticeId),
+    enabled: enabled && !!noticeId,
+  });
+}
+
+export function useSetDugnadSignup(noticeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (join: boolean) => apiClient.setDugnadSignup(noticeId, join),
+    onSettled: () => qc.invalidateQueries({ queryKey: noticeExtraKeys.signups(noticeId) }),
+  });
+}
+
+export function useToolBookedDays(noticeId: string, enabled = true) {
+  return useQuery({
+    queryKey: noticeExtraKeys.booked(noticeId),
+    queryFn: () => apiClient.listToolBookedDays(noticeId),
+    enabled: enabled && !!noticeId,
+  });
+}
+
+export function useToolBookings(noticeId: string, enabled = true) {
+  return useQuery({
+    queryKey: noticeExtraKeys.bookings(noticeId),
+    queryFn: () => apiClient.listToolBookings(noticeId),
+    enabled: enabled && !!noticeId,
+  });
+}
+
+function useRefreshBookings(noticeId: string) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: noticeExtraKeys.booked(noticeId) });
+    qc.invalidateQueries({ queryKey: noticeExtraKeys.bookings(noticeId) });
+  };
+}
+
+export function useRequestToolBooking(noticeId: string) {
+  const refresh = useRefreshBookings(noticeId);
+  return useMutation({
+    mutationFn: ({ from, to, note }: { from: string; to: string; note?: string }) => apiClient.requestToolBooking(noticeId, from, to, note),
+    onSettled: refresh,
+  });
+}
+
+export function useRespondToolBooking(noticeId: string) {
+  const refresh = useRefreshBookings(noticeId);
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED' }) => apiClient.respondToolBooking(id, status),
+    onSettled: refresh,
+  });
+}
+
+// --- thank-you cards, my numbers, politiattest (0091) ---
+
+export const personalKeys = {
+  thanks: (id: string) => ['thankCards', id] as const,
+  recap: (year: number) => ['yearRecap', year] as const,
+  agreedSum: (year: number) => ['agreedSum', year] as const,
+  police: ['policeCertificate'] as const,
+  policeOf: (id: string) => ['policeBadge', id] as const,
+};
+
+export function useThankCards(profileId: string) {
+  return useQuery({
+    queryKey: personalKeys.thanks(profileId),
+    queryFn: () => apiClient.listThankCards(profileId),
+    enabled: !!profileId,
+  });
+}
+
+export function useSendThankCard(toProfileId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ proposalId, card, message }: { proposalId: string; card: ThankCardKind; message?: string }) =>
+      apiClient.sendThankCard(proposalId, card, message),
+    onSettled: () => qc.invalidateQueries({ queryKey: personalKeys.thanks(toProfileId) }),
+  });
+}
+
+export function useYearRecap(year: number) {
+  return useQuery({ queryKey: personalKeys.recap(year), queryFn: () => apiClient.getYearRecap(year) });
+}
+
+export function useAgreedSum(year: number) {
+  return useQuery({ queryKey: personalKeys.agreedSum(year), queryFn: () => apiClient.getAgreedSum(year) });
+}
+
+export function useMyPoliceCertificate(enabled = true) {
+  return useQuery({ queryKey: personalKeys.police, queryFn: () => apiClient.getMyPoliceCertificate(), enabled });
+}
+
+export function useSubmitPoliceCertificate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) => apiClient.submitPoliceCertificate(path),
+    onSettled: () => qc.invalidateQueries({ queryKey: personalKeys.police }),
+  });
+}
+
+export function usePoliceBadge(profileId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: personalKeys.policeOf(profileId),
+    queryFn: () => apiClient.hasPoliceCertificate(profileId),
+    enabled: enabled && !!profileId,
+  });
+}

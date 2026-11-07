@@ -11,6 +11,7 @@ import { isOpenListing, isTakenListing } from '@/domain/editing';
 import { serverMessage } from '@/lib/errors';
 import { StillAvailableCard } from '@/components/rescue/StillAvailableCard';
 import nb from '@/i18n/nb';
+import { budgetKr as listingBudgetKr, isNewHelper } from '@/domain/newHelper';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import { apiClient } from '@/api/client';
 import {
@@ -135,8 +136,8 @@ export function TilbudDetaljScreen({ proposalId, answerYes }: { proposalId: stri
   const helperName = helper?.displayName ?? '';
   const helperFirst = helperName.split(' ')[0];
   const priceKr = Math.round(proposal.price.amountMinor / 100);
-  const budgetKr = listing?.price && listing.priceMode !== 'BY_AGREEMENT' ? Math.round(listing.price.amountMinor / 100) : null;
-  const diff = budgetKr != null ? priceKr - budgetKr : null;
+  const budgetValue = listing ? listingBudgetKr(listing) : null;
+  const diff = budgetValue != null ? priceKr - budgetValue : null;
   const [whenMain, whenTime] = (proposal.scheduledText ?? '').split(/ (?=kl\. )/);
   const duration = proposal.durationText ?? listing?.task?.durationText;
   const place = listing?.location.place || listing?.location.municipality;
@@ -375,6 +376,7 @@ export function TilbudDetaljScreen({ proposalId, answerYes }: { proposalId: stri
                 <Text style={text.eyebrow}>
                   {isSender ? nb.tilbudDetalj.eyebrowMine(other?.displayName ?? '') : nb.tilbudDetalj.eyebrowFrom}
                 </Text>
+                {other && isNewHelper(other, new Date()) ? <Pill label={nb.card.newHelper} tone="accent" icon="sparkle" size="sm" style={styles.youthPill} /> : null}
                 {other?.youthAge != null ? (
                   <Pill label={nb.youth.marker(other.youthAge)} tone="dark" icon="shield" size="sm" style={styles.youthPill} />
                 ) : null}
@@ -436,12 +438,12 @@ export function TilbudDetaljScreen({ proposalId, answerYes }: { proposalId: stri
               ) : null}
             </View>
             <Text style={styles.display}>{formatPrice(proposal.price)}</Text>
-            {budgetKr != null ? (
+            {budgetValue != null ? (
               <>
                 <Text style={[text.meta, styles.mt6]}>
-                  {isSender ? nb.tilbudDetalj.budgetTheirs(first, kr(budgetKr)) : nb.tilbudDetalj.budgetMine(kr(budgetKr))}
+                  {isSender ? nb.tilbudDetalj.budgetTheirs(first, kr(budgetValue)) : nb.tilbudDetalj.budgetMine(kr(budgetValue))}
                 </Text>
-                <PriceBar price={priceKr} budget={budgetKr} />
+                <PriceBar price={priceKr} budget={budgetValue} />
               </>
             ) : null}
             <View style={styles.noteBox}>

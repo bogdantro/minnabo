@@ -8,12 +8,13 @@ import { track } from './reporting';
  * file and offer "save to Files".
  */
 export async function exportMyData(userId: string): Promise<void> {
-  const [profile, listings, agreements, reviews, savedSearches] = await Promise.all([
+  const [profile, listings, agreements, reviews, savedSearches, thankCards] = await Promise.all([
     apiClient.getProfile(userId),
     apiClient.listMyListings(),
     apiClient.listMyAgreements(),
     apiClient.listReviews(userId),
     apiClient.listSavedSearches().catch(() => []),
+    apiClient.listThankCards(userId).catch(() => []),
   ]);
 
   const payload = {
@@ -23,6 +24,7 @@ export async function exportMyData(userId: string): Promise<void> {
     agreements,
     reviews,
     savedSearches,
+    thankCards,
   };
 
   track('data_exported');

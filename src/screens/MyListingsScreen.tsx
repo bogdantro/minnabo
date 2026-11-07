@@ -223,7 +223,17 @@ export function MyListingsScreen() {
             <EmptyScene icon={GROUPS.find((g) => g.id === group)!.icon} tone="lime" />
             <Text style={styles.emptyTitle}>{empty.title}</Text>
             <Text style={[text.meta, styles.emptyText]}>{empty.text}</Text>
-            <Button label={nb.mine.newListing} variant="ink" size="sm" icon="plus" block={false} align="center" onPress={() => safePush('/legg-ut')} style={styles.mt6} />
+            {/* same choice as the footer: «Tilbyr hjelp» is the only thing a youth account can post */}
+            <Button
+              label={kind === 'offer' ? nb.offer.offerCta : nb.mine.newListing}
+              variant="ink"
+              size="sm"
+              icon={kind === 'offer' ? 'hand' : 'plus'}
+              block={false}
+              align="center"
+              onPress={() => safePush(kind === 'offer' ? '/legg-ut/tilbyr' : '/legg-ut')}
+              style={styles.mt6}
+            />
           </FadeUp>
         ) : (
           shown.map((l) => (

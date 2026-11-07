@@ -3,7 +3,12 @@ import { serverMessage } from '@/lib/errors';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from '@/components/ui/Image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BoardArt } from '@/components/art/Scenes';
+import { ImageViewer } from '@/components/ImageViewer';
+import { DugnadPanel, ToolLoanPanel } from '@/components/NoticeExtras';
+import { DateField } from '@/components/ui/DateField';
+import { EmptyScene } from '@/components/ui/EmptyScene';
+import { TimeField } from '@/components/ui/TimeField';
 import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';
 import type { NoticeComment, NoticeKind, NoticeboardPost } from '@/domain/types';
 import nb from '@/i18n/nb';
@@ -18,6 +23,7 @@ import {
   useDeleteNoticeComment,
   useNoticeComments,
   useUpdateNoticeboardPost,
+  useToggleNoticeLike,
   useToggleSavedNotice,
 } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -29,7 +35,7 @@ import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { pickAndUpload } from '@/lib/uploads';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
-import { NOTICE_KINDS, NOTICE_STYLE } from '@/components/community/noticeKinds';
+import { NOTICE_STYLE, NOTICE_TYPES, noticeType, type NoticeType } from '@/components/community/noticeKinds';
 import {
   Avatar,
   Button,
@@ -40,6 +46,8 @@ import {
   Icon,
   IconButton,
   Input,
+  ListGroup,
+  ListRow,
   Pill,
   Note,
   RowSkeleton,
@@ -51,15 +59,33 @@ import {
   type IconName,
 } from '@/components/ui';
 
-type Filter = NoticeKind | 'ALL';
+type Filter = NoticeType | 'ALL';
+type Photo = { path: string; url: string };
+type Compose = { type?: NoticeType; photo?: Photo };
+
+/** The day from the date field + "10:00" → ISO. */
+const eventIso = (d: Date, hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  const at = new Date(d);
+  at.setHours(h || 0, m || 0, 0, 0);
+  return at.toISOString();
+};
 const TITLE_MAX = 60;
 const TEXT_MAX = 400;
 const COMMENT_MAX = 500;
+/** The feed runs nearly edge to edge, like a group feed. */
+const FEED_INSET = 10;
+const MAX_FACES = 5;
+const QUICK: { key: string; label: string; icon: IconName; bg: string; fg: string; start?: Compose }[] = [
+  { key: 'photo', label: nb.noticeboard.quick.photo, icon: 'image', bg: colors.cyanTint, fg: colors.cyanDeep },
+  { key: 'DUGNAD', label: nb.noticeboard.quick.DUGNAD, ...NOTICE_STYLE.DUGNAD, start: { type: 'DUGNAD' } },
+  { key: 'GIVEAWAY', label: nb.noticeboard.quick.GIVEAWAY, ...NOTICE_STYLE.GIVEAWAY, start: { type: 'GIVEAWAY' } },
+  { key: 'TOOL_LEND', label: nb.noticeboard.quick.TOOL_LEND, ...NOTICE_STYLE.TOOL_LEND, start: { type: 'TOOL_LEND' } },
+];
 
-/** Oppslagstavle (design/screens/Oppslagstavle.dc.html) – oppslag in your kommune. */
+/** Oppslagstavle: the kommune's own group – a cover, a box to write in, and a feed of neighbours' posts. */
 export function NoticeboardScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const me = useCurrentUser();
   const scope = useLocationScope();
   const kommune = me.municipality || scope.municipality || '';
@@ -67,11 +93,14 @@ export function NoticeboardScreen() {
   const del = useDeleteNoticeboardPost();
   const savedIds = useSavedNoticeIds().data ?? [];
   const toggleSaved = useToggleSavedNotice();
+  const toggleLike = useToggleNoticeLike();
   const update = useUpdateNoticeboardPost();
   // "Svar" opens the public comments under the oppslag
-  const { oppslag } = useLocalSearchParams<{ oppslag?: string }>();
+  const { oppslag, ny, tittel, tekst } = useLocalSearchParams<{ oppslag?: string; ny?: string; tittel?: string; tekst?: string }>();
   const [commentsFor, setCommentsFor] = useState<string | null>(typeof oppslag === 'string' ? oppslag : null);
   const [editing, setEditing] = useState<NoticeboardPost | null>(null);
+  const [menuFor, setMenuFor] = useState<NoticeboardPost | null>(null);
+  const [viewer, setViewer] = useState<NoticeboardPost | null>(null);
   const toggleDone = (post: NoticeboardPost) =>
     update.mutate(
       { id: post.id, patch: { done: !post.doneAt } },
@@ -87,11 +116,31 @@ export function NoticeboardScreen() {
       onError: () => toast.error(nb.toast.genericError, { bottom: 100 }),
     });
   };
+  const like = (post: NoticeboardPost) => {
+    haptics.light();
+    toggleLike.mutate(post, { onError: () => toast.error(nb.toast.genericError, { bottom: 100 }) });
+  };
 
   const [filter, setFilter] = useState<Filter>('ALL');
   const myNabolag = useMyNabolag(!!me.id).data ?? [];
   const [mineOnly, setMineOnly] = useState(false);
-  const [compose, setCompose] = useState(false);
+  // «Del hjelper med naboene» on Publisert opens the sheet with the text written for you
+  const [compose, setCompose] = useState<Compose | null>(ny === '1' ? {} : null);
+  // a new key each time, so a quick action starts on its own type with a clean form
+  const [composeKey, setComposeKey] = useState(0);
+  const openCompose = (start: Compose) => {
+    setComposeKey((n) => n + 1);
+    setCompose(start);
+  };
+  // «Bilde»: pick first, like in a group; the sheet opens with the photo in place
+  const photoFirst = async () => {
+    try {
+      const res = await pickAndUpload({ bucket: 'listing-images', folder: me.id, source: 'library' });
+      if (res) openCompose({ photo: { path: res.path, url: res.publicUrl } });
+    } catch (e) {
+      toast.error(serverMessage(e, nb.toast.genericError));
+    }
+  };
   const [freshId, setFreshId] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
 
@@ -104,12 +153,17 @@ export function NoticeboardScreen() {
   const all = (data ?? [])
     .filter((p) => !scope.municipalities.length || scope.municipalities.includes(p.municipality))
     .filter((p) => !mineOnly || !myNabolag.length || !!p.neighbourhoodId);
-  const shown = filter === 'ALL' ? all : all.filter((p) => p.kind === filter);
+  const shown = filter === 'ALL' ? all : all.filter((p) => noticeType(p) === filter);
+  const authors = [...new Set(all.map((p) => p.authorProfileId))];
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/fellesskap'));
+  const back = () => (router.canGoBack() ? router.back() : router.replace(me.isYouth ? '/ung' : '/fellesskap'));
   const remove = async (id: string) => {
     const ok = await confirm({ title: nb.noticeboard.deleteConfirm, destructive: true, confirmLabel: nb.noticeboard.remove });
     if (ok) del.mutate(id, { onSuccess: () => toast.success(nb.noticeboard.deleted, { bottom: 100 }) });
+  };
+  const closeMenu = (then: () => void) => {
+    setMenuFor(null);
+    then();
   };
 
   return (
@@ -121,26 +175,67 @@ export function NoticeboardScreen() {
           <SubHeader
             title={nb.noticeboard.title}
             onBack={back}
-            right={<IconButton icon="edit" iconSize={18} accessibilityLabel={nb.noticeboard.newPost} onPress={() => setCompose(true)} />}
+            right={<IconButton icon="edit" iconSize={18} accessibilityLabel={nb.noticeboard.newPost} onPress={() => openCompose({})} />}
           />
         }
       >
-        <FadeUp style={[styles.px, styles.head]}>
-          {kommune ? <Text style={text.eyebrow}>{nb.noticeboard.eyebrow(kommune)}</Text> : null}
-          <Text style={text.h1} accessibilityRole="header">
-            {nb.noticeboard.heading}
-          </Text>
-          <Text style={[text.body, styles.ink2]}>{nb.noticeboard.lead}</Text>
+        <FadeUp>
+          <View style={styles.cover}>
+            <BoardArt />
+          </View>
+          <View style={[styles.group, shadow.card]}>
+            <View style={styles.groupBadge}>
+              <Icon name="pinned" size={24} color={colors.ink} />
+            </View>
+            <Text style={[text.h1, styles.groupTitle]} accessibilityRole="header">
+              {nb.noticeboard.heading}
+            </Text>
+            <Text style={text.meta}>{[kommune ? nb.noticeboard.eyebrow(kommune) : null, nb.noticeboard.groupMeta].filter(Boolean).join(' · ')}</Text>
+            <Text style={[text.body, styles.ink2]}>{nb.noticeboard.lead}</Text>
+            {authors.length ? (
+              <View style={styles.faces}>
+                <View style={styles.faceRow}>
+                  {authors.slice(0, MAX_FACES).map((id, i) => (
+                    <Face key={id} id={id} first={i === 0} />
+                  ))}
+                </View>
+                <Text style={[text.meta, styles.flex]}>{nb.noticeboard.authors(authors.length)}</Text>
+              </View>
+            ) : null}
+          </View>
         </FadeUp>
 
-        <FadeUp delay={80} style={styles.mt16}>
+        <FadeUp delay={60} style={[styles.feedCard, styles.composer, shadow.card]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={nb.noticeboard.write} onPress={() => openCompose({})} style={styles.composeRow}>
+            <Avatar initials={me.initials} uri={me.avatarUrl} seed={me.id} size={42} ring={false} />
+            <View style={styles.composeBox}>
+              <Text style={styles.composePh} numberOfLines={1}>
+                {nb.noticeboard.composerPh(me.displayName.split(' ')[0])}
+              </Text>
+            </View>
+          </Pressable>
+          <View style={styles.quick}>
+            {QUICK.map((q) => (
+              <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={() => (q.start ? openCompose(q.start) : void photoFirst())} style={({ pressed }) => [styles.quickBtn, pressed && styles.pressed]}>
+                <View style={[styles.quickIcon, { backgroundColor: q.bg }]}>
+                  <Icon name={q.icon} size={17} color={q.fg} />
+                </View>
+                <Text style={styles.quickText} numberOfLines={1}>
+                  {q.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </FadeUp>
+
+        <FadeUp delay={100} style={styles.mt12}>
           <View accessibilityRole="tablist" accessibilityLabel={nb.noticeboard.kindLabel}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-              {(['ALL', ...NOTICE_KINDS] as Filter[]).map((k) => {
+              {(['ALL', ...NOTICE_TYPES] as Filter[]).map((k) => {
                 const on = filter === k;
                 const st = k === 'ALL' ? { icon: 'pinned' as IconName, bg: colors.neutralPill, fg: colors.ink2 } : NOTICE_STYLE[k];
                 const label = k === 'ALL' ? nb.noticeboard.all : nb.noticeboard.kinds[k];
-                const n = k === 'ALL' ? all.length : all.filter((p) => p.kind === k).length;
+                const n = k === 'ALL' ? all.length : all.filter((p) => noticeType(p) === k).length;
                 return (
                   <Pressable
                     key={k}
@@ -182,12 +277,12 @@ export function NoticeboardScreen() {
           </View>
         ) : null}
 
-        <View style={[styles.px, styles.list]}>
+        <View style={styles.list}>
           {isLoading ? (
-            <>
+            <View style={styles.px}>
               <RowSkeleton />
               <RowSkeleton />
-            </>
+            </View>
           ) : isError ? (
             <ErrorState onRetry={() => void refetch()} />
           ) : shown.length ? (
@@ -198,23 +293,22 @@ export function NoticeboardScreen() {
                   now={now}
                   fresh={p.id === freshId}
                   mine={p.authorProfileId === me.id}
+                  meId={me.id}
                   saved={savedIds.includes(p.id)}
+                  onLike={() => like(p)}
                   onReply={() => setCommentsFor(p.id)}
                   onSave={() => save(p.id)}
-                  onEdit={() => setEditing(p)}
-                  onToggleDone={() => toggleDone(p)}
-                  onDelete={() => remove(p.id)}
+                  onMore={() => setMenuFor(p)}
+                  onPhoto={() => setViewer(p)}
                 />
               </Animated.View>
             ))
           ) : (
-            <FadeUp style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Icon name="pinned" size={22} color={colors.cyanDeep} />
-              </View>
+            <FadeUp style={[styles.empty, styles.px]}>
+              <EmptyScene icon="pinned" tone="cyan" />
               <Text style={styles.emptyTitle}>{nb.noticeboard.emptyTitle}</Text>
               {kommune ? <Text style={text.meta}>{nb.noticeboard.emptyText(kommune)}</Text> : null}
-              <Button label={nb.noticeboard.write} variant="ghost" size="sm" block={false} align="center" onPress={() => setCompose(true)} />
+              <Button label={nb.noticeboard.write} variant="ink" size="sm" block={false} align="center" onPress={() => openCompose({})} />
             </FadeUp>
           )}
           {kommune ? (
@@ -226,19 +320,20 @@ export function NoticeboardScreen() {
         <View style={styles.bottom} />
       </Screen>
 
-      <View style={[styles.fab, { bottom: Math.max(30, insets.bottom + 14) }]} pointerEvents="box-none">
-        <Button label={nb.noticeboard.newPost} variant="ink" size="lg" icon="plus" block={false} onPress={() => setCompose(true)} />
-      </View>
-
       <ComposeSheet
-        visible={compose}
+        key={composeKey}
+        visible={!!compose}
+        startType={compose?.type}
+        startPhoto={compose?.photo}
+        startTitle={composeKey === 0 && typeof tittel === 'string' ? tittel : undefined}
+        startBody={composeKey === 0 && typeof tekst === 'string' ? tekst : undefined}
         kommune={kommune}
         place={me.place || kommune}
         userId={me.id}
-        onClose={() => setCompose(false)}
+        onClose={() => setCompose(null)}
         onPublished={(post) => {
-          setCompose(false);
-          if (filter !== 'ALL' && filter !== post.kind) setFilter('ALL');
+          setCompose(null);
+          if (filter !== 'ALL' && filter !== noticeType(post)) setFilter('ALL');
           setFreshId(post.id);
         }}
       />
@@ -258,7 +353,36 @@ export function NoticeboardScreen() {
         meId={me.id}
         onClose={() => setCommentsFor(null)}
       />
+      <Sheet visible={!!menuFor} onClose={() => setMenuFor(null)} title={menuFor?.title}>
+        {menuFor ? (
+          <ListGroup>
+            {menuFor.authorProfileId === me.id ? (
+              <>
+                <ListRow icon="edit" title={nb.noticeboard.menuEdit} onPress={() => closeMenu(() => setEditing(menuFor))} />
+                <ListRow
+                  icon={menuFor.doneAt ? 'undo' : 'check'}
+                  title={menuFor.doneAt ? nb.noticeboard.menuReopen : nb.noticeboard.menuDone}
+                  onPress={() => closeMenu(() => toggleDone(menuFor))}
+                />
+                <ListRow icon="trash" iconBg={colors.dangerTint} iconColor={colors.danger} title={nb.noticeboard.remove} onPress={() => closeMenu(() => void remove(menuFor.id))} />
+              </>
+            ) : (
+              <ListRow icon="flag" title={nb.noticeboard.menuReport} onPress={() => closeMenu(() => safePush(`/rapporter?profil=${menuFor.authorProfileId}`))} />
+            )}
+          </ListGroup>
+        ) : null}
+      </Sheet>
+      <ImageViewer images={viewer?.imageUrl ? [viewer.imageUrl] : []} caption={viewer?.title} onClose={() => setViewer(null)} />
     </>
+  );
+}
+
+function Face({ id, first }: { id: string; first: boolean }) {
+  const { data } = useProfile(id);
+  return (
+    <View style={[styles.face, !first && styles.faceOver]}>
+      <Avatar initials={data?.initials ?? '·'} uri={data?.avatarUrl} seed={id} size={32} ring={false} />
+    </View>
   );
 }
 
@@ -267,94 +391,143 @@ function PostCard({
   now,
   fresh,
   mine,
+  meId,
   saved,
+  onLike,
   onReply,
   onSave,
-  onEdit,
-  onToggleDone,
-  onDelete,
+  onMore,
+  onPhoto,
 }: {
   post: NoticeboardPost;
   now: number;
   fresh: boolean;
   mine: boolean;
+  meId: string;
   saved: boolean;
+  onLike: () => void;
   onReply: () => void;
   onSave: () => void;
-  onEdit: () => void;
-  onToggleDone: () => void;
-  onDelete: () => void;
+  onMore: () => void;
+  onPhoto: () => void;
 }) {
   const { data: author } = useProfile(post.authorProfileId);
-  const k = NOTICE_STYLE[post.kind];
+  const type = noticeType(post);
+  const k = NOTICE_STYLE[type];
+  const likes = post.likes ?? 0;
+  const replies = post.replies ?? 0;
   return (
-    <View style={[styles.post, shadow.card, fresh && styles.postFresh, !!post.doneAt && styles.postDone]}>
+    <View style={[styles.feedCard, styles.post, shadow.card, fresh && styles.postFresh]}>
       <View style={styles.postHead}>
-        <Avatar initials={author?.initials ?? '·'} uri={author?.avatarUrl} seed={post.authorProfileId} size={40} ring={false} />
+        <Avatar initials={author?.initials ?? '·'} uri={author?.avatarUrl} seed={post.authorProfileId} size={44} ring={false} />
         <View style={styles.flex}>
           <Text style={styles.who} numberOfLines={1}>
             {author?.displayName ?? ''}
           </Text>
-          <Text style={[text.meta, styles.f125]}>
-            {[post.neighbourhoodId ? nb.noticeboard.onlyNabolag(post.place) : post.place, fresh ? nb.noticeboard.justNow : postedAgo(post.createdAt, new Date(now)), post.editedAt ? nb.noticeboard.edited : null]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
+          <View style={styles.metaRow}>
+            <Icon name={post.neighbourhoodId ? 'home' : 'globe'} size={12} color={colors.mute} />
+            <Text style={[text.meta, styles.f125, styles.flex]} numberOfLines={1}>
+              {[post.neighbourhoodId ? nb.noticeboard.onlyNabolag(post.place) : post.place, fresh ? nb.noticeboard.justNow : postedAgo(post.createdAt, new Date(now)), post.editedAt ? nb.noticeboard.edited : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.kp, { backgroundColor: k.bg }]}>
-          <Icon name={k.icon} size={14} color={k.fg} />
-          <Text style={[styles.kpText, { color: k.fg }]}>{nb.noticeboard.kinds[post.kind]}</Text>
-        </View>
+        <IconButton icon="more" variant="ghost" iconSize={20} accessibilityLabel={nb.noticeboard.moreAria(post.title)} onPress={onMore} />
       </View>
-      <View style={styles.gap6}>
-        {post.doneAt ? <Pill label={nb.noticeboard.done} tone="ok" icon="check" size="sm" style={styles.selfStart} /> : null}
+
+      <View style={styles.postText}>
+        <View style={styles.tags}>
+          <View style={[styles.kp, { backgroundColor: k.bg }]}>
+            <Icon name={k.icon} size={13} color={k.fg} />
+            <Text style={[styles.kpText, { color: k.fg }]}>{nb.noticeboard.kinds[type]}</Text>
+          </View>
+          {post.doneAt ? <Pill label={nb.noticeboard.done} tone="ok" icon="check" size="sm" /> : null}
+        </View>
         <Text style={styles.title}>{post.title}</Text>
         {post.body ? <Text style={styles.body}>{post.body}</Text> : null}
       </View>
+
       {post.imageUrl ? (
-        <View style={styles.tile}>
+        <Pressable accessibilityRole="imagebutton" accessibilityLabel={nb.noticeboard.openPhoto(post.title)} onPress={onPhoto} style={styles.tile}>
           <Image source={{ uri: post.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+        </Pressable>
+      ) : null}
+
+      {post.isDugnad || post.kind === 'TOOL_LEND' ? (
+        <View style={styles.panels}>
+          {post.isDugnad ? <DugnadPanel post={post} meId={meId} mine={mine} /> : null}
+          {post.kind === 'TOOL_LEND' ? <ToolLoanPanel post={post} meId={meId} mine={mine} /> : null}
         </View>
       ) : null}
-      <View style={styles.pact}>
-        <Button
-          label={post.replies ? nb.noticeboard.replies(post.replies) : nb.noticeboard.reply}
-          icon="reply"
-          variant="ink"
-          size="sm"
-          block={false}
-          accessibilityLabel={nb.noticeboard.replyAria(post.title, post.replies ?? 0)}
-          onPress={onReply}
+
+      {likes || replies ? (
+        <View style={styles.counts}>
+          {likes ? (
+            <View style={styles.likeCount}>
+              <View style={styles.heartDot}>
+                <Icon name="heart" size={11} color={colors.white} filled />
+              </View>
+              <Text style={[text.meta, styles.f125]}>{nb.noticeboard.likes(likes)}</Text>
+            </View>
+          ) : (
+            <View />
+          )}
+          {replies ? <Text style={[text.meta, styles.f125]}>{nb.noticeboard.replies(replies)}</Text> : null}
+        </View>
+      ) : null}
+
+      <View style={styles.actions}>
+        <Action
+          icon="heart"
+          label={nb.noticeboard.like}
+          on={!!post.likedByMe}
+          onColor={colors.heart}
+          a11y={nb.noticeboard.likeAria(post.title, likes)}
+          onPress={onLike}
         />
-        {mine ? (
-          <View style={styles.own}>
-            <IconButton icon="edit" variant="ghost" iconSize={18} accessibilityLabel={nb.noticeboard.editAria(post.title)} onPress={onEdit} />
-            <IconButton
-              icon={post.doneAt ? 'undo' : 'check'}
-              variant="ghost"
-              iconSize={18}
-              iconColor={post.doneAt ? colors.ink2 : colors.ok}
-              accessibilityLabel={post.doneAt ? nb.noticeboard.reopenAria(post.title) : nb.noticeboard.doneAria(post.title)}
-              onPress={onToggleDone}
-            />
-            <IconButton icon="trash" variant="ghost" iconSize={18} iconColor={colors.danger} accessibilityLabel={nb.noticeboard.remove} onPress={onDelete} />
-          </View>
-        ) : (
-          <>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: saved }}
-              accessibilityLabel={saved ? nb.noticeboard.savedLabel : nb.noticeboard.save}
-              onPress={onSave}
-              style={[styles.savebtn, saved && styles.savebtnOn]}
-            >
-              <Icon name="bookmark" size={16} color={saved ? colors.white : colors.ink2} filled={saved} />
-              <Text style={[styles.savebtnText, saved && styles.white]}>{saved ? nb.noticeboard.savedLabel : nb.noticeboard.save}</Text>
-            </Pressable>
-          </>
-        )}
+        <Action icon="msg" label={nb.noticeboard.reply} a11y={nb.noticeboard.replyAria(post.title, replies)} onPress={onReply} />
+        {mine ? null : <Action icon="bookmark" label={saved ? nb.noticeboard.savedLabel : nb.noticeboard.save} on={saved} onColor={colors.ink} a11y={saved ? nb.noticeboard.savedLabel : nb.noticeboard.save} onPress={onSave} />}
       </View>
+
+      {replies ? <LatestReply postId={post.id} total={replies} now={now} onOpen={onReply} /> : null}
     </View>
+  );
+}
+
+function Action({ icon, label, on = false, onColor, a11y, onPress }: { icon: IconName; label: string; on?: boolean; onColor?: string; a11y: string; onPress: () => void }) {
+  const color = on ? (onColor ?? colors.ink) : colors.ink2;
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={a11y} onPress={onPress} style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
+      <Icon name={icon} size={19} color={color} filled={on} />
+      <Text style={[styles.actionText, { color }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** The newest answer right under the post, like a comment in a group. */
+function LatestReply({ postId, total, now, onOpen }: { postId: string; total: number; now: number; onOpen: () => void }) {
+  const list = useNoticeComments(postId).data ?? [];
+  const last = list[list.length - 1];
+  const { data: author } = useProfile(last?.authorProfileId ?? '');
+  if (!last) return null;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={nb.noticeboard.seeAll(total)} onPress={onOpen} style={styles.preview}>
+      <Avatar initials={author?.initials ?? '·'} uri={author?.avatarUrl} seed={last.authorProfileId} size={30} ring={false} />
+      <View style={styles.flex}>
+        <View style={styles.previewBubble}>
+          <Text style={styles.previewName} numberOfLines={1}>
+            {author?.displayName ?? ''}
+          </Text>
+          <Text style={styles.previewText} numberOfLines={2}>
+            {last.body}
+          </Text>
+        </View>
+        <Text style={styles.previewMeta}>{`${postedAgo(last.createdAt, new Date(now))}${total > 1 ? ` · ${nb.noticeboard.seeAll(total)}` : ''}`}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -502,12 +675,22 @@ function CommentRow({
 function ComposeSheet({
   visible,
   editing,
+  startType,
+  startPhoto,
+  startTitle,
+  startBody,
   kommune,
   place,
   userId,
   onClose,
   onPublished,
 }: {
+  /** a quick action under the writing box picked the type already */
+  startType?: NoticeType;
+  /** «Bilde» under the writing box picked it already */
+  startPhoto?: Photo;
+  startTitle?: string;
+  startBody?: string;
   visible: boolean;
   /** set → the sheet edits this oppslag instead of making a new one */
   editing?: NoticeboardPost;
@@ -519,12 +702,13 @@ function ComposeSheet({
 }) {
   const create = useCreateNoticeboardPost();
   const update = useUpdateNoticeboardPost();
-  const [kind, setKind] = useState<NoticeKind | null>(editing?.kind ?? null);
-  const [title, setTitle] = useState(editing?.title ?? '');
-  const [body, setBody] = useState(editing?.body ?? '');
-  const [photo, setPhoto] = useState<{ path: string; url: string } | null>(
-    editing?.imageUrl ? { path: editing.imageUrl, url: editing.imageUrl } : null,
-  );
+  const [type, setType] = useState<NoticeType | null>(editing ? noticeType(editing) : (startType ?? (startTitle ? 'GENERAL' : null)));
+  const dugnad = type === 'DUGNAD';
+  const [title, setTitle] = useState(editing?.title ?? startTitle ?? '');
+  const [body, setBody] = useState(editing?.body ?? startBody ?? '');
+  const [eventDay, setEventDay] = useState<Date | null>(null);
+  const [eventTime, setEventTime] = useState('10:00');
+  const [photo, setPhoto] = useState<Photo | null>(editing?.imageUrl ? { path: editing.imageUrl, url: editing.imageUrl } : (startPhoto ?? null));
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
   const [shake, setShake] = useState(0);
@@ -537,12 +721,13 @@ function ComposeSheet({
   const textBad = body.trim().length < 10;
 
   const reset = () => {
-    setKind(null);
+    setType(null);
     setTitle('');
     setBody('');
     setPhoto(null);
     setTried(false);
     setAudience(null);
+    setEventDay(null);
   };
 
   const addPhoto = async () => {
@@ -559,12 +744,14 @@ function ComposeSheet({
   };
 
   const publish = () => {
-    if (!kind || titleBad || textBad) {
+    if (!type || titleBad || textBad || (dugnad && !eventDay && !editing)) {
       setTried(true);
-      if (!kind) setShake((n) => n + 1);
+      if (!type) setShake((n) => n + 1);
       haptics.warning();
       return;
     }
+    // a dugnad is a GENERAL oppslag with a date, so older apps still show it (0090)
+    const kind: NoticeKind = type === 'DUGNAD' ? 'GENERAL' : type;
     if (editing) {
       update.mutate(
         { id: editing.id, patch: { kind, title: title.trim(), body: body.trim(), imagePath: photo?.path ?? null } },
@@ -580,7 +767,16 @@ function ComposeSheet({
       return;
     }
     create.mutate(
-      { kind, title: title.trim(), body: body.trim(), place, municipality: kommune, imagePath: photo?.path, neighbourhoodId: target?.id },
+      {
+        kind,
+        title: title.trim(),
+        body: body.trim(),
+        place,
+        municipality: kommune,
+        imagePath: photo?.path,
+        neighbourhoodId: target?.id,
+        ...(dugnad && eventDay ? { isDugnad: true, eventAt: eventIso(eventDay, eventTime) } : {}),
+      },
       {
         onSuccess: (post) => {
           haptics.success();
@@ -600,15 +796,15 @@ function ComposeSheet({
         <Text style={text.hint}>{nb.noticeboard.typeHint}</Text>
       </View>
       <Shake shakeKey={shake} style={styles.kinds}>
-        {NOTICE_KINDS.map((k) => {
-          const on = kind === k;
+        {NOTICE_TYPES.map((k) => {
+          const on = type === k;
           return (
             <Pressable
               key={k}
               accessibilityRole="radio"
               accessibilityState={{ selected: on }}
               accessibilityLabel={nb.noticeboard.kinds[k]}
-              onPress={() => setKind(k)}
+              onPress={() => setType(k)}
               style={[styles.kchip, on && styles.kchipOn]}
             >
               <Icon name={NOTICE_STYLE[k].icon} size={16} color={on ? colors.white : colors.ink2} />
@@ -617,7 +813,18 @@ function ComposeSheet({
           );
         })}
       </Shake>
-      {tried && !kind ? <ErrorText shakeKey={shake}>{nb.noticeboard.errKind}</ErrorText> : null}
+      {tried && !type ? <ErrorText shakeKey={shake}>{nb.noticeboard.errKind}</ErrorText> : null}
+
+      {!editing && dugnad ? (
+        <View style={styles.dugnadBox}>
+          <Text style={text.meta}>{nb.dugnad.toggleSub}</Text>
+          <View style={styles.dugnadWhen}>
+            <DateField label={nb.dugnad.date} value={eventDay} onChange={setEventDay} minToday />
+            {tried && !eventDay ? <ErrorText>{nb.dugnad.dateMissing}</ErrorText> : null}
+            <TimeField label={nb.dugnad.time} value={eventTime} onChange={setEventTime} />
+          </View>
+        </View>
+      ) : null}
 
       <Field
         label={nb.noticeboard.titleLabel}
@@ -711,21 +918,52 @@ function ComposeSheet({
 }
 
 const styles = StyleSheet.create({
+  dugnadBox: { marginTop: 14, padding: 14, borderRadius: radius.card, backgroundColor: colors.limeSoft, gap: 12 },
+  dugnadWhen: { gap: 12 },
   flex: { flex: 1, minWidth: 0 },
   px: { paddingHorizontal: screenPadding },
-  head: { marginTop: 8, gap: 8 },
   ink2: { color: colors.ink2 },
   white: { color: colors.white },
+  pressed: { opacity: 0.7 },
   mt8: { marginTop: 8 },
+  mt12: { marginTop: 12 },
   mt14: { marginTop: 14 },
   mt16: { marginTop: 16 },
-  scope: { flexDirection: 'row', gap: 8, marginTop: 6 },
   mt18: { marginTop: 18 },
+  scope: { flexDirection: 'row', gap: 8, marginTop: 6 },
   f125: { fontSize: 12.5 },
-  gap6: { gap: 6 },
   center: { justifyContent: 'center', marginTop: 4 },
-  bottom: { height: 120 },
-  chips: { gap: 8, paddingHorizontal: screenPadding, paddingTop: 2, paddingBottom: 6 },
+  bottom: { height: 60 },
+  cover: { height: 164, overflow: 'hidden' },
+  group: { marginTop: -22, marginHorizontal: FEED_INSET, padding: 16, paddingTop: 34, borderRadius: radius.card, backgroundColor: colors.surface, gap: 5 },
+  groupBadge: {
+    position: 'absolute',
+    left: 16,
+    top: -26,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 3,
+    borderColor: colors.white,
+    backgroundColor: colors.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupTitle: { fontSize: 25, lineHeight: 29 },
+  faces: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  faceRow: { flexDirection: 'row' },
+  face: { borderRadius: 18, borderWidth: 2, borderColor: colors.white, backgroundColor: colors.white },
+  faceOver: { marginLeft: -10 },
+  feedCard: { marginHorizontal: FEED_INSET, borderRadius: radius.card, backgroundColor: colors.surface },
+  composer: { marginTop: 10, padding: 12, gap: 10 },
+  composeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  composeBox: { flex: 1, minWidth: 0, height: 44, borderRadius: radius.pill, backgroundColor: colors.bg, justifyContent: 'center', paddingHorizontal: 16 },
+  composePh: { fontFamily: fonts.body, fontSize: 15, color: colors.mute },
+  quick: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.line2, paddingTop: 8 },
+  quickBtn: { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  quickIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  quickText: { flexShrink: 1, fontFamily: fonts.bodySemi, fontSize: 12.5, color: colors.ink2 },
+  chips: { gap: 8, paddingHorizontal: FEED_INSET, paddingTop: 2, paddingBottom: 6 },
   chip: {
     height: 42,
     paddingLeft: 6,
@@ -742,33 +980,32 @@ const styles = StyleSheet.create({
   ci: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.ink },
   chipCount: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.ink, opacity: 0.6 },
-  list: { gap: 14, marginTop: 12 },
-  post: { backgroundColor: colors.surface, borderRadius: 26, padding: 16, gap: 12 },
+  list: { gap: 10, marginTop: 8 },
+  post: { overflow: 'hidden', paddingTop: 12 },
   postFresh: { borderWidth: 2, borderColor: colors.lime },
-  postHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  who: { fontFamily: fonts.bodyBold, fontSize: 14.5, color: colors.ink },
-  kp: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 26, paddingHorizontal: 10, borderRadius: radius.pill },
+  postHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 4 },
+  who: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  postText: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 6 },
+  tags: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kp: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 24, paddingHorizontal: 9, borderRadius: radius.pill },
   kpText: { fontFamily: fonts.bodyBold, fontSize: 12 },
-  title: { fontFamily: fonts.display, fontSize: 17, lineHeight: 21, letterSpacing: -0.2, color: colors.ink },
-  body: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 21.75, color: colors.ink2 },
-  tile: { height: 150, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.track },
-  pact: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  savebtn: {
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    backgroundColor: colors.white,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  savebtnOn: { backgroundColor: colors.ink, borderColor: colors.ink },
-  savebtnText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.ink2 },
-  own: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto' },
-  postDone: { opacity: 0.72 },
-  selfStart: { alignSelf: 'flex-start' },
+  title: { fontFamily: fonts.display, fontSize: 18, lineHeight: 23, letterSpacing: -0.2, color: colors.ink },
+  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.ink },
+  tile: { height: 250, backgroundColor: colors.track },
+  panels: { paddingHorizontal: 14, paddingTop: 12, gap: 10 },
+  counts: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: 10 },
+  likeCount: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  heartDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.heart, alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', marginTop: 8, marginHorizontal: 8, paddingVertical: 2, borderTopWidth: 1, borderTopColor: colors.line2 },
+  action: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: radius.m },
+  actionPressed: { backgroundColor: colors.bg },
+  actionText: { fontFamily: fonts.bodySemi, fontSize: 14 },
+  preview: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingBottom: 12, paddingTop: 4 },
+  previewBubble: { alignSelf: 'flex-start', maxWidth: '100%', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: colors.bg },
+  previewName: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.ink },
+  previewText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 19, color: colors.ink },
+  previewMeta: { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.mute, marginTop: 3, marginLeft: 12 },
   cwrap: { gap: 14 },
   cform: { gap: 8 },
   cinput: { minHeight: 76, textAlignVertical: 'top' },
@@ -779,18 +1016,8 @@ const styles = StyleSheet.create({
   chead: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   cname: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.ink, flexShrink: 1 },
   ctext: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 21, color: colors.ink },
-  empty: {
-    padding: 26,
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.dashed,
-    borderRadius: 20,
-  },
-  emptyIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.cyanTint, alignItems: 'center', justifyContent: 'center' },
+  empty: { paddingVertical: 18, alignItems: 'center', gap: 8 },
   emptyTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink, textAlign: 'center' },
-  fab: { position: 'absolute', right: screenPadding, zIndex: 20 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 },
   kinds: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   kchip: {

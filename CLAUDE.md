@@ -27,12 +27,15 @@ When the design and these docs disagree, the `.dc.html` file wins. When unsure, 
 3. **Login is Vipps only.** No phone/e-mail/OTP/BankID login. Vipps is never used for payment.
 4. **No payment UI ever.** Show the payment note near every price/offer:
    "Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling."
-5. **Under-18 = youth account.** Can only: browse oppdrag, give/withdraw tilbud, post «Tilbyr hjelp» in the youth categories (hage, dyrepass, datahjelp, snømåking – changed 2026-11-03, 0084), chat inside conversations created by their tilbud or started by a nabo on their own offer, view profile, safety/privacy. Everything else is locked. Enforce on the **backend** (roles/permissions), the UI only reflects it. See `OppdragUng.dc.html`, `Ungdomskonto.dc.html`.
+5. **Under-18 = youth account.** Can only: browse and search oppdrag (never other helpers), give/withdraw tilbud, post «Tilbyr hjelp» in every category, see Fellesskap, use Oppslagstavla, save searches, give and get reviews, chat inside conversations created by their tilbud or started by a nabo on their own offer, view profile, safety/privacy (changed 2026-11-07, 0094). Every review a youth gives or gets waits for a moderator (Admin › Vurderinger). Everything else is locked. Enforce on the **backend** (roles/permissions), the UI only reflects it. See `OppdragUng.dc.html`, `Ungdomskonto.dc.html`.
 6. **Approximate location only** in public views – never an exact address or precise pin.
 7. **No gradients anywhere.** Flat colours only.
 8. **Norsk bokmål only**, copy exactly as in the design files.
 9. Oppdrag is the home/default route. Avatar top-right on every main screen → profile.
 10. Accessibility: 44px touch targets, `accessibilityLabel` on icon-only buttons, contrast as designed.
+
+## Testing the database
+`bash scripts/test-migrations.sh` loads every migration into a throwaway Postgres and runs `supabase/tests/new_features_checks.sql` as real signed-in users. Add a check with every migration.
 
 ## Tech choices
 - Fonts: `@expo-google-fonts/bricolage-grotesque`, `@expo-google-fonts/figtree`

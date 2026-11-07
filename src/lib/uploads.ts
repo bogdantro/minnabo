@@ -5,7 +5,7 @@ import { publicUrl } from './storage';
 import { UserError, backendError } from './errors';
 
 /** `report-attachments` is private (reporter + admins only); the others are public-read. */
-export type UploadBucket = 'avatars' | 'listing-images' | 'chat-attachments' | 'report-attachments';
+export type UploadBucket = 'avatars' | 'listing-images' | 'chat-attachments' | 'report-attachments' | 'police-certificates';
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const OK_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -50,13 +50,16 @@ async function uploadUri(
   return {
     path,
     // private buckets have no public link (chat photos are shown through signed links)
-    publicUrl: bucket === 'report-attachments' || bucket === 'chat-attachments' ? '' : publicUrl(bucket, path)!,
+    publicUrl: bucket === 'report-attachments' || bucket === 'chat-attachments' || bucket === 'police-certificates' ? '' : publicUrl(bucket, path)!,
     localUri: compressed,
     bytes: bytes.byteLength,
   };
 }
 
 /** `publicUrl` is empty for the private buckets; `localUri` / `bytes` describe the uploaded file. */
+/** A file made in the app (a covered photo): the same compression and storage as a picked one. */
+export const uploadCaptured = (bucket: UploadBucket, folder: string, uri: string): Promise<PickResult> => uploadUri(bucket, folder, uri);
+
 export type PickResult = { path: string; publicUrl: string; localUri?: string; bytes?: number };
 
 /**

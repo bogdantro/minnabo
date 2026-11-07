@@ -87,6 +87,25 @@ export const KOMMUNE_NEIGHBOURS: Record<string, readonly string[]> = {
   'Tolga': ['Tynset', 'Os', 'Rendalen'],
 };
 
+/**
+ * Kommuner so close together that they count as one area (asked 2026-11-04): someone in any of them
+ * sees oppdrag from all of them, even on «Bare min kommune», and hears about every new one.
+ * The database has the same list (kommune_group, migration 0085) – change both.
+ */
+export const KOMMUNE_GROUPS: readonly (readonly string[])[] = [['Lillehammer', 'Øyer', 'Gausdal']];
+
+/** 'Øyer' -> ['Øyer', 'Lillehammer', 'Gausdal'] (own kommune first); a kommune outside a group is alone. */
+export function kommuneGroup(k: string): string[] {
+  const group = KOMMUNE_GROUPS.find((g) => g.includes(k));
+  return group ? [k, ...group.filter((x) => x !== k)] : [k];
+}
+
+/** 'Øyer' -> 'Øyer, Lillehammer og Gausdal'; 'Hamar' -> 'Hamar'. */
+export function kommuneGroupNames(k: string): string {
+  const g = kommuneGroup(k);
+  return g.length === 1 ? k : `${g.slice(0, -1).join(', ')} og ${g[g.length - 1]}`;
+}
+
 const norm = (s: string): string => s.trim().toLowerCase();
 
 const CANONICAL_BY_NORM = new Map<string, string>(
@@ -110,17 +129,18 @@ export function resolveKommune(input: string): string | undefined {
 
 /**
  * Kommune allow-list for a reach level (Oppdrag › Rekkevidde):
- * 0 = own kommune, 1 = own + direct neighbours, 2 = all of Innlandet.
+ * 0 = own kommune (with its group, KOMMUNE_GROUPS), 1 = + direct neighbours, 2 = all of Innlandet.
  */
 export function expandKommuner(
   base: string | undefined,
   reach: 0 | 1 | 2,
 ): string[] {
   if (!base) return [];
-  if (reach === 0) return [base];
-  if (reach === 2) return [base, ...INNLANDET_KOMMUNER.filter((k) => k !== base)];
+  const group = kommuneGroup(base);
+  if (reach === 0) return group;
+  if (reach === 2) return [...group, ...INNLANDET_KOMMUNER.filter((k) => !group.includes(k))];
   const known = KOMMUNE_NEIGHBOURS[base] ?? [];
-  return [base, ...known.filter((k) => k !== base)];
+  return [...group, ...known.filter((k) => !group.includes(k))];
 }
 
 /** Approximate kommune centres (administrasjonssenter) for the offline location lookup. */
@@ -133,6 +153,9 @@ const KOMMUNE_CENTRES: Record<string, [number, number]> = {
   Grue: [60.462, 12.06], Åsnes: [60.613, 12.016], Sel: [61.773, 9.54], 'Nord-Fron': [61.596, 9.751],
   'Sør-Fron': [61.552, 9.92], Ringebu: [61.53, 10.14], Tynset: [62.275, 10.778], Tolga: [62.41, 10.993],
 };
+
+/** [lat, lon] of a kommune's centre: only for placing soft circles, never a person or an address. */
+export const kommuneCentre = (k: string): [number, number] | undefined => KOMMUNE_CENTRES[k];
 
 /** Nearest served kommune to a coordinate, or undefined when further than ~60 km from all of them. */
 export function nearestKommune(lat: number, lon: number): string | undefined {

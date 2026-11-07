@@ -29,6 +29,9 @@ import {
   useSendAttachment,
   useSendVoice,
   useSendMessage,
+  useAppSettings,
+  useDeleteMessage,
+  useTranscribeMessage,
   useSetPinnedMessage,
   useToggleBlock,
   useToggleReaction,
@@ -46,10 +49,12 @@ import { toast } from '@/lib/toast';
 import { pickAndUpload, pickAndUploadMany, uploadVoice } from '@/lib/uploads';
 import type { VoiceClip } from '@/components/chat/Voice';
 import { colors, motion, radius, shadow, text } from '@/theme/theme';
+import { confirm } from '@/lib/confirm';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import { AgreementBanner, BlockedBar, ChatTopBar, Composer, ListingStrip, PinBar } from '@/components/chat/ChatTop';
 import { DateChip, MessageRow, parseTimeProposal, SysPill, TimeCard, timeAnswer } from '@/components/chat/ChatThread';
-import { ChatMenuSheet, PinSheet, PlaceSheet, ShareSheet, TimeSheet, openMapLink } from '@/components/chat/ChatSheets';
+import { ChatMenuSheet, PlaceSheet, ShareSheet, TimeSheet, openMapLink } from '@/components/chat/ChatSheets';
+import { MessageActionsSheet, PhotosSheet, messagePreview } from '@/components/chat/MessageExtras';
 import { Button, Dialog, ErrorState, Icon, KeyValueRow, OfferCard, RowSkeleton, TypingIndicator, Avatar } from '@/components/ui';
 
 const STATUS = nb.chat.status;
@@ -79,6 +84,11 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
   const toggleReaction = useToggleReaction(c.id, me.id);
   const setPinned = useSetPinnedMessage(c.id);
   const respond = useRespondToProposal(c.id);
+  const deleteMessage = useDeleteMessage(c.id);
+  const transcribe = useTranscribeMessage(c.id);
+  const { transcriptsEnabled } = useAppSettings();
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [photosOpen, setPhotosOpen] = useState(false);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [viewer, setViewer] = useState<string | null>(null);
@@ -98,6 +108,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
 
   const list = messages ?? [];
   const pinnedMessage = list.find((m) => m.pinned);
+  const photos = list.filter((m) => m.kind === 'IMAGE' && !!m.attachmentUrl && !m.deletedAt);
   const blocked = (blockedIds.data ?? []).includes(c.counterpart.id);
   const activeAgreement = agreement && !agreement.cancelledAt ? agreement : null;
   const first = c.counterpart.displayName.split(' ')[0];
@@ -151,7 +162,9 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
       outbox.enqueue({ kind: 'message', conversationId: c.id, text: t });
       return;
     }
-    sendMessage.mutate(t, { onError: sendFailed });
+    const reply = replyTo && !replyTo.pending ? replyTo.id : undefined;
+    setReplyTo(null);
+    sendMessage.mutate({ text: t, replyToId: reply }, { onError: sendFailed });
   };
   const attach = (path: string, preview?: string) => {
     atBottom.current = true;
@@ -253,6 +266,18 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
     });
   };
 
+  const nameOf = (m: Message) => (m.authorProfileId === me.id ? nb.chat.you : first);
+  const askDelete = async (m: Message) => {
+    setPinFor(null);
+    const ok = await confirm({
+      title: nb.chat.deleteTitle,
+      message: nb.chat.deleteBody,
+      confirmLabel: nb.chat.deleteConfirm,
+      destructive: true,
+    });
+    if (ok) deleteMessage.mutate(m.id, { onError: (e) => toast.error(serverMessage(e, nb.toast.genericError), { bottom: 150 }) });
+  };
+
   // Last own message gets the Sendt / Levert / Lest line.
   let lastMine = -1;
   list.forEach((m, i) => {
@@ -313,6 +338,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
         </View>
       );
     }
+    const quotedMsg = m.replyToId ? list.find((x) => x.id === m.replyToId) : undefined;
     const groupBreak = (x?: Message) => !x || x.authorProfileId !== m.authorProfileId || x.kind === 'SYSTEM' || x.kind === 'PROPOSAL';
     return (
       <View key={m.id}>
@@ -334,6 +360,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
               setViewer(m.attachmentUrl);
               return;
             }
+            if (m.deletedAt) return;
             if (m.kind === 'TEXT' && m.text.startsWith('📍') && openMapLink(m.text)) return;
             setSelected(selected === m.id ? null : m.id);
           }}
@@ -343,10 +370,17 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           }}
           onLongPress={() => {
             // a photo opens on tap, so holding it gives the reactions; hold once more to pin
+            if (m.deletedAt) return;
             if (m.kind === 'IMAGE' && selected !== m.id) setSelected(m.id);
             else setPinFor(m);
           }}
           onRetry={() => retry(m)}
+          quoted={quotedMsg ? { name: nameOf(quotedMsg), preview: messagePreview(quotedMsg) } : undefined}
+          hasAgreement={!!activeAgreement}
+          onReply={() => setReplyTo(m)}
+          transcriptsEnabled={transcriptsEnabled}
+          transcribing={transcribe.isPending && transcribe.variables === m.id}
+          onTranscribe={() => transcribe.mutate(m.id, { onError: (e) => toast.error(serverMessage(e, nb.toast.genericError), { bottom: 150 }) })}
         />
       </View>
     );
@@ -430,6 +464,9 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           onTyping={notifyTyping}
           replies={replies}
           onVoice={sendVoice}
+          replyTo={replyTo ? { name: nameOf(replyTo), preview: messagePreview(replyTo) } : null}
+          onCancelReply={() => setReplyTo(null)}
+          hasAgreement={!!activeAgreement}
         />
       )}
 
@@ -482,6 +519,11 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
         listingTitle={c.listing.title}
         muted={muted}
         blocked={blocked}
+        photoCount={photos.length}
+        onPhotos={() => {
+          setSheet(null);
+          setPhotosOpen(true);
+        }}
         onProfile={() => {
           setSheet(null);
           safePush(`/profil/${c.counterpart.id}`);
@@ -504,13 +546,29 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
           else setBlockDlg(true);
         }}
       />
-      <PinSheet
-        visible={!!pinFor}
-        pinned={!!pinFor?.pinned}
+      <MessageActionsSheet
+        message={pinFor}
+        mine={pinFor?.authorProfileId === me.id}
         onClose={() => setPinFor(null)}
-        onToggle={() => {
+        onReply={() => {
+          setReplyTo(pinFor);
+          setPinFor(null);
+        }}
+        onTogglePin={() => {
           if (pinFor) setPinned.mutate(pinFor.pinned ? null : pinFor.id);
           setPinFor(null);
+        }}
+        onDelete={() => {
+          if (pinFor) void askDelete(pinFor);
+        }}
+      />
+      <PhotosSheet
+        visible={photosOpen}
+        photos={photos}
+        onClose={() => setPhotosOpen(false)}
+        onOpen={(uri) => {
+          setPhotosOpen(false);
+          setViewer(uri);
         }}
       />
 

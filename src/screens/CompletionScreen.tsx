@@ -5,6 +5,7 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
+import { ThankCardPicker } from '@/components/ThankCards';
 import {
   useAddPortfolioItem,
   useAgreementByProposal,
@@ -257,13 +258,18 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
             </View>
           </View>
         </FadeUp>
+        {done && !me.isYouth && otherId ? (
+          <View style={[styles.px, styles.thanks]}>
+            <ThankCardPicker proposalId={proposalId} toProfileId={otherId} first={first} />
+          </View>
+        ) : null}
         <View style={styles.bottom} />
       </Screen>
 
       <StickyFooter>
         {done ? (
           <FadeUp style={styles.footCol}>
-            {me.isYouth ? null : myRating == null ? (
+            {myRating == null ? (
               <Button label={nb.completion.giveReview} icon="star" size="lg" onPress={() => router.replace(`/vurder/${proposalId}`)} />
             ) : (
               <Button label={nb.completion.reviewed} icon="check" variant="ghost" size="lg" disabled onPress={() => undefined} />
@@ -418,6 +424,7 @@ function IssueOption({ icon, bg, fg, title, sub, onPress }: { icon: IconKey; bg:
 }
 
 const styles = StyleSheet.create({
+  thanks: { marginTop: 14 },
   flex: { flex: 1 },
   flex1: { flex: 1, minWidth: 0, gap: 2 },
   px: { paddingHorizontal: screenPadding },

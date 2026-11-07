@@ -5,7 +5,7 @@ import nb from '@/i18n/nb';
 import { detectKommune, locationErrorText } from '@/lib/geo';
 import type { Reach } from '@/lib/locationScope';
 import { KommuneWaitlist } from '@/components/KommuneWaitlist';
-import { KOMMUNE_NEIGHBOURS, LAUNCH_KOMMUNER, isLaunchKommune } from '@/data/kommuner';
+import { KOMMUNE_NEIGHBOURS, LAUNCH_KOMMUNER, isLaunchKommune, kommuneGroupNames } from '@/data/kommuner';
 import { colors, motion, text } from '@/theme/theme';
 import {
   Button,
@@ -142,7 +142,9 @@ export function LocationSheet({ visible, onClose, kommune, reach, onApply }: Loc
         </View>
         <View style={styles.reachText}>
           <Text style={[text.h4, { fontFamily: text.h3.fontFamily, fontSize: 17 }]}>{r.name}</Text>
-          <Text style={text.meta}>{r.desc(draftK || base || nb.oppdrag.yourKommune)}</Text>
+          <Text style={text.meta}>
+            {r.desc(draftR === 0 && (draftK || base) ? kommuneGroupNames(draftK || base!) : draftK || base || nb.oppdrag.yourKommune)}
+          </Text>
         </View>
       </View>
       <Segmented<`${Reach}`>

@@ -14,8 +14,11 @@ import { HomeTopBar } from '@/components/TopBar';
 import { LocationSheet } from '@/components/LocationSheet';
 import { OppdragCard } from '@/components/OppdragCard';
 import { DraftCard } from '@/components/DraftCard';
+import { NewSinceLine } from '@/components/NewSinceLine';
+import { newSinceIndex, useFeedSeen } from '@/lib/feedSeen';
 import { SeasonalRow } from '@/components/SeasonalRow';
 import { JobDayCard } from '@/components/JobDayCard';
+import { kommuneGroupNames } from '@/data/kommuner';
 import {
   Button,
   CategoryArt,
@@ -64,6 +67,8 @@ export function OppdragScreen() {
     return (tasks.data ?? []).filter((l) => l.owner.id !== me.id && !dismissed.has(l.id) && Date.parse(l.createdAt) >= since).length;
   }, [tasks.data, me.id, dismissed, openedAt]);
 
+  const seen = useFeedSeen(kind === 'offer' ? 'home-offers' : 'home');
+  const newLine = newSinceIndex(shown, seen, openedAt);
   const loading = jobs.isLoading || !ready;
   const refreshing = jobs.isFetching && !jobs.isLoading;
   const first = me.displayName.split(' ')[0] ?? '';
@@ -213,7 +218,7 @@ export function OppdragScreen() {
             <View style={[styles.emptyIcon, !municipality && styles.emptyIconPin]}>
               <Icon name={municipality ? 'clip' : 'pin'} size={26} color={municipality ? colors.limeDeep : colors.cyanDeep} />
             </View>
-            <Text style={styles.emptyTitle}>{municipality ? nb.oppdrag.empty(municipality) : nb.oppdrag.noKommuneTitle}</Text>
+            <Text style={styles.emptyTitle}>{municipality ? nb.oppdrag.empty(reach === 0 ? kommuneGroupNames(municipality) : municipality) : nb.oppdrag.noKommuneTitle}</Text>
             <Text style={[text.meta, styles.center, styles.emptyBody]}>
               {!municipality ? nb.oppdrag.noKommuneBody : reach < 2 ? nb.oppdrag.emptyHint : nb.oppdrag.emptyHintWide}
             </Text>
@@ -231,6 +236,7 @@ export function OppdragScreen() {
         ) : (
           shown.map((l, i) => (
             <FadeUp key={l.id} delay={Math.min(i, 9) * 50}>
+              {i === newLine ? <NewSinceLine /> : null}
               <OppdragCard listing={l} />
             </FadeUp>
           ))

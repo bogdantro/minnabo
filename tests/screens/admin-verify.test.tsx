@@ -23,21 +23,11 @@ test('Verifisering shows Vipps + verified methods, what was checked and the trus
   await fireEvent.press(screen.getByLabelText('Telefon, Bekreftet'));
   expect(await screen.findByText('Bekreftet 15. januar 2026')).toBeTruthy();
 
-  // "For bedrifter" is hidden for now (flag businessRegistration off) – no way in from here
-  await fireEvent.press(screen.getByLabelText('Bedrift, Ikke aktuelt'));
-  await settle();
-  expect(screen.queryByText('Registrer bedrift')).toBeNull();
+  // removed on request 2026-11-07
+  expect(screen.queryByLabelText(/^Bedrift/)).toBeNull();
 
   // checklist is computed from the real profile (photo + presentation + categories done)
   expect(screen.getByText('3 av 6 fullført')).toBeTruthy();
-});
-
-test('with businessRegistration on, Verifisering links to For bedrifter', async () => {
-  setFlagOverride('businessRegistration', true);
-  profileRepository._reset();
-  await renderWithProviders(<VerifiseringssenterScreen />);
-  await fireEvent.press(await screen.findByLabelText('Bedrift, Ikke aktuelt'));
-  expect(await screen.findByText('Registrer bedrift')).toBeTruthy();
 });
 
 test('For bedrifter shows only the information card while the form is switched off', async () => {

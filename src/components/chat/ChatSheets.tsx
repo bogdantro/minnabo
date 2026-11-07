@@ -16,7 +16,6 @@ import {
   Input,
   ListGroup,
   ListRow,
-  ScaleIn,
   Sheet,
   Toggle,
   type IconKey,
@@ -279,7 +278,11 @@ export function ChatMenuSheet({
   onToggleMute,
   onReport,
   onBlock,
+  onPhotos,
+  photoCount,
 }: {
+  onPhotos: () => void;
+  photoCount: number;
   visible: boolean;
   onClose: () => void;
   profile: PublicProfile;
@@ -317,6 +320,7 @@ export function ChatMenuSheet({
       <ListGroup>
         <ListRow icon="user" title={nb.chat.seeProfile} subtitle={nb.chat.seeProfileSub} onPress={onProfile} />
         <ListRow icon="clip" title={nb.chat.seeListing} subtitle={listingTitle} onPress={onListing} />
+        <ListRow icon="image" title={nb.chat.photosTitle} subtitle={nb.chat.photosCount(photoCount)} onPress={onPhotos} />
         <ListRow
           icon="bell"
           title={nb.chat.muteTitle}
@@ -348,16 +352,6 @@ export function ChatMenuSheet({
 }
 
 /* ---------- pin (long press) ---------- */
-
-export function PinSheet({ visible, pinned, onClose, onToggle }: { visible: boolean; pinned: boolean; onClose: () => void; onToggle: () => void }) {
-  return (
-    <Sheet visible={visible} onClose={onClose} title={nb.chat.messageActions}>
-      <ScaleIn>
-        <Button label={pinned ? nb.chat.unpinMessage : nb.chat.pinMessage} icon={pinned ? 'x' : 'pinned'} variant="ghost" onPress={onToggle} />
-      </ScaleIn>
-    </Sheet>
-  );
-}
 
 const styles = StyleSheet.create({
   quickWrap: { marginBottom: 6 },

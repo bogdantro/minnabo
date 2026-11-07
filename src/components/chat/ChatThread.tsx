@@ -6,6 +6,7 @@ import { formatTime } from '@/lib/datetime';
 import { colors, radius, shadow, text } from '@/theme/theme';
 import { Avatar, Button, FadeUp, Icon, ScaleIn, type IconKey } from '@/components/ui';
 import { VoiceBubble } from './Voice';
+import { QuotedMessage, RichText, ScamWarning, SwipeToReply, TranscriptLine } from './MessageExtras';
 
 /** Reactions offered on tap (stored as emoji; drawn as icons like the design). */
 export const REACTIONS: { emoji: string; icon: IconKey; color: string; filled?: boolean }[] = [
@@ -73,15 +74,45 @@ type RowProps = {
   onReact: (emoji: string) => void;
   onLongPress: () => void;
   onRetry: () => void;
+  /** the message this one answers */
+  quoted?: { name: string; preview: string };
+  /** the warnings about money and links only apply before an avtale */
+  hasAgreement: boolean;
+  onReply: () => void;
+  transcriptsEnabled: boolean;
+  transcribing: boolean;
+  onTranscribe: () => void;
 };
 
 /** `.mrow` – bubble with tap → reaction popover, reaction chips, ticks, status line. */
-export function MessageRow({ m, mine, meId, showAvatar, firstOfGroup, avatar, pinned, selected, statusText, onSelect, onReact, onLongPress, onRetry }: RowProps) {
+export function MessageRow({
+  m,
+  mine,
+  meId,
+  showAvatar,
+  firstOfGroup,
+  avatar,
+  pinned,
+  selected,
+  statusText,
+  onSelect,
+  onReact,
+  onLongPress,
+  onRetry,
+  quoted,
+  hasAgreement,
+  onReply,
+  transcriptsEnabled,
+  transcribing,
+  onTranscribe,
+}: RowProps) {
+  const gone = !!m.deletedAt;
   const isImg = m.kind === 'IMAGE' && !!m.attachmentUrl;
   const isVoice = m.kind === 'AUDIO' && !!m.attachmentUrl;
   const reactions = Object.entries(m.reactions ?? {}).filter(([, ids]) => ids.length);
   const tick: IconKey | null = !mine || m.failed ? null : m.pending ? 'clock' : m.delivery === 'SENT' ? 'check' : 'checks';
   return (
+    <SwipeToReply enabled={!gone && !m.pending && !m.failed} onReply={onReply}>
     <View style={[styles.mrow, mine ? styles.me : styles.them, firstOfGroup && styles.gap]}>
       {!mine ? (
         showAvatar ? (
@@ -133,12 +164,21 @@ export function MessageRow({ m, mine, meId, showAvatar, firstOfGroup, avatar, pi
               <Text style={[styles.pintagText, { color: mine ? colors.lime : colors.limeDeep }]}>{nb.chat.pinnedTag}</Text>
             </View>
           ) : null}
-          {isImg ? (
+          {quoted && !gone ? <QuotedMessage name={quoted.name} preview={quoted.preview} mine={mine} /> : null}
+          {gone ? (
+            <View style={styles.goneRow}>
+              <Icon name="ban" size={14} color={mine ? colors.onInk72 : colors.faint} />
+              <Text style={[styles.goneText, { color: mine ? colors.onInk72 : colors.mute }]}>{nb.chat.deleted}</Text>
+            </View>
+          ) : isImg ? (
             <Image source={{ uri: m.attachmentUrl }} style={styles.photo} accessibilityIgnoresInvertColors />
           ) : isVoice ? (
-            <VoiceBubble uri={m.attachmentUrl!} ms={m.audioMs ?? 0} mine={mine} />
+            <>
+              <VoiceBubble uri={m.attachmentUrl!} ms={m.audioMs ?? 0} mine={mine} />
+              <TranscriptLine m={m} mine={mine} enabled={transcriptsEnabled} loading={transcribing} onAsk={onTranscribe} />
+            </>
           ) : (
-            <Text style={[text.bubble, { color: mine ? colors.white : colors.ink }]}>{m.text}</Text>
+            <RichText value={m.text} mine={mine} />
           )}
           <View style={[styles.btime, isImg && styles.btimeImg]}>
             <Text style={[text.time, mine && !isImg && styles.timeOnDark]}>{formatTime(m.createdAt)}</Text>
@@ -147,6 +187,7 @@ export function MessageRow({ m, mine, meId, showAvatar, firstOfGroup, avatar, pi
             ) : null}
           </View>
         </Pressable>
+        {!mine && !gone && m.kind === 'TEXT' ? <ScamWarning m={m} hasAgreement={hasAgreement} /> : null}
         {reactions.length ? (
           <View style={[styles.rchips, mine ? styles.rchipsMe : styles.rchipsThem]}>
             {reactions.map(([emoji, ids]) => {
@@ -179,6 +220,7 @@ export function MessageRow({ m, mine, meId, showAvatar, firstOfGroup, avatar, pi
         ) : null}
       </View>
     </View>
+    </SwipeToReply>
   );
 }
 
@@ -283,6 +325,8 @@ const styles = StyleSheet.create({
   bubIn: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderBottomLeftRadius: 7 },
   bubOut: { backgroundColor: colors.ink, borderBottomRightRadius: 7 },
   imgBub: { padding: 5 },
+  goneRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  goneText: { fontFamily: text.body.fontFamily, fontSize: 14, fontStyle: 'italic' },
   photo: { width: 228, height: 164, borderRadius: 17 },
   btime: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 4 },
   btimeImg: { paddingHorizontal: 8, paddingBottom: 4 },

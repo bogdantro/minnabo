@@ -10,13 +10,15 @@ beforeEach(async () => {
   dismissedLeads._reset();
 });
 
-// The demo user (u-mb) can do Hage, Montering and Flytting – a Hage oppdrag ranks first.
+// The demo user (u-mb) can do Hage, Montering and Flytting. Lillehammer, Øyer and Gausdal count as one area
+// (KOMMUNE_GROUPS), so the closest match – a Montering oppdrag in Follebu, Gausdal – ranks first.
+const TOP = 'Montere garderobeskap';
 const counter = () => screen.getByText(/^\d+ av \d+$/).props.children as string;
 
 test('shows matched oppdrag first as a card stack with "why" chips and a counter', async () => {
   await renderWithProviders(<ForMegScreen />);
-  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
-  expect(screen.getByText('Passer Hage')).toBeTruthy();
+  await waitFor(() => expect(screen.getByText(TOP)).toBeTruthy());
+  expect(screen.getByText('Passer Montering')).toBeTruthy();
   expect(counter()).toMatch(/^1 av \d+$/);
   expect(screen.getByText('Se og gi tilbud')).toBeTruthy();
   expect(screen.getByText(/MinNabo håndterer ikke betaling/)).toBeTruthy();
@@ -26,13 +28,13 @@ test('"Ikke aktuelt" moves to the next card and "Angre" brings it back', async (
   jest.useFakeTimers();
   try {
     await renderWithProviders(<ForMegScreen />);
-    await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(TOP)).toBeTruthy());
     await fireEvent.press(screen.getByLabelText('Ikke aktuelt'));
     jest.advanceTimersByTime(500);
     await waitFor(() => expect(counter()).toMatch(/^2 av /));
     await fireEvent.press(screen.getByLabelText('Angre siste'));
     await waitFor(() => expect(counter()).toMatch(/^1 av /));
-    expect(screen.getByText('Klippe plen')).toBeTruthy();
+    expect(screen.getByText(TOP)).toBeTruthy();
   } finally {
     jest.useRealTimers();
   }
@@ -40,10 +42,10 @@ test('"Ikke aktuelt" moves to the next card and "Angre" brings it back', async (
 
 test('list view hides an item with the x button', async () => {
   await renderWithProviders(<ForMegScreen />);
-  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText(TOP)).toBeTruthy());
   await fireEvent.press(screen.getByText('Liste'));
-  await fireEvent.press(screen.getByLabelText('Ikke aktuelt: Klippe plen'));
-  await waitFor(() => expect(screen.queryByText('Klippe plen')).toBeNull());
+  await fireEvent.press(screen.getByLabelText(`Ikke aktuelt: ${TOP}`));
+  await waitFor(() => expect(screen.queryByText(TOP)).toBeNull());
   expect(screen.getByText('Angre siste')).toBeTruthy();
 });
 
@@ -51,7 +53,7 @@ test('"Lagre" saves the oppdrag, moves it out of the stack, and "Angre" brings i
   const { apiClient } = require('@/api/client');
   const before: string[] = await apiClient.listSavedListingIds();
   await renderWithProviders(<ForMegScreen />);
-  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText(TOP)).toBeTruthy());
 
   await fireEvent.press(screen.getByLabelText('Lagre oppdraget'));
   await waitFor(() => expect(counter()).toMatch(/^2 av /), { timeout: 3000 });

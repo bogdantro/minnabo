@@ -32,6 +32,13 @@ import type {
   Review,
   SkillEndorsement,
   VerificationKind,
+  AgreedSum,
+  ListingQuestion,
+  PoliceCertificate,
+  ThankCard,
+  ThankCardKind,
+  ToolBooking,
+  YearRecap,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type {
@@ -64,7 +71,8 @@ import type {
   ListingEditData,
   ListingExtras,
   PendingReview,
-  RescueResult} from './ApiClient';
+  RescueResult,
+  HelperSlots} from './ApiClient';
 import { DEFAULT_APP_SETTINGS, withDefaultPrefs } from './ApiClient';
 
 import { OPEN_LISTING_STATUSES } from '@/domain/editing';
@@ -109,14 +117,52 @@ const LISTING_SELECT = `
 `;
 const CONVERSATION_SELECT = `
   *,
-  listing:listings(id,title,type,place,listing_images(storage_path,ord)),
+  listing:listings(id,title,type,place,owner_id,listing_images(storage_path,ord)),
   conversation_participants(*,profile:profiles(${PROFILE_SELECT})),
   message_reads(profile_id,last_read_at),
   proposals(status,created_at),
-  messages(author_id,kind,created_at,text)
+  messages(author_id,kind,created_at,text,deleted_at)
 `;
 /** Only the newest message per conversation is embedded (who wrote last). */
 const LAST_MESSAGE = { referencedTable: 'messages' } as const;
+
+type QuestionRow = { id: string; listing_id: string; author_id: string; body: string; answer: string | null; answered_at: string | null; created_at: string };
+const toQuestion = (r: QuestionRow): ListingQuestion => ({
+  id: r.id,
+  listingId: r.listing_id,
+  authorId: r.author_id,
+  body: r.body,
+  answer: r.answer ?? undefined,
+  answeredAt: r.answered_at ?? undefined,
+  createdAt: r.created_at,
+});
+
+type BookingRow = { id: string; notice_id: string; borrower_id: string; from_date: string; to_date: string; note: string | null; status: ToolBooking['status'] };
+const toBooking = (r: BookingRow): ToolBooking => ({
+  id: r.id,
+  noticeId: r.notice_id,
+  borrowerId: r.borrower_id,
+  from: r.from_date,
+  to: r.to_date,
+  note: r.note ?? undefined,
+  status: r.status,
+});
+
+type ThankRow = { id: string; proposal_id: string; from_profile_id: string; to_profile_id: string; card: ThankCardKind; message: string | null; created_at: string };
+const toThank = (r: ThankRow): ThankCard => ({
+  id: r.id,
+  proposalId: r.proposal_id,
+  fromProfileId: r.from_profile_id,
+  toProfileId: r.to_profile_id,
+  card: r.card,
+  message: r.message ?? undefined,
+  createdAt: r.created_at,
+});
+
+/** "klipp plen" → "klipp:* & plen:*": what you have typed so far finds «klippe plenen». */
+export function prefixQuery(q: string): string {
+  return (q.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).map((w) => `${w}:*`).join(' & ');
+}
 
 type CommentRow = { id: string; notice_id: string; author_id: string; body: string; created_at: string };
 const toComment = (r: CommentRow): NoticeComment => ({
@@ -199,9 +245,8 @@ export class SupabaseApiClient implements ApiClient {
     } else if (filter?.categorySlug && filter.categorySlug !== 'alle') {
       q = q.eq('category_slug', filter.categorySlug);
     }
-    if (filter?.query?.trim()) {
-      q = q.textSearch('search', filter.query.trim(), { type: 'websearch', config: 'simple' });
-    }
+    const tsQuery = prefixQuery(filter?.query ?? '');
+    if (tsQuery) q = q.textSearch('search', tsQuery, { config: 'simple' });
     if (filter?.municipalities && filter.municipalities.length > 0) {
       q = q.in('municipality', filter.municipalities);
     }
@@ -253,6 +298,7 @@ export class SupabaseApiClient implements ApiClient {
         estimated_minutes: extras?.estimatedMinutes ?? null,
         // only when it hastes: an app build that reaches people before 0071 is pushed can still publish
         ...(extras?.urgentUntil ? { urgent_until: extras.urgentUntil } : {}),
+        ...(extras?.firstToFollowedUntil ? { first_to_followed_until: extras.firstToFollowedUntil } : {}),
       })
       .select('id')
       .single();
@@ -528,7 +574,23 @@ export class SupabaseApiClient implements ApiClient {
     return withReadState(messages, me, latest('last_read_at'), latest('last_delivered_at'));
   }
 
-  async sendMessage(conversationId: string, text: string): Promise<Message> {
+  async deleteMessage(messageId: string): Promise<void> {
+    const { error } = await supabase.rpc('delete_my_message', { p_message_id: messageId });
+    if (error) fail(error);
+  }
+
+  async setConversationArchived(conversationId: string, archived: boolean): Promise<void> {
+    const { error } = await supabase.rpc('set_conversation_archived', { p_conversation_id: conversationId, p_archived: archived });
+    if (error) fail(error);
+  }
+
+  async transcribeMessage(messageId: string): Promise<string> {
+    const { data, error } = await supabase.functions.invoke('transcribe', { body: { messageId } });
+    if (error) fail('Fikk ikke laget tekst av talemeldingen. Prøv igjen.');
+    return String((data as { text?: string } | null)?.text ?? '');
+  }
+
+  async sendMessage(conversationId: string, text: string, replyToId?: string): Promise<Message> {
     const me = await myId();
     const { data, error } = await supabase
       .from('messages')
@@ -538,6 +600,8 @@ export class SupabaseApiClient implements ApiClient {
         kind: 'TEXT',
         text,
         client_token: token(),
+        // only when it is a reply: an app build can reach people before 0089 is pushed
+        ...(replyToId ? { reply_to_id: replyToId } : {}),
       })
       .select('*')
       .single();
@@ -623,6 +687,48 @@ export class SupabaseApiClient implements ApiClient {
     if (error) fail(error);
     const r = (data ?? {}) as { count?: number; mine?: boolean };
     return { count: r.count ?? 0, mine: !!r.mine };
+  }
+
+  async getHelperSlots(listingId: string): Promise<HelperSlots> {
+    const { data, error } = await supabase.rpc('listing_helper_slots', { p_listing_id: listingId });
+    // a server without 0086 knows one helper per oppdrag
+    if (error) return { needed: 1, taken: 0 };
+    const r = (data ?? {}) as Partial<HelperSlots>;
+    return { needed: r.needed ?? 1, taken: r.taken ?? 0 };
+  }
+
+  async closeHelperSlots(listingId: string): Promise<void> {
+    const { error } = await supabase.rpc('close_helper_slots', { p_listing_id: listingId });
+    if (error) fail(error);
+  }
+
+  async listListingQuestions(listingId: string): Promise<ListingQuestion[]> {
+    const { data, error } = await supabase
+      .from('listing_questions')
+      .select('*')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: true });
+    // a server without 0088 simply has no questions yet
+    if (error?.code === '42P01' || error?.code === 'PGRST205') return [];
+    if (error) fail(error);
+    return (data as QuestionRow[]).map(toQuestion);
+  }
+
+  async askListingQuestion(listingId: string, body: string): Promise<ListingQuestion> {
+    const { data, error } = await supabase.rpc('ask_listing_question', { p_listing_id: listingId, p_body: body });
+    if (error) fail(error);
+    return toQuestion(data as unknown as QuestionRow);
+  }
+
+  async answerListingQuestion(id: string, answer: string): Promise<ListingQuestion> {
+    const { data, error } = await supabase.rpc('answer_listing_question', { p_id: id, p_answer: answer });
+    if (error) fail(error);
+    return toQuestion(data as unknown as QuestionRow);
+  }
+
+  async deleteListingQuestion(id: string): Promise<void> {
+    const { error } = await supabase.rpc('delete_listing_question', { p_id: id });
+    if (error) fail(error);
   }
 
   async getReplyMinutes(profileId: string): Promise<number | null> {
@@ -1125,6 +1231,68 @@ export class SupabaseApiClient implements ApiClient {
 
   // --- completion & review ------------------------------------------
 
+  async sendThankCard(proposalId: string, card: ThankCardKind, message?: string): Promise<ThankCard> {
+    const { data, error } = await supabase.rpc('send_thank_card', { p_proposal_id: proposalId, p_card: card, p_message: message ?? '' });
+    if (error) fail(error);
+    return toThank(data as unknown as ThankRow);
+  }
+
+  async listThankCards(profileId: string): Promise<ThankCard[]> {
+    const { data, error } = await supabase
+      .from('thank_cards')
+      .select('*')
+      .eq('to_profile_id', profileId)
+      .order('created_at', { ascending: false });
+    // a server without 0091 has no cards yet – the profile just doesn't show the section
+    if (error?.code === '42P01' || error?.code === 'PGRST205') return [];
+    if (error) fail(error);
+    return (data as ThankRow[]).map(toThank);
+  }
+
+  async getYearRecap(year: number): Promise<YearRecap> {
+    const { data, error } = await supabase.rpc('my_year_recap', { p_year: year });
+    if (error) fail(error);
+    const r = (data ?? {}) as Partial<YearRecap> & { topCategory?: string | null; stars?: number | null };
+    return {
+      year,
+      helped: r.helped ?? 0,
+      gotHelp: r.gotHelp ?? 0,
+      neighbours: r.neighbours ?? 0,
+      topCategory: r.topCategory ?? undefined,
+      thanks: r.thanks ?? 0,
+      stars: r.stars == null ? undefined : Number(r.stars),
+    };
+  }
+
+  async getAgreedSum(year: number): Promise<AgreedSum> {
+    const { data, error } = await supabase.rpc('my_agreed_sum', { p_year: year });
+    if (error) fail(error);
+    const r = (data ?? {}) as Partial<AgreedSum>;
+    return { year, totalMinor: Number(r.totalMinor ?? 0), jobs: Number(r.jobs ?? 0), people: r.people ?? [] };
+  }
+
+  async getMyPoliceCertificate(): Promise<PoliceCertificate> {
+    const me = await myId();
+    const { data, error } = await supabase
+      .from('police_certificates')
+      .select('status, decided_at, rejection_reason')
+      .eq('profile_id', me)
+      .maybeSingle();
+    if (error || !data) return { status: 'NONE' };
+    const r = data as { status: PoliceCertificate['status']; decided_at: string | null; rejection_reason: string | null };
+    return { status: r.status, decidedAt: r.decided_at ?? undefined, rejectionReason: r.rejection_reason ?? undefined };
+  }
+
+  async submitPoliceCertificate(path: string): Promise<void> {
+    const { error } = await supabase.rpc('submit_police_certificate', { p_path: path });
+    if (error) fail(error);
+  }
+
+  async hasPoliceCertificate(profileId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('has_police_certificate', { p_profile: profileId });
+    return !error && !!data;
+  }
+
   async getCompletion(agreementProposalId: string): Promise<CompletionConfirmation[]> {
     const { data, error } = await supabase
       .from('completion_confirmations')
@@ -1298,6 +1466,11 @@ export class SupabaseApiClient implements ApiClient {
     return this.listFollowedProfileIds();
   }
 
+  async signOutEverywhere(): Promise<void> {
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
+    if (error) fail(error);
+  }
+
   async listCategories(): Promise<CategoryRow[]> {
     const { data, error } = await supabase
       .from('categories')
@@ -1310,7 +1483,15 @@ export class SupabaseApiClient implements ApiClient {
   }
 
   async getAppSettings(): Promise<AppSettings> {
-    const keys = ['platform.maintenance_mode', 'platform.registration_open', 'platform.default_radius_km', 'partners.version', 'partners.max_hovedpartnere'];
+    const keys = [
+      'platform.maintenance_mode',
+      'platform.registration_open',
+      'platform.default_radius_km',
+      'partners.version',
+      'partners.max_hovedpartnere',
+      'platform.min_app_version',
+      'platform.transcripts_enabled',
+    ];
     const { data, error } = await supabase.from('app_settings').select('key, value').in('key', keys);
     if (error) fail(error);
     const v = Object.fromEntries(((data ?? []) as { key: string; value: unknown }[]).map((r) => [r.key, r.value]));
@@ -1324,6 +1505,8 @@ export class SupabaseApiClient implements ApiClient {
       defaultRadiusKm: radius && radius > 0 ? radius : undefined,
       partnersVersion: v['partners.version'] == null ? '' : String(v['partners.version']),
       maxHovedpartnere: max && max > 0 ? Math.round(max) : DEFAULT_APP_SETTINGS.maxHovedpartnere,
+      minAppVersion: typeof v['platform.min_app_version'] === 'string' ? v['platform.min_app_version'] : DEFAULT_APP_SETTINGS.minAppVersion,
+      transcriptsEnabled: v['platform.transcripts_enabled'] === true,
     };
   }
 
@@ -1370,12 +1553,37 @@ export class SupabaseApiClient implements ApiClient {
     let q = supabase.from('noticeboard_posts').select('*').order('created_at', { ascending: false });
     if (kind) q = q.eq('kind', kind);
     // "N svar" comes from an RPC (0041); without it the posts simply show no count.
-    const [{ data, error }, counts] = await Promise.all([q, supabase.rpc('noticeboard_reply_counts')]);
+    const me = await myId().catch(() => '');
+    // likes arrive with 0094; before it is pushed the posts simply show none
+    const [{ data, error }, counts, likes] = await Promise.all([
+      q,
+      supabase.rpc('noticeboard_reply_counts'),
+      supabase.from('notice_likes').select('notice_id, profile_id'),
+    ]);
     if (error) fail(error);
+    const liked = new Map<string, number>();
+    const mine = new Set<string>();
+    for (const r of (likes.error ? [] : likes.data) as { notice_id: string; profile_id: string }[]) {
+      liked.set(r.notice_id, (liked.get(r.notice_id) ?? 0) + 1);
+      if (r.profile_id === me) mine.add(r.notice_id);
+    }
     const replies = new Map(
       ((counts.error ? [] : counts.data) as { notice_id: string; replies: number }[]).map((r) => [r.notice_id, r.replies]),
     );
-    return (data as NoticeRow[]).map((r) => ({ ...toNoticeboardPost(r), replies: replies.get(r.id) ?? 0 }));
+    return (data as NoticeRow[]).map((r) => ({
+      ...toNoticeboardPost(r),
+      replies: replies.get(r.id) ?? 0,
+      likes: liked.get(r.id) ?? 0,
+      likedByMe: mine.has(r.id),
+    }));
+  }
+
+  async toggleNoticeLike(noticeId: string, liked: boolean): Promise<void> {
+    const me = await myId();
+    const { error } = liked
+      ? await supabase.from('notice_likes').upsert({ notice_id: noticeId, profile_id: me }, { ignoreDuplicates: true })
+      : await supabase.from('notice_likes').delete().eq('notice_id', noticeId).eq('profile_id', me);
+    if (error) fail(error);
   }
 
   async updateNoticeboardPost(
@@ -1426,6 +1634,50 @@ export class SupabaseApiClient implements ApiClient {
     if (error) fail(error);
   }
 
+  async listDugnadSignups(noticeId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('notice_signups')
+      .select('profile_id')
+      .eq('notice_id', noticeId)
+      .order('created_at', { ascending: true });
+    if (error) fail(error);
+    return (data as { profile_id: string }[]).map((r) => r.profile_id);
+  }
+
+  async setDugnadSignup(noticeId: string, join: boolean): Promise<number> {
+    const { data, error } = await supabase.rpc('set_dugnad_signup', { p_notice_id: noticeId, p_join: join });
+    if (error) fail(error);
+    return Number(data ?? 0);
+  }
+
+  async listToolBookedDays(noticeId: string): Promise<{ from: string; to: string }[]> {
+    const { data, error } = await supabase.rpc('tool_booked_days', { p_notice_id: noticeId });
+    if (error) fail(error);
+    return ((data ?? []) as { from_date: string; to_date: string }[]).map((r) => ({ from: r.from_date, to: r.to_date }));
+  }
+
+  async listToolBookings(noticeId: string): Promise<ToolBooking[]> {
+    const { data, error } = await supabase
+      .from('tool_bookings')
+      .select('*')
+      .eq('notice_id', noticeId)
+      .order('from_date', { ascending: true });
+    if (error) fail(error);
+    return (data as BookingRow[]).map(toBooking);
+  }
+
+  async requestToolBooking(noticeId: string, from: string, to: string, note?: string): Promise<ToolBooking> {
+    const { data, error } = await supabase.rpc('request_tool_booking', { p_notice_id: noticeId, p_from: from, p_to: to, p_note: note ?? '' });
+    if (error) fail(error);
+    return toBooking(data as unknown as BookingRow);
+  }
+
+  async respondToolBooking(id: string, status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED'): Promise<ToolBooking> {
+    const { data, error } = await supabase.rpc('respond_tool_booking', { p_id: id, p_status: status });
+    if (error) fail(error);
+    return toBooking(data as unknown as BookingRow);
+  }
+
   async listSavedNoticeIds(): Promise<string[]> {
     const me = await myId();
     const { data, error } = await supabase.from('saved_notices').select('notice_id').eq('profile_id', me);
@@ -1457,6 +1709,8 @@ export class SupabaseApiClient implements ApiClient {
     /** storage path in `listing-images` */
     imagePath?: string;
     neighbourhoodId?: string;
+    isDugnad?: boolean;
+    eventAt?: string;
   }): Promise<NoticeboardPost> {
     const me = await myId();
     const { data, error } = await supabase
@@ -1470,6 +1724,7 @@ export class SupabaseApiClient implements ApiClient {
         municipality: input.municipality,
         ...(input.imagePath ? { image_path: input.imagePath } : {}),
         ...(input.neighbourhoodId ? { neighbourhood_id: input.neighbourhoodId } : {}),
+        ...(input.isDugnad ? { is_dugnad: true, event_at: input.eventAt ?? null } : {}),
       })
       .select('*')
       .single();

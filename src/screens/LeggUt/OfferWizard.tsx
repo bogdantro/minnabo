@@ -6,7 +6,6 @@ import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
 import { listingKeys, profileKeys, useListing } from '@/api/queries';
 import { useActiveCategories } from '@/hooks/useCategories';
-import { YOUTH_CATS } from '@/domain/youth';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSession } from '@/auth/session';
 import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE } from '@/data/kommuner';
@@ -58,7 +57,7 @@ const ABOUT_MAX = 600;
 const MAX_KM = 30;
 const MAX_YEARS = 40;
 
-type Price = 'FROM' | 'FIXED' | 'BY_AGREEMENT';
+type Price = 'FROM' | 'FIXED' | 'HOURLY' | 'BY_AGREEMENT';
 type Form = {
   cat: CategoryId | null;
   services: string[];
@@ -135,7 +134,7 @@ function fromListing(l: Listing): Form {
     months: (o?.experienceMonths ?? 0) % 12,
     equipment: o?.equipmentText ?? '',
     photos: l.images.map((im) => im.url),
-    price: l.priceMode === 'BY_AGREEMENT' || !l.price ? 'BY_AGREEMENT' : l.priceMode === 'FIXED' ? 'FIXED' : 'FROM',
+    price: l.priceMode === 'BY_AGREEMENT' || !l.price ? 'BY_AGREEMENT' : l.priceMode === 'FIXED' || l.priceMode === 'HOURLY' ? l.priceMode : 'FROM',
     amount: l.price ? String(Math.round(l.price.amountMinor / 100)) : '',
     days: o?.availableWeekdays ?? [],
     when: o?.availabilityText ?? '',
@@ -156,8 +155,7 @@ export function OfferWizard() {
   const editId = typeof params.rediger === 'string' && params.rediger ? params.rediger : undefined;
   const editing = useListing(editId ?? '');
   const active = useActiveCategories();
-  // a youth account offers help only in the youth categories – the database checks the same (0084)
-  const cats = me.isYouth ? active.filter((c) => YOUTH_CATS.includes(c)) : active;
+  const cats = active;
   const [f, setF] = useState<Form>(() => empty(me.municipality ?? ''));
   const [seeded, setSeeded] = useState(false);
   const [step, setStep] = useState(1);
@@ -455,6 +453,7 @@ export function OfferWizard() {
                     [
                       ['FROM', nb.offer.priceFrom, nb.offer.priceFromSub],
                       ['FIXED', nb.offer.priceFixed, nb.offer.priceFixedSub],
+                      ['HOURLY', nb.offer.priceHourly, nb.offer.priceHourlySub],
                       ['BY_AGREEMENT', nb.offer.priceAgree, nb.offer.priceAgreeSub],
                     ] as [Price, string, string][]
                   ).map(([id, title, sub]) => (

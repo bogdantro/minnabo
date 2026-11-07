@@ -117,6 +117,8 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
   const notifUnread = useUnreadNotificationCount();
   const agreements = useMyAgreements().data ?? [];
   const myTasks = useMyListings('TASK_REQUEST').data ?? [];
+  // «Tilgjengelig for småjobber» only means something to someone who has said they can help
+  const canHelp = (useMyListings('SERVICE_OFFER').data ?? []).some((l) => ACTIVE.has(l.status) || l.status === 'PAUSED');
   const received = useReceivedProposals().data ?? [];
   const savedIds = useSavedListingIds().data ?? [];
   const savedSearches = useSavedSearches().data ?? [];
@@ -223,16 +225,18 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
               </View>
             </View>
           </PressableScale>
-          <View style={styles.avail}>
-            <View style={styles.availIcon}>
-              <Icon name="hand" size={16} color={colors.cyanDeep} />
+          {canHelp ? (
+            <View style={styles.avail}>
+              <View style={styles.availIcon}>
+                <Icon name="hand" size={16} color={colors.cyanDeep} />
+              </View>
+              <View style={styles.availText}>
+                <Text style={styles.availTitle}>{nb.meny.avail.title}</Text>
+                <Text style={text.meta}>{avail ? nb.meny.avail.on : nb.meny.avail.off}</Text>
+              </View>
+              <Toggle value={avail} onValueChange={toggleAvail} accessibilityLabel={nb.meny.avail.title} />
             </View>
-            <View style={styles.availText}>
-              <Text style={styles.availTitle}>{nb.meny.avail.title}</Text>
-              <Text style={text.meta}>{avail ? nb.meny.avail.on : nb.meny.avail.off}</Text>
-            </View>
-            <Toggle value={avail} onValueChange={toggleAvail} accessibilityLabel={nb.meny.avail.title} />
-          </View>
+          ) : null}
         </FadeUp>
 
         <Section delay={100}>{nb.meny.explore}</Section>
@@ -336,6 +340,26 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
             accessibilityLabel={notifUnread ? nb.meny.unread(nb.meny.notifications.title, notifUnread) : undefined}
             onPress={() => go('/varsler')}
           />
+          {!me.isYouth ? (
+            <ListRow
+              icon="chart"
+              iconBg={colors.limeTint}
+              iconColor={colors.limeDeep}
+              title={nb.meny.agreedSum.title}
+              subtitle={nb.meny.agreedSum.sub}
+              onPress={() => go('/avtalt-sum')}
+            />
+          ) : null}
+          {new Date().getMonth() === 11 || new Date().getMonth() === 0 ? (
+            <ListRow
+              icon="sparkle"
+              iconBg={colors.lavenderTint}
+              iconColor={colors.lavender}
+              title={nb.meny.recap.title}
+              subtitle={nb.meny.recap.sub}
+              onPress={() => go('/aret-ditt')}
+            />
+          ) : null}
         </Rows>
 
         <Section delay={400}>{nb.meny.trust}</Section>
@@ -355,6 +379,14 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
             title={nb.meny.safety.title}
             subtitle={nb.meny.safety.sub}
             onPress={() => go('/sikkerhet')}
+          />
+          <ListRow
+            icon="info"
+            iconBg={colors.cyanTint}
+            iconColor={colors.cyanDeep}
+            title={nb.meny.help.title}
+            subtitle={nb.meny.help.sub}
+            onPress={() => go('/hjelp')}
           />
           {me.id ? (
             <ListRow

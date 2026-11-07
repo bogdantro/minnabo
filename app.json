@@ -3,7 +3,7 @@
     "name": "MinNabo",
     "slug": "minnabo",
     "scheme": "minnabo",
-    "version": "1.1.0",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -96,7 +96,11 @@
         {
           "faceIDPermission": "MinNabo bruker Face ID for å låse opp appen når du har slått på låsen."
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-quick-actions",
+      "@sentry/react-native",
+      "expo-asset"
     ],
     "extra": {
       "router": {},
@@ -104,6 +108,13 @@
         "projectId": "b5f95414-ddb5-4c91-8128-4024c5378b51"
       }
     },
-    "owner": "webiser-as"
+    "owner": "webiser-as",
+    "updates": {
+      "url": "https://u.expo.dev/b5f95414-ddb5-4c91-8128-4024c5378b51",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

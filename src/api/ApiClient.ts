@@ -35,6 +35,13 @@ import type {
   Review,
   SkillEndorsement,
   VerificationKind,
+  AgreedSum,
+  ListingQuestion,
+  PoliceCertificate,
+  ThankCard,
+  ThankCardKind,
+  ToolBooking,
+  YearRecap,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 
@@ -98,6 +105,8 @@ export type ListingExtras = {
   wizard?: unknown;
   /** ISO – «Det haster» deadline; null = not urgent (rules in 0071_urgent_oppdrag.sql) */
   urgentUntil?: string | null;
+  /** ISO – «Send til faste hjelpere først»: new oppdrag only, the server caps it at two hours (0086) */
+  firstToFollowedUntil?: string | null;
 };
 
 /** What «Hjelperen kom ikke» did: urgent = it is a hasteoppdrag now, others = tilbud asked again. */
@@ -158,12 +167,23 @@ export type AppSettings = {
   partnersVersion: string;
   /** partners.max_hovedpartnere */
   maxHovedpartnere: number;
+  /** platform.min_app_version – older builds show «Oppdater appen»; 0.0.0 stops nobody */
+  minAppVersion: string;
+  /** platform.transcripts_enabled – «Vis som tekst» on talemeldinger (needs a speech service) */
+  transcriptsEnabled: boolean;
 };
 
 /** partner id → how many neighbours have thanked, and whether I am one of them */
 export type PartnerThanks = Record<string, { count: number; mine: boolean }>;
 
-export const DEFAULT_APP_SETTINGS: AppSettings = { maintenance: false, registrationOpen: true, partnersVersion: '', maxHovedpartnere: 4 };
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  maintenance: false,
+  registrationOpen: true,
+  partnersVersion: '',
+  maxHovedpartnere: 4,
+  minAppVersion: '0.0.0',
+  transcriptsEnabled: false,
+};
 
 /** Phone and home notes of someone you have an accepted tilbud with (shared_contact, 0057). */
 export type SharedContact = { phone?: string; homeNotes?: string };
@@ -244,6 +264,9 @@ export type SubmitReportInput = {
   /** storage path in the private `report-attachments` bucket */
   attachmentPath?: string;
 };
+
+/** «1 av 2 hjelpere»: numbers only, never who (0086). */
+export type HelperSlots = { needed: number; taken: number };
 
 export type ListListingsParams = {
   filter?: ListingFilter;
@@ -339,6 +362,8 @@ export interface ApiClient {
   getAppSettings(): Promise<AppSettings>;
   /** public.categories: order, on/off, labels and tile colours set on the website. */
   listCategories(): Promise<CategoryRow[]>;
+  /** Sign-out everywhere: every phone with this account has to log in with Vipps again. */
+  signOutEverywhere(): Promise<void>;
   /** "N naboer har takket" per visible partner, and whether I have (partner_thanks_summary). */
   getPartnerThanks(): Promise<PartnerThanks>;
   /** "Takk for støtten": once per person per partner. Returns the new count. */
@@ -355,6 +380,14 @@ export interface ApiClient {
   /** Notify nearby helpers whose offers match this task; returns how many. */
   notifyMatchingHelpers(listingId: string): Promise<number>;
   getListingOfferCount(listingId: string): Promise<OfferCount>;
+  getHelperSlots(listingId: string): Promise<HelperSlots>;
+  /** «Jeg trenger ikke flere»: the owner settles for the helpers already agreed. */
+  closeHelperSlots(listingId: string): Promise<void>;
+  /** «Spørsmål fra naboer» (0088), oldest first. */
+  listListingQuestions(listingId: string): Promise<ListingQuestion[]>;
+  askListingQuestion(listingId: string, body: string): Promise<ListingQuestion>;
+  answerListingQuestion(id: string, answer: string): Promise<ListingQuestion>;
+  deleteListingQuestion(id: string): Promise<void>;
 
   // conversations & messages
   listConversations(params?: ListConversationsParams): Promise<Conversation[]>;
@@ -365,7 +398,14 @@ export interface ApiClient {
   /** Innboks "Merk alle som lest". */
   markConversationsRead(conversationIds: string[]): Promise<void>;
   listMessages(conversationId: string): Promise<Message[]>;
-  sendMessage(conversationId: string, text: string): Promise<Message>;
+  /** `replyToId`: the message this one answers. */
+  sendMessage(conversationId: string, text: string, replyToId?: string): Promise<Message>;
+  /** Your own message, for 10 minutes (0089). */
+  deleteMessage(messageId: string): Promise<void>;
+  /** Per person; a new message brings the conversation back to Innboks. */
+  setConversationArchived(conversationId: string, archived: boolean): Promise<void>;
+  /** Writes a voice message out as text (edge function `transcribe`). */
+  transcribeMessage(messageId: string): Promise<string>;
   /** `attachmentPath`: the photo's path in the private chat-attachments bucket. */
   sendAttachment(conversationId: string, attachmentPath: string): Promise<Message>;
   /** A talemelding: `attachmentPath` is the sound file in chat-attachments, `durationMs` its length (max 2 min). */
@@ -485,6 +525,17 @@ export interface ApiClient {
   /** Finished jobs I still have to review (0072) – oldest first. Until then no new oppdrag or tilbud. */
   listPendingReviews(): Promise<PendingReview[]>;
   reportNoShow(agreementProposalId: string, profileId: string): Promise<void>;
+  /** A thank-you card after a finished job (0091); sending again changes it. */
+  sendThankCard(proposalId: string, card: ThankCardKind, message?: string): Promise<ThankCard>;
+  listThankCards(profileId: string): Promise<ThankCard[]>;
+  /** «Året ditt på MinNabo». */
+  getYearRecap(year: number): Promise<YearRecap>;
+  /** «Avtalt sum i år»: agreed prices only. */
+  getAgreedSum(year: number): Promise<AgreedSum>;
+  getMyPoliceCertificate(): Promise<PoliceCertificate>;
+  /** `path`: the file in the private police-certificates bucket. */
+  submitPoliceCertificate(path: string): Promise<void>;
+  hasPoliceCertificate(profileId: string): Promise<boolean>;
   listEndorsements(profileId: string): Promise<SkillEndorsement[]>;
   toggleEndorsement(profileId: string, skill: string): Promise<SkillEndorsement[]>;
   listFollowedProfileIds(): Promise<string[]>;
@@ -500,6 +551,10 @@ export interface ApiClient {
     imagePath?: string;
     /** set → only members of this nabolag can read it; unset → the whole kommune */
     neighbourhoodId?: string;
+    /** a dugnad people sign up for (0090) */
+    isDugnad?: boolean;
+    /** ISO */
+    eventAt?: string;
   }): Promise<NoticeboardPost>;
   deleteNoticeboardPost(id: string): Promise<void>;
   /** The owner edits an oppslag, or marks it as done / open again. */
@@ -511,7 +566,19 @@ export interface ApiClient {
   listNoticeComments(noticeId: string): Promise<NoticeComment[]>;
   addNoticeComment(noticeId: string, body: string): Promise<NoticeComment>;
   deleteNoticeComment(id: string): Promise<void>;
+  /** Who has signed up for a dugnad (0090). */
+  listDugnadSignups(noticeId: string): Promise<string[]>;
+  /** Returns how many are signed up now. */
+  setDugnadSignup(noticeId: string, join: boolean): Promise<number>;
+  /** The days a tool is lent out, without saying to whom. */
+  listToolBookedDays(noticeId: string): Promise<{ from: string; to: string }[]>;
+  /** Requests I can see: all of them on my own tool, my own on someone else's. */
+  listToolBookings(noticeId: string): Promise<ToolBooking[]>;
+  requestToolBooking(noticeId: string, from: string, to: string, note?: string): Promise<ToolBooking>;
+  respondToolBooking(id: string, status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED'): Promise<ToolBooking>;
   listSavedNoticeIds(): Promise<string[]>;
+  /** A heart on an oppslag, or taking it back (0094). */
+  toggleNoticeLike(noticeId: string, liked: boolean): Promise<void>;
   toggleSavedNotice(noticeId: string): Promise<string[]>;
 
   // community

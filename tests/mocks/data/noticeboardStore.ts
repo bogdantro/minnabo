@@ -38,12 +38,13 @@ const SEED: NoticeboardPost[] = [
 let posts: NoticeboardPost[] = [...SEED];
 let seq = 0;
 let saved = new Set<string>();
+const liked = new Set<string>();
 let comments: NoticeComment[] = [];
 
 export const noticeboardStore = {
   list(kind?: NoticeKind): NoticeboardPost[] {
     return [...posts]
-      .map((p) => ({ ...p, replies: comments.filter((c) => c.noticeId === p.id).length }))
+      .map((p) => ({ ...p, replies: comments.filter((c) => c.noticeId === p.id).length, likes: (p.likes ?? 0) + (liked.has(p.id) ? 1 : 0), likedByMe: liked.has(p.id) }))
       .filter((p) => !kind || p.kind === kind)
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   },
@@ -56,6 +57,8 @@ export const noticeboardStore = {
     /** storage path in `listing-images` */
     imagePath?: string;
     neighbourhoodId?: string;
+    isDugnad?: boolean;
+    eventAt?: string;
   }): NoticeboardPost {
     const post: NoticeboardPost = {
       id: `n-${Date.now()}-${seq++}`,
@@ -68,9 +71,15 @@ export const noticeboardStore = {
       createdAt: new Date().toISOString(),
       imageUrl: input.imagePath,
       neighbourhoodId: input.neighbourhoodId,
+      isDugnad: input.isDugnad,
+      eventAt: input.eventAt,
     };
     posts = [post, ...posts];
     return post;
+  },
+  setLiked(id: string, on: boolean): void {
+    if (on) liked.add(id);
+    else liked.delete(id);
   },
   remove(id: string): void {
     posts = posts.filter((p) => p.id !== id);

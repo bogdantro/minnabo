@@ -161,7 +161,19 @@ Deno.serve(async (req: Request) => {
         .select('id, suspended_at, deleted_at')
         .eq('id', known.profile_id)
         .maybeSingle();
-      if (prof?.suspended_at) return json({ error: 'Kontoen din er suspendert. Kontakt MinNabo.', code: 'SUSPENDED' }, 403);
+      if (prof?.suspended_at) {
+        // say until when and why, so the person isn't left guessing at a login that just fails
+        const { data: mod } = await admin
+          .from('profile_moderation')
+          .select('suspended_until, suspension_reason')
+          .eq('profile_id', known.profile_id)
+          .maybeSingle();
+        const until = mod?.suspended_until
+          ? ` til ${new Date(mod.suspended_until).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Oslo' })}`
+          : '';
+        const why = mod?.suspension_reason?.trim() ? ` Årsak: ${mod.suspension_reason.trim()}` : '';
+        return json({ error: `Kontoen er stengt${until}.${why} Spørsmål? Kontakt oss på minnaboapp.no/hjelp.`, code: 'SUSPENDED' }, 403);
+      }
       if (prof && !prof.deleted_at) profileId = prof.id;
       // a deleted account is gone for good: the same person starts over with a new one
       else await admin.from('profile_private').delete().eq('profile_id', known.profile_id);

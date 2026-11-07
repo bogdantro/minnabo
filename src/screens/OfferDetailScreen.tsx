@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
+import { ImageViewer } from '@/components/ImageViewer';
+import { ListingQuestions } from '@/components/ListingQuestions';
 import { ReliableBadge } from '@/components/ReliableBadge';
 import { useIsSaved, useStartConversation } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -42,6 +44,8 @@ export function OfferDetailScreen({ listing, onBack }: { listing: Listing; onBac
   const [saved, toggleSaved] = useIsSaved(listing.id);
   const start = useStartConversation();
   const [today] = useState(() => new Date());
+  const [viewer, setViewer] = useState<number | null>(null);
+  const photos = listing.images.map((img) => img.url);
   const o = listing.offer;
   const owner = listing.owner;
   const first = owner.displayName.split(' ')[0];
@@ -113,9 +117,30 @@ export function OfferDetailScreen({ listing, onBack }: { listing: Listing; onBac
         }
       >
         <FadeUp style={styles.px}>
-          <View style={[styles.hero, shadow.medium]}>
-            <CategoryArt category={cat} uri={listing.images[0]?.url} width="100%" height={210} radius={28} iconSize={56} />
-          </View>
+          <Pressable
+            accessibilityRole={photos.length ? 'imagebutton' : undefined}
+            accessibilityLabel={photos.length ? nb.detail.openImage(1, photos.length) : undefined}
+            disabled={!photos.length}
+            onPress={() => setViewer(0)}
+            style={[styles.hero, shadow.medium]}
+          >
+            <CategoryArt category={cat} uri={photos[0]} width="100%" height={210} radius={28} iconSize={56} />
+            {photos.length > 1 ? (
+              <View style={styles.more}>
+                <Icon name="image" size={14} color={colors.white} />
+                <Text style={styles.moreText}>{photos.length}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          {photos.length > 1 ? (
+            <View style={styles.thumbs}>
+              {photos.slice(1, 5).map((u, k) => (
+                <Pressable key={u} accessibilityRole="imagebutton" accessibilityLabel={nb.detail.openImage(k + 2, photos.length)} onPress={() => setViewer(k + 1)} style={styles.thumb}>
+                  <CategoryArt category={cat} uri={u} width="100%" height={72} radius={16} />
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </FadeUp>
 
         <FadeUp delay={80} style={[styles.px, styles.titleBlock]}>
@@ -215,10 +240,15 @@ export function OfferDetailScreen({ listing, onBack }: { listing: Listing; onBac
           </FadeUp>
         ) : null}
 
+        <View style={[styles.px, styles.mt20]}>
+          <ListingQuestions listing={listing} meId={me.id} isOwner={isOwner} youth={me.isYouth} onContact={ask} />
+        </View>
+
         <FadeUp delay={320} style={[styles.px, styles.mt20, styles.noteGap]}>
           <PaymentNote />
         </FadeUp>
       </Screen>
+      <ImageViewer images={viewer === null ? [] : photos} index={viewer ?? 0} caption={listing.title} onClose={() => setViewer(null)} />
     </View>
   );
 }
@@ -256,6 +286,21 @@ const styles = StyleSheet.create({
   row6: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   headBtns: { flexDirection: 'row', gap: 6 },
   hero: { borderRadius: 28, overflow: 'hidden', marginTop: 4 },
+  more: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    height: 32,
+    paddingHorizontal: 11,
+    borderRadius: radius.pill,
+    backgroundColor: colors.scrim,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  moreText: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.white },
+  thumbs: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  thumb: { flex: 1, minHeight: 44 },
   titleBlock: { gap: 8, marginTop: 18 },
   card: { borderRadius: radius.card, backgroundColor: colors.white },
   who: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },

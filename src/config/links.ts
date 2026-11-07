@@ -18,6 +18,12 @@ export const WEBSITE = {
   bedrifter: `${SITE}/for-bedrifter/`,
 } as const;
 
+/** The store pages, for «Oppdater appen». */
+export const STORE = {
+  ios: 'https://apps.apple.com/no/search?term=minnabo',
+  android: 'https://play.google.com/store/apps/details?id=no.minnabo.app',
+} as const;
+
 export type WebsitePage = keyof typeof WEBSITE;
 
 /** Opens a page on the website in the phone's browser. */

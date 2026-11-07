@@ -9,10 +9,12 @@ import { useListing } from '@/api/queries';
 import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, text } from '@/theme/theme';
 import { listingPlace, listingPrice, listingSchedule } from '@/components/OppdragCard';
-import { categoryArtId } from '@/domain/categories';
+import { categoryArtId, categoryLabel } from '@/domain/categories';
+import type { CategoryId } from '@/theme/theme';
 import {
   Button,
   Card,
+  TextLink,
   Confetti,
   DrawnCheck,
   FadeUp,
@@ -26,6 +28,9 @@ import {
 } from '@/components/ui';
 
 /** Legg ut · Publisert (design/screens/Publisert.dc.html). `id = 'lokal'` = mock publish (nothing saved). */
+/** Jobs where one helper can take several neighbours in one go. */
+const SHARED_HELPER_CATEGORIES: CategoryId[] = ['snomaking', 'hage'];
+
 export function PublishedScreen({ listingId }: { listingId?: string }) {
   const router = useRouter();
   const local = listingId === 'lokal';
@@ -94,6 +99,27 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
         />
         <Button label={nb.published.home} variant="text" block={false} onPress={home} style={styles.selfCenter} />
       </FadeUp>
+      {listing && SHARED_HELPER_CATEGORIES.includes(categoryArtId(listing.category.slug)) ? (
+        <FadeUp delay={280}>
+          <Card flat style={[styles.tip, styles.shared]}>
+            <View style={[styles.tipIcon, styles.sharedIcon]}>
+              <Icon name="users" size={16} color={colors.cyanDeep} />
+            </View>
+            <View style={styles.tipText}>
+              <Text style={[text.label, { fontSize: 14.5 }]}>{nb.published.sharedTitle}</Text>
+              <Text style={[text.meta, { color: colors.ink2 }]}>{nb.published.sharedBody}</Text>
+              <TextLink
+                label={nb.published.sharedCta}
+                onPress={() =>
+                  router.push(
+                    `/oppslagstavle?ny=1&tittel=${encodeURIComponent(nb.published.sharedPostTitle(categoryLabel(categoryArtId(listing.category.slug)).toLowerCase()))}&tekst=${encodeURIComponent(nb.published.sharedPostBody(categoryLabel(categoryArtId(listing.category.slug)).toLowerCase()))}`,
+                  )
+                }
+              />
+            </View>
+          </Card>
+        </FadeUp>
+      ) : null}
       <FadeUp delay={300}>
         <Card flat style={styles.tip}>
           <View style={styles.tipIcon}>
@@ -138,6 +164,8 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
 }
 
 const styles = StyleSheet.create({
+  shared: { backgroundColor: colors.cyanTint },
+  sharedIcon: { backgroundColor: colors.white },
   content: { paddingHorizontal: screenPadding, paddingTop: 18, gap: 22, paddingBottom: 30 },
   center: { alignItems: 'center' },
   selfCenter: { alignSelf: 'center' },

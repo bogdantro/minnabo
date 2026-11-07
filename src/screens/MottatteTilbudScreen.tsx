@@ -5,6 +5,7 @@ import type { Proposal, ProposalStatus } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
 import nb from '@/i18n/nb';
+import { isNewHelper } from '@/domain/newHelper';
 import { ReliableBadge } from '@/components/ReliableBadge';
 import { WEEKDAYS } from '@/domain/offer';
 import { isExpiredProposal, isTakenListing } from '@/domain/editing';
@@ -314,6 +315,7 @@ function OfferRow({ p, onHold }: { p: Proposal; onHold: boolean }) {
           ) : null}
         </View>
         {from?.youthAge != null ? <Text style={[text.meta, styles.youth]}>{nb.youth.marker(from.youthAge)}</Text> : null}
+        {from && isNewHelper(from, new Date()) ? <Text style={[text.meta, styles.youth]}>{nb.card.newHelper}</Text> : null}
         <ReliableBadge profileId={p.fromProfileId} />
         {p.scheduledAt && from?.availableWeekdays?.includes(new Date(p.scheduledAt).getDay()) ? (
           <Text style={[text.meta, styles.free]}>{nb.availability.freeOn(WEEKDAYS.find((w) => w.i === new Date(p.scheduledAt!).getDay())!.long)}</Text>

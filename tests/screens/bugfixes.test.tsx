@@ -72,7 +72,7 @@ test('the Trygg tur banner opens the avtale, or Sikkerhet when the trip has none
 test('a saved search runs with all its filters', async () => {
   savedSearchStore.add(
     'Hage og flytting',
-    { query: 'plen', categorySlugs: ['hage', 'flytting'], verifiedOnly: true, maxDistanceKm: 10, municipalities: ['Lillehammer', 'Øyer'] },
+    { query: 'plen', categorySlugs: ['hage', 'flytting'], maxDistanceKm: 10, municipalities: ['Lillehammer', 'Øyer'] },
     'NEWEST',
   );
   await renderWithProviders(<SavedScreen />);
@@ -84,24 +84,21 @@ test('a saved search runs with all its filters', async () => {
   expect(url.startsWith('/sok?')).toBe(true);
   expect(params.get('q')).toBe('plen');
   expect(params.get('cats')).toBe('hage,flytting');
-  expect(params.get('verified')).toBe('1');
   expect(params.get('km')).toBe('10');
   expect(params.get('sort')).toBe('NEWEST');
   expect(params.get('kommuner')).toBe('Lillehammer,Øyer');
 });
 
 test('Søk started from a saved search shows its filters, and saving keeps several categories', async () => {
-  await renderWithProviders(<SearchScreen initialQuery="plen" start={{ categories: ['hage', 'flytting'], verified: true, sort: 'NEWEST' }} />);
+  await renderWithProviders(<SearchScreen initialQuery="plen" start={{ categories: ['hage', 'flytting'], sort: 'NEWEST' }} />);
   await settle(500);
   expect(screen.getByText('Hage')).toBeTruthy();
   expect(screen.getByText('Flytting/bæring')).toBeTruthy();
-  expect(screen.getByText('Kun verifiserte')).toBeTruthy();
 
   await fireEvent.press(screen.getByText('Lagre søk'));
   await settle();
   const saved = savedSearchStore.list();
   expect(saved.at(-1)!.filter.categorySlugs).toEqual(['hage', 'flytting']);
-  expect(saved.at(-1)!.filter.verifiedOnly).toBe(true);
   expect(saved.at(-1)!.sort).toBe('NEWEST');
 });
 

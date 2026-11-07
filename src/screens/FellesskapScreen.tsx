@@ -1,7 +1,8 @@
+import { useFocusEffect, useRouter } from 'expo-router';
+import { PartnerArt } from '@/components/art/Scenes';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Dimensions, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from '@/components/ui/Image';
-import { useFocusEffect } from 'expo-router';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -42,6 +43,7 @@ import {
   ScaleIn,
   Screen,
   SectionHeader,
+  SubHeader,
   Sheet,
   type IconKey,
   TextLink,
@@ -139,6 +141,7 @@ const supporterLine = (p: Partner): string => (p.categorySlug ? categoryBySlug(p
 /** Fellesskap tab (design/screens/Fellesskap.dc.html). */
 export function FellesskapScreen() {
   const pull = usePullRefresh();
+  const router = useRouter();
   const me = useCurrentUser();
   const { municipality, municipalities, ready } = useLocationScope();
   const partnersQuery = usePartners();
@@ -227,11 +230,15 @@ export function FellesskapScreen() {
       spacer="nav"
       scrollProps={{ onScroll: checkVisible, scrollEventThrottle: 200, refreshControl: pullRefreshControl(pull) }}
       header={
-        <HomeTopBar
-          avatar={{ uri: me.avatarUrl, initials: me.initials }}
-          onProfilePress={() => safePush('/profil')}
-          onNotificationsPress={() => safePush('/varsler')}
-        />
+        me.isYouth ? (
+          <SubHeader title={nb.youth.community} onBack={() => (router.canGoBack() ? router.back() : router.replace('/ung'))} />
+        ) : (
+          <HomeTopBar
+            avatar={{ uri: me.avatarUrl, initials: me.initials }}
+            onProfilePress={() => safePush('/profil')}
+            onNotificationsPress={() => safePush('/varsler')}
+          />
+        )
       }
     >
       <FadeUp style={[styles.px, styles.mt10]}>
@@ -247,7 +254,7 @@ export function FellesskapScreen() {
 
       <View style={[styles.px, styles.links]}>
         <FadeUp delay={100}>
-          {myNabolag.length ? (
+          {me.isYouth ? null : myNabolag.length ? (
             // the nabolag I chose: each opens directly
             <View style={styles.mine}>
               <MyNabolagCards nabolag={myNabolag} posts={postsData ?? []} now={openedAt} />
@@ -527,25 +534,36 @@ export function FellesskapScreen() {
       {/* businesses become partners on the website (packages and payment live there, never in the app) */}
       {!me.isYouth ? (
         <View style={[styles.px, styles.mt22]}>
-          <View style={styles.pcta} testID="partner-cta">
-            <View style={styles.pctaTop}>
-              <View style={styles.pctaIc}>
-                <Icon name="building" size={22} color={colors.ink} />
-              </View>
-              <View style={styles.pctaBody}>
-                <Text style={styles.pctaEyebrow}>{nb.fellesskap.partnerCtaEyebrow}</Text>
-                <Text style={[text.label, styles.pctaTitle]}>{nb.fellesskap.partnerCtaTitle(municipality ?? '')}</Text>
-              </View>
+          <View style={[styles.pcta, shadow.medium]} testID="partner-cta">
+            <View style={styles.pctaScene}>
+              <PartnerArt />
             </View>
-            <Text style={[text.body, styles.pctaText]}>{nb.fellesskap.partnerCtaBody}</Text>
-            <Button
-              label={nb.fellesskap.partnerCtaButton}
-              iconRight="arrow"
-              variant="lime"
-              accessibilityLabel={nb.fellesskap.partnerCtaA11y}
-              onPress={() => openWebsite('bedrifter')}
-            />
-            <Text style={styles.pctaNote}>{nb.fellesskap.partnerCtaNote}</Text>
+            <View style={styles.pctaBody}>
+              <Text style={styles.pctaTitle} accessibilityRole="header">
+                {nb.fellesskap.partnerCtaTitle}
+              </Text>
+              <Text style={styles.pctaText}>{nb.fellesskap.partnerCtaBody}</Text>
+              <View style={styles.pctaPoints}>
+                {nb.fellesskap.partnerCtaPoints.map((p) => (
+                  <View key={p} style={styles.pctaPoint}>
+                    <View style={styles.pctaTick}>
+                      <Icon name="check" size={13} color={colors.ink} strokeWidth={3} />
+                    </View>
+                    <Text style={styles.pctaPointText}>{p}</Text>
+                  </View>
+                ))}
+              </View>
+              <Button
+                label={nb.fellesskap.partnerCtaButton}
+                iconRight="arrow"
+                variant="lime"
+                size="lg"
+                flat
+                accessibilityLabel={nb.fellesskap.partnerCtaA11y}
+                onPress={() => openWebsite('bedrifter')}
+              />
+              <Text style={styles.pctaNote}>{nb.fellesskap.partnerCtaNote}</Text>
+            </View>
           </View>
         </View>
       ) : null}
@@ -637,13 +655,15 @@ const styles = StyleSheet.create({
   mt30: { marginTop: 30 },
   mt34: { marginTop: 34 },
   mt22: { marginTop: 22 },
-  pcta: { borderRadius: radius.card, backgroundColor: colors.ink, padding: 18, gap: 12 },
-  pctaTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  pctaIc: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
-  pctaBody: { flex: 1, minWidth: 0, gap: 2 },
-  pctaEyebrow: { ...text.eyebrow, color: colors.lime },
-  pctaTitle: { fontSize: 16.5, lineHeight: 21, color: colors.white },
-  pctaText: { fontSize: 14.5, lineHeight: 20, color: colors.onInk78 },
+  pcta: { borderRadius: radius.listingCard, backgroundColor: colors.ink, overflow: 'hidden' },
+  pctaScene: { height: 150 },
+  pctaBody: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20, gap: 10 },
+  pctaTitle: { ...text.h2, fontSize: 25, lineHeight: 29, color: colors.white },
+  pctaText: { ...text.body, fontSize: 15, lineHeight: 21, color: colors.onInk78 },
+  pctaPoints: { gap: 9, marginTop: 4, marginBottom: 6 },
+  pctaPoint: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pctaTick: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
+  pctaPointText: { flex: 1, fontFamily: text.bodySemi.fontFamily, fontSize: 14.5, lineHeight: 20, color: colors.white },
   pctaNote: { ...text.meta, color: colors.onInk62, textAlign: 'center' },
   gap3: { gap: 3 },
   gap12: { gap: 12 },

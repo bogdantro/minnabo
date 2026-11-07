@@ -214,7 +214,6 @@ function filterChips(s: SavedSearchRecord): { icon: IconName; label: string }[] 
   const m = f.municipalities ?? [];
   if (m.length === 1) out.push({ icon: 'pin', label: m[0] });
   else if (m.length > 1) out.push({ icon: 'pin', label: nb.saved.neighbours(m[0]) });
-  if (f.verifiedOnly) out.push({ icon: 'shield', label: nb.saved.verifiedOnly });
   if (s.sort === 'NEWEST') out.push({ icon: 'clock', label: nb.saved.newest });
   if (s.sort === 'PRICE') out.push({ icon: 'tag', label: nb.saved.cheapest });
   return out;
@@ -275,10 +274,13 @@ function SearchCard({ search: s }: { search: SavedSearchRecord }) {
     if (f.query) params.set('q', f.query);
     if (f.categorySlugs?.length) params.set('cats', f.categorySlugs.join(','));
     else if (f.categorySlug && f.categorySlug !== 'alle') params.set('category', f.categorySlug);
-    if (f.verifiedOnly) params.set('verified', '1');
     if (typeof f.maxDistanceKm === 'number') params.set('km', String(f.maxDistanceKm));
     if (s.sort && s.sort !== 'RELEVANCE') params.set('sort', s.sort);
     if (f.municipalities?.length) params.set('kommuner', f.municipalities.join(','));
+    if (f.type) params.set('kind', f.type);
+    if (f.when) params.set('when', f.when);
+    if (f.minBudgetKr) params.set('min', String(f.minBudgetKr));
+    if (f.urgentOnly) params.set('urgent', '1');
     const qs = params.toString();
     safePush(qs ? `/sok?${qs}` : '/sok');
   };

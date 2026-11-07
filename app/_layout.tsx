@@ -38,9 +38,12 @@ import { HeroOverlay } from '@/components/HeroOverlay';
 import { AppLockGate } from '@/components/AppLockGate';
 import { ReviewGate } from '@/components/ReviewGate';
 import { OfflineOutbox } from '@/lib/outbox';
+import { AppBridges, WhatsNewSheet } from '@/components/AppGates';
+import { startCrashReporting } from '@/lib/reporting';
 import { queryClientRef } from '@/auth/queryClientRef';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+void startCrashReporting();
 
 // Web only: strip the browser focus ring / outline from inputs and buttons
 // so the web preview matches the native look.
@@ -120,6 +123,8 @@ export default function RootLayout() {
               <PushBridge />
               <NotificationsReadOnVisit />
               <ReviewGate />
+              <AppBridges />
+              <WhatsNewSheet />
               <InboxRealtime />
               <PlatformRealtime />
               <CategorySync />

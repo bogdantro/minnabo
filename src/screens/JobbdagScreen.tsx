@@ -6,6 +6,7 @@ import Animated, { useAnimatedProps, useAnimatedStyle, useReducedMotion, useShar
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice, groupThousands } from '@/domain/price';
 import nb from '@/i18n/nb';
+import { clearLive, showLive } from '@/lib/appServices';
 import {
   useAgreementByProposal,
   useJobWorkspace,
@@ -73,6 +74,18 @@ const dur = (ms: number) => {
 };
 
 /** Jobbdag (design/screens/Jobbdag.dc.html). */
+/** On the lock screen while the clock runs, so it isn't forgotten with the phone in a pocket. */
+function LiveTimer({ running, startedAt, title, proposalId }: { running: boolean; startedAt?: number | null; title: string; proposalId: string }) {
+  useEffect(() => {
+    if (running && startedAt) {
+      void showLive('job', nb.live.jobTitle(title), nb.live.jobBody(formatTime(new Date(startedAt).toISOString())), `/jobbdag/${proposalId}`);
+    } else {
+      void clearLive('job');
+    }
+  }, [running, startedAt, title, proposalId]);
+  return null;
+}
+
 export function JobbdagScreen({ proposalId }: { proposalId: string }) {
   const router = useRouter();
   const me = useCurrentUser();
@@ -264,6 +277,23 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
             </View>
             <IconButton icon="msg" iconSize={18} accessibilityLabel={nb.jobWorkspace.openChat(first)} onPress={() => safePush(`/chat/${proposal.conversationId}`)} />
           </View>
+        </FadeUp>
+
+        <LiveTimer running={run === 'running'} startedAt={ws?.timerStartedAt} title={listing?.title ?? ''} proposalId={proposalId} />
+        {/* one tap from the job, not three screens away */}
+        <FadeUp delay={60} style={[styles.px, styles.mt14]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.jobWorkspace.emergencyA11y}
+            onPress={() => void Linking.openURL('tel:112')}
+            style={({ pressed }) => [styles.sos, pressed && styles.sosPressed]}
+          >
+            <View style={styles.sosIcon}>
+              <Icon name="phone" size={16} color={colors.white} />
+            </View>
+            <Text style={styles.sosText}>{nb.jobWorkspace.emergency}</Text>
+            <Text style={styles.sosNumber}>112</Text>
+          </Pressable>
         </FadeUp>
 
         {/* time tracker */}
@@ -727,6 +757,11 @@ function MaterialSheet({ visible, onClose, onAdd, party }: { visible: boolean; o
 }
 
 const styles = StyleSheet.create({
+  sos: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 12, borderRadius: radius.m, backgroundColor: colors.dangerTint },
+  sosPressed: { opacity: 0.8 },
+  sosIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
+  sosText: { flex: 1, fontFamily: text.bodySemi.fontFamily, fontSize: 14, color: colors.danger },
+  sosNumber: { fontFamily: text.h3.fontFamily, fontSize: 18, color: colors.danger },
   flex: { flex: 1 },
   flex1: { flex: 1, minWidth: 0, gap: 2 },
   px: { paddingHorizontal: screenPadding },

@@ -109,6 +109,7 @@ export const colors = {
   dashedCardBg: 'rgba(255,255,255,0.6)',
   budgetBg: '#F2FBDF',     // Oppdragsdetaljer budget card
   mapBg: '#E7EEE2',        // approximate-area map
+  mapZone: 'rgba(10,23,64,0.12)', // the approximate circle on a real map
   mapWater: '#CFE6F3',
   mapPark: '#D4E8C4',
   areaFill: 'rgba(184,238,60,0.28)',
@@ -396,6 +397,7 @@ export const shadow = {
   large: sh('0 24px 60px -16px rgba(10,23,64,.34)'),                                // --sh-l (dialog, toast)
   nav: sh('0 18px 44px -14px rgba(10,23,64,.32), 0 0 0 1px rgba(10,23,64,.05)'),
   fab: sh('0 14px 26px -10px rgba(20,160,140,.75), 0 0 0 5px #fff'),
+  fabBlue: sh('0 14px 26px -10px rgba(8,101,158,.75), 0 0 0 5px #fff'),
   sheet: sh('0 -10px 40px rgba(10,23,64,.12)'),
   btnLime: sh('0 10px 22px -10px rgba(110,180,10,.85)'),
   btnCyan: sh('0 10px 22px -10px rgba(8,101,158,.8)'),
@@ -485,7 +487,7 @@ export const icons = {
   userX: 'UserX', msgOff: 'MessageCircleOff',
   eye: 'Eye', sun: 'Sun', zap: 'Zap', repeat: 'Repeat', smile: 'Smile', thumb: 'ThumbsUp',
   pinned: 'Pin', gift: 'Gift', map: 'Map', logout: 'LogOut', chart: 'BarChart3', archive: 'Archive',
-  list: 'ListChecks', award: 'Award', hand: 'Handshake', key: 'Key', globe: 'Globe', mic: 'Mic',
+  list: 'ListChecks', eyeoff: 'EyeOff', award: 'Award', hand: 'Handshake', key: 'Key', globe: 'Globe', mic: 'Mic',
   undo: 'Undo2', moon: 'Moon', sparkle: 'Sparkle', copy: 'Copy', reply: 'Reply', hourglass: 'Hourglass',
   // categories
   hage: 'Leaf', rengjoring: 'Sparkles', flytting: 'Package', transport: 'Truck', montering: 'Wrench',

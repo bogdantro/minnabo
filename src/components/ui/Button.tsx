@@ -44,6 +44,8 @@ export type ButtonProps = {
   loadingLabel?: string;
   accessibilityLabel?: string;
   testID?: string;
+  /** No drop shadow: for buttons on dark cards, where it only looks like a smudge. */
+  flat?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -84,6 +86,7 @@ export function Button({
   loadingLabel,
   accessibilityLabel,
   testID,
+  flat = false,
   style,
 }: ButtonProps) {
   // Guard against re-entrancy while an async onPress is still running, so a
@@ -131,7 +134,7 @@ export function Button({
         },
         look.border ? { borderWidth: 1.5, borderColor: look.border } : null,
         block ? styles.block : align === 'center' ? styles.inlineCenter : styles.inline,
-        !disabled && look.shadow ? look.shadow : null,
+        !disabled && !flat && look.shadow ? look.shadow : null,
         disabled ? styles.disabled : null,
         style,
       ]}

@@ -7,6 +7,9 @@ import nb from '@/i18n/nb';
 import type { Listing, ListingSort } from '@/domain/types';
 import { categoryArtId, slugForArtId, categoryLabel } from '@/domain/categories';
 import { useAddSavedSearch, useListings, useRemoveSavedSearch } from '@/api/queries';
+import { matchesFilters, WHEN_FILTERS, type KindFilter, type WhenFilter } from '@/domain/listingFilters';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { ListingsMap } from '@/components/ListingsMap';
 import { useLocationScope } from '@/lib/locationScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRecentSearches } from '@/lib/recentSearches';
@@ -30,6 +33,7 @@ import {
   Radio,
   RangeSlider,
   ScaleIn,
+  Segmented,
   ListScreen,
   Sheet,
   Toggle,
@@ -39,21 +43,32 @@ import {
 const SORTS: ListingSort[] = ['RELEVANCE', 'DISTANCE', 'NEWEST', 'PRICE'];
 const MAX_KM = 50;
 
-type Filters = { cats: CategoryId[]; verified: boolean; km: number; sort: ListingSort };
-const NO_FILTERS: Filters = { cats: [], verified: false, km: MAX_KM, sort: 'RELEVANCE' };
+const BUDGETS = [300, 500, 1000, 2000];
+
+type Filters = {
+  cats: CategoryId[];
+  km: number;
+  sort: ListingSort;
+  /** «Alle», «Trenger hjelp» or «Tilbyr hjelp»: sits on the screen, not in the sheet */
+  kind: KindFilter;
+  when: WhenFilter | null;
+  minKr: number;
+  urgent: boolean;
+};
+const NO_FILTERS: Filters = { cats: [], km: MAX_KM, sort: 'RELEVANCE', kind: 'ALL', when: null, minKr: 0, urgent: false };
 
 const priceValue = (l: Listing) => (l.price ? l.price.amountMinor : Number.MAX_SAFE_INTEGER);
 
 /**
- * Search query + kommune scope on the server; categories (multi), "Kun
- * verifiserte", distance and sort applied here so the filter sheet can show
- * a live "Vis N treff" count.
+ * Search query + kommune scope on the server; categories (multi), distance
+ * and sort applied here so the filter sheet can show a live "Vis N treff" count.
  */
 function applyFilters(list: Listing[], f: Filters): Listing[] {
   let out = list;
   if (f.cats.length) out = out.filter((l) => f.cats.includes(categoryArtId(l.category.slug)));
-  if (f.verified) out = out.filter((l) => l.owner.verifications.some((v) => v.verified));
   if (f.km < MAX_KM) out = out.filter((l) => (l.location.distanceKm ?? 0) <= f.km);
+  const now = new Date();
+  out = out.filter((l) => matchesFilters(l, { kind: f.kind, when: f.when, minBudgetKr: f.minKr, urgentOnly: f.urgent }, now));
   const s = [...out];
   if (f.sort === 'DISTANCE') s.sort((a, b) => (a.location.distanceKm ?? 999) - (b.location.distanceKm ?? 999));
   if (f.sort === 'NEWEST') s.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
@@ -61,15 +76,18 @@ function applyFilters(list: Listing[], f: Filters): Listing[] {
   return s;
 }
 
-/** Søk (design/screens/Sok.dc.html). Oppdrag only (rule 1). */
+/** Søk (design/screens/Sok.dc.html). Finds both kinds of post: oppdrag and «Tilbyr hjelp». */
 /** Filters a link can start Søk with ("Kjør søk" on a saved search passes all of them). */
 export type SearchStart = {
   categories?: string[];
-  verified?: boolean;
   km?: number;
   sort?: ListingSort;
   /** search these kommuner instead of the current location scope */
   kommuner?: string[];
+  kind?: KindFilter;
+  when?: WhenFilter;
+  minKr?: number;
+  urgent?: boolean;
 };
 
 export function SearchScreen({
@@ -84,6 +102,9 @@ export function SearchScreen({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const CATS = useActiveCategories();
+  const me = useCurrentUser();
+  // a youth account helps people who need it; it doesn't shop for other helpers
+  const youth = me.isYouth;
   const [q, setQ] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
   const [f, setF] = useState<Filters>(() => {
@@ -94,9 +115,12 @@ export function SearchScreen({
         : [];
     return {
       cats: [...new Set(slugs.map((s) => categoryArtId(s)))],
-      verified: !!start?.verified,
       km: start?.km && start.km > 0 && start.km < MAX_KM ? start.km : MAX_KM,
       sort: start?.sort ?? 'RELEVANCE',
+      kind: youth ? 'TASK_REQUEST' : (start?.kind ?? 'ALL'),
+      when: start?.when ?? null,
+      minKr: start?.minKr ?? 0,
+      urgent: !!start?.urgent,
     };
   });
   // a saved search ("Kjør søk") runs in the kommuner it was saved with
@@ -104,16 +128,19 @@ export function SearchScreen({
   const [draft, setDraft] = useState<Filters>(f);
   const [sheet, setSheet] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [map, setMap] = useState(false);
 
   const debounced = useDebouncedValue(q, 300);
   const recent = useRecentSearches();
   const { municipality, municipalities: scope, reach, ready } = useLocationScope();
   const municipalities = kommuner ?? scope;
-  const jobs = useListings({ type: 'TASK_REQUEST', query: debounced.trim() || undefined, municipalities }, 'RELEVANCE');
+  // no type: Søk shows oppdrag and «Tilbyr hjelp» together; the kind switch filters on the phone
+  const jobs = useListings({ query: debounced.trim() || undefined, municipalities }, 'RELEVANCE');
   const addSearch = useAddSavedSearch();
   const removeSearch = useRemoveSavedSearch();
 
-  const base = useMemo(() => jobs.data ?? [], [jobs.data]);
+  // your own «Tilbyr hjelp» and oppdrag are in Mine, not something to find
+  const base = useMemo(() => (jobs.data ?? []).filter((l) => l.owner.id !== me.id && (!youth || l.type === 'TASK_REQUEST')), [jobs.data, me.id, youth]);
   const results = useMemo(() => applyFilters(base, f), [base, f]);
   const draftCount = useMemo(() => applyFilters(base, draft).length, [base, draft]);
 
@@ -128,9 +155,13 @@ export function SearchScreen({
     setF((x) => ({ ...x, ...patch }));
     setSavedId(null);
   };
+  // the kind switch is a view of the list: «Nullstill» leaves it where it is
+  const clearFilters = () => set({ ...NO_FILTERS, kind: f.kind });
   const active: { label: string; remove: () => void }[] = [
     ...f.cats.map((c) => ({ label: categoryLabel(c), remove: () => set({ cats: f.cats.filter((x) => x !== c) }) })),
-    ...(f.verified ? [{ label: nb.sok.verifiedOnly, remove: () => set({ verified: false }) }] : []),
+    ...(f.when ? [{ label: nb.sok.whens[f.when], remove: () => set({ when: null }) }] : []),
+    ...(f.minKr ? [{ label: nb.sok.minBudget(f.minKr), remove: () => set({ minKr: 0 }) }] : []),
+    ...(f.urgent ? [{ label: nb.sok.urgentOnly, remove: () => set({ urgent: false }) }] : []),
     ...(f.km < MAX_KM ? [{ label: nb.sok.distanceUpTo(f.km), remove: () => set({ km: MAX_KM }) }] : []),
     ...(f.sort !== 'RELEVANCE' ? [{ label: nb.sok.sortedBy(nb.sok.sorts[f.sort].label), remove: () => set({ sort: 'RELEVANCE' }) }] : []),
   ];
@@ -165,11 +196,13 @@ export function SearchScreen({
       {
         name: term || f.cats.map((c) => categoryLabel(c)).join(', ') || nb.sok.saveSearch,
         filter: {
-          type: 'TASK_REQUEST',
+          type: f.kind === 'ALL' ? undefined : f.kind,
+          when: f.when ?? undefined,
+          minBudgetKr: f.minKr || undefined,
+          urgentOnly: f.urgent || undefined,
           query: term || undefined,
           categorySlug: f.cats.length === 1 ? slugForArtId(f.cats[0]) : undefined,
           categorySlugs: f.cats.length > 1 ? f.cats.map(slugForArtId) : undefined,
-          verifiedOnly: f.verified || undefined,
           maxDistanceKm: f.km < MAX_KM ? f.km : undefined,
           municipalities: municipalities.length ? municipalities : undefined,
         },
@@ -224,6 +257,20 @@ export function SearchScreen({
         }
         listHeader={
           <View>
+            {youth ? null : (
+              <View style={[styles.px, styles.mt12]}>
+                <Segmented
+                  accessibilityLabel={nb.sok.kindA11y}
+                  value={f.kind}
+                  onChange={(kind) => set({ kind })}
+                  options={[
+                    { value: 'ALL', label: nb.sok.kinds.ALL },
+                    { value: 'TASK_REQUEST', label: nb.sok.kinds.TASK_REQUEST },
+                    { value: 'SERVICE_OFFER', label: nb.sok.kinds.SERVICE_OFFER },
+                  ]}
+                />
+              </View>
+            )}
             <FadeUp delay={100} style={styles.mt12}>
               <ChipRow style={styles.filterRow}>
                 <Pressable
@@ -253,7 +300,7 @@ export function SearchScreen({
                     </Pressable>
                   </ScaleIn>
                 ))}
-                {active.length > 1 ? <TextLink label={nb.sok.reset} icon={null} onPress={() => set(NO_FILTERS)} style={styles.resetLink} /> : null}
+                {active.length > 1 ? <TextLink label={nb.sok.reset} icon={null} onPress={clearFilters} style={styles.resetLink} /> : null}
                 {active.length === 0 ? <Text style={[text.meta, styles.hint]}>{nb.sok.filterHint}</Text> : null}
               </ChipRow>
             </FadeUp>
@@ -303,6 +350,7 @@ export function SearchScreen({
                           <View style={[styles.flex, { gap: 3 }]}>
                             <Text style={[text.h3, { fontSize: 19 }]}>{nb.sok.count(results.length, where)}</Text>
                             <Text style={text.meta}>{nb.sok.sortLine(term, nb.sok.sorts[f.sort].label)}</Text>
+                            <TextLink label={nb.sok.viewMap} icon="map" onPress={() => setMap(true)} style={styles.viewLink} />
                           </View>
                           <Button
                             label={savedId ? nb.sok.saved : nb.sok.saveSearch}
@@ -341,7 +389,7 @@ export function SearchScreen({
                 <Text style={[text.h3, styles.center]}>{term ? nb.sok.emptyQ(term) : nb.sok.emptyFilters}</Text>
                 <Text style={[text.meta, styles.center, { maxWidth: 280 }]}>{nb.sok.emptyBody}</Text>
                 {active.length ? (
-                  <Button label={nb.sok.removeAll} icon="refresh" variant="ink" size="sm" block={false} align="center" onPress={() => set(NO_FILTERS)} />
+                  <Button label={nb.sok.removeAll} icon="refresh" variant="ink" size="sm" block={false} align="center" onPress={clearFilters} />
                 ) : null}
                 <Text style={[text.eyebrow, styles.mt12]}>{nb.sok.tryInstead}</Text>
                 <View style={[styles.wrap, { justifyContent: 'center' }]}>
@@ -351,7 +399,7 @@ export function SearchScreen({
                       accessibilityRole="button"
                       onPress={() => {
                         setQ(p);
-                        set(NO_FILTERS);
+                        clearFilters();
                       }}
                       style={styles.pop}
                     >
@@ -360,9 +408,13 @@ export function SearchScreen({
                     </Pressable>
                   ))}
                 </View>
-                <View style={styles.divider} />
-                <Text style={text.meta}>{nb.sok.notFound}</Text>
-                <Button label={nb.sok.post} icon="plus" onPress={() => router.push('/legg-ut')} />
+                {youth ? null : (
+                  <>
+                    <View style={styles.divider} />
+                    <Text style={text.meta}>{nb.sok.notFound}</Text>
+                    <Button label={nb.sok.post} icon="plus" onPress={() => router.push('/legg-ut')} />
+                  </>
+                )}
               </Card>
             </ScaleIn>
           )
@@ -390,8 +442,47 @@ export function SearchScreen({
         title={nb.sok.sheetTitle}
         titleSize="h2"
         scroll
-        headerAction={<TextLink label={nb.sok.reset} icon={null} onPress={() => setDraft(NO_FILTERS)} />}
+        headerAction={<TextLink label={nb.sok.reset} icon={null} onPress={() => setDraft({ ...NO_FILTERS, kind: draft.kind })} />}
       >
+        <Field label={nb.sok.when}>
+          <View style={styles.catwrap}>
+            {WHEN_FILTERS.map((w) => (
+              <Chip
+                key={w}
+                label={nb.sok.whens[w]}
+                selected={draft.when === w}
+                onPress={() => setDraft((d) => ({ ...d, when: d.when === w ? null : w }))}
+                style={styles.catChip}
+              />
+            ))}
+          </View>
+        </Field>
+        <View style={styles.sheetDivider} />
+        <Field label={nb.sok.budget} hint={nb.sok.budgetHint}>
+          <View style={styles.catwrap}>
+            {BUDGETS.map((kr) => (
+              <Chip
+                key={kr}
+                label={nb.sok.budgetChip(kr)}
+                selected={draft.minKr === kr}
+                onPress={() => setDraft((d) => ({ ...d, minKr: d.minKr === kr ? 0 : kr }))}
+                style={styles.catChip}
+              />
+            ))}
+          </View>
+        </Field>
+        <View style={styles.sheetDivider} />
+        <View style={styles.verRow}>
+          <View style={[styles.verIcon, styles.urgentIcon]}>
+            <Icon name="zap" size={22} color={colors.warn} />
+          </View>
+          <View style={styles.flex}>
+            <Text style={[text.rowTitle, { fontFamily: text.label.fontFamily }]}>{nb.sok.urgentOnly}</Text>
+            <Text style={text.meta}>{nb.sok.urgentSub}</Text>
+          </View>
+          <Toggle value={draft.urgent} onValueChange={(v) => setDraft((d) => ({ ...d, urgent: v }))} accessibilityLabel={nb.sok.urgentOnly} />
+        </View>
+        <View style={styles.sheetDivider} />
         <Field label={nb.sok.category} hint={nb.sok.categoryHint}>
           <View style={styles.catwrap}>
             {CATS.map((c) => {
@@ -409,17 +500,6 @@ export function SearchScreen({
             })}
           </View>
         </Field>
-        <View style={styles.sheetDivider} />
-        <View style={styles.verRow}>
-          <View style={styles.verIcon}>
-            <Icon name="verified" size={22} color={colors.ok} />
-          </View>
-          <View style={styles.flex}>
-            <Text style={[text.rowTitle, { fontFamily: text.label.fontFamily }]}>{nb.sok.verifiedOnly}</Text>
-            <Text style={text.meta}>{nb.sok.verifiedSub}</Text>
-          </View>
-          <Toggle value={draft.verified} onValueChange={(v) => setDraft((d) => ({ ...d, verified: v }))} accessibilityLabel={nb.sok.verifiedOnly} />
-        </View>
         <View style={styles.sheetDivider} />
         <View style={styles.distHead}>
           <Text style={text.label}>{nb.sok.distance}</Text>
@@ -471,6 +551,8 @@ export function SearchScreen({
           style={styles.apply}
         />
       </Sheet>
+
+      {map ? <ListingsMap listings={results} onClose={() => setMap(false)} /> : null}
     </View>
   );
 }
@@ -566,6 +648,8 @@ const styles = StyleSheet.create({
     marginTop: 26,
     marginBottom: 12,
   },
+  viewLink: { alignSelf: 'flex-start', marginTop: 3 },
+  urgentIcon: { backgroundColor: colors.warnTint },
   noteCenter: { justifyContent: 'center' },
   errorBox: { height: 400 },
   empty: { alignItems: 'center', gap: 10, paddingTop: 28, paddingHorizontal: 22, paddingBottom: 22 },

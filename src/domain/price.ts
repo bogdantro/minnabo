@@ -15,4 +15,7 @@ export const groupThousands = (n: number): string =>
 export const formatPrice = (p: Price): string =>
   `${groupThousands(Math.round(p.amountMinor / 100))}${NBSP}kr`;
 
+/** "300 kr / t" */
+export const formatHourly = (p: Price): string => `${formatPrice(p)}${NBSP}/${NBSP}t`;
+
 export const formatFromPrice = (p: Price): string => `Fra${NBSP}${formatPrice(p)}`;

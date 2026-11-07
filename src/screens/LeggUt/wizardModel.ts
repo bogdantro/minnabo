@@ -8,7 +8,7 @@ import { isUrgent, URGENCY_DAYS, urgentDeadline, type Urgency } from '@/domain/u
 import { EQUIPMENT, FORMS, TIMES_OF_DAY, type EquipKey, type IntakeField } from './wizardConfig';
 
 export type WhenMode = 'fast' | 'flex' | 'innen';
-export type PriceMode = 'budget' | 'offer';
+export type PriceMode = 'budget' | 'hourly' | 'offer';
 export type Who = 'alle' | 'verif';
 /** One answer to a category question: choice(s), a number or free text. */
 export type Answer = string | string[] | number;
@@ -44,6 +44,8 @@ export type WizardState = {
   practical: string;
   who: Who;
   km: number;
+  /** «Send til faste hjelpere først»: new oppdrag only, not when it hastes */
+  firstToFollowed?: boolean;
 };
 
 export const emptyWizard = (kommune = ''): WizardState => ({
@@ -194,6 +196,8 @@ export function applyUrgency(u: Urgency, days: DayItem[]): Partial<WizardState> 
 export const urgentUntilOf = (s: WizardState, from: Date): string | null =>
   s.urgent ? urgentDeadline(urgencyOf(s), from).toISOString() : null;
 
+/** "ca. 1 200 kr for 4 timer" */
+export const hourlyTotal = (kr: number, h: number) => `ca. ${fmtKr(kr * h)} for ${h} ${h === 1 ? 'time' : 'timer'}`;
 export const hoursLabel = (h: number) => `ca. ${h} ${h === 1 ? 'time' : 'timer'}`;
 export const fmtKr = (n: number) => `${groupThousands(n)} kr`;
 
@@ -221,6 +225,9 @@ export function validateStep(step: number, s: WizardState): WizardError | null {
   }
   if (step === 6 && s.priceMode === 'budget' && !(Number(s.amount) > 0)) {
     return { field: 'amount', message: 'Skriv inn et budsjett, eller velg «Ønsker tilbud».' };
+  }
+  if (step === 6 && s.priceMode === 'hourly' && !(Number(s.amount) > 0)) {
+    return { field: 'amount', message: 'Skriv inn en timepris, eller velg «Ønsker tilbud».' };
   }
   return null;
 }
@@ -257,7 +264,9 @@ export function summary(s: WizardState, days: DayItem[]) {
       v:
         s.priceMode === 'budget'
           ? `Budsjett ${fmtKr(amt)}`
-          : `Ønsker tilbud${amt ? ` · ditt anslag ${fmtKr(amt)} (vises ikke)` : ''}`,
+          : s.priceMode === 'hourly'
+            ? `${fmtKr(amt)} / t · ${hourlyTotal(amt, s.hours)}`
+            : `Ønsker tilbud${amt ? ` · ditt anslag ${fmtKr(amt)} (vises ikke)` : ''}`,
       step: 6,
     },
     { k: 'Praktisk', v: eqOn.length ? eqOn.join(', ') : 'Ingenting valgt', step: 7 },
@@ -290,8 +299,8 @@ export function buildListing(s: WizardState, days: DayItem[]): Listing {
     type: 'TASK_REQUEST',
     title: s.title.trim(),
     category: categoryBySlug(slugForArtId(cat)),
-    priceMode: s.priceMode === 'budget' ? 'BUDGET' : 'BY_AGREEMENT',
-    price: s.priceMode === 'budget' && amt > 0 ? nok(amt) : undefined,
+    priceMode: s.priceMode === 'budget' ? 'BUDGET' : s.priceMode === 'hourly' ? 'HOURLY' : 'BY_AGREEMENT',
+    price: s.priceMode !== 'offer' && amt > 0 ? nok(amt) : undefined,
     // No distance on your own listing (it would read "0 km").
     location: { municipality: s.kommune, place: s.area.trim() || s.kommune },
     images: s.photos.map((url, i) => ({ id: `ui-${i}-${Date.now()}`, url })),
@@ -312,6 +321,9 @@ export function buildListing(s: WizardState, days: DayItem[]): Listing {
   };
 }
 
+/** «Send til faste hjelpere først» */
+export const FIRST_REFUSAL_MS = 2 * 60 * 60 * 1000;
+
 /** Settings stored next to the listing ("Hvem kan gi tilbud", km, private estimate, the form itself). */
 export function extrasFor(s: WizardState, from = new Date()): ListingExtras {
   const amt = Number(s.amount) || 0;
@@ -323,6 +335,8 @@ export function extrasFor(s: WizardState, from = new Date()): ListingExtras {
     privateEstimateMinor: s.priceMode === 'offer' && amt > 0 ? amt * 100 : null,
     estimatedMinutes: s.hours * 60,
     urgentUntil: urgentUntilOf(s, from),
+    // the server caps this at two hours and ignores it on an edit (0086)
+    firstToFollowedUntil: s.firstToFollowed && !s.urgent ? new Date(from.getTime() + FIRST_REFUSAL_MS).toISOString() : null,
     wizard: s,
   };
 }
@@ -339,7 +353,7 @@ export function isWizardState(v: unknown): v is WizardState {
 export function wizardFromListing(l: Listing, privateEstimateMinor: number | null): WizardState {
   const cat = categoryArtId(l.category.slug);
   const base = { ...emptyWizard(l.location.municipality), ...applyCategory(emptyWizard(), cat) };
-  const budget = l.priceMode === 'BUDGET' || l.priceMode === 'FIXED';
+  const budget = l.priceMode === 'BUDGET' || l.priceMode === 'FIXED' || l.priceMode === 'HOURLY';
   const amountKr = budget ? (l.price?.amountMinor ?? 0) / 100 : (privateEstimateMinor ?? 0) / 100;
   // Read the category answers back from the detail rows ("Hva skal males?: Gjerde").
   const answers = { ...base.answers };
@@ -372,7 +386,7 @@ export function wizardFromListing(l: Listing, privateEstimateMinor: number | nul
     kommune: l.location.municipality,
     area: l.location.place,
     photos: l.images.map((im) => im.url),
-    priceMode: budget ? 'budget' : 'offer',
+    priceMode: l.priceMode === 'HOURLY' ? 'hourly' : budget ? 'budget' : 'offer',
     amount: amountKr > 0 ? String(Math.round(amountKr)) : '',
     practical: l.task?.meetingNote ?? '',
     hours: l.estimatedMinutes ? Math.max(1, Math.round(l.estimatedMinutes / 60)) : base.hours,

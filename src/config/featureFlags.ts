@@ -8,6 +8,8 @@ export const featureFlags = {
   businessRegistration: false,
   /** The registration form on "For bedrifter". Off = only the information card. */
   businessForm: false,
+  /** Politiattest on Verifisering and the badge. Off until the lawyer has answered (docs/LEFT_OUT.md). */
+  policeCertificate: false,
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

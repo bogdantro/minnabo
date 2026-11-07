@@ -26,6 +26,7 @@ import {
   useReliability,
   useReplyMinutes,
   useInviteCount,
+  usePoliceBadge,
 } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { useMyAccount } from '@/auth/identity';
@@ -37,6 +38,9 @@ import { toast } from '@/lib/toast';
 import { categoryLabels, colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
 import { ProfileReviews, firstName } from '@/components/profile/ProfileReviews';
+import { ProfileThanks } from '@/components/ThankCards';
+import { useFeatureFlags } from '@/config/featureFlags';
+import { PosterRow, ProfilePosterSheet } from '@/components/ShareCards';
 import { PortfolioViewer, VERIF_ART, VerifSheet, portfolioWhere, type VerifKind } from '@/components/profile/ProfileSheets';
 import {
   Avatar,
@@ -73,6 +77,13 @@ function artForSkill(skill: string): CategoryId {
   return cat ? categoryArtId(cat.slug) : 'annet';
 }
 
+/** Only ever «vist», never what the attest says. Behind the flag until the lawyer has answered. */
+function PoliceBadge({ profileId }: { profileId: string }) {
+  const on = useFeatureFlags().policeCertificate;
+  const { data } = usePoliceBadge(profileId, on);
+  return data ? <Pill label={nb.police.badge} tone="ok" icon="shield" size="sm" /> : null;
+}
+
 /** Profil (design/screens/Profil.dc.html) – own profile with a public preview, or someone else's. */
 export function ProfileScreen({ profileId, initialTab }: { profileId?: string; initialTab?: 'om' | 'rev' | 'port' }) {
   const pull = usePullRefresh();
@@ -97,6 +108,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   const { data: portfolioItems } = usePortfolio(id || undefined);
 
   const [tab, setTab] = useState<Tab>(initialTab ?? 'om');
+  const [poster, setPoster] = useState(false);
   const [view, setView] = useState<View_>('me');
   const [verif, setVerif] = useState<VerifKind | null>(null);
   const [photo, setPhoto] = useState<number | null>(null);
@@ -268,6 +280,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
           <View style={styles.vbadge}>
             <Icon name="shield" size={14} color={colors.verified} />
             <Text style={[text.verified, { color: colors.verified }]}>{nb.profile.vippsVerified}</Text>
+            <PoliceBadge profileId={profile.id} />
           </View>
           {isPub && profile.paused ? <Pill label={nb.profile.onVacation} tone="warn" icon="moon" /> : null}
         </FadeUp>
@@ -526,6 +539,23 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
               </View>
               <Text style={[text.meta, styles.f12, styles.mt10]}>{nb.profile.recsNote(first)}</Text>
             </FadeUp>
+          ) : null}
+
+          <ProfileThanks profileId={profile.id} style={styles.mt16} />
+          {!isPub && !me.isYouth ? (
+            <View style={styles.mt16}>
+              <PosterRow onPress={() => setPoster(true)} />
+              <ProfilePosterSheet
+                visible={poster}
+                onClose={() => setPoster(false)}
+                id={profile.id}
+                name={profile.displayName}
+                initials={profile.initials}
+                avatarUrl={profile.avatarUrl}
+                place={profile.location.place || profile.location.municipality}
+                skills={(profile.categorySlugs ?? []).map((c) => categoryLabel(categoryArtId(c)))}
+              />
+            </View>
           ) : null}
 
           {!isPub ? (

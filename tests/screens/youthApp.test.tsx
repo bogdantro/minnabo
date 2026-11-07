@@ -37,8 +37,51 @@ test('giving an offer validates, sends and shows it under Mine tilbud', async ()
   await waitFor(() => expect(screen.getByText(/Tilbudet er sendt til/)).toBeTruthy(), { timeout: 4000 });
   await fireEvent.press(screen.getByText('Se Mine tilbud'));
   await waitFor(() => expect(screen.getByText('Sendt nå')).toBeTruthy());
+  // two steps before anything happens
+  const withdraw = jest.spyOn(apiClient, 'respondToProposal');
   await fireEvent.press(screen.getByText('Trekk'));
-  await waitFor(() => expect(screen.getByText('Trukket')).toBeTruthy());
+  await fireEvent.press(await screen.findByText('Ja, trekk tilbudet'));
+  expect(withdraw).not.toHaveBeenCalled();
+  await fireEvent.press(await screen.findByText('Trekk tilbudet nå'));
+  await waitFor(() => expect(withdraw).toHaveBeenCalled());
+  await waitFor(() => expect(screen.getAllByText('Trukket').length).toBeGreaterThan(0));
+});
+
+test('«Behold tilbudet» leaves the offer alone', async () => {
+  await renderWithProviders(<YouthAppScreen />);
+  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  await fireEvent.press(screen.getByText('Klippe plen'));
+  await fireEvent.press(screen.getByText('Gi tilbud'));
+  await fireEvent.changeText(screen.getByLabelText('Pris'), '350');
+  await fireEvent.changeText(screen.getByLabelText('Melding'), 'Jeg har klipt plen mange ganger før.');
+  // date and time are optional
+  await fireEvent.press(screen.getByText('Send tilbud'));
+  await fireEvent.press(await screen.findByText('Se Mine tilbud', {}, { timeout: 4000 }));
+  await fireEvent.press(await screen.findByText('Trekk'));
+  const withdraw = jest.spyOn(apiClient, 'respondToProposal');
+  await fireEvent.press(await screen.findByText('Behold tilbudet'));
+  expect(withdraw).not.toHaveBeenCalled();
+});
+
+test('the youth tab bar has a blue «Tilby hjelp» that opens the offer wizard', async () => {
+  const { router } = require('expo-router');
+  const push = jest.spyOn(router, 'push');
+  await renderWithProviders(<YouthAppScreen />);
+  // the last one is the tab bar: the card on the page comes first
+  const buttons = await screen.findAllByRole('button', { name: 'Tilby hjelp' });
+  await fireEvent.press(buttons[buttons.length - 1]);
+  expect(push).toHaveBeenCalledWith('/legg-ut/tilbyr');
+  push.mockRestore();
+});
+
+test('Oppslagstavle and Lagrede søk are open, only the real locks stay', async () => {
+  await renderWithProviders(<YouthAppScreen />);
+  await fireEvent.press(screen.getAllByText('Profil')[0]);
+  expect(screen.queryByText('Vurdere andre')).toBeNull();
+  expect(screen.getByText('Oppslagstavle')).toBeTruthy();
+  expect(screen.getByText('Lagrede søk')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Oppslagstavle'));
+  expect(screen.queryByText('Oppslagstavle er ikke tilgjengelig')).toBeNull();
 });
 
 test('locked features open the "ikke tilgjengelig" sheet', async () => {
@@ -85,7 +128,7 @@ test('a technical error when sending an offer shows a friendly message, never th
 test('a youth can start «Tilby hjelp» from the oppdrag list and find what they offer under Profil', async () => {
   const { router } = jest.requireMock('expo-router');
   await renderWithProviders(<YouthAppScreen />);
-  await fireEvent.press(await screen.findByText('Tilby hjelp'));
+  await fireEvent.press((await screen.findAllByText('Tilby hjelp'))[0]);
   expect(router.push).toHaveBeenCalledWith('/legg-ut/tilbyr');
   await fireEvent.press(screen.getAllByText('Profil')[0]);
   await fireEvent.press(screen.getByText('Det jeg tilbyr'));
@@ -115,4 +158,15 @@ test('a chat a nabo started on the youth’s own offer shows in Innboks', async 
   await waitFor(() => expect(screen.getByText('Jeg lufter hunder')).toBeTruthy());
   expect(screen.getByText('Kan du lufte Bamse på lørdag?')).toBeTruthy();
   expect(screen.getByText('Spør deg om hjelp')).toBeTruthy();
+});
+
+test('a youth account can add a profile picture from Profil, and it is saved at once', async () => {
+  const uploads = require('@/lib/uploads');
+  jest.spyOn(uploads, 'pickAndUpload').mockResolvedValue({ path: 'u-mb/meg.jpg', publicUrl: 'https://example.invalid/meg.jpg' });
+  const update = jest.spyOn(apiClient, 'updateProfile');
+  await renderWithProviders(<YouthAppScreen />);
+  await fireEvent.press(screen.getAllByText('Profil')[0]);
+  await fireEvent.press(await screen.findByLabelText('Endre profilbilde'));
+  await fireEvent.press(await screen.findByText('Velg fra album'));
+  await waitFor(() => expect(update).toHaveBeenCalledWith({ avatarPath: 'u-mb/meg.jpg' }));
 });

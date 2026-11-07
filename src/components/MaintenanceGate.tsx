@@ -5,6 +5,7 @@ import nb from '@/i18n/nb';
 import { appSettingsKeys, useAppSettings } from '@/api/queries';
 import { colors } from '@/theme/theme';
 import { StateView } from '@/components/ui';
+import { UpdateScreen, needsAppUpdate } from '@/components/AppGates';
 
 /**
  * Maintenance mode (website › Innstillinger › Generelt, app_settings
@@ -12,10 +13,11 @@ import { StateView } from '@/components/ui';
  * "Prøv igjen". It lifts by itself when the switch is turned off (PlatformRealtime), or on retry.
  */
 export function MaintenanceGate({ children }: { children: ReactNode }) {
-  const { maintenance } = useAppSettings();
+  const { maintenance, minAppVersion } = useAppSettings();
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
 
+  if (needsAppUpdate(minAppVersion)) return <UpdateScreen />;
   if (!maintenance) return <>{children}</>;
 
   const retry = async () => {

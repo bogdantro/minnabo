@@ -6,6 +6,7 @@ import type { NotificationPrefs } from '@/api/ApiClient';
 import nb from '@/i18n/nb';
 import { useMyListings, useMySettings, useProfile, useUpdateNotificationPrefs, useUpdateProfile } from '@/api/queries';
 import { signOut } from '@/auth/session';
+import { apiClient } from '@/api/client';
 import { useFeatureFlags } from '@/config/featureFlags';
 import { useMyAccount } from '@/auth/identity';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -47,6 +48,7 @@ export function SettingsScreen() {
 
   const [locOpen, setLocOpen] = useState(false);
   const [logout, setLogout] = useState(false);
+  const [logoutAll, setLogoutAll] = useState(false);
   const [guardian, setGuardian] = useState(false);
   const [big, setBig] = useState(false);
 
@@ -88,6 +90,18 @@ export function SettingsScreen() {
 
   const doLogout = async () => {
     setLogout(false);
+    await signOut();
+    router.replace('/velkommen');
+  };
+  // every phone with this account has to log in with Vipps again, this one included
+  const doLogoutAll = async () => {
+    setLogoutAll(false);
+    try {
+      await apiClient.signOutEverywhere();
+    } catch {
+      toast.error(nb.toast.genericError);
+      return;
+    }
     await signOut();
     router.replace('/velkommen');
   };
@@ -262,6 +276,7 @@ export function SettingsScreen() {
 
       <View style={[styles.px, styles.actions]}>
         <Button label={nb.innstillinger.logout} variant="ghost" icon="logout" onPress={() => setLogout(true)} />
+        <Button label={nb.innstillinger.logoutAll} variant="ghost" icon="lock" onPress={() => setLogoutAll(true)} />
         <Button label={nb.innstillinger.deleteAccount} variant="dangerGhost" icon="trash" onPress={() => safePush('/slett-konto')} />
         <Text style={[text.meta, styles.version]}>{nb.innstillinger.version(version)}</Text>
       </View>
@@ -269,6 +284,20 @@ export function SettingsScreen() {
 
       <GuardianSheet visible={guardian} onClose={() => setGuardian(false)} />
       <LocationSheet visible={locOpen} onClose={() => setLocOpen(false)} kommune={municipality} reach={reach} onApply={applyLocation} />
+      <Dialog
+        visible={logoutAll}
+        onClose={() => setLogoutAll(false)}
+        icon="lock"
+        tone="neutral"
+        title={nb.innstillinger.logoutAllTitle}
+        body={nb.innstillinger.logoutAllBody}
+        actions={
+          <View style={styles.gap10}>
+            <Button label={nb.innstillinger.logoutAll} variant="ink" onPress={doLogoutAll} />
+            <Button label={nb.innstillinger.cancel} variant="ghost" onPress={() => setLogoutAll(false)} />
+          </View>
+        }
+      />
       <Dialog
         visible={logout}
         onClose={() => setLogout(false)}

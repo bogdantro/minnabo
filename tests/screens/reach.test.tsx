@@ -16,7 +16,7 @@ const askedFor = (spy: jest.SpyInstance) => {
 test('«Rekkevidde» really changes which kommuner the oppdrag come from', async () => {
   const spy = jest.spyOn(apiClient, 'listListings');
   await renderWithProviders(<OppdragScreen />);
-  await waitFor(() => expect(askedFor(spy)).toEqual(['Lillehammer']));
+  await waitFor(() => expect(askedFor(spy)).toEqual(['Lillehammer', 'Øyer', 'Gausdal']));
 
   // open the location sheet, pick «Nabokommuner», «Vis oppdrag»
   await fireEvent.press(await screen.findByLabelText(/Bare min kommune/));

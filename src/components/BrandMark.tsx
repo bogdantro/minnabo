@@ -14,7 +14,7 @@ export function BrandMark({
 }) {
   return (
     <View style={styles.row} accessibilityRole="header" accessibilityLabel="MinNabo">
-      <Image source={logoIcon} style={{ width: size, height: size }} resizeMode="contain" />
+      <Image source={logoIcon} style={{ width: size, height: size, borderRadius: size * 0.22 }} resizeMode="contain" />
       {showWordmark ? (
         <AppText variant="section" weight="extrabold">
           MinNabo

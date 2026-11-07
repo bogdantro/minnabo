@@ -28,6 +28,13 @@ import type {
   Review,
   SkillEndorsement,
   VerificationKind,
+  AgreedSum,
+  ListingQuestion,
+  PoliceCertificate,
+  ThankCard,
+  ThankCardKind,
+  ToolBooking,
+  YearRecap,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type { Report } from '@/domain/types';
@@ -83,7 +90,7 @@ import { reviewDutyStore } from '@mocks/data/reviewDutyStore';
 import { noShowStore } from '@mocks/data/noShowStore';
 import { noShowWindowOpen } from '@/domain/noShow';
 import type { HelperStatus, NoShowReason, NoShowReport } from '@/domain/types';
-import type { RescueResult } from '@/api/ApiClient';
+import type { HelperSlots, RescueResult } from '@/api/ApiClient';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const delay = (ms: number) =>
@@ -108,7 +115,35 @@ export const extras = {
   claimedReports: {} as Record<string, string>,
   /** null = the database has the same list as the app's built-in one */
   categories: null as CategoryRow[] | null,
+  deletedMessages: [] as string[],
+  archived: {} as Record<string, boolean>,
+  transcribed: [] as string[],
+  slots: {} as Record<string, HelperSlots>,
+  closedSlots: [] as string[],
+  questions: [] as ListingQuestion[],
+  signedOutEverywhere: false,
+  signups: {} as Record<string, string[]>,
+  bookings: [] as ToolBooking[],
+  thanks: [] as ThankCard[],
+  thankTo: null as string | null,
+  recap: null as YearRecap | null,
+  agreedSum: null as AgreedSum | null,
+  police: { status: 'NONE' } as PoliceCertificate,
   reset() {
+    this.deletedMessages = [];
+    this.archived = {};
+    this.transcribed = [];
+    this.slots = {};
+    this.closedSlots = [];
+    this.questions = [];
+    this.signedOutEverywhere = false;
+    this.signups = {};
+    this.bookings = [];
+    this.thanks = [];
+    this.thankTo = null;
+    this.recap = null;
+    this.agreedSum = null;
+    this.police = { status: 'NONE' };
     this.categories = null;
     this.claimedReports = {};
     this.partnerThanks = {};
@@ -296,9 +331,146 @@ export class MockApiClient implements ApiClient {
     return chatRepository.getMessages(conversationId);
   }
 
-  async sendMessage(conversationId: string, text: string): Promise<Message> {
+  async sendMessage(conversationId: string, text: string, replyToId?: string): Promise<Message> {
     await delay(120);
-    return chatRepository.sendMessage(conversationId, text);
+    const sent = chatRepository.sendMessage(conversationId, text);
+    if (replyToId) sent.replyToId = replyToId;
+    return sent;
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    await delay(40);
+    extras.deletedMessages.push(messageId);
+  }
+
+  async setConversationArchived(conversationId: string, archived: boolean): Promise<void> {
+    await delay(40);
+    extras.archived[conversationId] = archived;
+  }
+
+  async transcribeMessage(messageId: string): Promise<string> {
+    await delay(40);
+    extras.transcribed.push(messageId);
+    return 'Hei, jeg er på vei.';
+  }
+
+  async getHelperSlots(listingId: string): Promise<HelperSlots> {
+    await delay(20);
+    return extras.slots[listingId] ?? { needed: repositories.listings.get(listingId)?.helpersNeeded ?? 1, taken: 0 };
+  }
+
+  async closeHelperSlots(listingId: string): Promise<void> {
+    await delay(20);
+    extras.closedSlots.push(listingId);
+  }
+
+  async listListingQuestions(listingId: string): Promise<ListingQuestion[]> {
+    await delay(20);
+    return extras.questions.filter((q) => q.listingId === listingId);
+  }
+
+  async askListingQuestion(listingId: string, body: string): Promise<ListingQuestion> {
+    await delay(20);
+    const q: ListingQuestion = { id: `q-${Date.now()}-${extras.questions.length}`, listingId, authorId: profileRepository.currentUserId, body, createdAt: new Date().toISOString() };
+    extras.questions.push(q);
+    return q;
+  }
+
+  async answerListingQuestion(id: string, answer: string): Promise<ListingQuestion> {
+    await delay(20);
+    const q = extras.questions.find((x) => x.id === id);
+    if (!q) throw new UserError('Fant ikke spørsmålet.');
+    q.answer = answer;
+    q.answeredAt = new Date().toISOString();
+    return q;
+  }
+
+  async deleteListingQuestion(id: string): Promise<void> {
+    await delay(20);
+    extras.questions = extras.questions.filter((q) => q.id !== id);
+  }
+
+  async signOutEverywhere(): Promise<void> {
+    await delay(20);
+    extras.signedOutEverywhere = true;
+  }
+
+  async listDugnadSignups(noticeId: string): Promise<string[]> {
+    await delay(20);
+    return extras.signups[noticeId] ?? [];
+  }
+
+  async setDugnadSignup(noticeId: string, join: boolean): Promise<number> {
+    await delay(20);
+    const me = profileRepository.currentUserId;
+    const rest = (extras.signups[noticeId] ?? []).filter((p) => p !== me);
+    extras.signups[noticeId] = join ? [...rest, me] : rest;
+    return extras.signups[noticeId].length;
+  }
+
+  async listToolBookedDays(noticeId: string): Promise<{ from: string; to: string }[]> {
+    await delay(20);
+    return extras.bookings.filter((b) => b.noticeId === noticeId && b.status === 'APPROVED').map(({ from, to }) => ({ from, to }));
+  }
+
+  async listToolBookings(noticeId: string): Promise<ToolBooking[]> {
+    await delay(20);
+    return extras.bookings.filter((b) => b.noticeId === noticeId);
+  }
+
+  async requestToolBooking(noticeId: string, from: string, to: string, note?: string): Promise<ToolBooking> {
+    await delay(20);
+    if (extras.bookings.some((b) => b.noticeId === noticeId && b.status === 'APPROVED' && b.from <= to && b.to >= from)) {
+      throw new UserError('Noen av dagene er allerede tatt.');
+    }
+    const b: ToolBooking = { id: `b-${extras.bookings.length + 1}`, noticeId, borrowerId: profileRepository.currentUserId, from, to, note, status: 'PENDING' };
+    extras.bookings.push(b);
+    return b;
+  }
+
+  async respondToolBooking(id: string, status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED'): Promise<ToolBooking> {
+    await delay(20);
+    const b = extras.bookings.find((x) => x.id === id);
+    if (!b) throw new UserError('Fant ikke forespørselen.');
+    b.status = status;
+    return b;
+  }
+
+  async sendThankCard(proposalId: string, card: ThankCardKind, message?: string): Promise<ThankCard> {
+    await delay(20);
+    const c: ThankCard = { id: `t-${extras.thanks.length + 1}`, proposalId, fromProfileId: profileRepository.currentUserId, toProfileId: extras.thankTo ?? 'u-other', card, message, createdAt: new Date().toISOString() };
+    extras.thanks.push(c);
+    return c;
+  }
+
+  async listThankCards(profileId: string): Promise<ThankCard[]> {
+    await delay(20);
+    return extras.thanks.filter((c) => c.toProfileId === profileId);
+  }
+
+  async getYearRecap(year: number): Promise<YearRecap> {
+    await delay(20);
+    return extras.recap ?? { year, helped: 0, gotHelp: 0, neighbours: 0, thanks: 0 };
+  }
+
+  async getAgreedSum(year: number): Promise<AgreedSum> {
+    await delay(20);
+    return extras.agreedSum ?? { year, totalMinor: 0, jobs: 0, people: [] };
+  }
+
+  async getMyPoliceCertificate(): Promise<PoliceCertificate> {
+    await delay(20);
+    return extras.police;
+  }
+
+  async submitPoliceCertificate(_path: string): Promise<void> {
+    await delay(20);
+    extras.police = { status: 'PENDING' };
+  }
+
+  async hasPoliceCertificate(_profileId: string): Promise<boolean> {
+    await delay(20);
+    return extras.police.status === 'APPROVED';
   }
 
   async sendAttachment(conversationId: string, attachmentUrl: string): Promise<Message> {
@@ -837,6 +1009,8 @@ export class MockApiClient implements ApiClient {
     /** storage path in `listing-images` */
     imagePath?: string;
     neighbourhoodId?: string;
+    isDugnad?: boolean;
+    eventAt?: string;
   }): Promise<NoticeboardPost> {
     await delay(150);
     const hood = input.neighbourhoodId ? neighbourhoodStore.byId(input.neighbourhoodId) : undefined;
@@ -874,6 +1048,11 @@ export class MockApiClient implements ApiClient {
   async toggleSavedNotice(noticeId: string): Promise<string[]> {
     await delay(40);
     return noticeboardStore.toggleSaved(noticeId);
+  }
+
+  async toggleNoticeLike(noticeId: string, liked: boolean): Promise<void> {
+    await delay(40);
+    noticeboardStore.setLiked(noticeId, liked);
   }
 
   async deleteNoticeboardPost(id: string): Promise<void> {

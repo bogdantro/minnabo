@@ -10,6 +10,7 @@ import nb from '@/i18n/nb';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
+import { ReplyBar, ShareHint } from './MessageExtras';
 import { RecordingBar, useVoiceRecorder, type VoiceClip } from './Voice';
 import { colors, fonts, motion, radius, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
@@ -221,8 +222,16 @@ export function Composer({
   onTyping,
   replies,
   onVoice,
+  replyTo,
+  onCancelReply,
+  hasAgreement,
 }: {
   first: string;
+  /** set while answering a specific message */
+  replyTo?: { name: string; preview: string } | null;
+  onCancelReply?: () => void;
+  /** before an avtale we warn about sharing an address or a number too early */
+  hasAgreement?: boolean;
   onSend: (t: string) => void;
   onAttach: () => void;
   onTyping?: () => void;
@@ -236,7 +245,12 @@ export function Composer({
   const [value, setValue] = useState('');
   const [focused, setFocused] = useState(false);
   const lastPing = useRef(0);
+  const input = useRef<TextInput>(null);
   const can = value.trim().length > 0;
+  // «Svar»: straight to the keyboard
+  useEffect(() => {
+    if (replyTo) input.current?.focus();
+  }, [replyTo]);
 
   const change = (v: string) => {
     setValue(v);
@@ -292,6 +306,8 @@ export function Composer({
           ))}
         </ScrollView>
       ) : null}
+      {replyTo ? <ReplyBar name={replyTo.name} preview={replyTo.preview} onCancel={() => onCancelReply?.()} /> : null}
+      <ShareHint draft={value} hasAgreement={!!hasAgreement} />
       {voice.active ? (
         <RecordingBar elapsedMs={voice.elapsedMs} onCancel={cancelVoice} onSend={() => void sendVoice()} />
       ) : (
@@ -299,6 +315,7 @@ export function Composer({
           <IconButton icon="plus" accessibilityLabel={nb.chat.attachA11y} onPress={onAttach} />
           <View style={[styles.cin, focused && [styles.cinFocus, shadow.focus]]}>
             <TextInput
+              ref={input}
               value={value}
               onChangeText={change}
               onFocus={() => setFocused(true)}

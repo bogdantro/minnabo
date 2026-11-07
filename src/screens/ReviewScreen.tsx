@@ -5,6 +5,7 @@ import { categoryArtId } from '@/domain/categories';
 import { serverMessage } from '@/lib/errors';
 import nb from '@/i18n/nb';
 import { reviewStreak } from '@/domain/reviewStreak';
+import { askForRating } from '@/lib/appServices';
 import { useListing, useMyAgreements, usePendingReviews, useProfile, useProposal, useSubmitReview } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { shortDate } from '@/lib/datetime';
@@ -53,6 +54,8 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
   const [comment, setComment] = useState('');
   const [rec, setRec] = useState<'ja' | 'nei' | null>(null);
   const [done, setDone] = useState(false);
+  // a review a youth gives or gets waits for a moderator (0094)
+  const [waiting, setWaiting] = useState(false);
 
   if (!proposal) {
     return <FallbackScreen status={isError ? 'error' : isLoading ? 'loading' : 'empty'} onRetry={() => refetch()} title={nb.review.formTitle} />;
@@ -83,7 +86,10 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
         recommends: rec === null ? undefined : rec === 'ja',
       },
       {
-        onSuccess: () => {
+        onSuccess: (review) => {
+          setWaiting(review.approval === 'PENDING');
+          // a five-star moment is the best time to ask, and the only one we use
+          if (rating === 5) void askForRating();
           haptics.success();
           setDone(true);
         },
@@ -117,7 +123,7 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
                 </Text>
               </FadeUp>
               <FadeUp delay={200}>
-                <Text style={[text.body, styles.muted, styles.center]}>{nb.review.thanksSub(first)}</Text>
+                <Text style={[text.body, styles.muted, styles.center]}>{waiting ? nb.review.waitingApproval : nb.review.thanksSub(first)}</Text>
               </FadeUp>
               {/* a small thank-you, never a nag: only how many of the finished jobs you have reviewed */}
               {streak ? (

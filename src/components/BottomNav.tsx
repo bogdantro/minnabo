@@ -59,29 +59,43 @@ export function NavItem({
   );
 }
 
-/** `.fab` – raised 62 px lime button. Press: scale .9 + rotate 90°. Always opens the Legg ut wizard. */
-function PostButton({ onPress }: { onPress: () => void }) {
+/**
+ * `.fab` – raised 62 px button. Press: scale .9 + rotate 90°. Lime «Legg ut» for adults; the youth
+ * bar has a blue «Tilby hjelp», since offering help is what a youth account can post.
+ */
+export function PostButton({
+  onPress,
+  label = nb.tabs.leggUt,
+  icon = 'plus',
+  blue = false,
+}: {
+  onPress: () => void;
+  label?: string;
+  icon?: IconKey;
+  blue?: boolean;
+}) {
   const p = useSharedValue(0);
+  const spin = !blue;
   const anim = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 - 0.1 * p.value }, { rotate: `${90 * p.value}deg` }],
+    transform: [{ scale: 1 - 0.1 * p.value }, { rotate: spin ? `${90 * p.value}deg` : '0deg' }],
   }));
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={nb.tabs.leggUt}
+      accessibilityLabel={label}
       style={styles.fabw}
       onPressIn={() => p.set(withTiming(1, { duration: 200 }))}
       onPressOut={() => p.set(withSpring(0, motion.spring))}
       onPress={onPress}
     >
-      <View style={[styles.fabShadow, shadow.fab]}>
+      <View style={[styles.fabShadow, blue ? shadow.fabBlue : shadow.fab]}>
         {/* rotation lives on an inner view (COMPONENTS.md: never on the animated host) */}
-        <Animated.View style={[styles.fab, anim]}>
-          <Icon name="plus" size={sizes.fabIcon} color={colors.ink} strokeWidth={2.4} />
+        <Animated.View style={[styles.fab, blue && styles.fabBlue, anim]}>
+          <Icon name={icon} size={sizes.fabIcon} color={blue ? colors.white : colors.ink} strokeWidth={2.4} />
         </Animated.View>
       </View>
-      <Text style={[text.tabLabel, styles.fabLabel]} maxFontSizeMultiplier={1.2}>
-        {nb.tabs.leggUt}
+      <Text style={[text.tabLabel, styles.fabLabel]} maxFontSizeMultiplier={1.2} numberOfLines={1}>
+        {label}
       </Text>
     </Pressable>
   );
@@ -191,6 +205,7 @@ const styles = StyleSheet.create({
   fabw: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -30, gap: 5 },
   fabLabel: { color: colors.mute },
   fabShadow: { width: sizes.fab, height: sizes.fab, borderRadius: sizes.fab / 2 },
+  fabBlue: { backgroundColor: colors.cyan2 },
   fab: {
     width: sizes.fab,
     height: sizes.fab,

@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { ModerationBanner } from '@/components/ModerationBanner';
+import { FirstRefusalNote, HelperSlotsCard, NoOffersTips } from '@/components/ListingOwnerCards';
+import { AreaMap } from '@/components/AreaMap';
+import { ImageViewer } from '@/components/ImageViewer';
+import { ShareListingSheet } from '@/components/ShareCards';
 import { useCategoryCatalog } from '@/hooks/useCategories';
 import {
   Pressable,
@@ -31,10 +35,10 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { postedAgo, replyTime } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
-import { shareListing } from '@/lib/share';
 import { toast } from '@/lib/toast';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { listingPrice } from '@/components/OppdragCard';
+import { hourlyEstimateKr } from '@/domain/newHelper';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import {
   Avatar,
@@ -58,7 +62,7 @@ const GAL_RADIUS = 30;
 const km = (d: number) => d.toLocaleString('nb-NO', { maximumFractionDigits: 1 });
 
 /** Oppdragsdetaljer (design/screens/Oppdragsdetaljer.dc.html). */
-export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack: () => void }) {
+export function TaskDetailScreen({ listing, onBack, showTips = false }: { listing: Listing; onBack: () => void; showTips?: boolean }) {
   useCategoryCatalog(); // labels and colours follow the website's settings
   const me = useCurrentUser();
   const insets = useSafeAreaInsets();
@@ -70,6 +74,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
   const invitedFirst = (useProfile(listing.invitedProfileId ?? '').data?.displayName ?? '').split(' ')[0] || nb.detail.aNeighbour;
   const [sheet, setSheet] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [sentConv, setSentConv] = useState<string | null | undefined>(undefined);
 
   const task = listing.task;
@@ -106,6 +111,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
     { icon: 'pin', label: nb.detail.place, value: placeLine },
     ...(task?.scheduledText ? [{ icon: 'cal' as const, label: nb.detail.date, value: task.scheduledText }] : []),
     ...(task?.durationText ? [{ icon: 'hourglass' as const, label: nb.detail.duration, value: task.durationText }] : []),
+    ...(hourlyEstimateKr(listing) ? [{ icon: 'tag' as const, label: nb.detail.estimate, value: nb.detail.estimateValue(hourlyEstimateKr(listing)!) }] : []),
     { icon: 'clock', label: nb.detail.posted, value: postedAgo(listing.createdAt, new Date(), true) },
   ];
 
@@ -161,7 +167,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
 
         {/* gallery */}
         <FadeUp style={styles.px}>
-          <Gallery listing={listing} saved={saved} onSave={onSave} />
+          <Gallery listing={listing} saved={saved} onSave={onSave} onShare={() => setShareOpen(true)} />
         </FadeUp>
 
         {/* title */}
@@ -177,6 +183,9 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
             {listing.title}
           </Text>
           {isOwner ? <ModerationBanner listing={listing} /> : null}
+          {isOwner ? <NoOffersTips listing={listing} offers={offerCount?.count ?? 0} force={showTips} /> : null}
+          <HelperSlotsCard listing={listing} isOwner={isOwner} />
+          <FirstRefusalNote listing={listing} isOwner={isOwner} ownerFirst={first} />
           {/* "Be om hjelp igjen": only the invited helper and the owner get here */}
           {listing.invitedProfileId ? (
             <View style={styles.invited}>
@@ -219,7 +228,13 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
         <View style={[styles.px, styles.mt26]}>
           <Text style={styles.sec}>{nb.detail.area}</Text>
           <View style={[styles.card, styles.mapCard, shadow.card]}>
-            <AreaMap place={place} />
+            <View accessible accessibilityRole="image" accessibilityLabel={nb.detail.areaLabel(place)}>
+              <AreaMap municipality={listing.location.municipality} height={190}>
+                <View style={[styles.alabel, shadow.card]}>
+                  <Text style={styles.alabelText}>{place}</Text>
+                </View>
+              </AreaMap>
+            </View>
             <Note icon="lock" style={styles.mapNote}>
               {nb.detail.areaNote}
             </Note>
@@ -347,6 +362,7 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
         </View>
       </ScrollView>
 
+      <ShareListingSheet listing={listing} visible={shareOpen} onClose={() => setShareOpen(false)} />
       <StickyFooter>
         <Note style={styles.footNote}>{nb.detail.payNote}</Note>
         {isOwner ? (
@@ -426,11 +442,12 @@ export function TaskDetailScreen({ listing, onBack }: { listing: Listing; onBack
 
 /* ---------- gallery ---------- */
 
-function Gallery({ listing, saved, onSave }: { listing: Listing; saved: boolean; onSave: () => void }) {
+function Gallery({ listing, saved, onSave, onShare }: { listing: Listing; saved: boolean; onSave: () => void; onShare: () => void }) {
   const { width } = useWindowDimensions();
   const w = width - screenPadding * 2;
   const ref = useRef<ScrollView>(null);
   const [i, setI] = useState(0);
+  const [viewer, setViewer] = useState<number | null>(null);
   const imgs = listing.images;
   const n = imgs.length;
   const cat = categoryArtId(listing.category.slug);
@@ -469,8 +486,10 @@ function Gallery({ listing, saved, onSave }: { listing: Listing; saved: boolean;
     >
       {n ? (
         <ScrollView ref={ref} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onEnd} style={incoming ? styles.hidden : undefined}>
-          {imgs.map((img) => (
-            <CategoryArt key={img.id} category={cat} uri={img.url} width={w} height={GAL_H} />
+          {imgs.map((img, k) => (
+            <Pressable key={img.id} accessibilityRole="imagebutton" accessibilityLabel={nb.detail.openImage(k + 1, n)} onPress={() => setViewer(k)}>
+              <CategoryArt category={cat} uri={img.url} width={w} height={GAL_H} />
+            </Pressable>
           ))}
         </ScrollView>
       ) : (
@@ -487,7 +506,7 @@ function Gallery({ listing, saved, onSave }: { listing: Listing; saved: boolean;
           onPress={onSave}
           style={saved ? styles.savedBtn : undefined}
         />
-        <IconButton icon="share" iconSize={18} variant="glass" accessibilityLabel={nb.detail.share} onPress={() => void shareListing(listing.id, listing.title)} />
+        <IconButton icon="share" iconSize={18} variant="glass" accessibilityLabel={nb.detail.share} onPress={onShare} />
       </View>
       {n > 1 ? (
         <>
@@ -503,30 +522,11 @@ function Gallery({ listing, saved, onSave }: { listing: Listing; saved: boolean;
           </View>
         </>
       ) : null}
+      <ImageViewer images={viewer === null ? [] : imgs.map((img) => img.url)} index={viewer ?? 0} caption={listing.title} onClose={() => setViewer(null)} />
     </View>
   );
 }
 
-/* ---------- approximate area ---------- */
-
-/** Stylised map with a dashed circle – approximate area only, never a pin (rule 6). */
-function AreaMap({ place }: { place: string }) {
-  return (
-    <View style={styles.map} accessible accessibilityRole="image" accessibilityLabel={nb.detail.areaLabel(place)}>
-      <View style={[styles.water, { left: -40, top: -20, width: 110, height: 240, transform: [{ rotate: '8deg' }] }]} />
-      <View style={[styles.park, { right: 30, top: 18, width: 70, height: 46 }]} />
-      <View style={[styles.park, { left: 110, bottom: 10, width: 60, height: 38 }]} />
-      <View style={[styles.road, { left: 60, right: -20, top: 62, height: 9, transform: [{ rotate: '-8deg' }] }]} />
-      <View style={[styles.road, { left: 40, right: 0, top: 128, height: 7, transform: [{ rotate: '5deg' }] }]} />
-      <View style={[styles.road, { left: 190, top: -20, width: 8, height: 230, transform: [{ rotate: '14deg' }] }]} />
-      <View style={[styles.road, { left: 120, top: 20, width: 6, height: 170, transform: [{ rotate: '-22deg' }] }]} />
-      <View style={styles.area} />
-      <View style={[styles.alabel, shadow.card]}>
-        <Text style={styles.alabelText}>{place}</Text>
-      </View>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   youthPill: { alignSelf: 'flex-start', marginTop: 4 },
@@ -595,24 +595,6 @@ const styles = StyleSheet.create({
   sec: { fontFamily: text.h3.fontFamily, fontSize: 19, lineHeight: 22, letterSpacing: -0.38, color: colors.ink, marginBottom: 12 },
   card: { backgroundColor: colors.white, borderRadius: radius.card },
   mapCard: { padding: 8 },
-  map: { height: 178, borderRadius: 22, overflow: 'hidden', backgroundColor: colors.mapBg },
-  water: { position: 'absolute', backgroundColor: colors.mapWater, borderTopRightRadius: 66, borderBottomRightRadius: 66 },
-  park: { position: 'absolute', borderRadius: 24, backgroundColor: colors.mapPark },
-  road: { position: 'absolute', backgroundColor: colors.white, borderRadius: 6 },
-  area: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: 132,
-    height: 132,
-    marginLeft: -66,
-    marginTop: -66,
-    borderRadius: 66,
-    backgroundColor: colors.areaFill,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.areaBorder,
-  },
   alabel: {
     position: 'absolute',
     alignSelf: 'center',

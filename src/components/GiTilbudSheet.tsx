@@ -5,6 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Listing, Proposal, PublicProfile } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
+import { budgetKr } from '@/domain/newHelper';
+import { useTilbudTexts } from '@/lib/tilbudTexts';
 import { apiClient } from '@/api/client';
 import { chatKeys, usePriceGuidance, useProfile, useStartConversation, useTilbudPause } from '@/api/queries';
 import { useSession } from '@/auth/session';
@@ -23,6 +25,7 @@ import {
   Confetti,
   DrawnCheck,
   ErrorText,
+  TextLink,
   FadeUp,
   Field,
   Icon,
@@ -75,7 +78,10 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
 
   const owner = recipient ?? listing.owner;
   const first = owner.displayName.split(' ')[0];
-  const budget = listing.price && listing.priceMode !== 'BY_AGREEMENT' ? Math.round(listing.price.amountMinor / 100) : null;
+  const budget = budgetKr(listing);
+  const mineTexts = useTilbudTexts();
+  // gentle only: the job can be fine, but a young helper should think about the way home
+  const eveningForYouth = me.isYouth && /kveld|natt/i.test(listing.task?.scheduledText ?? '');
   const place = listing.location.place || listing.location.municipality;
   const days = useMemo(() => {
     const out: { label: string; date: Date }[] = [];
@@ -321,6 +327,45 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
                 </Pressable>
               ))}
             </View>
+            {mineTexts.texts.length ? (
+              <View style={styles.myTexts}>
+                <Text style={text.hint}>{nb.giTilbud.myTexts}</Text>
+                <View style={styles.tplRow}>
+                  {mineTexts.texts.map((t) => (
+                    <Pressable
+                      key={t}
+                      accessibilityRole="button"
+                      accessibilityHint={nb.giTilbud.myTextHint}
+                      onPress={() => {
+                        setMsg(t.slice(0, MSG_MAX));
+                        setErrMsg(null);
+                      }}
+                      onLongPress={() => {
+                        mineTexts.remove(t);
+                        toast.info(nb.giTilbud.myTextRemoved, { icon: 'trash' });
+                      }}
+                      style={styles.tchip}
+                    >
+                      <Icon name="file" size={14} color={colors.limeDeep} />
+                      <Text style={styles.tchipText} numberOfLines={1}>
+                        {t}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+            {msg.trim().length >= 10 && !mineTexts.texts.includes(msg.trim()) ? (
+              <TextLink
+                label={nb.giTilbud.saveText}
+                icon="plus"
+                onPress={() => {
+                  mineTexts.add(msg);
+                  toast.success(nb.giTilbud.textSaved, { icon: 'check' });
+                }}
+                style={styles.saveText}
+              />
+            ) : null}
             {errMsg ? <ErrorText shakeKey={tries}>{errMsg}</ErrorText> : null}
           </View>
 
@@ -348,6 +393,11 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
               ))}
             </ChipRow>
             </View>
+            {eveningForYouth ? (
+              <Note icon="moon" style={styles.mt8}>
+                {nb.giTilbud.youthEvening}
+              </Note>
+            ) : null}
             {/* not in the design's sheet – the offer's "Varighet" needs a source */}
             <Text style={[text.label, styles.mt8]}>{nb.giTilbud.duration}</Text>
             <View style={styles.bleed}>
@@ -532,6 +582,8 @@ function Steps({ n }: { n: 1 | 2 }) {
 }
 
 const styles = StyleSheet.create({
+  myTexts: { gap: 6, marginTop: 10 },
+  saveText: { marginTop: 8, alignSelf: 'flex-start' },
   pause: { alignItems: 'center', gap: 10, paddingTop: 24, paddingBottom: 16 },
   pauseIc: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.warnTint, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   pauseCenter: { textAlign: 'center' },

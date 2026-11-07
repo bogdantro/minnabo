@@ -7,7 +7,7 @@ import { TaskDetailScreen } from '@/screens/TaskDetailScreen';
 import { OfferDetailScreen } from '@/screens/OfferDetailScreen';
 
 export default function ListingDetailRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tips } = useLocalSearchParams<{ id: string; tips?: string }>();
   const router = useRouter();
   const { data: listing, isLoading, isError, refetch } = useListing(id ?? '');
 
@@ -19,7 +19,7 @@ export default function ListingDetailRoute() {
   }
 
   if (listing && listing.type === 'TASK_REQUEST') {
-    return <TaskDetailScreen listing={listing} onBack={goBack} />;
+    return <TaskDetailScreen listing={listing} onBack={goBack} showTips={tips === '1'} />;
   }
   // «Tilbyr hjelp» (0076)
   if (listing && listing.type === 'SERVICE_OFFER') {

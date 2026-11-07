@@ -2,6 +2,7 @@ import {
   INNLANDET_KOMMUNER,
   resolveKommune,
   expandKommuner,
+  kommuneGroupNames,
 } from '@/data/kommuner';
 
 describe('resolveKommune', () => {
@@ -27,8 +28,19 @@ describe('resolveKommune', () => {
 });
 
 describe('expandKommuner', () => {
-  it('reach 0 is just the base kommune', () => {
-    expect(expandKommuner('Lillehammer', 0)).toEqual(['Lillehammer']);
+  it('reach 0 is just the base kommune, outside a group', () => {
+    expect(expandKommuner('Hamar', 0)).toEqual(['Hamar']);
+  });
+  // asked 2026-11-04: they lie so close together that they count as one area
+  it('Lillehammer, Øyer and Gausdal see each other even on «Bare min kommune»', () => {
+    expect(expandKommuner('Lillehammer', 0)).toEqual(['Lillehammer', 'Øyer', 'Gausdal']);
+    expect(expandKommuner('Øyer', 0)).toEqual(['Øyer', 'Lillehammer', 'Gausdal']);
+    expect(expandKommuner('Gausdal', 0)).toEqual(['Gausdal', 'Lillehammer', 'Øyer']);
+    expect(expandKommuner('Ringsaker', 0)).not.toContain('Lillehammer');
+  });
+  it('the group is named in full, own kommune first', () => {
+    expect(kommuneGroupNames('Øyer')).toBe('Øyer, Lillehammer og Gausdal');
+    expect(kommuneGroupNames('Hamar')).toBe('Hamar');
   });
   it('reach 1 adds direct neighbours (deduped, base first)', () => {
     const r = expandKommuner('Lillehammer', 1);

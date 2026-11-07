@@ -16,7 +16,7 @@ test('Vilkår has the same 12 sections as the website, "Kort fortalt", TOC chips
   // what Vipps really hands over, and the payment rule
   expect(screen.getByText(/navn, telefonnummer, fødselsdato og e-postadresse fra Vipps/)).toBeTruthy();
   expect(screen.getByText('Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling mellom brukere.')).toBeTruthy();
-  expect(screen.getByText(/Sist oppdatert 3. november 2026 · Lesetid ca\. 8 min/)).toBeTruthy();
+  expect(screen.getByText(/Sist oppdatert 7. november 2026 · Lesetid ca\. 8 min/)).toBeTruthy();
   // no unfilled placeholders reach the user
   expect(screen.queryByText(/\[e-postadresse\]|\[aldersgrense\]|\[antall\]/)).toBeNull();
   expect(await screen.findByText('15. januar 2026')).toBeTruthy();

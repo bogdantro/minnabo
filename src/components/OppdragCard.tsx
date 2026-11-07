@@ -1,7 +1,8 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
-import { formatPrice } from '@/domain/price';
+import { formatHourly, formatPrice } from '@/domain/price';
+import { isNewHelper } from '@/domain/newHelper';
 import { useIsSaved } from '@/api/queries';
 import { isUrgent } from '@/domain/urgent';
 import { isOffer, offerAvailability } from '@/domain/offer';
@@ -17,6 +18,7 @@ export function listingPrice(l: Listing): { label: string; value: string } {
   // an offer without a price is agreed in the chat; an oppdrag without one wants tilbud
   if (!l.price || l.priceMode === 'BY_AGREEMENT') return { label: '', value: isOffer(l) ? nb.card.byAgreement : nb.card.wantsOffers };
   if (l.priceMode === 'FROM') return { label: nb.card.from, value: formatPrice(l.price) };
+  if (l.priceMode === 'HOURLY') return { label: nb.card.hourly, value: formatHourly(l.price) };
   // an oppdrag's fixed amount is the owner's budget; a «Tilbyr hjelp» post's is the helper's own price
   return { label: isOffer(l) ? nb.card.fixed : nb.card.budget, value: formatPrice(l.price) };
 }
@@ -37,6 +39,8 @@ export function listingSchedule(l: Listing): string | undefined {
 function extraBadge(l: Listing): ListingCardProps['extraBadge'] {
   if (l.task?.isDugnad) return { label: nb.card.dugnad, icon: 'users' };
   if (l.task?.recurrence) return { label: nb.card.recurring, icon: 'repeat' };
+  // a helper with no reviews yet still deserves a chance: say why, instead of showing nothing
+  if (isOffer(l) && isNewHelper(l.owner, new Date())) return { label: nb.card.newHelper, icon: 'sparkle' };
   return undefined;
 }
 

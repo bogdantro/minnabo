@@ -73,7 +73,7 @@ type Step = { key: keyof typeof nb.avtaleSum.steps; icon: IconKey; state: 'done'
  * `bekreft` + `svar=ja`: «Jeg kommer» tapped on the push (PushBridge) – confirm straight away.
  * `redning`: opened from «X kan ikke likevel» / «X kan i dag» – the rescue panel is the point.
  */
-export function AvtaleSammendragScreen({ proposalId, answerYes }: { proposalId: string; answerYes?: boolean }) {
+export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { proposalId: string; answerYes?: boolean; afterJob?: boolean }) {
   const pull = usePullRefresh();
   const router = useRouter();
   const me = useCurrentUser();
@@ -465,6 +465,20 @@ export function AvtaleSammendragScreen({ proposalId, answerYes }: { proposalId: 
           </View>
         ) : null}
 
+        {/* «Alt i orden etter jobben?» (0087): damage often shows up a few days later */}
+        {afterJob && other ? (
+          <FadeUp style={[styles.px, styles.mt14]}>
+            <View style={[styles.card, styles.afterJob, shadow.card]}>
+              <Text style={text.label}>{nb.avtaleSum.afterTitle}</Text>
+              <Text style={text.meta}>{nb.avtaleSum.afterBody(first)}</Text>
+              <View style={styles.afterBtns}>
+                <Button label={nb.avtaleSum.afterChat(first)} icon="msg" variant="ink" size="sm" onPress={openChat} />
+                <Button label={nb.avtaleSum.afterReport} icon="flag" variant="ghost" size="sm" onPress={() => safePush(`/rapporter?profil=${other.id}`)} />
+              </View>
+            </View>
+          </FadeUp>
+        ) : null}
+
         {/* progress */}
         <FadeUp delay={150} style={[styles.px, styles.mt14]}>
           <View style={[styles.card, styles.progressCard, shadow.card]}>
@@ -705,6 +719,8 @@ function Progress({ steps, lastDone }: { steps: Step[]; lastDone: number }) {
 }
 
 const styles = StyleSheet.create({
+  afterJob: { padding: 16, gap: 8 },
+  afterBtns: { gap: 8, marginTop: 6 },
   timeCard: { borderRadius: 22, backgroundColor: colors.cyanTint, padding: 16, gap: 10 },
   timeIc: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   timeBig: { fontFamily: text.h2.fontFamily, fontSize: 19, lineHeight: 24, color: colors.ink },

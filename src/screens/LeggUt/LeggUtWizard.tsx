@@ -1,3 +1,4 @@
+import { AreaMap } from '@/components/AreaMap';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { serverMessage } from '@/lib/errors';
 import { useActiveCategories } from '@/hooks/useCategories';
@@ -8,11 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import Animated, {
   Easing,
-  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import nb from '@/i18n/nb';
@@ -21,8 +19,9 @@ import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE } from '@/data/kommuner';
 import { AreaSearch } from '@/components/AreaSearch';
 import { detectKommune, locationErrorText } from '@/lib/geo';
 import { pickAndUpload, pickAndUploadMany } from '@/lib/uploads';
+import { PhotoBlurEditor, canBlurPhotos } from '@/components/PhotoBlurEditor';
 import { slugForArtId, categoryLabel } from '@/domain/categories';
-import { useListing, useListingEditData, useMyListings, usePriceGuidance, useAppSettings } from '@/api/queries';
+import { useListing, useListingEditData, useMyListings, usePriceGuidance, useAppSettings, useFollowedProfileIds } from '@/api/queries';
 import { isOpenListing } from '@/domain/editing';
 import { isUrgent, URGENCIES } from '@/domain/urgent';
 import { formatAmount } from '@/components/ui/Field';
@@ -81,6 +80,7 @@ import {
   buildListing,
   emptyWizard,
   extrasFor,
+  hourlyTotal,
   isApprox,
   isWizardState,
   wizardFromListing,
@@ -140,39 +140,13 @@ function Stepper({
   );
 }
 
-/** Decorative map with the approximate area as a breathing circle – never a pin (rule 6). */
-function AreaMap({ label }: { label: string }) {
-  const s = useSharedValue(1);
-  useEffect(() => {
-    s.set(withRepeat(withSequence(withTiming(1.07, { duration: 1600, easing: Easing.inOut(Easing.ease) }), withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) })), -1));
-    return () => cancelAnimation(s);
-  }, [s]);
-  const zone = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
-  return (
-    <View style={styles.mapc} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <View key={`h${i}`} style={[styles.gridH, { top: i * 26 }]} />
-      ))}
-      {Array.from({ length: 16 }).map((_, i) => (
-        <View key={`v${i}`} style={[styles.gridV, { left: i * 26 }]} />
-      ))}
-      <View style={styles.lake} />
-      <View style={[styles.road, { left: -20, right: -20, top: 58, height: 9 }]} />
-      <View style={[styles.road, { left: 140, top: -20, bottom: -20, width: 8 }]} />
-      <View style={[styles.road, { left: 40, top: 100, width: 180, height: 6 }]} />
-      <Animated.View style={[styles.zone, zone]} />
-      <View style={[styles.mapLbl, shadow.card]}>
-        <Icon name="pin" size={14} color={colors.limeDeep} />
-        <Text style={text.metaBold}>{label}</Text>
-      </View>
-    </View>
-  );
-}
-
 /**
  * Legg ut – 9-step oppdrag wizard (design/screens/LeggUt.dc.html).
  * Opened directly by the Legg ut button (rule 2). Ends in Forhåndsvisning.
  */
+/** Hourly prices people usually pick. */
+const QUICK_HOURLY = [200, 300, 400, 500];
+
 export function LeggUtWizard() {
   const router = useRouter();
   // the admin's order, with "Annet" first so nobody has to scroll past every category to find it
@@ -229,6 +203,8 @@ export function LeggUtWizard() {
     return () => clearTimeout(t);
   }, [err, errN, targets]);
   const [kSheet, setKSheet] = useState(false);
+  const [blurFor, setBlurFor] = useState<string | null>(null);
+  const followed = useFollowedProfileIds().data ?? [];
   const [closeOpen, setCloseOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [located, setLocated] = useState<string | null>(null);
@@ -723,6 +699,12 @@ export function LeggUtWizard() {
                     >
                       <Icon name="x" size={14} color={colors.white} />
                     </Pressable>
+                    {canBlurPhotos ? (
+                      <Pressable accessibilityRole="button" accessibilityLabel={nb.blur.open(i + 1)} onPress={() => setBlurFor(url)} style={styles.phblur}>
+                        <Icon name="eyeoff" size={13} color={colors.white} />
+                        <Text style={styles.phblurText}>{nb.blur.short}</Text>
+                      </Pressable>
+                    ) : null}
                   </ScaleIn>
                 ))}
                 {uploading > 0
@@ -785,7 +767,14 @@ export function LeggUtWizard() {
                 {errOn('area') ? <ErrorText shakeKey={errN}>{err!.message}</ErrorText> : null}
               </Field>
               <View style={styles.mt22}>
-                <AreaMap label={`${s.area.trim() || nb.wizard.s4.areaFallback}, ${s.kommune || '…'} · ${nb.wizard.s4.approx}`} />
+                <View style={styles.mapc} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  <AreaMap municipality={s.kommune} height={156} breathing>
+                    <View style={[styles.mapLbl, shadow.card]}>
+                      <Icon name="pin" size={14} color={colors.limeDeep} />
+                      <Text style={text.metaBold}>{`${s.area.trim() || nb.wizard.s4.areaFallback}, ${s.kommune || '…'} · ${nb.wizard.s4.approx}`}</Text>
+                    </View>
+                  </AreaMap>
+                </View>
               </View>
               <View style={[styles.lockCard, shadow.card]}>
                 <View style={styles.lockIcon}>
@@ -985,10 +974,33 @@ export function LeggUtWizard() {
                 onChange={(m) => edit({ priceMode: m })}
                 options={[
                   { value: 'budget', label: nb.wizard.s6.budget },
+                  { value: 'hourly', label: nb.wizard.s6.hourly },
                   { value: 'offer', label: nb.wizard.s6.offers },
                 ]}
               />
-              {s.priceMode === 'budget' ? (
+              {s.priceMode === 'hourly' ? (
+                <FadeUp style={styles.mt20}>
+                  <Field label={nb.wizard.s6.hourlyLabel} hint={nb.wizard.s6.budgetHint}>
+                    <View ref={target('amount')} collapsable={false} />
+                    <Shake shakeKey={errOn('amount') ? errN : 0}>
+                      <AmountInput
+                        value={s.amount}
+                        onChangeText={(v) => edit({ amount: v })}
+                        placeholder="0"
+                        error={errOn('amount')}
+                        accessibilityLabel={nb.wizard.s6.hourlyLabel}
+                      />
+                    </Shake>
+                    {errOn('amount') ? <ErrorText shakeKey={errN}>{err!.message}</ErrorText> : null}
+                    {amt > 0 ? <Note icon="clock">{nb.wizard.s6.hourlyEstimate(hourlyTotal(amt, s.hours))}</Note> : null}
+                    <View style={styles.qchips}>
+                      {QUICK_HOURLY.map((v) => (
+                        <Chip key={v} label={`${fmtKr(v)} / t`} size="sm" tone="lime" selected={amt === v} onPress={() => edit({ amount: String(v) })} />
+                      ))}
+                    </View>
+                  </Field>
+                </FadeUp>
+              ) : s.priceMode === 'budget' ? (
                 <FadeUp style={styles.mt20}>
                   <Field label={nb.wizard.s6.budgetLabel} hint={nb.wizard.s6.budgetHint}>
                     <View ref={target('amount')} collapsable={false} />
@@ -1034,7 +1046,7 @@ export function LeggUtWizard() {
                 </FadeUp>
               )}
               <View style={styles.priceNotes}>
-                {s.cat && s.priceMode !== 'budget' ? (
+                {s.cat && s.priceMode === 'offer' ? (
                   <Note icon="chart">
                     {/* real numbers from earlier tilbud when there are enough; otherwise the fixed range */}
                     {guidance
@@ -1103,9 +1115,21 @@ export function LeggUtWizard() {
                 category={s.cat ?? 'annet'}
                 photoUri={s.photos[0]}
                 place={placeLine(s)}
-                priceLabel={s.priceMode === 'budget' ? nb.card.budget : ''}
-                priceValue={s.priceMode === 'budget' ? fmtKr(amt) : nb.card.wantsOffers}
+                priceLabel={s.priceMode === 'budget' ? nb.card.budget : s.priceMode === 'hourly' ? nb.card.hourly : ''}
+                priceValue={s.priceMode === 'budget' ? fmtKr(amt) : s.priceMode === 'hourly' ? `${fmtKr(amt)} / t` : nb.card.wantsOffers}
               />
+              {!editId && !s.urgent && followed.length ? (
+                <View style={styles.firstRow}>
+                  <View style={styles.firstIcon}>
+                    <Icon name="star" size={18} color={colors.limeDeep} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Text style={[text.rowTitle, { fontFamily: text.label.fontFamily }]}>{nb.firstRefusal.title}</Text>
+                    <Text style={text.meta}>{nb.firstRefusal.sub(followed.length)}</Text>
+                  </View>
+                  <Toggle value={!!s.firstToFollowed} onValueChange={(v) => edit({ firstToFollowed: v })} accessibilityLabel={nb.firstRefusal.title} />
+                </View>
+              ) : null}
               <View style={styles.sgroups}>
                 <SumGroup icon="clip" title={nb.wizard.s9.groups.oppdrag} rows={sum.oppdrag} onEdit={(n) => go(n, 'back', true)} />
                 <SumGroup icon="pin" title={nb.wizard.s9.groups.sted} rows={sum.stedTid} onEdit={(n) => go(n, 'back', true)} />
@@ -1119,6 +1143,20 @@ export function LeggUtWizard() {
       </Screen>
 
       {header}
+
+      {userId ? (
+        <PhotoBlurEditor
+          key={blurFor ?? 'none'}
+          uri={blurFor}
+          folder={userId}
+          onClose={() => setBlurFor(null)}
+          onSaved={(url) => {
+            edit({ photos: s.photos.map((p) => (p === blurFor ? url : p)) });
+            setBlurFor(null);
+            toast.success(nb.blur.saved, { icon: 'check', bottom: 130 });
+          }}
+        />
+      ) : null}
 
       <Sheet visible={kSheet} onClose={() => setKSheet(false)} title={nb.wizard.s4.pickKommune} titleSize="h2" scroll>
         <View style={styles.klist}>
@@ -1490,6 +1528,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     justifyContent: 'center',
   },
+  phblur: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    height: 26,
+    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.scrim,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  phblurText: { fontFamily: text.label.fontFamily, fontSize: 11, color: colors.white },
+  firstRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  firstIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
   phx: {
     position: 'absolute',
     top: 6,
@@ -1513,24 +1576,7 @@ const styles = StyleSheet.create({
   },
   okCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.ok, alignItems: 'center', justifyContent: 'center' },
   qchips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
-  mapc: { height: 156, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.mapGreen, borderWidth: 1, borderColor: colors.navHairline },
-  gridH: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: colors.mapGrid },
-  gridV: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: colors.mapGrid },
-  lake: { position: 'absolute', right: -40, top: -30, width: 150, height: 110, borderRadius: 75, backgroundColor: colors.mapLake },
-  road: { position: 'absolute', backgroundColor: colors.white, borderRadius: 6 },
-  zone: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: 124,
-    height: 124,
-    marginLeft: -62,
-    marginTop: -62,
-    borderRadius: 62,
-    backgroundColor: colors.reachRingOn,
-    borderWidth: 2,
-    borderColor: colors.mapZoneBorder,
-  },
+  mapc: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   mapLbl: {
     position: 'absolute',
     left: 12,

@@ -112,6 +112,8 @@ export function Sheet({
     <BottomSheetModal
       ref={ref}
       onDismiss={handleDismiss}
+      // a date field inside a sheet opens a sheet of its own: the one below must stay open, not be replaced
+      stackBehavior="push"
       enableDynamicSizing={!heightRatio}
       // never taller than the space below the status bar, and never pushed under it by the keyboard
       topInset={insets.top}
