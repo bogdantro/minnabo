@@ -1,3 +1,4 @@
+import { leaveFlow } from '@/lib/nav';
 import { useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -60,7 +61,7 @@ export function YearRecapScreen({ year }: { year: number }) {
             </View>
             <Text style={[text.h3, styles.center]}>{nb.recap.emptyTitle}</Text>
             <Text style={[text.meta, styles.center]}>{nb.recap.emptyBody}</Text>
-            <Button label={nb.recap.findJob} size="sm" block={false} align="center" onPress={() => router.replace('/')} />
+            <Button label={nb.recap.findJob} size="sm" block={false} align="center" onPress={() => leaveFlow('/')} />
           </FadeUp>
         ) : data ? (
           <>

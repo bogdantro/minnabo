@@ -15,7 +15,7 @@ import {
   agreedDate,
   parseDurationHours,
 } from '@/lib/deviceCalendar';
-import { safePush } from '@/lib/nav';
+import { safePush, leaveFlow } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
@@ -260,14 +260,14 @@ export function MineAvtalerScreen() {
                 >
                   <View style={styles.row8}>
                     <Button label={nb.agenda.showAll} variant="ghost" size="sm" block={false} onPress={() => setDay(null)} />
-                    <Button label={nb.agenda.findJob} size="sm" block={false} onPress={() => router.replace('/')} />
+                    <Button label={nb.agenda.findJob} size="sm" block={false} onPress={() => leaveFlow('/')} />
                   </View>
                 </EmptyCard>
               </ScaleIn>
             ) : !day && upcoming.length === 0 ? (
               <ScaleIn style={styles.mt20}>
                 <EmptyCard icon="cal" title={nb.agenda.emptyUp} sub={nb.agenda.emptyUpSub}>
-                  <Button label={nb.agenda.findJob} size="sm" block={false} align="center" onPress={() => router.replace('/')} />
+                  <Button label={nb.agenda.findJob} size="sm" block={false} align="center" onPress={() => leaveFlow('/')} />
                 </EmptyCard>
               </ScaleIn>
             ) : null}

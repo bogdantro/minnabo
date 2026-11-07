@@ -9,6 +9,8 @@ console.log(`\nMinNabo med testinnlogging: http://localhost:${PORT}\nDen første
 const expo = spawn('npx', ['expo', 'start', '--web', '--port', PORT, '--clear'], {
   stdio: 'inherit',
   shell: true,
-  env: { ...process.env, MINNABO_TEST_LOGIN: '1' },
+  // Stadia's modern map works without a key on localhost, so the test login shows the map as it will look
+  // once a key is set (src/config/mapStyle.ts). A value in .env wins.
+  env: { EXPO_PUBLIC_MAP_PROVIDER: 'stadia', ...process.env, MINNABO_TEST_LOGIN: '1' },
 });
 expo.on('exit', (code) => process.exit(code ?? 0));

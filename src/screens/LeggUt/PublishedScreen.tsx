@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { leaveFlow } from '@/lib/nav';
 import * as Clipboard from 'expo-clipboard';
 import { WEBSITE } from '@/config/links';
 import nb from '@/i18n/nb';
@@ -40,7 +41,12 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
 
   const home = () => {
     draftStore.clear();
-    router.replace('/');
+    leaveFlow('/');
+  };
+  // the wizard and the preview come off the history: «Tilbake» on the oppdrag goes to the tabs
+  const see = () => {
+    draftStore.clear();
+    leaveFlow(`/oppdrag/${listingId}`);
   };
   // the website has no page per oppdrag yet – share the title with a link to the front page
   const link = WEBSITE.home;
@@ -85,7 +91,7 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
             priceLabel={price.label}
             priceValue={price.value}
             extraBadge={{ label: nb.published.active }}
-            onPress={local ? undefined : () => router.push(`/oppdrag/${listingId}`)}
+            onPress={local ? undefined : see}
           />
         </FadeUp>
       ) : null}
@@ -95,7 +101,7 @@ export function PublishedScreen({ listingId }: { listingId?: string }) {
           label={nb.published.see}
           variant="ink"
           disabled={local}
-          onPress={() => router.replace(`/oppdrag/${listingId}`)}
+          onPress={see}
         />
         <Button label={nb.published.home} variant="text" block={false} onPress={home} style={styles.selfCenter} />
       </FadeUp>

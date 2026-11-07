@@ -7,6 +7,7 @@ import { useIsSaved } from '@/api/queries';
 import { isUrgent } from '@/domain/urgent';
 import { isOffer, offerAvailability } from '@/domain/offer';
 import { useAlwaysShowsUp } from './ReliableBadge';
+import { postedAgo } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import nb from '@/i18n/nb';
@@ -84,6 +85,8 @@ export function OppdragCard({ listing, onPress, statusBadge, showVerified, isNew
       photoUri={listing.images[0]?.url}
       ownerName={listing.owner.displayName}
       ownerRating={listing.owner.rating?.count ? listing.owner.rating.average : null}
+      owner={{ id: listing.owner.id, initials: listing.owner.initials, avatarUrl: listing.owner.avatarUrl }}
+      posted={postedAgo(listing.createdAt).replace(/^for /, '')}
       verified={showVerified && listing.owner.verifications.some((v) => v.verified)}
       place={listingPlace(listing)}
       schedule={listingSchedule(listing)}

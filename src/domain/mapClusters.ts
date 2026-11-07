@@ -1,5 +1,6 @@
 import type { Listing } from './types';
 import { kommuneCentre } from '@/data/kommuner';
+import { mapTileUrl } from '@/config/mapStyle';
 
 export type MapCluster = {
   /** "kommune|place" */
@@ -16,9 +17,8 @@ const PLACE_SPREAD = 0.05;
 const GOLDEN = (137.5 * Math.PI) / 180;
 
 export const TILE = 256;
-/** Kartverket's open topographic map: no key, and the map people in Norway know from hiking and school. */
-export const tileUrl = (z: number, x: number, y: number) =>
-  `https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/${z}/${y}/${x}.png`;
+/** The map images: Kartverket, or a modern style when one is set up (src/config/mapStyle.ts). */
+export const tileUrl = (z: number, x: number, y: number) => mapTileUrl(z, x, y);
 export const MIN_ZOOM = 5;
 /** Rule 6: never closer than a whole town. The circles are not real positions and must not look like it. */
 export const MAX_ZOOM = 12;

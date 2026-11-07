@@ -98,7 +98,7 @@ describe('the offer wizard', () => {
     expect(screen.getByText('Ser alt riktig ut?')).toBeTruthy();
     expect(screen.getByText('Ledig helg')).toBeTruthy();
     await fireEvent.press(screen.getByText('Publiser tilbudet'));
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith(expect.stringMatching(/^\/oppdrag\//)));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(expect.stringMatching(/^\/oppdrag\//)));
     const mine = repositories.listings.ownedBy(ME).find((l) => l.title === 'Plenklipp og hekk')!;
     expect(mine.type).toBe('SERVICE_OFFER');
     expect(mine.priceMode).toBe('FROM');

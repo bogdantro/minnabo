@@ -614,4 +614,49 @@ begin
   assert n = 0, 'F6: someone with a picture is left out';
 end $$;
 
+-- ---------- 20. notifications for oppslag (0097) ----------
+do $$
+declare v uuid; n int;
+begin
+  delete from notifications;
+  -- a kommune-wide oppslag reaches the others in the kommune, never the author
+  insert into noticeboard_posts (author_id, kind, title, body, municipality)
+    values ('00000000-0000-4000-8000-0000000000a1', 'GIVEAWAY', 'Gir bort sofa', 'Hentes i helga', 'Lillehammer') returning id into v;
+  select count(*) into n from notifications where kind = 'NABOLAG_POST' and route = '/oppslagstavle?oppslag=' || v;
+  assert n >= 1, 'O1: neighbours hear about a new oppslag';
+  assert not exists (select 1 from notifications where profile_id = '00000000-0000-4000-8000-0000000000a1' and route = '/oppslagstavle?oppslag=' || v), 'O2: never the author';
+  -- at most three a day each
+  insert into noticeboard_posts (author_id, kind, title, body, municipality)
+    select '00000000-0000-4000-8000-0000000000a1', 'GENERAL', 'Oppslag ' || i, 'Tekst nummer ' || i, 'Lillehammer' from generate_series(1, 4) i;
+  select max(c) into n from (select count(*) c from notifications where kind = 'NABOLAG_POST' group by profile_id) t;
+  assert n = 3, 'O3: three a day, then quiet';
+  -- an answer reaches the author and the others who answered
+  delete from notifications;
+  insert into notice_comments (notice_id, author_id, body) values (v, '00000000-0000-4000-8000-0000000000b1', 'Er den ledig?');
+  insert into notice_comments (notice_id, author_id, body) values (v, '00000000-0000-4000-8000-0000000000c1', 'Jeg vil også ha den');
+  assert exists (select 1 from notifications where profile_id = '00000000-0000-4000-8000-0000000000b1' and route = '/oppslagstavle?oppslag=' || v), 'O4: the one who answered first hears about the next answer';
+  select count(*) into n from notifications where profile_id = '00000000-0000-4000-8000-0000000000a1' and route = '/oppslagstavle?oppslag=' || v;
+  assert n = 2, 'O5: the author hears about both answers';
+  assert not exists (select 1 from notifications where profile_id = '00000000-0000-4000-8000-0000000000c1'), 'O6: never about your own answer';
+end $$;
+
+-- ---------- 21. no view can be written to by the app's roles (0098) ----------
+do $$
+declare v text; r text; ok boolean;
+begin
+  for v in select table_name from information_schema.views where table_schema = 'public' loop
+    foreach r in array array['anon', 'authenticated'] loop
+      ok := false;
+      begin
+        execute format('set local role %I', r);
+        execute format('delete from public.%I where false', v);
+        ok := true;
+      exception when others then null;
+      end;
+      reset role;
+      assert not ok, format('V1: %s can write to the view %s – revoke it like 0098', r, v);
+    end loop;
+  end loop;
+end $$;
+
 \echo ALL CHECKS PASSED

@@ -12,6 +12,8 @@ configure({ asyncUtilTimeout: 8000 });
 
 // Reanimated 4 / worklets have no native runtime under jest: use their mocks.
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+// the gesture library's own test setup: GestureHandlerRootView (the photo viewer's Modal) needs its native module
+require('react-native-gesture-handler/jestSetup');
 jest.mock('react-native-reanimated', () => ({
   ...require('react-native-reanimated/mock'),
   // not in the official mock
@@ -420,6 +422,7 @@ jest.mock('expo-router', () => {
     setParams: jest.fn(),
     dismiss: jest.fn(),
     dismissAll: jest.fn(),
+    canDismiss: jest.fn(() => true),
   };
   const Stack: any = passthrough;
   Stack.Screen = () => null;

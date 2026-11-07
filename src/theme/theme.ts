@@ -37,6 +37,7 @@ export const colors = {
   online: '#2FBF62',
   scrim: 'rgba(10,23,64,0.45)',
   viewerBg: 'rgba(5,10,28,0.97)', // fullscreen photo
+  viewerSolid: '#050A1C',  // fullscreen photo viewer: solid, so the screen behind never shows through
   vipps: '#FF5B24',      // ONLY the login button
 
   // component colours (also from mn.css)

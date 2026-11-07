@@ -12,6 +12,7 @@ import {
   useCompletion,
   useConfirmCompletion,
   useJobWorkspace,
+  useConversation,
   useListing,
   useMyAgreements,
   usePortfolio,
@@ -58,6 +59,9 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
   const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
   const { data: agreement } = useAgreementByProposal(proposalId);
   const { data: listing } = useListing(proposal?.listingId ?? '');
+  // a closed oppdrag may no longer load: the chat keeps its title
+  const { data: conv } = useConversation(proposal?.conversationId ?? '');
+  const jobTitle = listing?.title ?? conv?.listing.title ?? '';
   const otherId = proposal ? (proposal.fromProfileId === me.id ? proposal.toProfileId : proposal.fromProfileId) : '';
   const { data: other } = useProfile(otherId);
   const { data: confirmations } = useCompletion(proposalId);
@@ -171,20 +175,12 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
           <View style={[styles.card, styles.duo, shadow.card]}>
             <View style={styles.duoRow}>
               <View style={styles.track}>
-                {/* the line grows from whoever has confirmed: they are on the left, I am on the right */}
-                <ProgressFill to={(theirs ? 0.5 : 0) + (mine ? 0.5 : 0)} fromRight={!!mine && !theirs} />
+                {/* the line grows from whoever has confirmed: I am on the left, they are on the right */}
+                <ProgressFill to={(theirs ? 0.5 : 0) + (mine ? 0.5 : 0)} fromRight={!!theirs && !mine} />
               </View>
               <View style={[styles.mid, done && styles.midOk]}>
                 <Icon name="hand" size={18} color={done ? colors.white : colors.mute} />
               </View>
-              <Party
-                name={other?.displayName ?? ''}
-                initials={other?.initials ?? '·'}
-                uri={other?.avatarUrl}
-                seed={otherId}
-                at={theirs?.confirmedAt}
-                waitingLabel={nb.completion.waiting}
-              />
               <Party
                 name={nb.completion.you}
                 initials={me.initials}
@@ -193,6 +189,14 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
                 at={mine?.confirmedAt}
                 waitingLabel={nb.completion.waitingYou}
                 pulse={!mine}
+              />
+              <Party
+                name={other?.displayName ?? ''}
+                initials={other?.initials ?? '·'}
+                uri={other?.avatarUrl}
+                seed={otherId}
+                at={theirs?.confirmedAt}
+                waitingLabel={nb.completion.waiting}
               />
             </View>
             <View style={styles.divider} />
@@ -207,17 +211,18 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
               <CategoryArt category={cat} uri={listing?.images[0]?.url} width={52} height={52} radius={16} iconSize={24} />
               <View style={styles.flex1}>
                 <Text style={[text.label, styles.f165]} numberOfLines={2}>
-                  {listing?.title ?? ''}
+                  {jobTitle}
                 </Text>
                 <Text style={text.meta} numberOfLines={1}>
                   {meta}
                 </Text>
               </View>
             </View>
+            {/* only what the job day actually recorded: a row of «–» and «0» looked broken */}
             <View style={styles.stats}>
-              <Stat icon="clock" label={nb.completion.timeUsed} value={duration(tracked)} />
-              <Stat icon="list" label={nb.completion.tasks} value={tasksTotal ? `${tasksDone}/${tasksTotal}` : '–'} />
-              <Stat icon="image" label={nb.completion.photos} value={String(ws?.photos.length ?? 0)} />
+              {tracked ? <Stat icon="clock" label={nb.completion.timeUsed} value={duration(tracked)} /> : null}
+              {tasksTotal ? <Stat icon="list" label={nb.completion.tasks} value={`${tasksDone}/${tasksTotal}`} /> : null}
+              {ws?.photos.length ? <Stat icon="image" label={nb.completion.photos} value={String(ws.photos.length)} /> : null}
               <Stat icon="tag" label={nb.completion.price} value={price} suffix={nb.completion.agreed} />
             </View>
             <TextLink label={nb.completion.seeAgreement} icon="right" onPress={() => safePush(`/avtale/${proposalId}`)} style={styles.mt6} />

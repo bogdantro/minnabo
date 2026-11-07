@@ -22,7 +22,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatTime } from '@/lib/datetime';
 import { parseDurationHours } from '@/lib/deviceCalendar';
 import { haptics } from '@/lib/haptics';
-import { safePush } from '@/lib/nav';
+import { safeNavigate, safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { pickAndUploadMany } from '@/lib/uploads';
 import { colors, fonts, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -91,6 +91,10 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
   const me = useCurrentUser();
   const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
   const { data: agreement } = useAgreementByProposal(proposalId);
+  // back to the chat if it is already open under Jobbdag; never /chat/undefined
+  const openChat = () => {
+    if (proposal?.conversationId) safeNavigate(`/chat/${proposal.conversationId}`);
+  };
   const { data: listing } = useListing(proposal?.listingId ?? '');
   const otherId = proposal ? (proposal.fromProfileId === me.id ? proposal.toProfileId : proposal.fromProfileId) : '';
   const { data: other } = useProfile(otherId);
@@ -275,7 +279,7 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
                 <Avatar initials={other?.initials ?? '·'} uri={other?.avatarUrl} seed={otherId} size={32} ring={false} />
               </View>
             </View>
-            <IconButton icon="msg" iconSize={18} accessibilityLabel={nb.jobWorkspace.openChat(first)} onPress={() => safePush(`/chat/${proposal.conversationId}`)} />
+            <IconButton icon="msg" iconSize={18} accessibilityLabel={nb.jobWorkspace.openChat(first)} onPress={() => openChat()} />
           </View>
         </FadeUp>
 
@@ -533,7 +537,7 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
               agreement={agreement}
               iAmHelper={iAmHelper}
               otherFirst={first}
-              onWrite={() => safePush(`/chat/${proposal.conversationId}`)}
+              onWrite={() => openChat()}
               onFindOther={canNoShow ? () => setNoShowOpen(true) : undefined}
               onCantCome={() => safePush(`/avtale/${proposalId}`)}
             />
@@ -562,7 +566,7 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
               helperFirst={first}
               timeText={agreement?.scheduledAt ? `kl. ${formatTime(agreement.scheduledAt)}` : undefined}
               attendance={attendanceOf(agreement)}
-              onWrite={() => safePush(`/chat/${proposal.conversationId}`)}
+              onWrite={() => openChat()}
               onReport={() => setNoShowOpen(true)}
             />
           ) : null}

@@ -11,6 +11,7 @@ import {
   useCancelAgreement,
   useConfirmAttendance,
   useProposalsForListing,
+  useConversation,
   useListing,
   useProfile,
   useProposal,
@@ -80,6 +81,9 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
   const { data: proposal, isLoading, isError, refetch } = useProposal(proposalId);
   const { data: agreement } = useAgreementByProposal(proposalId);
   const { data: listing } = useListing(proposal?.listingId ?? '');
+  // a closed oppdrag may no longer load: the chat keeps its title, so the avtale always says what the job is
+  const { data: conv } = useConversation(proposal?.conversationId ?? '');
+  const jobTitle = listing?.title ?? conv?.listing.title ?? '';
   const helperId = proposal?.fromProfileId ?? '';
   const clientId = proposal?.toProfileId ?? '';
   const { data: helper } = useProfile(helperId);
@@ -288,15 +292,11 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
 
         {/* heading */}
         <FadeUp style={[styles.px, styles.heading]}>
-          <Text style={text.eyebrow} numberOfLines={1}>
-            {listing?.title ?? ''}
-          </Text>
           <Text style={text.h1} accessibilityRole="header">
             {cancelled ? nb.avtaleSum.cancelledTitle : nb.avtaleSum.ready}
           </Text>
           <View style={styles.pills}>
             {!cancelled && countdown ? <Pill label={countdown} tone="accent" icon="hourglass" size="lg" /> : null}
-            {when ? <Pill label={when} tone="line" icon="cal" size="lg" /> : null}
           </View>
         </FadeUp>
 
@@ -390,22 +390,27 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
         <FadeUp delay={100} style={[styles.px, styles.mt18]}>
           <View style={[styles.doc, shadow.medium]} accessibilityLabel={nb.avtaleSum.docLabel}>
             <View style={[styles.edge, cancelled && styles.edgeOff]} />
-            <ScaleIn delay={250} style={styles.stamp}>
-              <View style={[styles.stampIn, cancelled && styles.stampOff]}>
-                <Icon name={cancelled ? 'ban' : 'lock'} size={14} color={cancelled ? colors.stampOffText : colors.stampOkText} />
-                <Text style={[styles.stampText, cancelled && { color: colors.stampOffText }]}>
-                  {cancelled ? nb.avtaleSum.stampCancelled : nb.avtaleSum.stampAgreed}
-                </Text>
-              </View>
-            </ScaleIn>
+            {/* only a cancelled avtale gets a stamp; «Avtalt» was removed on request (2026-11-07) */}
+            {cancelled ? (
+              <ScaleIn delay={250} style={styles.stamp}>
+                <View style={[styles.stampIn, styles.stampOff]}>
+                  <Icon name="ban" size={14} color={colors.stampOffText} />
+                  <Text style={[styles.stampText, { color: colors.stampOffText }]}>{nb.avtaleSum.stampCancelled}</Text>
+                </View>
+              </ScaleIn>
+            ) : null}
             <View style={styles.paper}>
               <View style={styles.row10}>
                 <View style={styles.lockIc}>
                   <Icon name="lock" size={16} color={colors.lime} />
                 </View>
-                <View style={styles.gap3}>
-                  <Text style={[text.label, styles.f145]}>{nb.avtaleSum.locked}</Text>
-                  <Text style={text.meta}>{nb.avtaleSum.agreedAt(`${shortDate(agreedAt).replace(/^\S+ /, '')} kl. ${formatTime(agreedAt)}`)}</Text>
+                <View style={[styles.gap3, styles.flex1]}>
+                  <Text style={[text.label, styles.f145]} numberOfLines={2}>
+                    {jobTitle || nb.avtaleSum.locked}
+                  </Text>
+                  <Text style={text.meta}>
+                    {[jobTitle ? nb.avtaleSum.locked : null, nb.avtaleSum.agreedAt(`${shortDate(agreedAt).replace(/^\S+ /, '')} kl. ${formatTime(agreedAt)}`)].filter(Boolean).join(' · ')}
+                  </Text>
                 </View>
               </View>
 
@@ -511,7 +516,7 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
           {canMoveTime ? (
             <QuickAction icon="clock" bg={colors.cyanTint} fg={colors.cyanDeep} label={nb.avtaleSum.newTime} onPress={() => setTimeSheet(true)} />
           ) : null}
-          <QuickAction icon="msg" bg={colors.cyanTint} fg={colors.cyanDeep} label={nb.avtaleSum.openChat} onPress={openChat} />
+          {/* «Åpne chat» is in the bar at the bottom: no second button for it here */}
           <QuickAction icon="shield" bg={colors.bg} fg={colors.ink} label={nb.avtaleSum.shareTrusted} onPress={() => safePush('/trygge-kontakter')} />
         </FadeUp>
 

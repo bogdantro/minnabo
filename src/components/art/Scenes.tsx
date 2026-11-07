@@ -197,6 +197,24 @@ export function HelperArt() {
   );
 }
 
+/** Top of Hjelp: a question in the middle, the four topics around it. */
+export function HelpArt({ style }: { style?: StyleProp<ViewStyle> }) {
+  return (
+    <Orbit
+      style={style}
+      core="msg"
+      coreSize={80}
+      dots={SMALL_DOTS}
+      discs={[
+        { icon: 'sparkle', left: '9%', top: 22, size: 46, bg: colors.limeTint, fg: colors.limeDeep },
+        { icon: 'clip', left: '22%', top: 92, size: 40, bg: colors.cyanTint, fg: colors.cyanDeep },
+        { icon: 'shield', right: '9%', top: 20, size: 46, bg: colors.okTint, fg: colors.okText },
+        { icon: 'user', right: '22%', top: 92, size: 40, bg: colors.lavenderTint, fg: colors.lavender },
+      ]}
+    />
+  );
+}
+
 export type Season = 'winter' | 'spring' | 'summer' | 'autumn';
 
 export const seasonOf = (d: Date): Season => {

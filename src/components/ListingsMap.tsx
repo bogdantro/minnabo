@@ -4,6 +4,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import nb from '@/i18n/nb';
+import { MAP_CREDIT, MAP_PROVIDER } from '@/config/mapStyle';
 import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { fitMap, MAX_ZOOM, mapClusters, mergeNearby, MIN_ZOOM, project, TILE, tileUrl, type MapCluster } from '@/domain/mapClusters';
@@ -77,7 +78,7 @@ export function ListingsMap({ listings, onClose }: { listings: Listing[]; onClos
               {nb.sok.mapNote}
             </Text>
           </View>
-          <Text style={styles.credit}>{nb.sok.mapCredit}</Text>
+          <Text style={styles.credit}>{MAP_CREDIT[MAP_PROVIDER]}</Text>
         </View>
         {!clusters.length ? <Text style={[text.meta, styles.none]}>{nb.sok.mapNoPlace}</Text> : null}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={CARD_W + 10} contentContainerStyle={styles.cards}>
@@ -346,9 +347,12 @@ const styles = StyleSheet.create({
   countText: { fontFamily: text.label.fontFamily, fontSize: 14, color: colors.white },
   zoom: { position: 'absolute', right: 12, gap: 8 },
   rail: { position: 'absolute', left: 0, right: 0, bottom: 0, gap: 8 },
-  noteRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12 },
+  // the note and the map credit: the credit drops to its own line when it is long (Stadia, MapTiler)
+  noteRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6, paddingHorizontal: 12 },
   note: {
+    flexGrow: 1,
     flexShrink: 1,
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -358,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   noteText: { ...text.small, flexShrink: 1, color: colors.ink2 },
-  credit: { ...text.small, flexShrink: 0, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: colors.white, color: colors.ink2 },
+  credit: { ...text.small, marginLeft: 'auto', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: colors.white, color: colors.ink2 },
   none: { paddingHorizontal: 16 },
   cards: { gap: 10, paddingHorizontal: 12 },
   card: { width: CARD_W, flexDirection: 'row', gap: 12, padding: 8, borderRadius: radius.card, backgroundColor: colors.white },

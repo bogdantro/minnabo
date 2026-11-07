@@ -1,3 +1,4 @@
+import { leaveFlow } from '@/lib/nav';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -287,8 +288,8 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
       <StickyFooter>
         {done ? (
           <FadeUp style={styles.foot}>
-            <Button label={nb.review.backToOppdrag} iconRight="arrow" size="lg" onPress={() => router.replace('/')} />
-            <Button label={nb.review.seeProfile(first)} variant="text" block={false} onPress={() => router.replace(`/profil/${counterpartId}`)} style={styles.selfCenter} />
+            <Button label={nb.review.backToOppdrag} iconRight="arrow" size="lg" onPress={() => leaveFlow('/')} />
+            <Button label={nb.review.seeProfile(first)} variant="text" block={false} onPress={() => leaveFlow(`/profil/${counterpartId}`)} style={styles.selfCenter} />
           </FadeUp>
         ) : (
           <View style={styles.foot}>

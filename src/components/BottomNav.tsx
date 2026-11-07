@@ -10,7 +10,8 @@ import { CountBadge } from './ui/Badges';
 import { Icon, type IconKey } from './ui/Icon';
 import { MenySheet } from './MenySheet';
 import { LeggUtChooser } from './LeggUtChooser';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
+import { menuReturn } from '@/lib/menuReturn';
 
 export type NavTarget = 'oppdrag' | 'fellesskap' | 'innboks';
 
@@ -133,6 +134,13 @@ export function BottomNav({
   onLeggUt: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // back from a page opened in Meny: Meny opens again on the screen it was opened on
+  const path = usePathname();
+  const [seenPath, setSeenPath] = useState(path);
+  if (path !== seenPath) {
+    setSeenPath(path);
+    if (menuReturn.take(path)) setMenuOpen(true);
+  }
   // «Hva vil du legge ut?» – an oppdrag, or what you can help with (0076)
   const [chooseOpen, setChooseOpen] = useState(false);
   const unreadInbox = useUnreadConversationCount();
@@ -154,10 +162,10 @@ export function BottomNav({
         {LEFT.map(slot)}
         <PostButton onPress={() => setChooseOpen(true)} />
         {RIGHT.map(slot)}
-        <NavItem label={nb.tabs.meny} icon="menu" active={false} onPress={() => setMenuOpen(true)} />
+        <NavItem label={nb.tabs.meny} icon="menu" active={menuOpen} onPress={() => setMenuOpen(true)} />
       </NavFrame>
 
-      <MenySheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MenySheet visible={menuOpen} onClose={() => setMenuOpen(false)} from={path} />
       <LeggUtChooser
         visible={chooseOpen}
         onClose={() => setChooseOpen(false)}

@@ -248,7 +248,7 @@ export function OfferDetailScreen({ listing, onBack }: { listing: Listing; onBac
           <PaymentNote />
         </FadeUp>
       </Screen>
-      <ImageViewer images={viewer === null ? [] : photos} index={viewer ?? 0} caption={listing.title} onClose={() => setViewer(null)} />
+      <ImageViewer images={viewer === null ? [] : photos} index={viewer ?? 0} caption={listing.title} subtitle={listing.location.place || listing.location.municipality} onClose={() => setViewer(null)} />
     </View>
   );
 }

@@ -43,7 +43,7 @@ import { formatDayLabel, isSameDay } from '@/lib/calendar';
 import { formatTime, seenWhen, shortDate } from '@/lib/datetime';
 import { haptics } from '@/lib/haptics';
 import { useMutedConversation } from '@/lib/mutedConversations';
-import { safePush } from '@/lib/nav';
+import { safePush, safeNavigate } from '@/lib/nav';
 import { outbox } from '@/lib/outbox';
 import { toast } from '@/lib/toast';
 import { pickAndUpload, pickAndUploadMany, uploadVoice } from '@/lib/uploads';
@@ -409,7 +409,7 @@ export function ChatScreen({ conversation: c, onBack }: { conversation: Conversa
             agreement={activeAgreement}
             place={listing?.location.place || c.listing.place}
             onAgreement={() => safePush(`/avtale/${activeAgreement.proposalId}`)}
-            onJobDay={() => safePush(`/jobbdag/${activeAgreement.proposalId}`)}
+            onJobDay={() => safeNavigate(`/jobbdag/${activeAgreement.proposalId}`)}
           />
         ) : null}
         <ListingStrip c={c} listing={listing} agreed={!!activeAgreement} offerCount={offerCount} onOpen={() => safePush(c.notice ? '/oppslagstavle' : `/oppdrag/${c.listing.id}`)} />

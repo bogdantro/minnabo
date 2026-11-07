@@ -4,6 +4,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, w
 import { colors, motion, radius, shadow, sizes, text, type CategoryId } from '@/theme/theme';
 import { heroTransition } from '@/lib/heroTransition';
 import { haptics } from '@/lib/haptics';
+import { categoryLabel } from '@/domain/categories';
+import { Avatar } from './Avatar';
 import { CategoryArt } from './CategoryArt';
 import { Icon, type IconName } from './Icon';
 import { Pill } from './Pill';
@@ -16,6 +18,10 @@ export type ListingCardProps = {
   photoUri?: string | null;
   ownerName?: string;
   ownerRating?: number | null;
+  /** a small face before the name; initials when there is no photo */
+  owner?: { id: string; initials: string; avatarUrl?: string };
+  /** «3 t siden», right of the pills */
+  posted?: string;
   /** Small green "Verifisert" mark after the owner (search results). */
   verified?: boolean;
   /** Approximate area only, e.g. "Nordre Ål · 1,2 km". Never an address. */
@@ -105,6 +111,8 @@ export function ListingCard({
   photoUri,
   ownerName,
   ownerRating,
+  owner,
+  posted,
   verified,
   place,
   schedule,
@@ -151,6 +159,11 @@ export function ListingCard({
       >
         <View ref={thumb} collapsable={false} style={styles.thumb}>
           <CategoryArt category={category} uri={photoUri} radius={radius.thumb} style={StyleSheet.absoluteFill} />
+          {photoUri ? (
+            <View style={[styles.catTag, shadow.card]} accessible accessibilityLabel={categoryLabel(category)}>
+              <Icon name={category} size={15} color={colors.ink} />
+            </View>
+          ) : null}
           {online ? <View style={styles.online} /> : null}
         </View>
         <View style={styles.body}>
@@ -162,13 +175,19 @@ export function ListingCard({
             )}
             {urgent ? <Pill label="Haster" icon="zap" tone="warn" /> : null}
             {extraBadge ? <Pill label={extraBadge.label} icon={extraBadge.icon} tone="neutral" /> : null}
+            {posted ? (
+              <Text style={styles.posted} numberOfLines={1}>
+                {posted}
+              </Text>
+            ) : null}
           </View>
-          <Text style={[text.cardTitle, styles.title]} numberOfLines={1}>
+          <Text style={styles.title} numberOfLines={2}>
             {title}
           </Text>
           {ownerName ? (
             <View style={styles.meta}>
-              <Text style={text.metaBold} numberOfLines={1}>
+              {owner ? <Avatar initials={owner.initials} uri={owner.avatarUrl} seed={owner.id} size={20} ring={false} /> : null}
+              <Text style={[text.metaBold, styles.shrink]} numberOfLines={1}>
                 {ownerName}
               </Text>
               {ownerRating != null ? <Stars rating={ownerRating} /> : null}
@@ -183,15 +202,21 @@ export function ListingCard({
           {reliable ? <ReliableLine /> : null}
           {place ? <Meta icon="pin">{place}</Meta> : null}
           {schedule ? <Meta icon={scheduleIcon}>{schedule}</Meta> : null}
-          <View style={styles.price}>
-            {priceLabel ? <Text style={text.priceLabel}>{priceLabel}</Text> : null}
-            <Text style={text.price} numberOfLines={1}>
-              {priceValue}
-            </Text>
+          <View style={styles.foot}>
+            <View style={styles.price}>
+              {priceLabel ? <Text style={text.priceLabel}>{priceLabel}</Text> : null}
+              <Text style={[text.price, styles.shrink]} numberOfLines={1}>
+                {priceValue}
+              </Text>
+            </View>
+            <View style={styles.go}>
+              <Icon name="arrow" size={15} color={colors.ink} />
+            </View>
           </View>
         </View>
       </PressableScale>
-      {onToggleSave ? <SaveButton saved={saved} onPress={onToggleSave} label={saveLabel} style={styles.saveAbs} /> : null}
+      {/* on the photo's corner, so the title gets the whole width */}
+      {onToggleSave ? <SaveButton saved={saved} onPress={onToggleSave} label={saveLabel} style={[styles.saveAbs, !saved && styles.saveOnPhoto]} /> : null}
     </View>
   );
 }
@@ -223,10 +248,15 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
   },
   body: { flex: 1, minWidth: 0, gap: 6, paddingVertical: 2 },
-  badges: { flexDirection: 'row', gap: 6, overflow: 'hidden' },
-  title: { paddingRight: 40 },
+  badges: { flexDirection: 'row', alignItems: 'center', gap: 6, overflow: 'hidden' },
+  posted: { ...text.small, flexShrink: 1, marginLeft: 'auto', color: colors.mute },
+  title: { fontFamily: text.h3.fontFamily, fontSize: 17, lineHeight: 21, letterSpacing: -0.2, color: colors.ink },
+  shrink: { flexShrink: 1 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6, overflow: 'hidden' },
-  price: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 'auto' },
+  catTag: { position: 'absolute', left: 6, bottom: 6, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 'auto', paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.line2 },
+  price: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  go: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
   save: {
     width: sizes.saveButton,
     height: sizes.saveButton,
@@ -236,6 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveOn: { backgroundColor: colors.savedBg },
-  saveAbs: { position: 'absolute', top: 10, right: 10 },
+  saveAbs: { position: 'absolute', top: 18, left: 18, width: 34, height: 34, borderRadius: 17 },
+  saveOnPhoto: { backgroundColor: colors.white },
   vmini: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 });

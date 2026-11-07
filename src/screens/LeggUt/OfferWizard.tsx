@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { leaveFlow } from '@/lib/nav';
 import { useQueryClient } from '@tanstack/react-query';
 import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
@@ -151,12 +152,17 @@ export function OfferWizard() {
   const qc = useQueryClient();
   const me = useCurrentUser();
   const { userId } = useSession();
-  const params = useLocalSearchParams<{ rediger?: string }>();
+  const params = useLocalSearchParams<{ rediger?: string; kategori?: string }>();
   const editId = typeof params.rediger === 'string' && params.rediger ? params.rediger : undefined;
   const editing = useListing(editId ?? '');
   const active = useActiveCategories();
   const cats = active;
-  const [f, setF] = useState<Form>(() => empty(me.municipality ?? ''));
+  // «Dette trenger naboene hjelp med» on Oppdrag opens /legg-ut/tilbyr?kategori=snomaking with it chosen
+  const [f, setF] = useState<Form>(() => {
+    const start = empty(me.municipality ?? '');
+    const k = typeof params.kategori === 'string' ? (params.kategori as CategoryId) : null;
+    return !editId && k && active.includes(k) ? { ...start, cat: k } : start;
+  });
   const [seeded, setSeeded] = useState(false);
   const [step, setStep] = useState(1);
   const [dir, setDir] = useState<'forward' | 'back'>('forward');
@@ -239,7 +245,9 @@ export function OfferWizard() {
       void qc.invalidateQueries({ queryKey: profileKeys.myListings('SERVICE_OFFER') });
       void qc.invalidateQueries({ queryKey: ['listing'] });
       toast.success(editId ? nb.offer.saved : nb.offer.published, { icon: 'check' });
-      router.replace(`/oppdrag/${saved.id}`);
+      // an edit goes back to the post it came from; a new post leaves the wizard behind for good
+      if (editId && router.canGoBack()) router.back();
+      else leaveFlow(`/oppdrag/${saved.id}`);
     } catch (e) {
       toast.error(serverMessage(e, nb.toast.genericError), { bottom: 150 });
     } finally {

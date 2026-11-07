@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { menuReturn } from '@/lib/menuReturn';
 import Constants from 'expo-constants';
 import nb from '@/i18n/nb';
 import { shareInvite } from '@/lib/share';
@@ -110,7 +111,7 @@ function Rows({ children, delay }: { children: ReactNode; delay: number }) {
 }
 
 /** Meny – opened from the tab bar (design/screens/Meny.dc.html). */
-export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function MenySheet({ visible, onClose, from }: { visible: boolean; onClose: () => void; /** the screen Meny was opened on */ from?: string }) {
   const me = useCurrentUser();
   const profile = useProfile(me.id).data;
   const inboxUnread = useUnreadConversationCount();
@@ -156,6 +157,7 @@ export function MenySheet({ visible, onClose }: { visible: boolean; onClose: () 
   const version = Constants.expoConfig?.version ?? '';
 
   const go = (route: string) => {
+    if (from) menuReturn.arm(from);
     onClose();
     router.push(route as never);
   };

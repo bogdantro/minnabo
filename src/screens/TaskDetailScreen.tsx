@@ -37,7 +37,7 @@ import { postedAgo, replyTime } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
-import { listingPrice } from '@/components/OppdragCard';
+import { listingPlace, listingPrice } from '@/components/OppdragCard';
 import { hourlyEstimateKr } from '@/domain/newHelper';
 import { GiTilbudSheet } from '@/components/GiTilbudSheet';
 import {
@@ -522,7 +522,7 @@ function Gallery({ listing, saved, onSave, onShare }: { listing: Listing; saved:
           </View>
         </>
       ) : null}
-      <ImageViewer images={viewer === null ? [] : imgs.map((img) => img.url)} index={viewer ?? 0} caption={listing.title} onClose={() => setViewer(null)} />
+      <ImageViewer images={viewer === null ? [] : imgs.map((img) => img.url)} index={viewer ?? 0} caption={listing.title} subtitle={listingPlace(listing)} onClose={() => setViewer(null)} />
     </View>
   );
 }

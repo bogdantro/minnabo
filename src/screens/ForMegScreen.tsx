@@ -22,7 +22,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
 import { useDismissedLeads } from '@/lib/dismissedLeads';
 import { postedAgo } from '@/lib/datetime';
-import { safePush } from '@/lib/nav';
+import { safePush, leaveFlow } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import {
   categoryColors,
@@ -113,6 +113,15 @@ export function ForMegScreen() {
   const [savedHere, setSavedHere] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+  // «Angre» lives in a toast that outlives this render: it must read the newest state, not a stale copy
+  const goneRef = useRef<string[]>([]);
+  const savedHereRef = useRef<string[]>([]);
+  useEffect(() => {
+    goneRef.current = gone;
+    savedHereRef.current = savedHere;
+  }, [gone, savedHere]);
+  // a swipe and a button at the same moment must not count one card twice
+  const decided = useRef(new Set<string>());
 
   const skills = useMemo(() => {
     const seen: CategoryId[] = [];
@@ -123,7 +132,9 @@ export function ForMegScreen() {
     return seen;
   }, [profile.data?.categorySlugs]);
 
-  const ranked = useMemo<Suggestion[]>(() => {
+  // The order is fixed for the visit: a refresh in the background never swaps the card you're looking at.
+  // Oppdrag that arrive later join at the back.
+  const sorted = useMemo<Suggestion[]>(() => {
     return (jobs.data ?? [])
       .filter((l) => l.owner.id !== me.id)
       .map((l) => {
@@ -139,6 +150,15 @@ export function ForMegScreen() {
         return Date.parse(b.listing.createdAt) - Date.parse(a.listing.createdAt);
       });
   }, [jobs.data, me.id, skills]);
+  // only fix the order once the person's skills are known too, or «passer deg» would be sorted without them
+  const settled = !!profile.data && !jobs.isLoading;
+  const [order, setOrder] = useState<string[]>([]);
+  const missing = settled ? sorted.filter((x) => !order.includes(x.listing.id)).map((x) => x.listing.id) : [];
+  if (missing.length) setOrder([...order, ...missing]);
+  const ranked = useMemo(
+    () => (settled ? [...sorted].sort((a, b) => order.indexOf(a.listing.id) - order.indexOf(b.listing.id)) : sorted),
+    [sorted, settled, order],
+  );
 
   // The deck for this visit: everything not hidden or saved earlier (what leaves the
   // stack during this visit stays counted).
@@ -161,6 +181,9 @@ export function ForMegScreen() {
 
   /** The card has left the stack: store the choice and bring up the next one. */
   const commit = (id: string, dir: Dir) => {
+    if (decided.current.has(id)) return;
+    decided.current.add(id);
+    clearTimeout(timer.current);
     if (dir === 'right') {
       toggleSaved.mutate(id);
       setSavedHere((s) => [...s, id]);
@@ -182,6 +205,8 @@ export function ForMegScreen() {
 
   const hide = (id: string, fromList: boolean) => {
     if (fromList) {
+      if (decided.current.has(id)) return;
+      decided.current.add(id);
       dismiss(id);
       setGone((g) => [...g, id]);
       toast.info(nb.forMeg.hiddenToast, { icon: 'x', action: { label: nb.forMeg.undo, onPress: undo }, bottom: 28 });
@@ -191,16 +216,18 @@ export function ForMegScreen() {
   };
 
   function undo() {
-    const last = gone[gone.length - 1];
+    const last = goneRef.current[goneRef.current.length - 1];
     if (!last) return;
-    const wasSaved = savedHere.includes(last);
+    const wasSaved = savedHereRef.current.includes(last);
     if (wasSaved) {
       toggleSaved.mutate(last);
       setSavedHere((s) => s.filter((x) => x !== last));
     } else {
       restore([last]);
     }
-    setGone((g) => g.slice(0, -1));
+    decided.current.delete(last);
+    goneRef.current = goneRef.current.slice(0, -1);
+    setGone((g) => g.filter((x) => x !== last));
     // it comes back from the side it left on
     setAnim((a) => ({ mode: wasSaved ? 'backRight' : 'back', n: a.n + 1 }));
   }
@@ -208,6 +235,7 @@ export function ForMegScreen() {
   const restart = () => {
     // "Start på nytt" shows the hidden ones again; what you saved stays in Lagrede
     restore(gone.filter((id) => !savedHere.includes(id)));
+    decided.current.clear();
     setGone([]);
     setView('stack');
     setAnim((a) => ({ mode: 'back', n: a.n + 1 }));
@@ -285,7 +313,7 @@ export function ForMegScreen() {
         <DoneCard
           empty={deck.length === 0}
           savedCount={savedHere.length}
-          onWiden={() => router.replace('/')}
+          onWiden={() => leaveFlow('/')}
           onRestart={restart}
         />
       ) : view === 'stack' && top ? (
