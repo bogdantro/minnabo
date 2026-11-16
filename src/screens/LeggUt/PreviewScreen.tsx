@@ -93,7 +93,7 @@ export function PreviewScreen() {
     }
     try {
       const id = (await create.mutateAsync({ listing, extras: meta.extras })).id;
-      await wizardDraft.clear();
+      await wizardDraft.clear(meta.draftId);
       haptics.success();
       // Straight to the success page – no extra "Fortsett" tap.
       router.replace(`/legg-ut/publisert?id=${id}`);

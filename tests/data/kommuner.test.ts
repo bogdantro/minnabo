@@ -29,7 +29,15 @@ describe('resolveKommune', () => {
 
 describe('expandKommuner', () => {
   it('reach 0 is just the base kommune, outside a group', () => {
-    expect(expandKommuner('Hamar', 0)).toEqual(['Hamar']);
+    expect(expandKommuner('Gjøvik', 0)).toEqual(['Gjøvik']);
+  });
+  // asked 2026-11-10
+  it('Hamar, Ringsaker and Stange see each other too, and never the Lillehammer group', () => {
+    expect(expandKommuner('Hamar', 0)).toEqual(['Hamar', 'Ringsaker', 'Stange']);
+    expect(expandKommuner('Ringsaker', 0)).toEqual(['Ringsaker', 'Hamar', 'Stange']);
+    expect(expandKommuner('Stange', 0)).toEqual(['Stange', 'Hamar', 'Ringsaker']);
+    expect(expandKommuner('Hamar', 0)).not.toContain('Lillehammer');
+    expect(expandKommuner('Løten', 0)).toEqual(['Løten']);
   });
   // asked 2026-11-04: they lie so close together that they count as one area
   it('Lillehammer, Øyer and Gausdal see each other even on «Bare min kommune»', () => {
@@ -40,7 +48,8 @@ describe('expandKommuner', () => {
   });
   it('the group is named in full, own kommune first', () => {
     expect(kommuneGroupNames('Øyer')).toBe('Øyer, Lillehammer og Gausdal');
-    expect(kommuneGroupNames('Hamar')).toBe('Hamar');
+    expect(kommuneGroupNames('Hamar')).toBe('Hamar, Ringsaker og Stange');
+    expect(kommuneGroupNames('Gjøvik')).toBe('Gjøvik');
   });
   it('reach 1 adds direct neighbours (deduped, base first)', () => {
     const r = expandKommuner('Lillehammer', 1);

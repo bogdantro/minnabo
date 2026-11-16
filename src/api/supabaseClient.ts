@@ -3,6 +3,23 @@ import { supabase } from '@/lib/supabase';
 import { reportError } from '@/lib/reporting';
 import { backendError } from '@/lib/errors';
 import type {
+  CategoryJobs,
+  EventMessage,
+  EventType,
+  EventRsvps,
+  GuardianYouth,
+  Household,
+  LendItem,
+  LendRequest,
+  LendBusy,
+  NoticePoll,
+  NoticeQueue,
+  NoticeReaction,
+  NoticeReactionEmoji,
+  NoticeReservation,
+  PhotoDraft,
+  RsvpStatus,
+  LinkPreview,
   AgendaItem,
   AgreementSnapshot,
   AgreementTimeProposal,
@@ -37,7 +54,6 @@ import type {
   PoliceCertificate,
   ThankCard,
   ThankCardKind,
-  ToolBooking,
   YearRecap,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
@@ -72,10 +88,14 @@ import type {
   ListingExtras,
   PendingReview,
   RescueResult,
-  HelperSlots} from './ApiClient';
+  HelperSlots,
+  LendItemInput} from './ApiClient';
 import { DEFAULT_APP_SETTINGS, withDefaultPrefs } from './ApiClient';
 
 import { OPEN_LISTING_STATUSES } from '@/domain/editing';
+import { publicUrl } from '@/lib/storage';
+import { SupabaseOppdrag } from './supabaseOppdrag';
+import type { NoticeTopic } from '@/domain/community';
 import {
   toAgreement,
   toTimeProposal,
@@ -86,6 +106,11 @@ import {
   toNotification,
   toNoticeboardPost,
   toPartner,
+  toEventMessage,
+  toLendItem,
+  type EventMessageRow,
+  type LendItemRow,
+  type LendRequestRow,
   toDonation,
   toProfile,
   toProposal,
@@ -137,17 +162,6 @@ const toQuestion = (r: QuestionRow): ListingQuestion => ({
   createdAt: r.created_at,
 });
 
-type BookingRow = { id: string; notice_id: string; borrower_id: string; from_date: string; to_date: string; note: string | null; status: ToolBooking['status'] };
-const toBooking = (r: BookingRow): ToolBooking => ({
-  id: r.id,
-  noticeId: r.notice_id,
-  borrowerId: r.borrower_id,
-  from: r.from_date,
-  to: r.to_date,
-  note: r.note ?? undefined,
-  status: r.status,
-});
-
 type ThankRow = { id: string; proposal_id: string; from_profile_id: string; to_profile_id: string; card: ThankCardKind; message: string | null; created_at: string };
 const toThank = (r: ThankRow): ThankCard => ({
   id: r.id,
@@ -164,10 +178,11 @@ export function prefixQuery(q: string): string {
   return (q.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).map((w) => `${w}:*`).join(' & ');
 }
 
-type CommentRow = { id: string; notice_id: string; author_id: string; body: string; created_at: string };
+type CommentRow = { id: string; notice_id: string; author_id: string; body: string; created_at: string; parent_id?: string | null };
 const toComment = (r: CommentRow): NoticeComment => ({
   id: r.id,
   noticeId: r.notice_id,
+  parentId: r.parent_id ?? undefined,
   authorProfileId: r.author_id,
   body: r.body,
   createdAt: r.created_at,
@@ -206,7 +221,7 @@ async function withSignedPhotos(messages: Message[]): Promise<Message[]> {
   const paths = [
     ...new Set(
       messages
-        .filter((m) => (m.kind === 'IMAGE' || m.kind === 'AUDIO') && m.attachmentUrl && !/^(file|content|data|blob):/i.test(m.attachmentUrl))
+        .filter((m) => (m.kind === 'IMAGE' || m.kind === 'AUDIO' || m.attachmentKind) && m.attachmentUrl && !/^(file|content|data|blob):/i.test(m.attachmentUrl))
         .map((m) => chatPath(m.attachmentUrl!)),
     ),
   ];
@@ -218,7 +233,7 @@ async function withSignedPhotos(messages: Message[]): Promise<Message[]> {
     }
   }
   return messages.map((m) =>
-    (m.kind === 'IMAGE' || m.kind === 'AUDIO') && m.attachmentUrl
+    (m.kind === 'IMAGE' || m.kind === 'AUDIO' || m.attachmentKind) && m.attachmentUrl
       ? { ...m, attachmentUrl: signed.get(chatPath(m.attachmentUrl))?.url ?? m.attachmentUrl }
       : m,
   );
@@ -230,7 +245,7 @@ async function myId(): Promise<string> {
   return data.user.id;
 }
 
-export class SupabaseApiClient implements ApiClient {
+export class SupabaseApiClient extends SupabaseOppdrag implements ApiClient {
   // --- listings ---------------------------------------------------------
 
   async listListings(params: ListListingsParams = {}): Promise<Listing[]> {
@@ -299,6 +314,9 @@ export class SupabaseApiClient implements ApiClient {
         // only when it hastes: an app build that reaches people before 0071 is pushed can still publish
         ...(extras?.urgentUntil ? { urgent_until: extras.urgentUntil } : {}),
         ...(extras?.firstToFollowedUntil ? { first_to_followed_until: extras.firstToFollowedUntil } : {}),
+        // only when chosen: a build that reaches people before 0108 is pushed can still publish
+        ...(extras?.sharedStreet ? { shared_street: true } : {}),
+        ...(extras?.fromSenior ? { from_senior: true } : {}),
       })
       .select('id')
       .single();
@@ -582,6 +600,13 @@ export class SupabaseApiClient implements ApiClient {
   async setConversationArchived(conversationId: string, archived: boolean): Promise<void> {
     const { error } = await supabase.rpc('set_conversation_archived', { p_conversation_id: conversationId, p_archived: archived });
     if (error) fail(error);
+  }
+
+  async linkPreview(url: string): Promise<LinkPreview | null> {
+    const { data, error } = await supabase.functions.invoke('link-preview', { body: { url } });
+    // no card is never an error: the link is still there
+    if (error) return null;
+    return ((data as { preview?: LinkPreview | null } | null)?.preview ?? null) as LinkPreview | null;
   }
 
   async transcribeMessage(messageId: string): Promise<string> {
@@ -1332,6 +1357,7 @@ export class SupabaseApiClient implements ApiClient {
       p_comment: input.comment ?? '',
       p_tags: input.tags ?? [],
       p_recommends: input.recommends ?? null,
+      ...(input.imagePaths?.length ? { p_image_paths: input.imagePaths } : {}),
     });
     if (error) fail(error);
     return toReview(data as unknown as ReviewRow);
@@ -1491,6 +1517,7 @@ export class SupabaseApiClient implements ApiClient {
       'partners.max_hovedpartnere',
       'platform.min_app_version',
       'platform.transcripts_enabled',
+      'platform.ai_enabled',
     ];
     const { data, error } = await supabase.from('app_settings').select('key, value').in('key', keys);
     if (error) fail(error);
@@ -1507,6 +1534,7 @@ export class SupabaseApiClient implements ApiClient {
       maxHovedpartnere: max && max > 0 ? Math.round(max) : DEFAULT_APP_SETTINGS.maxHovedpartnere,
       minAppVersion: typeof v['platform.min_app_version'] === 'string' ? v['platform.min_app_version'] : DEFAULT_APP_SETTINGS.minAppVersion,
       transcriptsEnabled: v['platform.transcripts_enabled'] === true,
+      aiEnabled: v['platform.ai_enabled'] === true,
     };
   }
 
@@ -1555,12 +1583,15 @@ export class SupabaseApiClient implements ApiClient {
     // "N svar" comes from an RPC (0041); without it the posts simply show no count.
     const me = await myId().catch(() => '');
     // likes arrive with 0094; before it is pushed the posts simply show none
-    const [{ data, error }, counts, likes] = await Promise.all([
+    // which thing on Utlån each «Lån ut» oppslag is (0107); before it is pushed there is no link
+    const [{ data, error }, counts, likes, lends] = await Promise.all([
       q,
       supabase.rpc('noticeboard_reply_counts'),
       supabase.from('notice_likes').select('notice_id, profile_id'),
+      supabase.from('lend_items').select('id, notice_id').not('notice_id', 'is', null),
     ]);
     if (error) fail(error);
+    const lendOf = new Map(((lends.error ? [] : lends.data) as { id: string; notice_id: string }[]).map((r) => [r.notice_id, r.id]));
     const liked = new Map<string, number>();
     const mine = new Set<string>();
     for (const r of (likes.error ? [] : likes.data) as { notice_id: string; profile_id: string }[]) {
@@ -1575,6 +1606,7 @@ export class SupabaseApiClient implements ApiClient {
       replies: replies.get(r.id) ?? 0,
       likes: liked.get(r.id) ?? 0,
       likedByMe: mine.has(r.id),
+      lendItemId: lendOf.get(r.id),
     }));
   }
 
@@ -1588,14 +1620,15 @@ export class SupabaseApiClient implements ApiClient {
 
   async updateNoticeboardPost(
     id: string,
-    patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; done?: boolean },
+    patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; imagePaths?: string[]; done?: boolean },
   ): Promise<NoticeboardPost> {
     const me = await myId();
     const row: Record<string, unknown> = {};
     if (patch.kind !== undefined) row.kind = patch.kind;
     if (patch.title !== undefined) row.title = patch.title;
     if (patch.body !== undefined) row.body = patch.body;
-    if (patch.imagePath !== undefined) row.image_path = patch.imagePath;
+    if (patch.imagePaths !== undefined) row.image_paths = patch.imagePaths;
+    else if (patch.imagePath !== undefined) row.image_path = patch.imagePath;
     if (patch.done !== undefined) row.done_at = patch.done ? new Date().toISOString() : null;
     const { data, error } = await supabase
       .from('noticeboard_posts')
@@ -1618,11 +1651,16 @@ export class SupabaseApiClient implements ApiClient {
     return (data as CommentRow[]).map(toComment);
   }
 
-  async addNoticeComment(noticeId: string, body: string): Promise<NoticeComment> {
+  async keepNotice(id: string): Promise<void> {
+    const { error } = await supabase.rpc('keep_notice', { p_notice: id });
+    if (error) fail(error);
+  }
+
+  async addNoticeComment(noticeId: string, body: string, parentId?: string): Promise<NoticeComment> {
     const me = await myId();
     const { data, error } = await supabase
       .from('notice_comments')
-      .insert({ notice_id: noticeId, author_id: me, body: body.trim() })
+      .insert({ notice_id: noticeId, author_id: me, body: body.trim(), ...(parentId ? { parent_id: parentId } : {}) })
       .select('*')
       .single();
     if (error) fail(error);
@@ -1648,34 +1686,6 @@ export class SupabaseApiClient implements ApiClient {
     const { data, error } = await supabase.rpc('set_dugnad_signup', { p_notice_id: noticeId, p_join: join });
     if (error) fail(error);
     return Number(data ?? 0);
-  }
-
-  async listToolBookedDays(noticeId: string): Promise<{ from: string; to: string }[]> {
-    const { data, error } = await supabase.rpc('tool_booked_days', { p_notice_id: noticeId });
-    if (error) fail(error);
-    return ((data ?? []) as { from_date: string; to_date: string }[]).map((r) => ({ from: r.from_date, to: r.to_date }));
-  }
-
-  async listToolBookings(noticeId: string): Promise<ToolBooking[]> {
-    const { data, error } = await supabase
-      .from('tool_bookings')
-      .select('*')
-      .eq('notice_id', noticeId)
-      .order('from_date', { ascending: true });
-    if (error) fail(error);
-    return (data as BookingRow[]).map(toBooking);
-  }
-
-  async requestToolBooking(noticeId: string, from: string, to: string, note?: string): Promise<ToolBooking> {
-    const { data, error } = await supabase.rpc('request_tool_booking', { p_notice_id: noticeId, p_from: from, p_to: to, p_note: note ?? '' });
-    if (error) fail(error);
-    return toBooking(data as unknown as BookingRow);
-  }
-
-  async respondToolBooking(id: string, status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED'): Promise<ToolBooking> {
-    const { data, error } = await supabase.rpc('respond_tool_booking', { p_id: id, p_status: status });
-    if (error) fail(error);
-    return toBooking(data as unknown as BookingRow);
   }
 
   async listSavedNoticeIds(): Promise<string[]> {
@@ -1708,9 +1718,17 @@ export class SupabaseApiClient implements ApiClient {
     municipality: string;
     /** storage path in `listing-images` */
     imagePath?: string;
+    imagePaths?: string[];
     neighbourhoodId?: string;
     isDugnad?: boolean;
     eventAt?: string;
+    /** an arrangement (0101); DUGNAD also sets isDugnad */
+    eventType?: EventType;
+    /** «Avstemning»: 2–6 choices (0101) */
+    pollOptions?: string[];
+    topic?: NoticeTopic;
+    organisationId?: string;
+    repeatWeekly?: boolean;
   }): Promise<NoticeboardPost> {
     const me = await myId();
     const { data, error } = await supabase
@@ -1722,9 +1740,14 @@ export class SupabaseApiClient implements ApiClient {
         body: input.body,
         place: input.place,
         municipality: input.municipality,
-        ...(input.imagePath ? { image_path: input.imagePath } : {}),
+        ...(input.imagePaths?.length ? { image_paths: input.imagePaths } : input.imagePath ? { image_path: input.imagePath } : {}),
         ...(input.neighbourhoodId ? { neighbourhood_id: input.neighbourhoodId } : {}),
         ...(input.isDugnad ? { is_dugnad: true, event_at: input.eventAt ?? null } : {}),
+        ...(input.eventType ? { event_type: input.eventType, event_at: input.eventAt ?? null } : {}),
+        ...(input.pollOptions && input.pollOptions.length >= 2 ? { poll_options: input.pollOptions } : {}),
+        ...(input.topic ? { topic: input.topic, kind: 'GENERAL' } : {}),
+        ...(input.organisationId ? { organisation_id: input.organisationId } : {}),
+        ...(input.repeatWeekly ? { repeat_weekly: true } : {}),
       })
       .select('*')
       .single();
@@ -1905,6 +1928,26 @@ export class SupabaseApiClient implements ApiClient {
   async replyToMinNabo(body: string): Promise<void> {
     const { error } = await supabase.rpc('minnabo_reply', { p_body: body });
     if (error) fail(error);
+  }
+
+  async reportProblem(input: { body: string; imagePath?: string; context?: string }): Promise<void> {
+    const { error } = await supabase.rpc('minnabo_report_problem', {
+      p_body: input.body,
+      p_image_path: input.imagePath ?? null,
+      p_context: input.context ?? null,
+    });
+    if (error) fail(error);
+  }
+
+  async recordListingView(listingId: string): Promise<void> {
+    // a count is never worth an error on screen; before 0099 the function is simply missing
+    await supabase.rpc('record_listing_view', { p_listing: listingId });
+  }
+
+  async listingViewCount(listingId: string): Promise<number | null> {
+    const { data, error } = await supabase.rpc('listing_view_count', { p_listing: listingId });
+    if (error) return null;
+    return typeof data === 'number' ? data : null;
   }
 
   async voteMinNaboPoll(broadcastId: string, option: number): Promise<void> {
@@ -2190,5 +2233,261 @@ export class SupabaseApiClient implements ApiClient {
       p_category_slugs: input.categorySlugs,
     });
     if (error) fail(error);
+  }
+  // --- 0101: utvidelse ---
+
+  async setAgreementRepeat(proposalId: string, everyDays: 7 | 14 | 28, until?: string | null): Promise<void> {
+    const { error } = await supabase.rpc('set_agreement_repeat', { p_proposal: proposalId, p_every: everyDays, p_until: until ?? null });
+    if (error) fail(error);
+  }
+
+  async endAgreementRepeat(proposalId: string): Promise<void> {
+    const { error } = await supabase.rpc('end_agreement_repeat', { p_proposal: proposalId });
+    if (error) fail(error);
+  }
+
+  async markAgreementVisit(proposalId: string, visitAt: string): Promise<void> {
+    const { error } = await supabase.rpc('mark_agreement_visit', { p_proposal: proposalId, p_visit_at: visitAt });
+    if (error) fail(error);
+  }
+
+  async listAgreementVisits(proposalId: string): Promise<string[]> {
+    const { data, error } = await supabase.from('agreement_visits').select('visit_at').eq('proposal_id', proposalId).order('visit_at', { ascending: false });
+    if (error) fail(error);
+    return ((data ?? []) as { visit_at: string }[]).map((r) => r.visit_at);
+  }
+
+  async draftFromPhoto(imagePath: string): Promise<PhotoDraft> {
+    const { data, error } = await supabase.functions.invoke('draft-from-photo', { body: { imagePath } });
+    const d = data as { draft?: PhotoDraft; error?: string } | null;
+    if (error || !d?.draft) fail(d?.error ?? 'Fikk ikke laget et forslag fra bildet. Skriv det selv, eller prøv igjen.');
+    return d.draft;
+  }
+
+  async reserveNotice(noticeId: string, join: boolean): Promise<number> {
+    const { data, error } = await supabase.rpc('reserve_notice', { p_notice: noticeId, p_join: join });
+    if (error) fail(error);
+    return Number(data ?? 0);
+  }
+
+  async noticeQueue(noticeId: string): Promise<NoticeQueue> {
+    const { data, error } = await supabase.rpc('notice_queue', { p_notice: noticeId });
+    if (error) fail(error);
+    const d = (data ?? {}) as { waiting?: number; mine?: NoticeQueue['mine']; position?: number };
+    return { waiting: Number(d.waiting ?? 0), mine: d.mine ?? '', position: Number(d.position ?? 0) };
+  }
+
+  async listNoticeReservations(noticeId: string): Promise<NoticeReservation[]> {
+    const { data, error } = await supabase.from('notice_reservations').select('profile_id, status, created_at').eq('notice_id', noticeId).order('created_at');
+    if (error) fail(error);
+    return ((data ?? []) as { profile_id: string; status: NoticeReservation['status']; created_at: string }[]).map((r) => ({
+      profileId: r.profile_id,
+      status: r.status,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async settleReservation(noticeId: string, taken: boolean): Promise<void> {
+    const { error } = await supabase.rpc('settle_reservation', { p_notice: noticeId, p_taken: taken });
+    if (error) fail(error);
+  }
+
+  async setEventRsvp(noticeId: string, status: RsvpStatus | null): Promise<void> {
+    const { error } = await supabase.rpc('set_event_rsvp', { p_notice: noticeId, p_status: status });
+    if (error) fail(error);
+  }
+
+  async eventRsvps(noticeId: string): Promise<EventRsvps> {
+    const me = await myId();
+    const { data, error } = await supabase.from('notice_signups').select('profile_id, status').eq('notice_id', noticeId);
+    if (error) fail(error);
+    const rows = (data ?? []) as { profile_id: string; status: RsvpStatus | null }[];
+    const status = (r: { status: RsvpStatus | null }) => r.status ?? 'GOING';
+    return {
+      going: rows.filter((r) => status(r) === 'GOING').length,
+      maybe: rows.filter((r) => status(r) === 'MAYBE').length,
+      mine: (() => {
+        const m = rows.find((r) => r.profile_id === me);
+        return m ? status(m) : null;
+      })(),
+      goingIds: rows.filter((r) => status(r) === 'GOING').map((r) => r.profile_id),
+    };
+  }
+
+  async voteNoticePoll(noticeId: string, option: number | null): Promise<void> {
+    const { error } = await supabase.rpc('vote_notice_poll', { p_notice: noticeId, p_option: option });
+    if (error) fail(error);
+  }
+
+  async noticePoll(noticeId: string): Promise<NoticePoll | null> {
+    const { data, error } = await supabase.rpc('notice_poll', { p_notice: noticeId });
+    if (error) fail(error);
+    if (!data) return null;
+    const d = data as { counts?: number[]; total?: number; mine?: number | null };
+    return { counts: (d.counts ?? []).map(Number), total: Number(d.total ?? 0), mine: d.mine ?? null };
+  }
+
+  async listNoticeReactions(noticeId: string): Promise<NoticeReaction[]> {
+    const { data, error } = await supabase.from('notice_reactions').select('profile_id, emoji').eq('notice_id', noticeId);
+    if (error) fail(error);
+    return ((data ?? []) as { profile_id: string; emoji: NoticeReactionEmoji }[]).map((r) => ({ profileId: r.profile_id, emoji: r.emoji }));
+  }
+
+  async setNoticeReaction(noticeId: string, emoji: NoticeReactionEmoji, on: boolean): Promise<void> {
+    const me = await myId();
+    const { error } = on
+      ? await supabase.from('notice_reactions').upsert({ notice_id: noticeId, profile_id: me, emoji }, { ignoreDuplicates: true })
+      : await supabase.from('notice_reactions').delete().eq('notice_id', noticeId).eq('profile_id', me).eq('emoji', emoji);
+    if (error) fail(error);
+  }
+
+  async canUseEventChat(noticeId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('can_use_event_chat', { p_notice: noticeId });
+    if (error) return false;
+    return data === true;
+  }
+
+  async listEventMessages(noticeId: string): Promise<EventMessage[]> {
+    const { data, error } = await supabase.from('event_messages').select('*').eq('notice_id', noticeId).order('created_at');
+    if (error) fail(error);
+    return ((data ?? []) as EventMessageRow[]).map(toEventMessage);
+  }
+
+  async postEventMessage(noticeId: string, body: string): Promise<EventMessage> {
+    const { data, error } = await supabase.rpc('post_event_message', { p_notice: noticeId, p_body: body });
+    if (error) fail(error);
+    return toEventMessage(data as EventMessageRow);
+  }
+
+  async translateMessage(messageId: string): Promise<string> {
+    const { data, error } = await supabase.functions.invoke('translate-message', { body: { messageId } });
+    const d = data as { text?: string; error?: string } | null;
+    if (error || !d?.text) fail(d?.error ?? 'Fikk ikke oversatt meldingen. Prøv igjen.');
+    return d.text;
+  }
+
+  async listLendItems(filter: { ownerId?: string; municipality?: string }): Promise<LendItem[]> {
+    let q = supabase.from('lend_items').select('*').order('created_at', { ascending: false });
+    if (filter.ownerId) q = q.eq('owner_id', filter.ownerId);
+    if (filter.municipality) q = q.eq('municipality', filter.municipality).eq('active', true);
+    const { data, error } = await q;
+    if (error) fail(error);
+    return ((data ?? []) as LendItemRow[]).map(toLendItem);
+  }
+
+  async getLendItem(id: string): Promise<LendItem | null> {
+    const { data, error } = await supabase.from('lend_items').select('*').eq('id', id).maybeSingle();
+    if (error) fail(error);
+    return data ? toLendItem(data as LendItemRow) : null;
+  }
+
+  async saveLendItem(input: LendItemInput): Promise<LendItem> {
+    const me = await myId();
+    const row = {
+      owner_id: me,
+      title: input.title.trim(),
+      category: input.category,
+      note: input.note?.trim() || null,
+      ...(input.imagePath !== undefined ? { image_path: input.imagePath } : {}),
+      ...(input.active !== undefined ? { active: input.active } : {}),
+      // who sees it is chosen once, like an oppslag
+      ...(!input.id && input.neighbourhoodId ? { neighbourhood_id: input.neighbourhoodId } : {}),
+    };
+    const { data, error } = input.id
+      ? await supabase.from('lend_items').update(row).eq('id', input.id).eq('owner_id', me).select('*').single()
+      : await supabase.from('lend_items').insert(row).select('*').single();
+    if (error) fail(error);
+    return toLendItem(data as LendItemRow);
+  }
+
+  async deleteLendItem(id: string): Promise<void> {
+    const me = await myId();
+    const { error } = await supabase.from('lend_items').delete().eq('id', id).eq('owner_id', me);
+    if (error) fail(error);
+  }
+
+  async requestLend(itemId: string, fromDate: string, toDate: string, note?: string): Promise<void> {
+    const { error } = await supabase.rpc('request_lend', { p_item: itemId, p_from: fromDate, p_to: toDate, p_note: note ?? null });
+    if (error) fail(error);
+  }
+
+  async listLendRequests(): Promise<LendRequest[]> {
+    const { data, error } = await supabase
+      .from('lend_requests')
+      .select('*, lend_items(title, owner_id)')
+      .order('from_date', { ascending: false });
+    if (error) fail(error);
+    return ((data ?? []) as (LendRequestRow & { lend_items: { title: string; owner_id: string } | null })[]).map((r) => ({
+      id: r.id,
+      itemId: r.item_id,
+      itemTitle: r.lend_items?.title ?? '',
+      ownerId: r.lend_items?.owner_id ?? '',
+      borrowerId: r.borrower_id,
+      fromDate: r.from_date,
+      toDate: r.to_date,
+      note: r.note ?? undefined,
+      status: r.status,
+      reply: r.reply ?? undefined,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async respondLend(id: string, status: 'ACCEPTED' | 'DECLINED' | 'CANCELLED', reply?: string): Promise<void> {
+    const { error } = await supabase.rpc('respond_lend', { p_id: id, p_status: status, p_reply: reply?.trim() || null });
+    if (error) fail(error);
+  }
+
+  async lendBusyDays(itemId: string): Promise<LendBusy[]> {
+    const { data, error } = await supabase.rpc('lend_busy_days', { p_item: itemId });
+    if (error) return [];
+    return ((data ?? []) as { from_date: string; to_date: string }[]).map((r) => ({ fromDate: r.from_date, toDate: r.to_date }));
+  }
+
+  async profileCategoryJobs(profileId: string): Promise<CategoryJobs[]> {
+    const { data, error } = await supabase.rpc('profile_category_jobs', { p_profile: profileId });
+    if (error) return [];
+    return ((data ?? []) as { category_slug: string; jobs: number }[]).map((r) => ({ categorySlug: r.category_slug, jobs: Number(r.jobs) }));
+  }
+
+  async myHousehold(): Promise<Household> {
+    const { data, error } = await supabase.rpc('my_household');
+    if (error) fail(error);
+    const d = (data ?? {}) as Omit<Partial<Household>, 'listings'> & { listings?: (Household['listings'][number] & { imagePath?: string | null })[] };
+    return {
+      inHousehold: !!d.inHousehold,
+      since: d.since ?? undefined,
+      code: d.code ?? undefined,
+      partner: d.partner ?? undefined,
+      listings: (d.listings ?? []).map(({ imagePath, ...l }) => ({ ...l, imageUrl: publicUrl('listing-images', imagePath) })),
+      agreements: (d.agreements ?? []).map((a) => ({ ...a, scheduledAt: a.scheduledAt ?? undefined, scheduledText: a.scheduledText ?? undefined })),
+    };
+  }
+
+  async householdInviteCode(): Promise<string> {
+    const { data, error } = await supabase.rpc('household_invite_code');
+    if (error) fail(error);
+    return String(data);
+  }
+
+  async householdJoin(code: string): Promise<void> {
+    const { error } = await supabase.rpc('household_join', { p_code: code });
+    if (error) fail(error);
+  }
+
+  async householdLeave(): Promise<void> {
+    const { error } = await supabase.rpc('household_leave');
+    if (error) fail(error);
+  }
+
+  async partnerHelperCode(partnerId: string): Promise<string | null> {
+    const { data, error } = await supabase.rpc('partner_helper_code', { p_partner: partnerId });
+    if (error) return null;
+    return typeof data === 'string' && data ? data : null;
+  }
+
+  async guardianOverview(): Promise<GuardianYouth[]> {
+    const { data, error } = await supabase.rpc('guardian_overview');
+    if (error) fail(error);
+    return (data ?? []) as GuardianYouth[];
   }
 }

@@ -1,7 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { PartnerArt } from '@/components/art/Scenes';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Dimensions, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from '@/components/ui/Image';
 import Animated, {
   Easing,
@@ -15,14 +15,30 @@ import Animated, {
 import nb from '@/i18n/nb';
 import { MAX_NABOLAG } from '@/domain/nabolag';
 import { MyNabolagCards } from '@/components/community/MyNabolagCards';
-import type { NoticeKind, Partner } from '@/domain/types';
+import { CommunityLinkCard } from '@/components/community/CommunityLinkCard';
+import { EVENT_ICON, NOTICE_STYLE, eventTypeOf, noticeType } from '@/components/community/noticeKinds';
+import { postedAgo } from '@/lib/datetime';
+import type { Donation, NoticeboardPost, Partner } from '@/domain/types';
 import { categoryBySlug } from '@/domain/categories';
 import { formatPrice, nok } from '@/domain/price';
-import { useAppSettings, useDonations, useMyNabolag, useNoticeboard, usePartners } from '@/api/queries';
+import { isEnabled } from '@/config/featureFlags';
+import { upcomingEvents } from '@/components/community/EventsCalendar';
+import { HelperPerks, activeHelperOffers } from '@/components/community/HelperPerks';
+import {
+  FellesSearchLink,
+  NabolagFilter,
+  NeighbourOffers,
+  SupportCard,
+  WeatherAlertCard,
+  WeekCard,
+  YouthCorner,
+} from '@/components/community/FellesTop';
+import { useAppSettings, useDonations, useMyNabolag, useNoticeboard, usePartners, useProfile } from '@/api/queries';
 import { ImpressionWatcher, impressionLogged, logPartnerClick, logPartnerImpression, setPartnerStatsKommune, visibleRatio } from '@/lib/partnerStats';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
 import { safePush } from '@/lib/nav';
+import { useTabReselect } from '@/lib/tabReselect';
 import { openWebsite } from '@/config/links';
 import { colors, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { HomeTopBar } from '@/components/TopBar';
@@ -53,13 +69,12 @@ import {
 
 const CARD_STEP = 162; // 150 card + 12 gap
 const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-const KIND_PILL: Record<NoticeKind, { tone: 'ok' | 'warn' | 'offer' | 'neutral'; icon: IconKey }> = {
-  GIVEAWAY: { tone: 'ok', icon: 'gift' },
-  LOST_FOUND: { tone: 'warn', icon: 'key' },
-  TOOL_LEND: { tone: 'offer', icon: 'montering' },
-  GENERAL: { tone: 'neutral', icon: 'pinned' },
-};
 const DON_ICONS: IconKey[] = ['award', 'users', 'hand', 'mic'];
+const DON_TONES = [
+  { bg: colors.limeTint, fg: colors.limeDeep },
+  { bg: colors.cyanTint, fg: colors.cyanDeep },
+  { bg: colors.warnTint, fg: colors.warn },
+];
 
 /** `.float` / `.float2` drift for the hero collage. */
 function Float({ period, children }: { period: number; children: ReactNode }) {
@@ -117,13 +132,29 @@ function HeroArt() {
   );
 }
 
-/** Partner logo on a white tile; dashed placeholder (`.logoph`) until partners deliver their logo. */
-function PartnerLogo({ uri, size = 68 }: { uri?: string | null; size?: number }) {
+/** «Innlandet Sparebank» -> 'IS', «Fjellbygg AS» -> 'F'. */
+const monogram = (name: string) => {
+  const words = name.replace(/\b(AS|ASA|SA|DA|BA|ANS)\b/g, '').trim().split(/\s+/).filter(Boolean);
+  return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '').slice(0, 1)).toUpperCase();
+};
+
+/**
+ * Partner logo on a white tile. Until a partner delivers a logo it shows their initials on lime – a
+ * «LOGO» placeholder looked unfinished (2026-11-10).
+ */
+function PartnerLogo({ uri, size = 68, name }: { uri?: string | null; size?: number; name?: string }) {
   const radiusFor = { width: size, height: size, borderRadius: size * 0.29 };
   if (uri) {
     return (
       <View style={[styles.logo, radiusFor]}>
         <Image source={{ uri }} resizeMode="contain" style={styles.logoImg} accessibilityIgnoresInvertColors />
+      </View>
+    );
+  }
+  if (name) {
+    return (
+      <View style={[styles.mono, radiusFor]}>
+        <Text style={[styles.monoText, { fontSize: size * 0.34 }]}>{monogram(name)}</Text>
       </View>
     );
   }
@@ -135,12 +166,32 @@ function PartnerLogo({ uri, size = 68 }: { uri?: string | null; size?: number })
   );
 }
 
+/** A quiet card for an empty section: an icon disc, one line, and (for partner sections) «Bli partner». */
+function EmptyNote({ icon, textValue, cta }: { icon: IconKey; textValue: string; cta?: { label: string; onPress: () => void } }) {
+  return (
+    <View style={styles.emptyNote}>
+      <View style={styles.emptyIcon}>
+        <Icon name={icon} size={20} color={colors.ink2} />
+      </View>
+      <Text style={[text.meta, styles.flex]}>{textValue}</Text>
+      {cta ? (
+        <Pressable accessibilityRole="link" onPress={cta.onPress} hitSlop={8} style={styles.emptyCta}>
+          <Text style={styles.emptyCtaText}>{cta.label}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 /** Under the name in the støttespiller carousel: the line of business (category), else the partner's own line. */
 const supporterLine = (p: Partner): string => (p.categorySlug ? categoryBySlug(p.categorySlug).label : p.tagline);
 
 /** Fellesskap tab (design/screens/Fellesskap.dc.html). */
 export function FellesskapScreen() {
   const pull = usePullRefresh();
+  // tap «Fellesskap» again: back to the top
+  const scrollRef = useRef<ScrollView>(null);
+  useTabReselect('fellesskap', () => scrollRef.current?.scrollTo({ y: 0, animated: true }));
   const router = useRouter();
   const me = useCurrentUser();
   const { municipality, municipalities, ready } = useLocationScope();
@@ -153,6 +204,10 @@ export function FellesskapScreen() {
   const [donAll, setDonAll] = useState(false);
   const [sheet, setSheet] = useState<Partner | null>(null);
   const [openedAt] = useState(() => Date.now());
+  // «Tips en bedrift» and a donation's story (0108)
+  const [story, setStory] = useState<Donation | null>(null);
+  // one of my nabolag only, when I am in more than one (0108)
+  const [onlyNabolag, setOnlyNabolag] = useState<string | null>(null);
 
   const main = partners.filter((p) => p.featured).slice(0, settings.maxHovedpartnere);
   // Lokale helter and støttespillere are scoped to the user's kommune; wait for
@@ -164,6 +219,8 @@ export function FellesskapScreen() {
         (p) => !p.featured && (municipalities.length === 0 || !p.municipality || municipalities.includes(p.municipality)),
       );
   const heroes = local.filter((p) => p.localHero);
+  // «Fordeler for hjelpere» (0101): every partner in the kommune with a running offer
+  const perks = activeHelperOffers([...main, ...local]);
   const supporters = local.filter((p) => !p.localHero);
   const maxCar = Math.max(0, supporters.length - 2);
   // the list can get shorter (kommune change, a partner switched off) – never past the end
@@ -175,15 +232,22 @@ export function FellesskapScreen() {
   const track = useAnimatedStyle(() => ({ transform: [{ translateX: trackX.value }] }));
 
   const scopedPosts = useMemo(
-    () => (postsData ?? []).filter((p) => municipalities.length === 0 || municipalities.includes(p.municipality)),
-    [postsData, municipalities],
+    () =>
+      (postsData ?? []).filter(
+        (p) => (municipalities.length === 0 || municipalities.includes(p.municipality)) && (!onlyNabolag || p.neighbourhoodId === onlyNabolag),
+      ),
+    [postsData, municipalities, onlyNabolag],
   );
   const newPosts = scopedPosts.filter((p) => Date.parse(p.createdAt) >= openedAt - NEW_WINDOW_MS).length;
-  const kinds = [...new Set(scopedPosts.map((p) => p.kind))].slice(0, 2);
+  // the newest oppslag as a preview, and the faces of the neighbours who wrote lately
+  const byNewest = useMemo(() => [...scopedPosts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)), [scopedPosts]);
+  const latest = byNewest[0];
+  const authors = [...new Set(byNewest.map((p) => p.authorProfileId))];
   const kommune = me.municipality || municipality || '';
   // nabolag are picked here, on Fellesskap → Nabolag (not at sign-up)
   const myNabolag = useMyNabolag(!!me.id).data ?? [];
   const shownDonations = donAll ? donations : donations.slice(0, 3);
+  const donatedKr = donations.reduce((sum, d) => sum + d.amountKr, 0);
 
   // Partners are managed on the website: fresh every time the tab is opened (and live through
   // PlatformRealtime while it is open).
@@ -228,6 +292,7 @@ export function FellesskapScreen() {
     <Screen
       scroll
       spacer="nav"
+      scrollRef={scrollRef}
       scrollProps={{ onScroll: checkVisible, scrollEventThrottle: 200, refreshControl: pullRefreshControl(pull) }}
       header={
         me.isYouth ? (
@@ -252,9 +317,15 @@ export function FellesskapScreen() {
         </View>
       </FadeUp>
 
+      <FellesSearchLink />
+      <WeatherAlertCard kommune={kommune} youth={me.isYouth} />
+      <WeekCard kommune={kommune} />
+      <NabolagFilter nabolag={myNabolag} value={onlyNabolag} onChange={setOnlyNabolag} />
+
       <View style={[styles.px, styles.links]}>
         <FadeUp delay={100}>
-          {me.isYouth ? null : myNabolag.length ? (
+          {/* youth can join nabolag too (0103) */}
+          {myNabolag.length ? (
             // the nabolag I chose: each opens directly
             <View style={styles.mine}>
               <MyNabolagCards nabolag={myNabolag} posts={postsData ?? []} now={openedAt} />
@@ -263,60 +334,51 @@ export function FellesskapScreen() {
               </View>
             </View>
           ) : (
-            <PressableScale
-              accessibilityRole="link"
-              accessibilityLabel={`${nb.fellesskap.nabolag}. ${nb.fellesskap.nabolagJoin}. ${nb.fellesskap.joinHint}`}
+            <CommunityLinkCard
+              tone="ink"
+              icon="home"
+              eyebrow={nb.fellesskap.nabolag}
+              title={nb.fellesskap.nabolagCardTitle}
+              body={nb.fellesskap.joinHint}
+              faces={authors.slice(3, 6)}
+              cta={nb.fellesskap.nabolagJoin}
+              a11y={`${nb.fellesskap.nabolag}. ${nb.fellesskap.nabolagJoin}. ${nb.fellesskap.joinHint}`}
               onPress={() => safePush('/nabolag')}
-              scaleTo={0.985}
-              style={[styles.linkcard, shadow.card]}
-            >
-              <View style={[styles.linkIcon, { backgroundColor: colors.limeTint }]}>
-                <Icon name="home" size={22} color={colors.limeDeep} />
-              </View>
-              <View style={styles.linkBody}>
-                <Text style={[text.eyebrow, { fontSize: 11 }]}>{nb.fellesskap.nabolag}</Text>
-                <Text style={styles.linkTitle}>{nb.fellesskap.nabolagJoin}</Text>
-                <Text style={text.meta}>{nb.fellesskap.joinHint}</Text>
-              </View>
-              <Icon name="right" size={20} color={colors.faint} />
-            </PressableScale>
+              testID="fellesskap-nabolag"
+            />
           )}
         </FadeUp>
         <FadeUp delay={150}>
-          <PressableScale
-            accessibilityRole="link"
-            accessibilityLabel={`${nb.fellesskap.oppslag}. ${nb.fellesskap.oppslagTitle(municipality ?? '')}${newPosts ? `, ${nb.fellesskap.newCount(newPosts)}` : ''}`}
+          <CommunityLinkCard
+            tone="cyan"
+            icon="pinned"
+            eyebrow={nb.fellesskap.oppslag}
+            title={nb.fellesskap.oppslagTitle(municipality ?? '')}
+            body={latest ? undefined : nb.fellesskap.oppslagEmpty}
+            badge={newPosts ? nb.fellesskap.newCount(newPosts) : undefined}
+            faces={authors.slice(0, 3)}
+            preview={latest ? <LatestNotice post={latest} now={openedAt} /> : null}
+            cta={nb.fellesskap.oppslagOpen}
+            a11y={`${nb.fellesskap.oppslag}. ${nb.fellesskap.oppslagTitle(municipality ?? '')}${newPosts ? `, ${nb.fellesskap.newCount(newPosts)}` : ''}`}
             onPress={() => safePush('/oppslagstavle')}
-            scaleTo={0.985}
-            style={[styles.linkcard, shadow.card]}
-          >
-            <View style={[styles.linkIcon, { backgroundColor: colors.cyanTint }]}>
-              <Icon name="pinned" size={22} color={colors.cyanDeep} />
-            </View>
-            <View style={styles.linkBody}>
-              <Text style={[text.eyebrow, { fontSize: 11 }]}>{nb.fellesskap.oppslag}</Text>
-              <Text style={styles.linkTitle}>{nb.fellesskap.oppslagTitle(municipality ?? '')}</Text>
-              {kinds.length ? (
-                <View style={styles.row6}>
-                  {kinds.map((k) => (
-                    <Pill key={k} label={nb.fellesskap.kinds[k]} tone={KIND_PILL[k].tone} icon={KIND_PILL[k].icon} size="sm" style={styles.pill22} />
-                  ))}
-                </View>
-              ) : (
-                <Text style={text.meta}>{nb.fellesskap.noNew}</Text>
-              )}
-            </View>
-            {newPosts ? <Pill label={nb.fellesskap.newCount(newPosts)} tone="dark" style={styles.pill24} /> : null}
-          </PressableScale>
+            testID="fellesskap-oppslag"
+          />
         </FadeUp>
       </View>
+
+      {me.isYouth ? <YouthCorner events={upcomingEvents(scopedPosts, openedAt)} /> : null}
+      {isEnabled('neighbourOffers') ? <NeighbourOffers partners={[...main, ...local]} /> : null}
+
 
       <FadeUp delay={200} style={[styles.px, styles.mt30]}>
         <View style={styles.partnerNote}>
           <View style={styles.noteIcon}>
-            <Icon name="info" size={18} color={colors.ink2} />
+            <Icon name="heart" size={20} color={colors.limeDeep} filled />
           </View>
-          <Text style={[text.explain, styles.flex]}>{nb.fellesskap.partnerNote}</Text>
+          <View style={styles.flex}>
+            <Text style={styles.noteTitle}>{nb.fellesskap.freeTitle}</Text>
+            <Text style={[text.explain, styles.ink2]}>{nb.fellesskap.partnerNote}</Text>
+          </View>
         </View>
       </FadeUp>
 
@@ -329,7 +391,7 @@ export function FellesskapScreen() {
       />
       <View style={[styles.px, styles.gap12]}>
         {main.length === 0 ? (
-          <Text style={[text.meta, styles.empty]}>{nb.fellesskap.noMain}</Text>
+          <EmptyNote icon="award" textValue={nb.fellesskap.noMain} />
         ) : (
           main.map((p, i) => (
             <FadeUp key={p.id} delay={i * 50}>
@@ -354,7 +416,7 @@ export function FellesskapScreen() {
                 </View>
                 <View style={styles.mbody}>
                   <View style={styles.mlogo}>
-                    <PartnerLogo uri={p.logoUrl} size={76} />
+                    <PartnerLogo uri={p.logoUrl} size={72} name={p.name} />
                   </View>
                   <Text style={styles.mname}>{p.name}</Text>
                   <Text style={[text.body, styles.ink2]}>{p.tagline}</Text>
@@ -399,7 +461,9 @@ export function FellesskapScreen() {
                   ) : null}
                   <View style={styles.mmore}>
                     <Text style={styles.mmoreText}>{nb.fellesskap.readMore}</Text>
-                    <Icon name="arrow" size={16} color={colors.cyanDeep} />
+                    <View style={styles.mmoreIcon}>
+                      <Icon name="arrow" size={16} color={colors.ink} />
+                    </View>
                   </View>
                 </View>
               </PressableScale>
@@ -417,7 +481,9 @@ export function FellesskapScreen() {
         subtitle={nb.fellesskap.heroSub(municipality ?? '')}
       />
       {heroes.length === 0 ? (
-        <Text style={[text.meta, styles.px, styles.empty]}>{nb.fellesskap.heroNone(municipality ?? '')}</Text>
+        <View style={styles.px}>
+          <EmptyNote icon="heart" textValue={nb.fellesskap.heroNone(municipality ?? '')} />
+        </View>
       ) : (
           <View style={[styles.px, styles.gap12]}>
             {heroes.map((p, i) => (
@@ -430,7 +496,7 @@ export function FellesskapScreen() {
                   scaleTo={0.985}
                   style={[styles.pcard, shadow.card]}
                 >
-                  <PartnerLogo uri={p.logoUrl} />
+                  <PartnerLogo uri={p.logoUrl} name={p.name} />
                   <View style={styles.pbody}>
                     <Text style={styles.pname}>{p.name}</Text>
                     <Text style={text.meta}>{p.tagline}</Text>
@@ -481,7 +547,9 @@ export function FellesskapScreen() {
         ) : null}
       </View>
       {supporters.length === 0 ? (
-        <Text style={[text.meta, styles.px, styles.empty]}>{nb.fellesskap.supNone(municipality ?? '')}</Text>
+        <View style={styles.px}>
+          <EmptyNote icon="building" textValue={nb.fellesskap.supNone(municipality ?? '')} />
+        </View>
       ) : (
         <>
           <View style={styles.carView}>
@@ -502,9 +570,7 @@ export function FellesskapScreen() {
                       <Image source={{ uri: s.logoUrl }} resizeMode="contain" style={styles.logoImg} accessibilityIgnoresInvertColors />
                     </View>
                   ) : (
-                    <View style={styles.scardLogo}>
-                      <Icon name="building" size={22} color={colors.faint} />
-                    </View>
+                    <PartnerLogo size={44} name={s.name} />
                   )}
                   <View style={styles.gap3}>
                     {/* two lines, so a longer company name is never cut to nothing */}
@@ -568,20 +634,44 @@ export function FellesskapScreen() {
         </View>
       ) : null}
 
+      {/* «Fordeler for hjelpere» (0101): at the end, just before the donations (asked 2026-11-12) */}
+      {isEnabled('helperPerks') && perks.length && !me.isYouth ? (
+        <>
+          <SectionHeader icon="tag" iconBg={colors.lime} iconColor={colors.ink} title={nb.perks.title} subtitle={nb.perks.sub} />
+          <View style={styles.px}>
+            <HelperPerks partners={perks} kommune={kommune || undefined} />
+          </View>
+        </>
+      ) : null}
+
       <SectionHeader icon="gift" title={nb.fellesskap.donTitle} subtitle={nb.fellesskap.donSub} style={styles.mt34} />
-      <View style={styles.px}>
+      <SupportCard kommune={kommune} />
+      <View style={[styles.px, styles.mt12]}>
         {donations.length === 0 ? (
-          <Text style={[text.meta, styles.empty]}>{nb.fellesskap.noDonations}</Text>
+          <EmptyNote icon="gift" textValue={nb.fellesskap.noDonations} />
         ) : (
           <>
+            <View style={[styles.donTotal, shadow.card]} accessible accessibilityLabel={`${nb.fellesskap.donTotalLabel}: ${formatPrice(nok(donatedKr))}`}>
+              <View style={styles.donBlob} />
+              <View style={styles.donIcon}>
+                <Icon name="gift" size={22} color={colors.limeDeep} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.donTotalLabel}>{nb.fellesskap.donTotalLabel}</Text>
+                <Text style={styles.donTotalNum}>{formatPrice(nok(donatedKr))}</Text>
+                <Text style={text.meta}>{nb.fellesskap.donTotalSub(donations.length)}</Text>
+              </View>
+            </View>
             <ListGroup>
               {shownDonations.map((d, i) => (
                 <ListRow
                   key={d.id}
                   icon={DON_ICONS[i % DON_ICONS.length]}
-                  iconColor={colors.ink2}
+                  iconBg={DON_TONES[i % DON_TONES.length].bg}
+                  iconColor={DON_TONES[i % DON_TONES.length].fg}
                   title={d.recipient}
-                  subtitle={d.period}
+                  subtitle={d.storyTitle ? `${d.period} · ${nb.felles.support.story}` : d.period}
+                  onPress={d.storyTitle ? () => setStory(d) : undefined}
                   right={
                     <View style={styles.donRight}>
                       <Text style={[text.num, { fontSize: 17, lineHeight: 19 }]}>{formatPrice(nok(d.amountKr))}</Text>
@@ -605,12 +695,24 @@ export function FellesskapScreen() {
         )}
       </View>
 
+      <Sheet visible={!!story} onClose={() => setStory(null)} title={nb.felles.support.storyTitle} titleSize="h2" scroll>
+        {story ? (
+          <View style={styles.storyBody}>
+            {story.storyImageUrl ? (
+              <Image source={{ uri: story.storyImageUrl }} style={styles.storyImage} resizeMode="cover" accessibilityIgnoresInvertColors />
+            ) : null}
+            <Text style={text.h3}>{story.storyTitle}</Text>
+            <Text style={text.meta}>{`${story.recipient} · ${formatPrice(nok(story.amountKr))}`}</Text>
+            {story.storyBody ? <Text style={text.body}>{story.storyBody}</Text> : null}
+          </View>
+        ) : null}
+      </Sheet>
       <Sheet visible={!!sheet} onClose={() => setSheet(null)}>
         {sheet ? (
           <View>
             <View style={styles.sheetTop}>
               <ScaleIn>
-                <PartnerLogo uri={sheet.logoUrl} size={84} />
+                <PartnerLogo uri={sheet.logoUrl} size={84} name={sheet.name} />
               </ScaleIn>
               <View style={[styles.flex, { gap: 6 }]}>
                 <Text style={text.h2}>{sheet.name}</Text>
@@ -645,7 +747,49 @@ export function FellesskapScreen() {
   );
 }
 
+/** The newest oppslag inside the Oppslagstavla card: who, the type, the title and when. */
+function LatestNotice({ post, now }: { post: NoticeboardPost; now: number }) {
+  const { data: author } = useProfile(post.authorProfileId);
+  const type = noticeType(post);
+  const k = NOTICE_STYLE[type];
+  const ev = eventTypeOf(post);
+  const kindIcon = ev ? EVENT_ICON[ev] : k.icon;
+  const kindLabel = ev ? nb.events.types[ev] : nb.noticeboard.kindsShort[type];
+  return (
+    <View style={styles.latest}>
+      <Avatar initials={author?.initials ?? '·'} uri={author?.avatarUrl} seed={post.authorProfileId} size={40} ring={false} />
+      <View style={styles.flex}>
+        <View style={styles.latestTop}>
+          <View style={[styles.latestKind, { backgroundColor: k.bg }]}>
+            <Icon name={kindIcon} size={11} color={k.fg} />
+            <Text style={[styles.latestKindText, { color: k.fg }]}>{kindLabel}</Text>
+          </View>
+          <Text style={styles.latestWhen} numberOfLines={1}>
+            {postedAgo(post.createdAt, new Date(now))}
+          </Text>
+        </View>
+        <Text style={styles.latestTitle} numberOfLines={1}>
+          {post.title}
+        </Text>
+        <Text style={styles.latestWho} numberOfLines={1}>
+          {author?.displayName ?? ''}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  storyBody: { gap: 10, paddingBottom: 8 },
+  storyImage: { width: '100%', aspectRatio: 1.6, borderRadius: radius.tile },
+  mt12: { marginTop: 12 },
+  latest: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4, padding: 12, borderRadius: radius.card, borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.white },
+  latestTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  latestKind: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 20, paddingHorizontal: 7, borderRadius: radius.pill },
+  latestKindText: { fontFamily: text.pill.fontFamily, fontSize: 11 },
+  latestWhen: { ...text.small, flexShrink: 1 },
+  latestTitle: { fontFamily: text.label.fontFamily, fontSize: 15, lineHeight: 20, color: colors.ink, marginTop: 3 },
+  latestWho: { ...text.small, color: colors.ink2 },
   flex: { flex: 1 },
   px: { paddingHorizontal: screenPadding },
   mt10: { marginTop: 10 },
@@ -675,7 +819,18 @@ const styles = StyleSheet.create({
   dim: { opacity: 0.4 },
   empty: { paddingVertical: 8 },
   noMargin: { marginTop: 0, marginBottom: 0, flex: 1 },
-  hero: { borderRadius: radius.nav, backgroundColor: colors.limeSoft, overflow: 'hidden', paddingTop: 22, paddingHorizontal: 20 },
+  hero: { borderRadius: radius.nav, backgroundColor: colors.limeSoft, overflow: 'hidden', paddingTop: 22, paddingHorizontal: 20, paddingBottom: 16 },
+  mono: { backgroundColor: colors.limeTint, borderWidth: 2, borderColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  monoText: { fontFamily: text.h2.fontFamily, color: colors.limeDeep, letterSpacing: -0.5 },
+  emptyNote: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.line, backgroundColor: colors.white },
+  emptyIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  emptyCta: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.lime },
+  emptyCtaText: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink },
+  donTotal: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, marginBottom: 12, borderRadius: radius.card, backgroundColor: colors.white, overflow: 'hidden' },
+  donBlob: { position: 'absolute', right: -40, top: -50, width: 150, height: 150, borderRadius: 75, backgroundColor: colors.limeTint },
+  donIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.limeTint, borderWidth: 2, borderColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  donTotalLabel: { ...text.eyebrow, fontSize: 11, color: colors.limeDeep },
+  donTotalNum: { ...text.num, fontSize: 28, lineHeight: 32, marginTop: 2 },
   heroTitle: { marginTop: 10, fontSize: 32, lineHeight: 34, letterSpacing: -0.96 },
   heroLead: { marginTop: 8, color: colors.ink2 },
   heroArt: { height: 178, marginTop: 6, marginHorizontal: -20 },
@@ -722,15 +877,15 @@ const styles = StyleSheet.create({
   linkTitle: { fontFamily: text.h3.fontFamily, fontSize: 17, lineHeight: 20.4, letterSpacing: -0.34, color: colors.ink },
   partnerNote: {
     flexDirection: 'row',
-    gap: 12,
-    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderRadius: radius.card,
+    backgroundColor: colors.limeTint,
   },
-  noteIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  noteIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  noteTitle: { fontFamily: text.label.fontFamily, fontSize: 15.5, color: colors.ink, marginBottom: 2 },
   pcard: {
     flexDirection: 'row',
     gap: 14,
@@ -756,19 +911,20 @@ const styles = StyleSheet.create({
   ink2: { color: colors.ink2 },
   // hovedpartner: one large card each
   mcard: { borderRadius: radius.listingCard, backgroundColor: colors.white, overflow: 'hidden' },
-  mcover: { height: 132, backgroundColor: colors.ink, overflow: 'hidden' },
+  mcover: { height: 96, backgroundColor: colors.ink, overflow: 'hidden' },
   mglow1: { position: 'absolute', right: -50, top: -70, width: 200, height: 200, borderRadius: 100, backgroundColor: colors.lime, opacity: 0.35 },
   mglow2: { position: 'absolute', left: -40, bottom: -90, width: 170, height: 170, borderRadius: 85, backgroundColor: colors.cyan, opacity: 0.2 },
   mbadge: { position: 'absolute', right: 14, top: 14, height: 24 },
   mbody: { paddingHorizontal: 18, paddingBottom: 18, gap: 6 },
-  mlogo: { marginTop: -38, marginBottom: 6, alignSelf: 'flex-start' },
-  mname: { fontFamily: text.h2.fontFamily, fontSize: 23, lineHeight: 27, letterSpacing: -0.5, color: colors.ink },
+  mlogo: { marginTop: -36, marginBottom: 6, alignSelf: 'flex-start', borderRadius: 22, ...shadow.card },
+  mname: { fontFamily: text.h2.fontFamily, fontSize: 22, lineHeight: 26, letterSpacing: -0.5, color: colors.ink },
   mabout: { marginTop: 4, fontSize: 14, lineHeight: 20 },
-  mmore: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 28 },
+  mmore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, height: 48, paddingLeft: 18, paddingRight: 6, borderRadius: radius.pill, backgroundColor: colors.bg },
+  mmoreIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
   mthanks: { marginTop: 6 },
   mactions: { flexDirection: 'row', gap: 10, marginTop: 10 },
   sheetThanks: { marginTop: 14, alignSelf: 'center' },
-  mmoreText: { fontFamily: text.label.fontFamily, fontSize: 14.5, color: colors.cyanDeep },
+  mmoreText: { fontFamily: text.label.fontFamily, fontSize: 15, color: colors.ink },
   pname: { fontFamily: text.h3.fontFamily, fontSize: 18, lineHeight: 21.6, letterSpacing: -0.36, color: colors.ink },
   logo: {
     borderWidth: 1,

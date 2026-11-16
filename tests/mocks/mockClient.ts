@@ -3,6 +3,7 @@ import { UserError } from '@/lib/errors';
 import { isOpenListing } from '@/domain/editing';
 import { isUrgent } from '@/domain/urgent';
 import type {
+  LinkPreview,
   AgendaItem,
   AgreementSnapshot,
   AgreementTimeProposal,
@@ -33,8 +34,24 @@ import type {
   PoliceCertificate,
   ThankCard,
   ThankCardKind,
-  ToolBooking,
   YearRecap,
+  CategoryJobs,
+  EventMessage,
+  EventRsvps,
+  EventType,
+  GuardianYouth,
+  Household,
+  LendCategory,
+  LendItem,
+  LendRequest,
+  LendBusy,
+  NoticePoll,
+  NoticeQueue,
+  NoticeReaction,
+  NoticeReactionEmoji,
+  NoticeReservation,
+  PhotoDraft,
+  RsvpStatus,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import type { Report } from '@/domain/types';
@@ -85,8 +102,11 @@ import type {
   UpdateProfilePatch,
 } from '@/api/ApiClient';
 import { DEFAULT_APP_SETTINGS } from '@/api/ApiClient';
-import type { PendingReview } from '@/api/ApiClient';
+import type { LendItemInput, PendingReview } from '@/api/ApiClient';
 import { reviewDutyStore } from '@mocks/data/reviewDutyStore';
+import { inbox } from './mockInbox';
+import { MockOppdrag } from './mockOppdrag';
+import type { NoticeTopic } from '@/domain/community';
 import { noShowStore } from '@mocks/data/noShowStore';
 import { noShowWindowOpen } from '@/domain/noShow';
 import type { HelperStatus, NoShowReason, NoShowReport } from '@/domain/types';
@@ -121,15 +141,47 @@ export const extras = {
   slots: {} as Record<string, HelperSlots>,
   closedSlots: [] as string[],
   questions: [] as ListingQuestion[],
+  views: {} as Record<string, number>,
+  problemReports: [] as { body: string; imagePath?: string; context?: string }[],
   signedOutEverywhere: false,
   signups: {} as Record<string, string[]>,
-  bookings: [] as ToolBooking[],
   thanks: [] as ThankCard[],
   thankTo: null as string | null,
   recap: null as YearRecap | null,
   agreedSum: null as AgreedSum | null,
   police: { status: 'NONE' } as PoliceCertificate,
+  // 0101
+  visits: {} as Record<string, string[]>,
+  photoDrafts: [] as string[],
+  queues: {} as Record<string, NoticeReservation[]>,
+  rsvp: {} as Record<string, Record<string, RsvpStatus>>,
+  votes: {} as Record<string, Record<string, number>>,
+  reactions: {} as Record<string, NoticeReaction[]>,
+  eventMessages: [] as EventMessage[],
+  translated: [] as string[],
+  lendItems: [] as LendItem[],
+  lendRequests: [] as LendRequest[],
+  categoryJobs: {} as Record<string, CategoryJobs[]>,
+  household: { inHousehold: false, listings: [], agreements: [] } as Household,
+  partnerCodes: {} as Record<string, string>,
+  guardianYouths: [] as GuardianYouth[],
   reset() {
+    this.visits = {};
+    this.photoDrafts = [];
+    this.queues = {};
+    this.rsvp = {};
+    this.votes = {};
+    this.reactions = {};
+    this.eventMessages = [];
+    this.translated = [];
+    this.lendItems = [];
+    this.lendRequests = [];
+    this.categoryJobs = {};
+    this.household = { inHousehold: false, listings: [], agreements: [] };
+    this.partnerCodes = {};
+    this.guardianYouths = [];
+    this.views = {};
+    this.problemReports = [];
     this.deletedMessages = [];
     this.archived = {};
     this.transcribed = [];
@@ -138,7 +190,6 @@ export const extras = {
     this.questions = [];
     this.signedOutEverywhere = false;
     this.signups = {};
-    this.bookings = [];
     this.thanks = [];
     this.thankTo = null;
     this.recap = null;
@@ -157,7 +208,7 @@ export const extras = {
   },
 };
 
-export class MockApiClient implements ApiClient {
+export class MockApiClient extends MockOppdrag implements ApiClient {
   async listListings(params: ListListingsParams = {}): Promise<Listing[]> {
     await delay(250);
     return repositories.listings.list(params.filter, params.sort);
@@ -190,6 +241,8 @@ export class MockApiClient implements ApiClient {
       maxDistanceKm: extras?.maxDistanceKm,
       estimatedMinutes: extras?.estimatedMinutes,
       urgentUntil: extras?.urgentUntil ?? undefined,
+      sharedStreet: extras?.sharedStreet || undefined,
+      fromSenior: extras?.fromSenior || undefined,
     };
     repositories.listings.add(full);
     repositories.listings.setEditData(full.id, {
@@ -301,7 +354,8 @@ export class MockApiClient implements ApiClient {
 
   async listConversations(params: ListConversationsParams = {}): Promise<Conversation[]> {
     await delay(200);
-    return chatRepository.listConversations(params);
+    // my own pins, snoozes and timed mutes (0109)
+    return chatRepository.listConversations(params).map((c) => ({ ...c, ...(inbox.flags[c.id] ?? {}) }));
   }
 
   async getConversation(id: string): Promise<Conversation> {
@@ -346,6 +400,23 @@ export class MockApiClient implements ApiClient {
   async setConversationArchived(conversationId: string, archived: boolean): Promise<void> {
     await delay(40);
     extras.archived[conversationId] = archived;
+  }
+
+  async linkPreview(url: string): Promise<LinkPreview | null> {
+    await delay(40);
+    let host: string;
+    try {
+      host = new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      return null;
+    }
+    // demo pages, so the card can be seen in the test login
+    const known: Record<string, Omit<LinkPreview, 'url' | 'host'>> = {
+      'yr.no': { title: 'Været for Lillehammer – yr', description: 'Værvarsel for Lillehammer, time for time, de neste ni dagene.', site: 'Yr', image: null },
+      'finn.no': { title: 'Hekksaks, nesten ny', description: 'Brukt én sesong. Hentes på Nordre Ål.', site: 'FINN.no', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800' },
+    };
+    const hit = known[host];
+    return hit ? { url, host, ...hit } : null;
   }
 
   async transcribeMessage(messageId: string): Promise<string> {
@@ -406,34 +477,6 @@ export class MockApiClient implements ApiClient {
     const rest = (extras.signups[noticeId] ?? []).filter((p) => p !== me);
     extras.signups[noticeId] = join ? [...rest, me] : rest;
     return extras.signups[noticeId].length;
-  }
-
-  async listToolBookedDays(noticeId: string): Promise<{ from: string; to: string }[]> {
-    await delay(20);
-    return extras.bookings.filter((b) => b.noticeId === noticeId && b.status === 'APPROVED').map(({ from, to }) => ({ from, to }));
-  }
-
-  async listToolBookings(noticeId: string): Promise<ToolBooking[]> {
-    await delay(20);
-    return extras.bookings.filter((b) => b.noticeId === noticeId);
-  }
-
-  async requestToolBooking(noticeId: string, from: string, to: string, note?: string): Promise<ToolBooking> {
-    await delay(20);
-    if (extras.bookings.some((b) => b.noticeId === noticeId && b.status === 'APPROVED' && b.from <= to && b.to >= from)) {
-      throw new UserError('Noen av dagene er allerede tatt.');
-    }
-    const b: ToolBooking = { id: `b-${extras.bookings.length + 1}`, noticeId, borrowerId: profileRepository.currentUserId, from, to, note, status: 'PENDING' };
-    extras.bookings.push(b);
-    return b;
-  }
-
-  async respondToolBooking(id: string, status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED'): Promise<ToolBooking> {
-    await delay(20);
-    const b = extras.bookings.find((x) => x.id === id);
-    if (!b) throw new UserError('Fant ikke forespørselen.');
-    b.status = status;
-    return b;
   }
 
   async sendThankCard(proposalId: string, card: ThankCardKind, message?: string): Promise<ThankCard> {
@@ -997,7 +1040,8 @@ export class MockApiClient implements ApiClient {
 
   async listNoticeboard(kind?: NoticeKind): Promise<NoticeboardPost[]> {
     await delay(120);
-    return noticeboardStore.list(kind);
+    linkLend();
+    return noticeboardStore.list(kind).map((p) => ({ ...p, lendItemId: extras.lendItems.find((i) => i.noticeId === p.id)?.id }));
   }
 
   async createNoticeboardPost(input: {
@@ -1008,21 +1052,42 @@ export class MockApiClient implements ApiClient {
     municipality: string;
     /** storage path in `listing-images` */
     imagePath?: string;
+    imagePaths?: string[];
     neighbourhoodId?: string;
     isDugnad?: boolean;
     eventAt?: string;
+    /** an arrangement (0101); DUGNAD also sets isDugnad */
+    eventType?: EventType;
+    /** «Avstemning»: 2–6 choices (0101) */
+    pollOptions?: string[];
+    topic?: NoticeTopic;
+    organisationId?: string;
+    repeatWeekly?: boolean;
   }): Promise<NoticeboardPost> {
     await delay(150);
     const hood = input.neighbourhoodId ? neighbourhoodStore.byId(input.neighbourhoodId) : undefined;
     if (input.neighbourhoodId && !neighbourhoodStore.isMember(input.neighbourhoodId, profileRepository.currentUserId)) {
       throw new Error('new row violates row-level security policy');
     }
-    return noticeboardStore.create(hood ? { ...input, place: hood.place, municipality: hood.municipality } : input);
+    const post = noticeboardStore.create(hood ? { ...input, place: hood.place, municipality: hood.municipality } : input);
+    if (post.kind === 'TOOL_LEND') extras.lendItems = [itemFromNotice(post), ...extras.lendItems];
+    return post;
   }
 
   async updateNoticeboardPost(id: string, patch: Parameters<ApiClient['updateNoticeboardPost']>[1]): Promise<NoticeboardPost> {
     await delay(60);
-    return noticeboardStore.update(id, patch);
+    const post = noticeboardStore.update(id, patch);
+    const item = extras.lendItems.find((i) => i.noticeId === id);
+    if (item && post.kind !== 'TOOL_LEND') Object.assign(item, { active: false, noticeId: undefined });
+    else if (item) {
+      Object.assign(item, {
+        title: post.title.slice(0, 60),
+        note: post.body.slice(0, 300) || undefined,
+        active: !post.doneAt,
+        ...(patch.imagePaths !== undefined || patch.imagePath !== undefined ? { imagePath: post.imageUrls?.[0], imageUrl: post.imageUrls?.[0] } : {}),
+      });
+    } else linkLend();
+    return post;
   }
 
   async listNoticeComments(noticeId: string): Promise<NoticeComment[]> {
@@ -1030,9 +1095,14 @@ export class MockApiClient implements ApiClient {
     return noticeboardStore.comments(noticeId);
   }
 
-  async addNoticeComment(noticeId: string, body: string): Promise<NoticeComment> {
+  async addNoticeComment(noticeId: string, body: string, parentId?: string): Promise<NoticeComment> {
     await delay(40);
-    return noticeboardStore.addComment(noticeId, body);
+    return noticeboardStore.addComment(noticeId, body, profileRepository.currentUserId, parentId);
+  }
+
+  async keepNotice(id: string): Promise<void> {
+    await delay(40);
+    noticeboardStore.keep(id);
   }
 
   async deleteNoticeComment(id: string): Promise<void> {
@@ -1058,6 +1128,7 @@ export class MockApiClient implements ApiClient {
   async deleteNoticeboardPost(id: string): Promise<void> {
     await delay(80);
     noticeboardStore.remove(id);
+    extras.lendItems = extras.lendItems.filter((i) => i.noticeId !== id);
   }
 
   // --- konto ---
@@ -1159,6 +1230,24 @@ export class MockApiClient implements ApiClient {
   async replyToMinNabo(body: string): Promise<void> {
     await delay(40);
     minnaboStore.reply(body);
+  }
+
+  async reportProblem(input: { body: string; imagePath?: string; context?: string }): Promise<void> {
+    await delay(60);
+    if (input.body.trim().length < 3) throw new UserError('Skriv litt om hva som skjedde.');
+    extras.problemReports.push(input);
+    minnaboStore.reply(`Feilmelding fra appen${input.context ? ` (${input.context})` : ''}\n${input.body.trim()}`);
+  }
+
+  async recordListingView(listingId: string): Promise<void> {
+    extras.views[listingId] = (extras.views[listingId] ?? 0) + 1;
+  }
+
+  async listingViewCount(listingId: string): Promise<number | null> {
+    await delay(20);
+    const l = repositories.listings.get(listingId);
+    if (!l || l.owner.id !== profileRepository.currentUserId) return null;
+    return extras.views[listingId] ?? 0;
   }
 
   async voteMinNaboPoll(broadcastId: string, option: number): Promise<void> {
@@ -1275,4 +1364,397 @@ export class MockApiClient implements ApiClient {
     await delay(60);
     return businessStore.get(profileRepository.currentUserId);
   }
+
+  // --- 0101: utvidelse ---
+
+  async setAgreementRepeat(proposalId: string, everyDays: 7 | 14 | 28, until?: string | null): Promise<void> {
+    await delay(40);
+    const a = chatRepository.getAgreement(proposalId);
+    if (!a || a.cancelledAt) throw new UserError('Avtalen er ikke aktiv.');
+    if (!a.scheduledAt) throw new UserError('Avtal første gang først, så kan den gjentas.');
+    chatRepository.patchAgreement(proposalId, { repeatEveryDays: everyDays, repeatUntil: until ?? undefined, repeatEndedAt: undefined });
+  }
+
+  async endAgreementRepeat(proposalId: string): Promise<void> {
+    await delay(40);
+    chatRepository.patchAgreement(proposalId, { repeatEndedAt: new Date().toISOString() });
+  }
+
+  async markAgreementVisit(proposalId: string, visitAt: string): Promise<void> {
+    await delay(30);
+    const list = extras.visits[proposalId] ?? [];
+    if (!list.includes(visitAt)) extras.visits[proposalId] = [visitAt, ...list];
+  }
+
+  async listAgreementVisits(proposalId: string): Promise<string[]> {
+    await delay(20);
+    return [...(extras.visits[proposalId] ?? [])].sort((x, y) => Date.parse(y) - Date.parse(x));
+  }
+
+  async draftFromPhoto(imagePath: string): Promise<PhotoDraft> {
+    await delay(300);
+    extras.photoDrafts.push(imagePath);
+    return { categorySlug: 'hage', title: 'Rydde i hagen', description: 'Hagen trenger en runde: klippe plenen, rake løv og fylle sekker. Utstyr finnes.' };
+  }
+
+  async reserveNotice(noticeId: string, join: boolean): Promise<number> {
+    await delay(30);
+    const me = profileRepository.currentUserId;
+    const post = notice(noticeId);
+    if (!post || post.kind !== 'GIVEAWAY') throw new UserError('Fant ikke oppslaget.');
+    if (post.authorProfileId === me) throw new UserError('Dette er ditt eget oppslag.');
+    const queue = extras.queues[noticeId] ?? [];
+    if (join) {
+      if (post.doneAt) throw new UserError('Den er allerede gitt bort.');
+      if (!queue.some((r) => r.profileId === me)) queue.push({ profileId: me, status: 'QUEUED', createdAt: new Date().toISOString() });
+    } else {
+      const mine = queue.find((r) => r.profileId === me);
+      if (mine && (mine.status === 'QUEUED' || mine.status === 'OFFERED')) queue.splice(queue.indexOf(mine), 1);
+    }
+    extras.queues[noticeId] = queue;
+    offerNext(noticeId);
+    const waiting = queue.filter((r) => r.status === 'QUEUED' || r.status === 'OFFERED');
+    return waiting.findIndex((r) => r.profileId === me) + 1;
+  }
+
+  async noticeQueue(noticeId: string): Promise<NoticeQueue> {
+    await delay(20);
+    const me = profileRepository.currentUserId;
+    const queue = extras.queues[noticeId] ?? [];
+    const waiting = queue.filter((r) => r.status === 'QUEUED' || r.status === 'OFFERED');
+    return { waiting: waiting.length, mine: queue.find((r) => r.profileId === me)?.status ?? '', position: waiting.findIndex((r) => r.profileId === me) + 1 };
+  }
+
+  async listNoticeReservations(noticeId: string): Promise<NoticeReservation[]> {
+    await delay(20);
+    return [...(extras.queues[noticeId] ?? [])];
+  }
+
+  async settleReservation(noticeId: string, taken: boolean): Promise<void> {
+    await delay(30);
+    if (notice(noticeId)?.authorProfileId !== profileRepository.currentUserId) throw new UserError('Ikke tilgang.');
+    const queue = extras.queues[noticeId] ?? [];
+    const cur = queue.find((r) => r.status === 'OFFERED');
+    if (!cur) throw new UserError('Ingen står først i køen.');
+    cur.status = taken ? 'TAKEN' : 'SKIPPED';
+    if (taken) noticeboardStore.update(noticeId, { done: true });
+    else offerNext(noticeId);
+  }
+
+  async setEventRsvp(noticeId: string, status: RsvpStatus | null): Promise<void> {
+    await delay(30);
+    const me = profileRepository.currentUserId;
+    const all = { ...(extras.rsvp[noticeId] ?? {}) };
+    if (status) all[me] = status;
+    else delete all[me];
+    extras.rsvp[noticeId] = all;
+    // a dugnad keeps its old list of who comes
+    const rest = (extras.signups[noticeId] ?? []).filter((p) => p !== me);
+    extras.signups[noticeId] = status ? [...rest, me] : rest;
+  }
+
+  async eventRsvps(noticeId: string): Promise<EventRsvps> {
+    await delay(20);
+    const me = profileRepository.currentUserId;
+    const statuses: Record<string, RsvpStatus> = {};
+    for (const id of extras.signups[noticeId] ?? []) statuses[id] = 'GOING';
+    Object.assign(statuses, extras.rsvp[noticeId] ?? {});
+    const entries = Object.entries(statuses);
+    return {
+      going: entries.filter(([, s]) => s === 'GOING').length,
+      maybe: entries.filter(([, s]) => s === 'MAYBE').length,
+      mine: statuses[me] ?? null,
+      goingIds: entries.filter(([, s]) => s === 'GOING').map(([id]) => id),
+    };
+  }
+
+  async voteNoticePoll(noticeId: string, option: number | null): Promise<void> {
+    await delay(30);
+    const post = notice(noticeId);
+    if (!post?.pollOptions) throw new UserError('Fant ikke avstemningen.');
+    if (option !== null && (option < 0 || option >= post.pollOptions.length)) throw new UserError('Ugyldig valg.');
+    const votes = { ...(extras.votes[noticeId] ?? {}) };
+    if (option === null) delete votes[profileRepository.currentUserId];
+    else votes[profileRepository.currentUserId] = option;
+    extras.votes[noticeId] = votes;
+  }
+
+  async noticePoll(noticeId: string): Promise<NoticePoll | null> {
+    await delay(20);
+    const post = notice(noticeId);
+    if (!post?.pollOptions) return null;
+    const votes = extras.votes[noticeId] ?? {};
+    const counts = post.pollOptions.map((_, i) => Object.values(votes).filter((v) => v === i).length);
+    return { counts, total: Object.keys(votes).length, mine: votes[profileRepository.currentUserId] ?? null };
+  }
+
+  async listNoticeReactions(noticeId: string): Promise<NoticeReaction[]> {
+    await delay(15);
+    return [...(extras.reactions[noticeId] ?? [])];
+  }
+
+  async setNoticeReaction(noticeId: string, emoji: NoticeReactionEmoji, on: boolean): Promise<void> {
+    await delay(20);
+    const me = profileRepository.currentUserId;
+    const rest = (extras.reactions[noticeId] ?? []).filter((r) => !(r.profileId === me && r.emoji === emoji));
+    extras.reactions[noticeId] = on ? [...rest, { profileId: me, emoji }] : rest;
+  }
+
+  async canUseEventChat(noticeId: string): Promise<boolean> {
+    await delay(15);
+    const me = profileRepository.currentUserId;
+    const post = notice(noticeId);
+    if (!post || extras.guardian.youth) return false;
+    if (post.eventAt && Date.parse(post.eventAt) < Date.now() - 7 * 86_400_000) return false;
+    const rsvp = await this.eventRsvps(noticeId);
+    return post.authorProfileId === me || rsvp.mine !== null;
+  }
+
+  async listEventMessages(noticeId: string): Promise<EventMessage[]> {
+    await delay(20);
+    if (!(await this.canUseEventChat(noticeId))) return [];
+    return extras.eventMessages.filter((m) => m.noticeId === noticeId);
+  }
+
+  async postEventMessage(noticeId: string, body: string): Promise<EventMessage> {
+    await delay(30);
+    if (!(await this.canUseEventChat(noticeId))) throw new UserError('Chatten er stengt.');
+    const m: EventMessage = { id: `em-${extras.eventMessages.length + 1}`, noticeId, authorProfileId: profileRepository.currentUserId, body: body.trim(), createdAt: new Date().toISOString() };
+    extras.eventMessages.push(m);
+    return m;
+  }
+
+  async translateMessage(messageId: string): Promise<string> {
+    await delay(200);
+    extras.translated.push(messageId);
+    return 'Hei! Jeg kan hjelpe deg med dette på lørdag.';
+  }
+
+  async getLendItem(id: string): Promise<LendItem | null> {
+    await delay(20);
+    linkLend();
+    const me = profileRepository.currentUserId;
+    return extras.lendItems.find((i) => i.id === id && (i.active || i.ownerId === me)) ?? null;
+  }
+
+  async listLendItems(filter: { ownerId?: string; municipality?: string }): Promise<LendItem[]> {
+    await delay(20);
+    linkLend();
+    return extras.lendItems.filter((i) => (!filter.ownerId || i.ownerId === filter.ownerId) && (!filter.municipality || (i.municipality === filter.municipality && i.active)));
+  }
+
+  async saveLendItem(input: LendItemInput): Promise<LendItem> {
+    await delay(30);
+    const me = profileRepository.currentUserId;
+    const existing = input.id ? extras.lendItems.find((i) => i.id === input.id && i.ownerId === me) : undefined;
+    const hood = !existing && input.neighbourhoodId ? neighbourhoodStore.byId(input.neighbourhoodId) : undefined;
+    if (hood && !neighbourhoodStore.isMember(hood.id, me)) throw new UserError('Du er ikke med i det nabolaget.');
+    const item: LendItem = {
+      id: existing?.id ?? `li-${extras.lendItems.length + 1}-${Date.now()}`,
+      ownerId: me,
+      title: input.title.trim(),
+      category: input.category,
+      note: input.note?.trim() || undefined,
+      imagePath: input.imagePath === undefined ? existing?.imagePath : input.imagePath ?? undefined,
+      imageUrl: input.imagePath === undefined ? existing?.imageUrl : input.imagePath ?? undefined,
+      municipality: existing?.municipality ?? hood?.municipality ?? profileRepository.getProfile(me)?.location.municipality ?? '',
+      active: input.active ?? existing?.active ?? true,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+      noticeId: existing?.noticeId,
+      neighbourhoodId: existing?.neighbourhoodId ?? hood?.id,
+    };
+    extras.lendItems = [item, ...extras.lendItems.filter((i) => i.id !== item.id)];
+    // its «Lån ut» oppslag, like the database (0107)
+    if (item.noticeId && noticeboardStore.get(item.noticeId)) {
+      const n = noticeboardStore.get(item.noticeId)!;
+      noticeboardStore._patch(item.noticeId, {
+        title: item.title,
+        body: item.note ?? '',
+        imageUrl: item.imageUrl,
+        imageUrls: item.imageUrl ? [item.imageUrl] : [],
+        imagePaths: item.imagePath ? [item.imagePath] : [],
+        doneAt: item.active ? undefined : (n.doneAt ?? new Date().toISOString()),
+      });
+    } else linkLend();
+    return item;
+  }
+
+  async deleteLendItem(id: string): Promise<void> {
+    await delay(20);
+    const item = extras.lendItems.find((i) => i.id === id && i.ownerId === profileRepository.currentUserId);
+    if (!item) return;
+    extras.lendItems = extras.lendItems.filter((i) => i.id !== id);
+    if (item.noticeId) noticeboardStore.remove(item.noticeId);
+  }
+
+  async requestLend(itemId: string, fromDate: string, toDate: string, note?: string): Promise<void> {
+    await delay(30);
+    const me = profileRepository.currentUserId;
+    const item = extras.lendItems.find((i) => i.id === itemId && i.active);
+    if (!item) throw new UserError('Fant ikke tingen.');
+    if (item.ownerId === me) throw new UserError('Dette er din egen ting.');
+    if (toDate < fromDate) throw new UserError('Velg opptil 30 dager, fra i dag.');
+    const clash = extras.lendRequests.some((r) => r.itemId === itemId && r.status === 'ACCEPTED' && !(toDate < r.fromDate || fromDate > r.toDate));
+    if (clash) throw new UserError('Den er lånt ut da. Velg andre dager.');
+    extras.lendRequests.push({
+      id: `lr-${extras.lendRequests.length + 1}`,
+      itemId,
+      itemTitle: item.title,
+      ownerId: item.ownerId,
+      borrowerId: me,
+      fromDate,
+      toDate,
+      note: note?.trim() || undefined,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  async listLendRequests(): Promise<LendRequest[]> {
+    await delay(20);
+    const me = profileRepository.currentUserId;
+    return extras.lendRequests.filter((r) => r.borrowerId === me || r.ownerId === me);
+  }
+
+  async lendBusyDays(itemId: string): Promise<LendBusy[]> {
+    await delay(15);
+    const today = new Date().toISOString().slice(0, 10);
+    return extras.lendRequests
+      .filter((r) => r.itemId === itemId && r.status === 'ACCEPTED' && r.toDate >= today)
+      .sort((a, b) => a.fromDate.localeCompare(b.fromDate))
+      .map((r) => ({ fromDate: r.fromDate, toDate: r.toDate }));
+  }
+
+  async respondLend(id: string, status: 'ACCEPTED' | 'DECLINED' | 'CANCELLED', reply?: string): Promise<void> {
+    await delay(30);
+    const me = profileRepository.currentUserId;
+    const r = extras.lendRequests.find((x) => x.id === id);
+    if (!r) throw new UserError('Fant ikke forespørselen.');
+    if (status === 'CANCELLED' ? r.borrowerId !== me : r.ownerId !== me) throw new UserError('Ikke tilgang.');
+    if (status !== 'CANCELLED' && r.status !== 'PENDING') throw new UserError('Forespørselen er allerede besvart.');
+    if (status === 'CANCELLED' && r.status !== 'PENDING' && r.status !== 'ACCEPTED') throw new UserError('Forespørselen er allerede avsluttet.');
+    r.status = status;
+    if (status !== 'CANCELLED' && reply?.trim()) r.reply = reply.trim().slice(0, 300);
+  }
+
+  async profileCategoryJobs(profileId: string): Promise<CategoryJobs[]> {
+    await delay(20);
+    return extras.categoryJobs[profileId] ?? [];
+  }
+
+  async myHousehold(): Promise<Household> {
+    await delay(20);
+    return { ...extras.household, listings: [...extras.household.listings], agreements: [...extras.household.agreements] };
+  }
+
+  async householdInviteCode(): Promise<string> {
+    await delay(30);
+    if (extras.guardian.youth) throw new UserError('Husstand er ikke tilgjengelig for ungdomskontoer.');
+    if (extras.household.partner) throw new UserError('Husstanden har allerede to personer.');
+    const code = 'K7P2QX';
+    extras.household = { ...extras.household, inHousehold: true, code: { code, expiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString() } };
+    return code;
+  }
+
+  async householdJoin(code: string): Promise<void> {
+    await delay(30);
+    if (code.replace(/\s/g, '').toUpperCase() !== 'ABC123') throw new UserError('Koden er feil eller utløpt.');
+    if (extras.household.partner) throw new UserError('Du er allerede i en husstand. Forlat den først.');
+    const at = (days: number, hour: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      d.setHours(hour, 0, 0, 0);
+      return d.toISOString();
+    };
+    extras.household = {
+      inHousehold: true,
+      since: new Date().toISOString(),
+      partner: { id: 'u-emma', name: 'Emma Larsen' },
+      listings: [
+        { id: 'l-vaskehjelp', title: 'Vaskehjelp før visning', status: 'RECEIVING_OFFERS', createdAt: new Date().toISOString(), categorySlug: 'rengjoring' },
+        { id: 'l-hekk', title: 'Klippe hekken', status: 'PUBLISHED', createdAt: new Date(Date.now() - 86_400_000).toISOString(), categorySlug: 'hage' },
+      ],
+      agreements: [
+        { proposalId: 'p-h1', title: 'Snømåking av oppkjørselen', scheduledAt: at(1, 7), with: 'Jonas Berg', who: 'partner', categorySlug: 'snomaking' },
+        { proposalId: 'p-h2', title: 'Montere hyller i boden', scheduledAt: at(1, 17), with: 'Andreas Holm', who: 'me', categorySlug: 'montering' },
+        { proposalId: 'p-h3', title: 'Hundelufting', scheduledAt: at(3, 12), with: 'Nora Lie', who: 'both', categorySlug: 'dyrepass' },
+        { proposalId: 'p-h4', title: 'Maling av gjerdet', scheduledText: 'En dag i neste uke', with: 'Martin Dahl', who: 'partner', categorySlug: 'maling' },
+      ],
+    };
+  }
+
+  async householdLeave(): Promise<void> {
+    await delay(20);
+    extras.household = { inHousehold: false, listings: [], agreements: [] };
+  }
+
+  async partnerHelperCode(partnerId: string): Promise<string | null> {
+    await delay(20);
+    const me = profileRepository.getProfile(profileRepository.currentUserId);
+    return (me?.completedTasks ?? 0) > 0 ? (extras.partnerCodes[partnerId] ?? null) : null;
+  }
+
+  async guardianOverview(): Promise<GuardianYouth[]> {
+    await delay(20);
+    return extras.guardianYouths.map((y) => ({ ...y, agreements: [...y.agreements] }));
+  }
+}
+
+/** The first one waiting gets it (like offer_next_reservation in 0101). */
+function offerNext(noticeId: string) {
+  const queue = extras.queues[noticeId] ?? [];
+  if (queue.some((r) => r.status === 'OFFERED' || r.status === 'TAKEN')) return;
+  const next = queue.find((r) => r.status === 'QUEUED');
+  if (next) next.status = 'OFFERED';
+}
+
+// ------------------------------------------------------------
+// «Lån ut» and Utlån are one thing (0107): the same two-way link the database keeps
+// ------------------------------------------------------------
+function itemFromNotice(p: NoticeboardPost): LendItem {
+  return {
+    id: `li-${p.id}`,
+    ownerId: p.authorProfileId,
+    title: p.title.slice(0, 60),
+    category: 'VERKTOY',
+    note: p.body.slice(0, 300) || undefined,
+    imagePath: p.imagePaths?.[0] ?? p.imageUrls?.[0],
+    imageUrl: p.imageUrls?.[0] ?? p.imageUrl,
+    municipality: p.municipality,
+    neighbourhoodId: p.neighbourhoodId,
+    active: !p.doneAt,
+    createdAt: p.createdAt,
+    noticeId: p.id,
+  };
+}
+
+/** Every «Lån ut» oppslag has its thing, and every thing its oppslag – like the backfill in 0107. */
+function linkLend(): void {
+  for (const p of noticeboardStore.list('TOOL_LEND')) {
+    if (!extras.lendItems.some((i) => i.noticeId === p.id)) extras.lendItems = [...extras.lendItems, itemFromNotice(p)];
+  }
+  for (const i of extras.lendItems) {
+    if (i.noticeId && noticeboardStore.get(i.noticeId)) continue;
+    const id = `n-${i.id}`;
+    noticeboardStore._insert({
+      id,
+      kind: 'TOOL_LEND',
+      title: i.title,
+      body: i.note ?? '',
+      authorProfileId: i.ownerId,
+      place: profileRepository.getProfile(i.ownerId)?.location.place || i.municipality,
+      municipality: i.municipality,
+      createdAt: i.createdAt,
+      imageUrl: i.imageUrl,
+      imageUrls: i.imageUrl ? [i.imageUrl] : undefined,
+      imagePaths: i.imagePath ? [i.imagePath] : undefined,
+      neighbourhoodId: i.neighbourhoodId,
+      doneAt: i.active ? undefined : i.createdAt,
+    });
+    i.noticeId = id;
+  }
+}
+
+function notice(id: string): NoticeboardPost | undefined {
+  return noticeboardStore.list().find((p) => p.id === id);
 }

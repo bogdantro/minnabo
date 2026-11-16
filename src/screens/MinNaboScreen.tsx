@@ -115,6 +115,7 @@ export function MinNaboScreen() {
             maxLength={MAX}
             multiline
             containerStyle={styles.input}
+            style={styles.inputField}
           />
           <IconButton
             icon="send"
@@ -251,4 +252,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.line,
   },
   input: { flex: 1 },
+  // the same rounded field as a chat, growing with the text
+  inputField: { minHeight: 46, maxHeight: 120, borderRadius: 23, borderWidth: 0, backgroundColor: colors.bg, paddingVertical: 12, fontSize: 15.5 },
 });

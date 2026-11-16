@@ -1,21 +1,22 @@
-import { useMemo } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { useMemo, useState } from 'react';
+import { canDeleteMessage, canEditMessage } from '@/domain/inbox';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import type { Message } from '@/domain/types';
+import { useLinkPreview } from '@/api/queries';
 import { isOwnLink, scamSignals, shareWarning, splitMessage, type ScamSignal, type ShareWarning } from '@/domain/chatSafety';
+import { looksForeign } from '@/lib/language';
 import nb from '@/i18n/nb';
 import { confirm } from '@/lib/confirm';
 import { haptics } from '@/lib/haptics';
 import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
-import { colors, radius, text } from '@/theme/theme';
+import { colors, fonts, radius, text } from '@/theme/theme';
 import { Button, Icon, ListGroup, ListRow, ScaleIn, Sheet } from '@/components/ui';
 import { Image } from '@/components/ui/Image';
 
-/** Your own message can be deleted this long (0089 checks it again on the server). */
-export const DELETE_WINDOW_MS = 10 * 60 * 1000;
 /** How far a bubble must be dragged before it counts as «Svar». */
 const SWIPE_REPLY_AT = 56;
 const SWIPE_MAX = 76;
@@ -58,6 +59,59 @@ export function RichText({ value, mine }: { value: string; mine: boolean }) {
         ),
       )}
     </Text>
+  );
+}
+
+/** 'https://www.webiser.no/om' -> 'webiser.no'. */
+export function hostOf(url: string): string {
+  return url.replace(/^https?:\/\//i, '').split(/[/?#]/)[0].replace(/^www\./i, '').toLowerCase();
+}
+
+/** The first link in a message, or null. */
+export function firstLink(textValue: string): string | null {
+  const hit = splitMessage(textValue).find((p) => p.kind === 'link');
+  return hit && hit.kind === 'link' ? hit.url : null;
+}
+
+/**
+ * The page's title and picture under a link, like in any chat app. Made on the server (link-preview), so this
+ * phone never contacts the site before the link is tapped. The site's name is always shown, so a lookalike page
+ * can't pass for another. Nothing at all while loading or when the page has no title.
+ */
+export function LinkPreviewCard({ textValue, mine }: { textValue: string; mine: boolean }) {
+  const url = useMemo(() => firstLink(textValue), [textValue]);
+  const q = useLinkPreview(url);
+  if (!url || q.isLoading) return null;
+  // a page without a title (or one the server couldn't read) still gets a small card with the site's name
+  const preview = q.data ?? { url, host: hostOf(url), title: hostOf(url), description: nb.chat.linkOpenHint, site: null, image: null };
+  return (
+    <ScaleIn>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={nb.chat.linkPreviewA11y(preview.title, preview.host)}
+        onPress={() => void openLink(url)}
+        style={({ pressed }) => [styles.lp, mine ? styles.lpMine : styles.lpTheirs, pressed && styles.lpPressed]}
+        testID="link-preview"
+      >
+        {preview.image ? <Image source={{ uri: preview.image }} style={styles.lpImg} resizeMode="cover" accessibilityIgnoresInvertColors /> : null}
+        <View style={styles.lpBody}>
+          <View style={styles.lpHost}>
+            <Icon name="globe" size={12} color={mine ? colors.lime : colors.cyanDeep} />
+            <Text style={[styles.lpHostText, { color: mine ? colors.lime : colors.cyanDeep }]} numberOfLines={1}>
+              {preview.host}
+            </Text>
+          </View>
+          <Text style={[styles.lpTitle, { color: mine ? colors.white : colors.ink }]} numberOfLines={2}>
+            {preview.title}
+          </Text>
+          {preview.description ? (
+            <Text style={[styles.lpText, { color: mine ? colors.onInk78 : colors.ink2 }]} numberOfLines={2}>
+              {preview.description}
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
+    </ScaleIn>
   );
 }
 
@@ -170,6 +224,9 @@ export function SwipeToReply({ enabled, onReply, children }: { enabled: boolean;
   );
 }
 
+/** A link inside a bubble: in a browser the bubble is already a <button>, and a button can't hold another one. */
+const IN_BUBBLE_ROLE = Platform.OS === 'web' ? 'link' : 'button';
+
 /** A voice message written out. Only shown when MinNabo has switched the service on. */
 export function TranscriptLine({
   m,
@@ -189,9 +246,43 @@ export function TranscriptLine({
   }
   if (!enabled || m.pending) return null;
   return (
-    <Pressable accessibilityRole="button" disabled={loading} onPress={onAsk} hitSlop={8} style={styles.askText}>
+    <Pressable accessibilityRole={IN_BUBBLE_ROLE} disabled={loading} onPress={onAsk} hitSlop={8} style={styles.askText}>
       <Icon name="file" size={13} color={mine ? colors.lime : colors.cyanDeep} />
       <Text style={[styles.askLabel, { color: mine ? colors.lime : colors.cyanDeep }]}>{loading ? nb.chat.transcribing : nb.chat.showAsText}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * «Vis på norsk» (0101) under a message from the other person that looks like another language.
+ * The translation is made once (Claude) and kept on the message, so both see the same text.
+ */
+export function TranslateLine({ m, enabled, loading, onAsk }: { m: Message; enabled: boolean; loading: boolean; onAsk: () => void }) {
+  const [hidden, setHidden] = useState(false);
+  if (m.translationNb) {
+    if (hidden) {
+      return (
+        <Pressable accessibilityRole={IN_BUBBLE_ROLE} onPress={() => setHidden(false)} hitSlop={8} style={styles.askText}>
+          <Icon name="globe" size={13} color={colors.cyanDeep} />
+          <Text style={[styles.askLabel, { color: colors.cyanDeep }]}>{nb.translate.show}</Text>
+        </Pressable>
+      );
+    }
+    return (
+      <View style={styles.translation}>
+        <Text style={styles.translationLabel}>{nb.translate.label}</Text>
+        <Text style={[styles.transcript, { color: colors.ink }]}>{m.translationNb}</Text>
+        <Pressable accessibilityRole={IN_BUBBLE_ROLE} onPress={() => setHidden(true)} hitSlop={8}>
+          <Text style={[styles.askLabel, { color: colors.cyanDeep }]}>{nb.translate.hide}</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  if (!enabled || m.pending || m.kind !== 'TEXT' || !looksForeign(m.text)) return null;
+  return (
+    <Pressable accessibilityRole={IN_BUBBLE_ROLE} accessibilityHint={nb.translate.privacy} disabled={loading} onPress={onAsk} hitSlop={8} style={styles.askText}>
+      <Icon name="globe" size={13} color={colors.cyanDeep} />
+      <Text style={[styles.askLabel, { color: colors.cyanDeep }]}>{loading ? nb.translate.working : nb.translate.show}</Text>
     </Pressable>
   );
 }
@@ -203,17 +294,20 @@ type ActionProps = {
   onReply: () => void;
   onTogglePin: () => void;
   onDelete: () => void;
+  /** «Endre meldingen» (0109): my own text within 15 minutes */
+  onEdit?: () => void;
+  /** «Les opp» (0109) */
+  onReadAloud?: () => void;
 };
 
 /** Hold a message: Svar, Kopier, Fest, Slett. */
-export function MessageActionsSheet({ message, mine, onClose, onReply, onTogglePin, onDelete }: ActionProps) {
+export function MessageActionsSheet({ message, mine, onClose, onReply, onTogglePin, onDelete, onEdit, onReadAloud }: ActionProps) {
   const m = message;
   const canCopy = !!m && m.kind === 'TEXT' && !m.deletedAt;
   // the sheet opens fresh for every message, so one check of the clock per message is enough
-  const canDelete = useMemo(
-    () => !!m && mine && !m.deletedAt && !m.pending && new Date().getTime() - Date.parse(m.createdAt) < DELETE_WINDOW_MS,
-    [m, mine],
-  );
+  const canDelete = useMemo(() => !!m && canDeleteMessage(m, mine, new Date().getTime()), [m, mine]);
+  const canEdit = useMemo(() => !!m && canEditMessage(m, mine, new Date().getTime()), [m, mine]);
+  const canRead = !!m && !m.deletedAt && (m.kind === 'TEXT' || (m.kind === 'AUDIO' && !!m.transcript));
   const copy = async () => {
     if (!m) return;
     await Clipboard.setStringAsync(m.text);
@@ -226,6 +320,8 @@ export function MessageActionsSheet({ message, mine, onClose, onReply, onToggleP
       <ListGroup>
         <ListRow icon="reply" title={nb.chat.reply} onPress={onReply} />
         {canCopy ? <ListRow icon="copy" title={nb.chat.copy} onPress={() => void copy()} /> : null}
+        {canEdit && onEdit ? <ListRow icon="edit" title={nb.innboks.chat.edit} subtitle={nb.innboks.chat.editHint} onPress={onEdit} /> : null}
+        {canRead && onReadAloud ? <ListRow icon="mic" title={nb.innboks.chat.readAloud} onPress={onReadAloud} /> : null}
         <ListRow icon="pinned" title={m?.pinned ? nb.chat.unpinMessage : nb.chat.pinMessage} onPress={onTogglePin} />
         {canDelete ? <ListRow icon="trash" title={nb.chat.deleteMessage} subtitle={nb.chat.deleteMessageSub} onPress={onDelete} /> : null}
       </ListGroup>
@@ -271,22 +367,34 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   pressed: { opacity: 0.8 },
   link: { textDecorationLine: 'underline' },
+  lp: { marginTop: 8, borderRadius: 14, overflow: 'hidden', width: 236, maxWidth: '100%' },
+  lpMine: { backgroundColor: colors.onInk16b },
+  lpTheirs: { backgroundColor: colors.bg },
+  lpPressed: { opacity: 0.85 },
+  lpImg: { width: '100%', height: 120, backgroundColor: colors.track },
+  lpBody: { padding: 10, gap: 3 },
+  lpHost: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  lpHostText: { fontFamily: text.label.fontFamily, fontSize: 11.5, flexShrink: 1 },
+  lpTitle: { fontFamily: text.label.fontFamily, fontSize: 14, lineHeight: 18 },
+  lpText: { fontFamily: text.body.fontFamily, fontSize: 12.5, lineHeight: 17 },
   quote: { borderLeftWidth: 3, paddingLeft: 8, paddingVertical: 2, marginBottom: 7, gap: 1 },
   quoteMine: { borderLeftColor: colors.lime },
   quoteTheirs: { borderLeftColor: colors.cyan },
   quoteName: { fontFamily: text.label.fontFamily, fontSize: 12 },
   quoteText: { fontFamily: text.body.fontFamily, fontSize: 13, lineHeight: 17 },
+  // a small note under the bubble, not a second message
   warn: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 7,
-    marginTop: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 11,
-    borderRadius: radius.m,
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 14,
     backgroundColor: colors.warnTint,
+    alignSelf: 'flex-start',
   },
-  warnText: { flex: 1, fontFamily: text.bodySemi.fontFamily, fontSize: 12.5, lineHeight: 17, color: colors.warn },
+  warnText: { flexShrink: 1, fontFamily: text.bodySemi.fontFamily, fontSize: 12, lineHeight: 16, color: colors.warn },
   shareHint: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -329,4 +437,6 @@ const styles = StyleSheet.create({
   tileImg: { width: '100%', height: '100%' },
   none: { alignItems: 'center', gap: 8, paddingVertical: 18 },
   noneIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.cyanTint, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  translation: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.line2, gap: 3 },
+  translationLabel: { fontFamily: fonts.bodySemi, fontSize: 11.5, color: colors.cyanDeep },
 });

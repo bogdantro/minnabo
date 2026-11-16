@@ -15,6 +15,8 @@ import { CompletenessCard } from '@/components/profile/CompletenessCard';
 import {
   useConversations,
   useEndorsements,
+  useCategoryJobs,
+  useLendItems,
   useFollowedProfileIds,
   useProfile,
   useReviews,
@@ -41,6 +43,10 @@ import { ProfileReviews, firstName } from '@/components/profile/ProfileReviews';
 import { ProfileThanks } from '@/components/ThankCards';
 import { useFeatureFlags } from '@/config/featureFlags';
 import { PosterRow, ProfilePosterSheet } from '@/components/ShareCards';
+import { SkillRings } from '@/components/profile/SkillRings';
+import { CommunityBadgesRow, hasCommunityBadges } from '@/components/profile/CommunityBadges';
+import { useCommunityBadges } from '@/api/communityQueries';
+import { LendShelf } from '@/components/profile/LendShelf';
 import { PortfolioViewer, VERIF_ART, VerifSheet, portfolioWhere, type VerifKind } from '@/components/profile/ProfileSheets';
 import {
   Avatar,
@@ -56,7 +62,6 @@ import {
   Screen,
   Segmented,
   SubHeader,
-  Tabs,
   TextLink,
   Toggle,
   pullRefreshControl,
@@ -106,6 +111,10 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   const rel = useReliability(id || undefined).data;
   const invited = useInviteCount(id || undefined).data ?? 0;
   const { data: portfolioItems } = usePortfolio(id || undefined);
+  // Ferdighetsmerker and «Ting jeg låner ut» (0101)
+  const skillJobs = useCategoryJobs(id).data ?? [];
+  const communityBadges = useCommunityBadges(id).data;
+  const lendItems = (useLendItems({ ownerId: id }).data ?? []).filter((i) => i.active);
 
   const [tab, setTab] = useState<Tab>(initialTab ?? 'om');
   const [poster, setPoster] = useState(false);
@@ -267,8 +276,19 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
 
       {/* head */}
       <View style={[styles.px, styles.head]}>
-        <View>
-          <Avatar initials={profile.initials} uri={profile.avatarUrl} size={88} me={isSelf} seed={profile.id} />
+        {/* the base design's soft blobs, ring and dots, behind the avatar (2026-11-10) */}
+        <View style={styles.cover} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <View style={[styles.coverBlob, styles.coverBlobL]} />
+          <View style={[styles.coverBlob, styles.coverBlobR]} />
+          <View style={styles.coverRing} />
+          <View style={[styles.coverDot, styles.coverDot1]} />
+          <View style={[styles.coverDot, styles.coverDot2]} />
+          <View style={[styles.coverDot, styles.coverDot3]} />
+        </View>
+        <View style={styles.avWrap}>
+          <View style={styles.avRing}>
+            <Avatar initials={profile.initials} uri={profile.avatarUrl} size={104} me={isSelf} seed={profile.id} ring={false} />
+          </View>
           <View style={[styles.icirc, styles.avBadge, shadow.whiteRing3]}>
             <Icon name="check" size={16} color={colors.white} />
           </View>
@@ -296,8 +316,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
           <View style={styles.metaRow}>
             <Icon name="pin" size={14} color={colors.mute} />
             <Text style={text.meta}>{profile.location.place}</Text>
-          </View>
-          <View style={styles.metaRow}>
+            <View style={styles.metaDot} />
             <Icon name="cal" size={14} color={colors.mute} />
             <Text style={text.meta}>
               {nb.profile.memberSinceLine(profile.memberSinceDate ? monthYear(profile.memberSinceDate) : profile.memberSince)}
@@ -341,9 +360,10 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
       {isSelf && !preview ? <CompletenessCard profile={profile} portfolioCount={portfolioItems?.length ?? 0} /> : null}
 
       {/* stats */}
-      <FadeUp delay={200} style={[styles.px, styles.row10, styles.mt22]}>
-        {statTiles.map((s) => (
-          <View key={s.key} style={[styles.stat, shadow.card]} accessible accessibilityLabel={`${s.value} ${s.label}`}>
+      <FadeUp delay={200} style={[styles.px, styles.mt22]}>
+       <View style={[styles.statCard, shadow.card]}>
+        {statTiles.map((s, i) => (
+          <View key={s.key} style={[styles.stat, i > 0 && styles.statSep]} accessible accessibilityLabel={`${s.value} ${s.label}`}>
             <View style={styles.statVal}>
               {s.star ? <Icon name="star" size={18} color={colors.star} filled /> : null}
               <Text style={[styles.statNum, 'small' in s && s.small && styles.statNumSm]}>{s.value}</Text>
@@ -351,6 +371,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
             <Text style={styles.statLabel}>{s.label}</Text>
           </View>
         ))}
+       </View>
       </FadeUp>
 
       {isSelf ? (
@@ -388,11 +409,12 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
         </FadeUp>
       ) : null}
 
-      <FadeUp delay={320} style={styles.mt22}>
-        <Tabs
+      <FadeUp delay={320} style={[styles.px, styles.mt22, styles.mb14]}>
+        <Segmented
+          accessibilityLabel={nb.profile.tabsLabel}
           value={tab}
           onChange={setTab}
-          tabs={[
+          options={[
             { value: 'om', label: nb.profile.tabOm },
             { value: 'rev', label: nb.profile.tabRev(reviewList.length) },
             { value: 'port', label: nb.profile.tabPort },
@@ -404,7 +426,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
         <View style={[styles.px, styles.stack14]}>
           {profile.presentation ? (
             <FadeUp style={[styles.card, shadow.card]}>
-              <Text style={text.eyebrow}>{nb.profile.presentation}</Text>
+              <CardHead icon="user" tone="lime" label={nb.profile.presentation} />
               <Text style={[text.body, styles.presText]}>{profile.presentation}</Text>
               {pills.length ? (
                 <View style={styles.pills}>
@@ -426,7 +448,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
 
           {categories.length || extraServices.length ? (
             <FadeUp delay={40} style={[styles.card, shadow.card]}>
-              <Text style={text.eyebrow}>{nb.profile.catsEyebrow}</Text>
+              <CardHead icon="brief" tone="cyan" label={nb.profile.catsEyebrow} />
               <View style={[styles.wrap8, styles.mt12]}>
                 {categories.map((c) => (
                   <View key={c} style={styles.catChip}>
@@ -444,9 +466,30 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
             </FadeUp>
           ) : null}
 
+          {skillJobs.some((j) => j.jobs > 0) ? (
+            <FadeUp delay={60} style={[styles.card, shadow.card]}>
+              <CardHead icon="award" tone="lime" label={nb.skills.title} />
+              <SkillRings jobs={skillJobs} />
+            </FadeUp>
+          ) : null}
+
+          {hasCommunityBadges(communityBadges) ? (
+            <FadeUp delay={65} style={[styles.card, shadow.card]}>
+              <CardHead icon="heart" tone="lime" label={nb.felles.badges.title} />
+              <CommunityBadgesRow badges={communityBadges!} />
+            </FadeUp>
+          ) : null}
+
+          {lendItems.length ? (
+            <FadeUp delay={70} style={[styles.card, shadow.card]}>
+              <CardHead icon="montering" tone="cyan" label={isSelf ? nb.lend.profileTitle : nb.lend.profileTitleOther(first)} />
+              <LendShelf items={lendItems.slice(0, 6)} profileId={id} isSelf={isSelf && !isPub} />
+            </FadeUp>
+          ) : null}
+
           <FadeUp delay={80} style={[styles.card, shadow.card]}>
             <View style={styles.between}>
-              <Text style={text.eyebrow}>{nb.profile.verifEyebrow}</Text>
+              <CardHead icon="shield" tone="ok" label={nb.profile.verifEyebrow} />
               <Text style={[text.meta, styles.f12]}>{nb.profile.tapForDetails}</Text>
             </View>
             <View style={[styles.row8, styles.mt12]}>
@@ -478,7 +521,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
           {relBars.length ? (
             <FadeUp delay={120} style={[styles.card, shadow.card]}>
               <View style={styles.between}>
-                <Text style={text.eyebrow}>{nb.profile.reliability}</Text>
+                <CardHead icon="hand" tone="lime" label={nb.profile.reliability} />
                 {relBars.every((b) => b.value >= 95) ? <Pill label={nb.profile.relTop} tone="ok" icon="award" size="sm" /> : null}
               </View>
               <View style={[styles.stack14, styles.mt14]}>
@@ -503,7 +546,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
 
           {recSkills.length ? (
             <FadeUp delay={160} style={[styles.card, shadow.card]}>
-              <Text style={text.eyebrow}>{nb.profile.recsEyebrow}</Text>
+              <CardHead icon="thumb" tone="cyan" label={nb.profile.recsEyebrow} />
               <View style={styles.mt6}>
                 {recSkills.map((skill, i) => {
                   const e = endorseList.find((x) => x.skill === skill);
@@ -561,8 +604,7 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
           {!isPub ? (
             <FadeUp delay={200} style={styles.privCard}>
               <View style={styles.row8c}>
-                <Icon name="lock" size={16} color={colors.mute} />
-                <Text style={text.eyebrow}>{nb.profile.privateEyebrow}</Text>
+                <CardHead icon="lock" tone="neutral" label={nb.profile.privateEyebrow} />
               </View>
               <View style={styles.mt6}>
                 {account?.phoneMasked ? <KeyValueRow label={nb.profile.privPhone} value={account.phoneMasked} /> : null}
@@ -663,6 +705,26 @@ export function ProfileScreen({ profileId, initialTab }: { profileId?: string; i
   );
 }
 
+const HEAD_TONES = {
+  lime: { bg: colors.limeTint, fg: colors.limeDeep },
+  cyan: { bg: colors.cyanTint, fg: colors.cyanDeep },
+  ok: { bg: colors.okTint, fg: colors.ok },
+  neutral: { bg: colors.line2, fg: colors.ink2 },
+} as const;
+
+/** A section's heading on the profile: a small icon disc and the eyebrow text. */
+function CardHead({ icon, tone, label }: { icon: IconName; tone: keyof typeof HEAD_TONES; label: string }) {
+  const t = HEAD_TONES[tone];
+  return (
+    <View style={styles.cardHead}>
+      <View style={[styles.cardHeadIcon, { backgroundColor: t.bg }]}>
+        <Icon name={icon} size={14} color={t.fg} />
+      </View>
+      <Text style={[text.eyebrow, styles.cardHeadText]}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   px: { paddingHorizontal: screenPadding },
   flex: { flex: 1, minWidth: 0 },
@@ -706,23 +768,32 @@ const styles = StyleSheet.create({
   },
   vacBannerText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 13.5, lineHeight: 18.2, color: colors.vacText },
   vacOff: { height: 36, paddingHorizontal: 12 },
-  head: { alignItems: 'center', paddingTop: 14 },
-  avBadge: { position: 'absolute', right: -6, bottom: -4, width: 30, height: 30, backgroundColor: colors.cyan },
-  name: { ...text.h2, fontSize: 27, lineHeight: 30, letterSpacing: -0.68, marginTop: 20, textAlign: 'center' },
+  head: { alignItems: 'center', paddingTop: 6 },
+  cover: { alignSelf: 'stretch', height: 118, borderRadius: radius.listingCard, backgroundColor: colors.limeSoft, overflow: 'hidden' },
+  coverBlob: { position: 'absolute', borderRadius: 999 },
+  coverBlobL: { width: 200, height: 200, left: -70, top: -40, backgroundColor: colors.heroBlobLime },
+  coverBlobR: { width: 220, height: 220, right: -80, top: -90, backgroundColor: colors.heroBlobCyan },
+  coverRing: { position: 'absolute', left: '50%', top: 18, marginLeft: -90, width: 180, height: 180, borderRadius: 90, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.heroDash },
+  coverDot: { position: 'absolute', borderRadius: 99 },
+  coverDot1: { width: 10, height: 10, left: 34, top: 22, backgroundColor: colors.lime },
+  coverDot2: { width: 8, height: 8, right: 52, top: 30, backgroundColor: colors.cyan },
+  coverDot3: { width: 6, height: 6, right: 96, bottom: 24, backgroundColor: colors.limeDeep },
+  avWrap: { marginTop: -62 },
+  avRing: { padding: 4, borderRadius: 60, backgroundColor: colors.white, ...shadow.card },
+  avBadge: { position: 'absolute', right: 0, bottom: 2, width: 30, height: 30, backgroundColor: colors.cyan },
+  name: { ...text.h2, fontSize: 28, lineHeight: 31, letterSpacing: -0.7, marginTop: 14, textAlign: 'center' },
+  metaDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.faint, marginHorizontal: 4 },
+  statCard: { flexDirection: 'row', borderRadius: radius.card, backgroundColor: colors.white, paddingVertical: 14 },
+  statSep: { borderLeftWidth: 1, borderLeftColor: colors.line2 },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardHeadIcon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  cardHeadText: { flexShrink: 1 },
   badges: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' },
   vbadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaCol: { marginTop: 8, gap: 4, alignItems: 'center' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   editBtn: { backgroundColor: colors.glassLight },
-  stat: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    gap: 6,
-  },
+  stat: { flex: 1, paddingHorizontal: 8, alignItems: 'center', gap: 5 },
   statVal: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statNumSm: { fontSize: 19 },
   statNum: { fontFamily: fonts.display, fontSize: 22, lineHeight: 22, letterSpacing: -0.44, color: colors.ink },

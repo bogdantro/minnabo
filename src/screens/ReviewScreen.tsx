@@ -14,6 +14,9 @@ import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { FallbackScreen } from '@/components/FallbackScreen';
+import { PhotoTiles, type UploadedPhoto } from '@/components/PhotoTiles';
+import { JobDoneShareSheet } from '@/components/ShareCards';
+import { Image } from '@/components/ui/Image';
 import {
   Avatar,
   Button,
@@ -37,6 +40,9 @@ import {
 const WORD_COLOR = [colors.mute, colors.danger, colors.warn, colors.ink2, colors.limeDeep, colors.limeDeep];
 
 /** Gi vurdering (design/screens/Vurdering.dc.html). */
+/** Photos on one review (0099 allows 4). */
+const MAX_REVIEW_PHOTOS = 4;
+
 /** `initialRating` – stars chosen on the reminder's star button (PushBridge), 1–5. */
 export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: string; initialRating?: number }) {
   const router = useRouter();
@@ -53,6 +59,9 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
   const [rating, setRating] = useState(initialRating >= 1 && initialRating <= 5 ? Math.round(initialRating) : 0);
   const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
+  // photos of the finished job (0099): the server only takes ones from my own folder
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
   const [rec, setRec] = useState<'ja' | 'nei' | null>(null);
   const [done, setDone] = useState(false);
   // a review a youth gives or gets waits for a moderator (0094)
@@ -85,6 +94,7 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
         comment: comment.trim() || undefined,
         tags: finalTags.length ? finalTags : undefined,
         recommends: rec === null ? undefined : rec === 'ja',
+        imagePaths: photos.length ? photos.map((p) => p.path) : undefined,
       },
       {
         onSuccess: (review) => {
@@ -157,6 +167,13 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
                   <Text style={[text.label, styles.f14]}>{word}</Text>
                 </View>
                 {comment.trim() ? <Text style={[text.body, styles.ink2, styles.mt10]}>«{comment.trim()}»</Text> : null}
+                {photos.length ? (
+                  <View style={styles.rphotos}>
+                    {photos.map((p) => (
+                      <Image key={p.path} source={{ uri: p.url }} style={styles.rphoto} resizeMode="cover" accessibilityIgnoresInvertColors />
+                    ))}
+                  </View>
+                ) : null}
                 {finalTags.length ? (
                   <View style={styles.rtags}>
                     {finalTags.map((t) => (
@@ -264,6 +281,15 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
               <Text style={[styles.counter, comment.length > 360 && { color: colors.warn }]}>{`${comment.length}/400`}</Text>
             </FadeUp>
 
+            <FadeUp delay={225} style={[styles.px, styles.mt18]}>
+              <View style={styles.photosHead}>
+                <Text style={text.label}>{nb.review.photos}</Text>
+                <Text style={text.hint}>{nb.review.photosHint(MAX_REVIEW_PHOTOS)}</Text>
+              </View>
+              <PhotoTiles photos={photos} max={MAX_REVIEW_PHOTOS} userId={me.id} onChange={setPhotos} testID="review-photos" />
+              <Text style={[text.note, styles.mt10]}>{nb.review.photosNote}</Text>
+            </FadeUp>
+
             <FadeUp delay={250} style={[styles.px, styles.mt18]}>
               <Text style={[text.label, styles.mb10]}>{nb.review.recommend(first)}</Text>
               <Segmented
@@ -288,7 +314,8 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
       <StickyFooter>
         {done ? (
           <FadeUp style={styles.foot}>
-            <Button label={nb.review.backToOppdrag} iconRight="arrow" size="lg" onPress={() => leaveFlow('/')} />
+            <Button label={nb.share.doneButton} icon="share" variant="ink" size="lg" onPress={() => setShareOpen(true)} />
+            <Button label={nb.review.backToOppdrag} iconRight="arrow" variant="ghost" size="lg" onPress={() => leaveFlow('/')} />
             <Button label={nb.review.seeProfile(first)} variant="text" block={false} onPress={() => leaveFlow(`/profil/${counterpartId}`)} style={styles.selfCenter} />
           </FadeUp>
         ) : (
@@ -311,6 +338,17 @@ export function ReviewScreen({ proposalId, initialRating = 0 }: { proposalId: st
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Confetti count={40} />
         </View>
+      ) : null}
+      {done ? (
+        <JobDoneShareSheet
+          visible={shareOpen}
+          onClose={() => setShareOpen(false)}
+          title={listing?.title ?? ''}
+          category={listing?.category.slug ?? 'annet'}
+          place={listing?.location.place || listing?.location.municipality}
+          rating={rating}
+          photo={photos[0]?.url ?? listing?.images[0]?.url}
+        />
       ) : null}
     </View>
   );
@@ -368,6 +406,9 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 },
   tagwrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   textarea: { minHeight: 110, textAlignVertical: 'top' },
+  photosHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 },
+  rphotos: { flexDirection: 'row', gap: 6, marginTop: 10 },
+  rphoto: { width: 56, height: 56, borderRadius: 12, backgroundColor: colors.track },
   counter: { fontFamily: text.bodySemi.fontFamily, fontSize: 12, color: colors.mute, textAlign: 'right', marginTop: 6 },
   bottom: { height: 170 },
   foot: { gap: 6 },

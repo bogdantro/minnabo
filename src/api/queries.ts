@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   useQuery,
   useQueries,
@@ -18,6 +19,8 @@ import type {
   Proposal,
   SkillEndorsement,
   ThankCardKind,
+  RsvpStatus,
+  NoticeReactionEmoji,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
 import { urgentFirst } from '@/domain/urgent';
@@ -77,6 +80,23 @@ export function useListings(filter?: ListingFilter, sort?: ListingSort, enabled 
     placeholderData: keepPreviousData,
     enabled,
   });
+}
+
+/** «14 naboer har sett oppdraget»: only the owner gets a number (0099). */
+export function useListingViewCount(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['listing-views', id],
+    queryFn: () => apiClient.listingViewCount(id),
+    enabled: enabled && !!id,
+    staleTime: 60_000,
+  });
+}
+
+/** Counts this visit once per person; never the owner, never an error on screen. */
+export function useRecordListingView(id: string, enabled: boolean) {
+  useEffect(() => {
+    if (enabled && id) void apiClient.recordListingView(id).catch(() => undefined);
+  }, [id, enabled]);
 }
 
 export function useListing(id: string) {
@@ -173,6 +193,16 @@ export function useUnreadConversationCount(): number {
   // the thread with «MinNabo» counts as one conversation
   const minnabo = useMinNaboUnread() > 0 ? 1 : 0;
   return (data ?? []).filter((c) => c.unread && !c.archived).length + minnabo;
+}
+
+/** Unread conversations with a new tilbud (0109): a lime dot of its own on the Innboks tab. */
+export function useNewOfferCount(): number {
+  const { data } = useQuery({
+    queryKey: chatKeys.conversations(false, ''),
+    queryFn: () => apiClient.listConversations({}),
+    staleTime: 15_000,
+  });
+  return (data ?? []).filter((c) => c.unread && !c.archived && c.statusTag === 'NEW_OFFER').length;
 }
 
 // --- «MinNabo» in Innboks (0066) ---
@@ -1128,12 +1158,21 @@ export function useToggleNoticeLike() {
   });
 }
 
+/**
+ * «Lån ut» on Oppslagstavla and Utlån are one thing (0107): a change on either side refreshes both.
+ */
+function refreshBoardAndLend(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: noticeboardKeys.all });
+  void qc.invalidateQueries({ queryKey: ['lend-items'] });
+  void qc.invalidateQueries({ queryKey: ['lend-item'] });
+}
+
 export function useUpdateNoticeboardPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: { id: string; patch: Parameters<typeof apiClient.updateNoticeboardPost>[1] }) =>
       apiClient.updateNoticeboardPost(v.id, v.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
+    onSuccess: () => refreshBoardAndLend(qc),
   });
 }
 
@@ -1149,11 +1188,22 @@ export function useNoticeComments(noticeId: string | null) {
 export function useAddNoticeComment(noticeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) => apiClient.addNoticeComment(noticeId, body),
+    /** a string, or { body, parentId } to answer one svar */
+    mutationFn: (input: string | { body: string; parentId?: string }) =>
+      typeof input === 'string' ? apiClient.addNoticeComment(noticeId, input) : apiClient.addNoticeComment(noticeId, input.body, input.parentId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['notice-comments', noticeId] });
       void qc.invalidateQueries({ queryKey: noticeboardKeys.all });
     },
+  });
+}
+
+/** «Ja, det er fortsatt aktuelt» on an oppslag the app asked about (0099). */
+export function useKeepNotice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.keepNotice(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
   });
 }
 
@@ -1173,7 +1223,7 @@ export function useCreateNoticeboardPost() {
   return useMutation({
     mutationFn: (input: Parameters<typeof apiClient.createNoticeboardPost>[0]) =>
       apiClient.createNoticeboardPost(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
+    onSuccess: () => refreshBoardAndLend(qc),
   });
 }
 
@@ -1181,7 +1231,7 @@ export function useDeleteNoticeboardPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.deleteNoticeboardPost(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: noticeboardKeys.all }),
+    onSuccess: () => refreshBoardAndLend(qc),
   });
 }
 
@@ -1479,6 +1529,18 @@ export function useArchiveConversation() {
   });
 }
 
+/** The card under a link in the chat; kept for a day, a missing card is never retried. */
+export function useLinkPreview(url: string | null) {
+  return useQuery({
+    queryKey: ['link-preview', url],
+    queryFn: () => apiClient.linkPreview(url!),
+    enabled: !!url,
+    staleTime: 24 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: false,
+  });
+}
+
 export function useTranscribeMessage(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -1487,12 +1549,10 @@ export function useTranscribeMessage(conversationId: string) {
   });
 }
 
-// --- dugnad and tool loans (0090) ---
+// --- dugnad (0090) ---
 
 export const noticeExtraKeys = {
   signups: (id: string) => ['dugnadSignups', id] as const,
-  booked: (id: string) => ['toolBooked', id] as const,
-  bookings: (id: string) => ['toolBookings', id] as const,
 };
 
 export function useDugnadSignups(noticeId: string, enabled = true) {
@@ -1508,46 +1568,6 @@ export function useSetDugnadSignup(noticeId: string) {
   return useMutation({
     mutationFn: (join: boolean) => apiClient.setDugnadSignup(noticeId, join),
     onSettled: () => qc.invalidateQueries({ queryKey: noticeExtraKeys.signups(noticeId) }),
-  });
-}
-
-export function useToolBookedDays(noticeId: string, enabled = true) {
-  return useQuery({
-    queryKey: noticeExtraKeys.booked(noticeId),
-    queryFn: () => apiClient.listToolBookedDays(noticeId),
-    enabled: enabled && !!noticeId,
-  });
-}
-
-export function useToolBookings(noticeId: string, enabled = true) {
-  return useQuery({
-    queryKey: noticeExtraKeys.bookings(noticeId),
-    queryFn: () => apiClient.listToolBookings(noticeId),
-    enabled: enabled && !!noticeId,
-  });
-}
-
-function useRefreshBookings(noticeId: string) {
-  const qc = useQueryClient();
-  return () => {
-    qc.invalidateQueries({ queryKey: noticeExtraKeys.booked(noticeId) });
-    qc.invalidateQueries({ queryKey: noticeExtraKeys.bookings(noticeId) });
-  };
-}
-
-export function useRequestToolBooking(noticeId: string) {
-  const refresh = useRefreshBookings(noticeId);
-  return useMutation({
-    mutationFn: ({ from, to, note }: { from: string; to: string; note?: string }) => apiClient.requestToolBooking(noticeId, from, to, note),
-    onSettled: refresh,
-  });
-}
-
-export function useRespondToolBooking(noticeId: string) {
-  const refresh = useRefreshBookings(noticeId);
-  return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED' }) => apiClient.respondToolBooking(id, status),
-    onSettled: refresh,
   });
 }
 
@@ -1604,4 +1624,260 @@ export function usePoliceBadge(profileId: string, enabled: boolean) {
     queryFn: () => apiClient.hasPoliceCertificate(profileId),
     enabled: enabled && !!profileId,
   });
+}
+
+// ------------------------------------------------------------------
+// 0101 – utvidelse
+// ------------------------------------------------------------------
+export const expansionKeys = {
+  visits: (proposalId: string) => ['agreement', 'visits', proposalId] as const,
+  queue: (noticeId: string) => ['notice-queue', noticeId] as const,
+  reservations: (noticeId: string) => ['notice-reservations', noticeId] as const,
+  rsvps: (noticeId: string) => ['notice-rsvps', noticeId] as const,
+  poll: (noticeId: string) => ['notice-poll', noticeId] as const,
+  reactions: (noticeId: string) => ['notice-reactions', noticeId] as const,
+  eventChat: (noticeId: string) => ['event-chat', noticeId] as const,
+  eventChatOpen: (noticeId: string) => ['event-chat-open', noticeId] as const,
+  lendItems: (filter: { ownerId?: string; municipality?: string }) => ['lend-items', filter.ownerId ?? '', filter.municipality ?? ''] as const,
+  lendRequests: ['lend-requests'] as const,
+  categoryJobs: (profileId: string) => ['category-jobs', profileId] as const,
+  household: ['household'] as const,
+  helperCode: (partnerId: string) => ['partner-helper-code', partnerId] as const,
+  guardianOverview: ['guardian-overview'] as const,
+};
+
+// --- fast avtale ---
+export function useSetAgreementRepeat(proposalId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ everyDays, until }: { everyDays: 7 | 14 | 28; until?: string | null }) => apiClient.setAgreementRepeat(proposalId, everyDays, until),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['agreement'] }),
+  });
+}
+
+export function useEndAgreementRepeat(proposalId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.endAgreementRepeat(proposalId),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['agreement'] }),
+  });
+}
+
+export function useAgreementVisits(proposalId: string, enabled = true) {
+  return useQuery({
+    queryKey: expansionKeys.visits(proposalId),
+    queryFn: () => apiClient.listAgreementVisits(proposalId),
+    enabled: enabled && !!proposalId,
+  });
+}
+
+export function useMarkAgreementVisit(proposalId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (visitAt: string) => apiClient.markAgreementVisit(proposalId, visitAt),
+    onSettled: () => qc.invalidateQueries({ queryKey: expansionKeys.visits(proposalId) }),
+  });
+}
+
+// --- oppdrag fra et bilde ---
+export function useDraftFromPhoto() {
+  return useMutation({ mutationFn: (imagePath: string) => apiClient.draftFromPhoto(imagePath) });
+}
+
+// --- «Jeg vil ha den» ---
+export function useNoticeQueue(noticeId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.queue(noticeId), queryFn: () => apiClient.noticeQueue(noticeId), enabled: enabled && !!noticeId });
+}
+
+export function useNoticeReservations(noticeId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.reservations(noticeId), queryFn: () => apiClient.listNoticeReservations(noticeId), enabled: enabled && !!noticeId });
+}
+
+function useRefreshQueue(noticeId: string) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: expansionKeys.queue(noticeId) });
+    qc.invalidateQueries({ queryKey: expansionKeys.reservations(noticeId) });
+  };
+}
+
+export function useReserveNotice(noticeId: string) {
+  const refresh = useRefreshQueue(noticeId);
+  return useMutation({ mutationFn: (join: boolean) => apiClient.reserveNotice(noticeId, join), onSettled: refresh });
+}
+
+export function useSettleReservation(noticeId: string) {
+  const qc = useQueryClient();
+  const refresh = useRefreshQueue(noticeId);
+  return useMutation({
+    mutationFn: (taken: boolean) => apiClient.settleReservation(noticeId, taken),
+    onSettled: () => {
+      refresh();
+      qc.invalidateQueries({ queryKey: ['noticeboard'] });
+      qc.invalidateQueries({ queryKey: ['notice'] });
+    },
+  });
+}
+
+// --- arrangement ---
+export function useEventRsvps(noticeId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.rsvps(noticeId), queryFn: () => apiClient.eventRsvps(noticeId), enabled: enabled && !!noticeId });
+}
+
+export function useSetEventRsvp(noticeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (status: RsvpStatus | null) => apiClient.setEventRsvp(noticeId, status),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: expansionKeys.rsvps(noticeId) });
+      qc.invalidateQueries({ queryKey: noticeExtraKeys.signups(noticeId) });
+      qc.invalidateQueries({ queryKey: expansionKeys.eventChatOpen(noticeId) });
+    },
+  });
+}
+
+// --- avstemning ---
+export function useNoticePoll(noticeId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.poll(noticeId), queryFn: () => apiClient.noticePoll(noticeId), enabled: enabled && !!noticeId });
+}
+
+export function useVoteNoticePoll(noticeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (option: number | null) => apiClient.voteNoticePoll(noticeId, option),
+    onSettled: () => qc.invalidateQueries({ queryKey: expansionKeys.poll(noticeId) }),
+  });
+}
+
+// --- reaksjoner ---
+export function useNoticeReactions(noticeId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.reactions(noticeId), queryFn: () => apiClient.listNoticeReactions(noticeId), enabled: enabled && !!noticeId });
+}
+
+export function useSetNoticeReaction(noticeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ emoji, on }: { emoji: NoticeReactionEmoji; on: boolean }) => apiClient.setNoticeReaction(noticeId, emoji, on),
+    onSettled: () => qc.invalidateQueries({ queryKey: expansionKeys.reactions(noticeId) }),
+  });
+}
+
+// --- gruppechat for arrangement ---
+export function useCanUseEventChat(noticeId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.eventChatOpen(noticeId), queryFn: () => apiClient.canUseEventChat(noticeId), enabled: enabled && !!noticeId });
+}
+
+export function useEventMessages(noticeId: string, enabled = true) {
+  return useQuery({
+    queryKey: expansionKeys.eventChat(noticeId),
+    queryFn: () => apiClient.listEventMessages(noticeId),
+    enabled: enabled && !!noticeId,
+    refetchInterval: 15_000,
+  });
+}
+
+export function usePostEventMessage(noticeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => apiClient.postEventMessage(noticeId, body),
+    onSettled: () => qc.invalidateQueries({ queryKey: expansionKeys.eventChat(noticeId) }),
+  });
+}
+
+// --- «Vis på norsk» ---
+export function useTranslateMessage(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => apiClient.translateMessage(messageId),
+    onSuccess: (text, messageId) => {
+      qc.setQueryData<Message[]>(chatKeys.messages(conversationId), (old) => old?.map((m) => (m.id === messageId ? { ...m, translationNb: text } : m)));
+    },
+  });
+}
+
+// --- utlån ---
+export function useLendItems(filter: { ownerId?: string; municipality?: string }, enabled = true) {
+  return useQuery({
+    queryKey: expansionKeys.lendItems(filter),
+    queryFn: () => apiClient.listLendItems(filter),
+    enabled: enabled && !!(filter.ownerId || filter.municipality),
+  });
+}
+
+/** One thing, e.g. the one behind a «Lån ut» oppslag. */
+export function useLendItem(id: string | undefined) {
+  return useQuery({ queryKey: ['lend-item', id ?? ''] as const, queryFn: () => apiClient.getLendItem(id!), enabled: !!id });
+}
+
+export function useSaveLendItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof apiClient.saveLendItem>[0]) => apiClient.saveLendItem(input),
+    onSettled: () => refreshBoardAndLend(qc),
+  });
+}
+
+export function useDeleteLendItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteLendItem(id),
+    onSettled: () => refreshBoardAndLend(qc),
+  });
+}
+
+export function useLendRequests(enabled = true) {
+  return useQuery({ queryKey: expansionKeys.lendRequests, queryFn: () => apiClient.listLendRequests(), enabled });
+}
+
+export function useRequestLend() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, from, to, note }: { itemId: string; from: string; to: string; note?: string }) => apiClient.requestLend(itemId, from, to, note),
+    onSettled: () => qc.invalidateQueries({ queryKey: expansionKeys.lendRequests }),
+  });
+}
+
+export function useRespondLend() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, reply }: { id: string; status: 'ACCEPTED' | 'DECLINED' | 'CANCELLED'; reply?: string }) => apiClient.respondLend(id, status, reply),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: expansionKeys.lendRequests });
+      qc.invalidateQueries({ queryKey: ['lend-busy'] });
+    },
+  });
+}
+
+export function useLendBusyDays(itemId: string, enabled = true) {
+  return useQuery({ queryKey: ['lend-busy', itemId] as const, queryFn: () => apiClient.lendBusyDays(itemId), enabled: enabled && !!itemId });
+}
+
+// --- ferdigheter ---
+export function useCategoryJobs(profileId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.categoryJobs(profileId), queryFn: () => apiClient.profileCategoryJobs(profileId), enabled: enabled && !!profileId });
+}
+
+// --- husstand ---
+export function useHousehold(enabled = true) {
+  return useQuery({ queryKey: expansionKeys.household, queryFn: () => apiClient.myHousehold(), enabled });
+}
+
+export function useHouseholdActions() {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: expansionKeys.household });
+  return {
+    invite: useMutation({ mutationFn: () => apiClient.householdInviteCode(), onSettled: refresh }),
+    join: useMutation({ mutationFn: (code: string) => apiClient.householdJoin(code), onSettled: refresh }),
+    leave: useMutation({ mutationFn: () => apiClient.householdLeave(), onSettled: refresh }),
+  };
+}
+
+// --- fordeler for hjelpere ---
+export function usePartnerHelperCode(partnerId: string, enabled = true) {
+  return useQuery({ queryKey: expansionKeys.helperCode(partnerId), queryFn: () => apiClient.partnerHelperCode(partnerId), enabled: enabled && !!partnerId });
+}
+
+// --- foresatt ---
+export function useGuardianOverview(enabled = true) {
+  return useQuery({ queryKey: expansionKeys.guardianOverview, queryFn: () => apiClient.guardianOverview(), enabled, refetchInterval: 60_000 });
 }

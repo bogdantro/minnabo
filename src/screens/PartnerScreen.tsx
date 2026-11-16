@@ -7,6 +7,7 @@ import { usePartners } from '@/api/queries';
 import { useLocationScope } from '@/lib/locationScope';
 import { logPartnerClick } from '@/lib/partnerStats';
 import { ThanksButton, ThanksCount } from '@/components/PartnerThanks';
+import { AskPartner, FollowPartnerButton, PartnerEvents } from '@/components/community/PartnerExtras';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import {
   Button,
@@ -105,11 +106,10 @@ function Body({ partner: p }: { partner: Partner }) {
           <Text style={[text.body, styles.ink2]}>{p.tagline}</Text>
         </FadeUp>
 
-        {p.url ? (
-          <FadeUp delay={60} style={styles.mt18}>
-            <Button label={t.visit} icon="arrowur" variant="ink" onPress={visit} />
-          </FadeUp>
-        ) : null}
+        <FadeUp delay={60} style={[styles.mt18, styles.headBtns]}>
+          {p.url ? <Button label={t.visit} icon="arrowur" variant="ink" onPress={visit} /> : null}
+          <FollowPartnerButton partner={p} />
+        </FadeUp>
 
         {p.about ? (
           <FadeUp delay={100} style={[styles.card, shadow.card]}>
@@ -184,6 +184,9 @@ function Body({ partner: p }: { partner: Partner }) {
           })}
         </FadeUp>
 
+        <PartnerEvents partner={p} />
+        <AskPartner partner={p} />
+
         <ThanksCount partnerId={p.id} style={styles.thanks} />
         <ThanksButton partner={p} style={styles.mt10} />
         <View style={styles.bottom} />
@@ -193,6 +196,7 @@ function Body({ partner: p }: { partner: Partner }) {
 }
 
 const styles = StyleSheet.create({
+  headBtns: { gap: 10 },
   px: { paddingHorizontal: screenPadding },
   flex: { flex: 1, minWidth: 0 },
   selfStart: { alignSelf: 'flex-start' },

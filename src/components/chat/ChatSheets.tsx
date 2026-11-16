@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { PublicProfile } from '@/domain/types';
@@ -34,7 +35,10 @@ export function ShareSheet({
   onTime,
   onPlace,
   onOffer,
+  extra = [],
 }: {
+  /** more tiles (0109): video, PDF, crop, «Send senere», «Del adresse», «Del et oppdrag» */
+  extra?: { key: string; label: string; icon: IconKey; bg: string; fg: string; onPress: () => void; locked?: boolean }[];
   visible: boolean;
   onClose: () => void;
   busy: boolean;
@@ -55,6 +59,7 @@ export function ShareSheet({
     canPlace
       ? { key: 'place', label: nb.chat.tilePlace, icon: 'pin', bg: colors.warnTint, fg: colors.warn, onPress: onPlace }
       : { key: 'place', label: nb.chat.tilePlace, icon: 'lock', bg: colors.neutralPill, fg: colors.mute, onPress: lockedPlace, locked: true },
+    ...extra,
   ];
   return (
     <Sheet visible={visible} onClose={onClose} title={nb.chat.shareTitle} titleSize="h2">
@@ -280,9 +285,15 @@ export function ChatMenuSheet({
   onBlock,
   onPhotos,
   photoCount,
+  onSearch,
+  extraRows = [],
 }: {
+  /** more rows (0109): «Om samtalen», the PDF, the checklist, «Oversett alltid» */
+  extraRows?: { key: string; icon: IconKey; title: string; subtitle?: string; right?: React.ReactNode; onPress?: () => void }[];
   onPhotos: () => void;
   photoCount: number;
+  /** «Søk i samtalen» (0101) */
+  onSearch: () => void;
   visible: boolean;
   onClose: () => void;
   profile: PublicProfile;
@@ -320,7 +331,11 @@ export function ChatMenuSheet({
       <ListGroup>
         <ListRow icon="user" title={nb.chat.seeProfile} subtitle={nb.chat.seeProfileSub} onPress={onProfile} />
         <ListRow icon="clip" title={nb.chat.seeListing} subtitle={listingTitle} onPress={onListing} />
+        <ListRow icon="search" title={nb.chatSearch.menu} subtitle={nb.chatSearch.menuSub} onPress={onSearch} />
         <ListRow icon="image" title={nb.chat.photosTitle} subtitle={nb.chat.photosCount(photoCount)} onPress={onPhotos} />
+        {extraRows.map((r) => (
+          <ListRow key={r.key} icon={r.icon} title={r.title} subtitle={r.subtitle} right={r.right} onPress={r.onPress} />
+        ))}
         <ListRow
           icon="bell"
           title={nb.chat.muteTitle}
@@ -368,8 +383,9 @@ const styles = StyleSheet.create({
   mt18: { marginTop: 18 },
   mt20: { marginTop: 20 },
   mb10: { marginBottom: 10 },
-  atiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  atileWrap: { flexBasis: '30%', flexGrow: 1 },
+  atiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
+  // three a row, all the same size: a last row with fewer tiles is not stretched
+  atileWrap: { width: '31.5%' },
   atile: {
     height: 104,
     borderRadius: 20,

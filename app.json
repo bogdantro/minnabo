@@ -3,7 +3,7 @@
     "name": "MinNabo",
     "slug": "minnabo",
     "scheme": "minnabo",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -71,7 +71,7 @@
         {
           "photosPermission": "MinNabo trenger tilgang til bildene dine for å legge ved bilder i oppdrag og samtaler.",
           "cameraPermission": "MinNabo trenger tilgang til kameraet for å ta bilder til oppdrag og samtaler.",
-          "microphonePermission": false
+          "microphonePermission": "MinNabo bruker mikrofonen når du filmer en kort video til en samtale."
         }
       ],
       [
@@ -100,7 +100,41 @@
       "expo-sharing",
       "expo-quick-actions",
       "@sentry/react-native",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-widgets",
+        {
+          "groupIdentifier": "group.no.minnabo.app",
+          "enableAndroid": true,
+          "widgets": [
+            {
+              "name": "NyeOppdrag",
+              "displayName": "Nye oppdrag",
+              "description": "De nyeste oppdragene i kommunen din",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "systemLarge"
+                ]
+              },
+              "android": {
+                "targetCellWidth": 3,
+                "targetCellHeight": 2,
+                "resizeMode": "both"
+              }
+            }
+          ]
+        }
+      ],
+      "expo-video",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "MinNabo bruker mikrofonen når du søker med stemmen.",
+          "speechRecognitionPermission": "MinNabo gjør om det du sier til tekst når du søker med stemmen."
+        }
+      ]
     ],
     "extra": {
       "router": {},

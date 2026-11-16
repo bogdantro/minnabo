@@ -1,5 +1,25 @@
 import type { CategoryRow } from '@/domain/categories';
+import type { OppdragApi } from './oppdragApi';
+import type { NoticeTopic } from '@/domain/community';
 import type {
+  CategoryJobs,
+  EventMessage,
+  EventType,
+  EventRsvps,
+  GuardianYouth,
+  Household,
+  LendCategory,
+  LendItem,
+  LendRequest,
+  LendBusy,
+  NoticePoll,
+  NoticeQueue,
+  NoticeReaction,
+  NoticeReactionEmoji,
+  NoticeReservation,
+  PhotoDraft,
+  RsvpStatus,
+  LinkPreview,
   AgendaItem,
   AgreementSnapshot,
   AgreementTimeProposal,
@@ -40,7 +60,6 @@ import type {
   PoliceCertificate,
   ThankCard,
   ThankCardKind,
-  ToolBooking,
   YearRecap,
 } from '@/domain/types';
 import type { Actor, ProposalEvent } from '@/domain/proposalMachine';
@@ -67,6 +86,8 @@ export type NotificationPrefs = {
   push: Record<NotifKey, boolean>;
   email: Record<NotifKey, boolean>;
   quiet: { on: boolean; from: string; to: string };
+  /** «Én oppsummering om dagen» (0110): one push a day instead of one per new oppdrag */
+  matchDaily?: boolean;
 };
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
@@ -91,6 +112,7 @@ export function withDefaultPrefs(p: Partial<NotificationPrefs> | null | undefine
     push: { ...d.push, ...(p?.push ?? {}) },
     email: { ...d.email, ...(p?.email ?? {}) },
     quiet: { ...d.quiet, ...(p?.quiet ?? {}) },
+    matchDaily: p?.matchDaily ?? false,
   };
 }
 
@@ -107,6 +129,10 @@ export type ListingExtras = {
   urgentUntil?: string | null;
   /** ISO – «Send til faste hjelpere først»: new oppdrag only, the server caps it at two hours (0086) */
   firstToFollowedUntil?: string | null;
+  /** «Del hjelperen med naboene» (0108): snømåking and hage only */
+  sharedStreet?: boolean;
+  /** posted in senior mode («Hjelp for eldre», 0110) */
+  fromSenior?: boolean;
 };
 
 /** What «Hjelperen kom ikke» did: urgent = it is a hasteoppdrag now, others = tilbud asked again. */
@@ -171,6 +197,8 @@ export type AppSettings = {
   minAppVersion: string;
   /** platform.transcripts_enabled – «Vis som tekst» on talemeldinger (needs a speech service) */
   transcriptsEnabled: boolean;
+  /** platform.ai_enabled – «Skriv fra et bilde» and «Vis på norsk» (Claude; needs ANTHROPIC_API_KEY) */
+  aiEnabled: boolean;
 };
 
 /** partner id → how many neighbours have thanked, and whether I am one of them */
@@ -183,6 +211,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   maxHovedpartnere: 4,
   minAppVersion: '0.0.0',
   transcriptsEnabled: false,
+  aiEnabled: false,
 };
 
 /** Phone and home notes of someone you have an accepted tilbud with (shared_contact, 0057). */
@@ -336,6 +365,8 @@ export type SubmitReviewInput = {
   tags?: string[];
   /** "Vil du anbefale …?" – true / false, undefined when not answered */
   recommends?: boolean;
+  /** photos of the finished job, storage paths in `listing-images` (0099) */
+  imagePaths?: string[];
 };
 
 export type RespondToProposalResult = {
@@ -348,7 +379,17 @@ export type RespondToProposalResult = {
  * `SupabaseApiClient` (runtime) both implement it. Adding a method here means
  * adding it to both implementations.
  */
-export interface ApiClient {
+export type LendItemInput = {
+  id?: string;
+  title: string;
+  category: LendCategory;
+  note?: string;
+  imagePath?: string | null;
+  active?: boolean;
+  neighbourhoodId?: string | null;
+};
+
+export interface ApiClient extends OppdragApi {
   // listings
   listListings(params?: ListListingsParams): Promise<Listing[]>;
   getListing(id: string): Promise<Listing>;
@@ -404,6 +445,8 @@ export interface ApiClient {
   deleteMessage(messageId: string): Promise<void>;
   /** Per person; a new message brings the conversation back to Innboks. */
   setConversationArchived(conversationId: string, archived: boolean): Promise<void>;
+  /** The title and picture of a page linked in the chat (edge function `link-preview`), or null. */
+  linkPreview(url: string): Promise<LinkPreview | null>;
   /** Writes a voice message out as text (edge function `transcribe`). */
   transcribeMessage(messageId: string): Promise<string>;
   /** `attachmentPath`: the photo's path in the private chat-attachments bucket. */
@@ -549,33 +592,42 @@ export interface ApiClient {
     municipality: string;
     /** storage path in `listing-images` */
     imagePath?: string;
+    /** every photo, cover first (0099); takes over from imagePath */
+    imagePaths?: string[];
     /** set → only members of this nabolag can read it; unset → the whole kommune */
     neighbourhoodId?: string;
     /** a dugnad people sign up for (0090) */
     isDugnad?: boolean;
     /** ISO */
     eventAt?: string;
+    /** an arrangement (0101); DUGNAD also sets isDugnad */
+    eventType?: EventType;
+    /** «Avstemning»: 2–6 choices (0101) */
+    pollOptions?: string[];
+    /** a newer kind of oppslag (0108); kind is then GENERAL */
+    topic?: NoticeTopic;
+    /** posted as a lag / forening I run */
+    organisationId?: string;
+    /** an arrangement every week */
+    repeatWeekly?: boolean;
   }): Promise<NoticeboardPost>;
   deleteNoticeboardPost(id: string): Promise<void>;
   /** The owner edits an oppslag, or marks it as done / open again. */
   updateNoticeboardPost(
     id: string,
-    patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; done?: boolean },
+    patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; imagePaths?: string[]; done?: boolean },
   ): Promise<NoticeboardPost>;
+  /** «Ja, det er fortsatt aktuelt»: the oppslag stays open and is asked again 14 days later (0099). */
+  keepNotice(id: string): Promise<void>;
   /** Oppslagstavle "Svar": public comments under an oppslag, oldest first. */
   listNoticeComments(noticeId: string): Promise<NoticeComment[]>;
-  addNoticeComment(noticeId: string, body: string): Promise<NoticeComment>;
+  /** `parentId` = reply to that answer (one level deep, 0099) */
+  addNoticeComment(noticeId: string, body: string, parentId?: string): Promise<NoticeComment>;
   deleteNoticeComment(id: string): Promise<void>;
   /** Who has signed up for a dugnad (0090). */
   listDugnadSignups(noticeId: string): Promise<string[]>;
   /** Returns how many are signed up now. */
   setDugnadSignup(noticeId: string, join: boolean): Promise<number>;
-  /** The days a tool is lent out, without saying to whom. */
-  listToolBookedDays(noticeId: string): Promise<{ from: string; to: string }[]>;
-  /** Requests I can see: all of them on my own tool, my own on someone else's. */
-  listToolBookings(noticeId: string): Promise<ToolBooking[]>;
-  requestToolBooking(noticeId: string, from: string, to: string, note?: string): Promise<ToolBooking>;
-  respondToolBooking(id: string, status: 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED'): Promise<ToolBooking>;
   listSavedNoticeIds(): Promise<string[]>;
   /** A heart on an oppslag, or taking it back (0094). */
   toggleNoticeLike(noticeId: string, liked: boolean): Promise<void>;
@@ -616,6 +668,12 @@ export interface ApiClient {
   /** My thread with «MinNabo», oldest first. */
   getMinNaboThread(): Promise<MinNaboMessage[]>;
   replyToMinNabo(body: string): Promise<void>;
+  /** «Rist for å melde fra»: a problem report with an optional screenshot, to the MinNabo thread (0099). */
+  reportProblem(input: { body: string; imagePath?: string; context?: string }): Promise<void>;
+  /** Someone opened a listing (counted once per person, never the owner). Fire and forget. */
+  recordListingView(listingId: string): Promise<void>;
+  /** How many neighbours have opened my listing; null when it isn't mine. */
+  listingViewCount(listingId: string): Promise<number | null>;
   /** `option` is 1-based. Voting again changes the vote. */
   voteMinNaboPoll(broadcastId: string, option: number): Promise<void>;
   markMinNaboRead(): Promise<void>;
@@ -650,4 +708,56 @@ export interface ApiClient {
   }): Promise<void>;
   /** My own business registration, or null when I haven't registered. */
   getMyBusinessProfile(): Promise<BusinessProfile | null>;
+
+  // --- 0101: utvidelse ---
+  /** «Gjør avtalen fast»: every 7, 14 or 28 days, optionally until a date (YYYY-MM-DD). */
+  setAgreementRepeat(proposalId: string, everyDays: 7 | 14 | 28, until?: string | null): Promise<void>;
+  endAgreementRepeat(proposalId: string): Promise<void>;
+  /** «Denne gangen er gjort» for one visit of a fast avtale. */
+  markAgreementVisit(proposalId: string, visitAt: string): Promise<void>;
+  /** The visits marked as done, ISO, newest first. */
+  listAgreementVisits(proposalId: string): Promise<string[]>;
+  /** «Skriv oppdraget fra et bilde» (edge function draft-from-photo). */
+  draftFromPhoto(imagePath: string): Promise<PhotoDraft>;
+  /** «Jeg vil ha den» on «Gis bort»: join or leave the queue; returns my place (0 = not in it). */
+  reserveNotice(noticeId: string, join: boolean): Promise<number>;
+  noticeQueue(noticeId: string): Promise<NoticeQueue>;
+  /** The owner's view of the queue, first first. */
+  listNoticeReservations(noticeId: string): Promise<NoticeReservation[]>;
+  /** The owner: the one at the front took it (closes the oppslag), or didn't come (the next gets it). */
+  settleReservation(noticeId: string, taken: boolean): Promise<void>;
+  setEventRsvp(noticeId: string, status: RsvpStatus | null): Promise<void>;
+  eventRsvps(noticeId: string): Promise<EventRsvps>;
+  voteNoticePoll(noticeId: string, option: number | null): Promise<void>;
+  noticePoll(noticeId: string): Promise<NoticePoll | null>;
+  listNoticeReactions(noticeId: string): Promise<NoticeReaction[]>;
+  setNoticeReaction(noticeId: string, emoji: NoticeReactionEmoji, on: boolean): Promise<void>;
+  canUseEventChat(noticeId: string): Promise<boolean>;
+  listEventMessages(noticeId: string): Promise<EventMessage[]>;
+  postEventMessage(noticeId: string, body: string): Promise<EventMessage>;
+  /** «Vis på norsk» (edge function translate-message). */
+  translateMessage(messageId: string): Promise<string>;
+  /** «Ting jeg låner ut»: one person's list, or every item in a kommune. */
+  listLendItems(filter: { ownerId?: string; municipality?: string }): Promise<LendItem[]>;
+  /** One thing, e.g. the one behind a «Lån ut» oppslag; null when it is gone or hidden from me. */
+  getLendItem(id: string): Promise<LendItem | null>;
+  /** Also writes its «Lån ut» oppslag (the database does it, 0107). `neighbourhoodId` only on a new thing. */
+  saveLendItem(input: LendItemInput): Promise<LendItem>;
+  deleteLendItem(id: string): Promise<void>;
+  requestLend(itemId: string, fromDate: string, toDate: string, note?: string): Promise<void>;
+  /** Requests I sent and requests for my things. */
+  listLendRequests(): Promise<LendRequest[]>;
+  /** `reply`: the owner's short answer, e.g. where to pick it up (0104) */
+  respondLend(id: string, status: 'ACCEPTED' | 'DECLINED' | 'CANCELLED', reply?: string): Promise<void>;
+  /** The days a thing is lent out from today on (0104). */
+  lendBusyDays(itemId: string): Promise<LendBusy[]>;
+  profileCategoryJobs(profileId: string): Promise<CategoryJobs[]>;
+  myHousehold(): Promise<Household>;
+  householdInviteCode(): Promise<string>;
+  householdJoin(code: string): Promise<void>;
+  householdLeave(): Promise<void>;
+  /** The partner's code for helpers; null unless I have finished a job as a helper. */
+  partnerHelperCode(partnerId: string): Promise<string | null>;
+  /** For a foresatt: the youths I follow, their coming avtaler and «Trygg tur». */
+  guardianOverview(): Promise<GuardianYouth[]>;
 }

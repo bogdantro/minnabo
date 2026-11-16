@@ -46,3 +46,19 @@ export function quickReplies(stage: ReplyStage, iAmHelper: boolean, scheduledAt?
   };
   return replies[stage][iAmHelper ? 1 : 0];
 }
+
+/**
+ * «Forslag» (0109): short answers fitted to the last message from the other person – simple rules, no AI.
+ *   'Når passer det?' -> ['Det passer fint!', 'Hva med i morgen?'] ; 'Tusen takk!' -> ['Bare hyggelig!']
+ */
+export function suggestedReplies(lastIncoming: string | undefined): string[] {
+  const t = (lastIncoming ?? '').toLowerCase();
+  if (!t.trim()) return [];
+  if (/\btakk\b|tusen takk|takker/.test(t)) return ['Bare hyggelig!', 'Takk selv!'];
+  if (/(når|hvilken dag|hvilket tidspunkt|klokka|kl\.?)\b.*\?/.test(t) || /passer det\b/.test(t)) return ['Det passer fint!', 'Hva med i morgen?', 'Når passer det for deg?'];
+  if (/(pris|koster|betale|kroner|\bkr\b)/.test(t)) return ['Hva tenker du er en grei pris?', 'Det høres greit ut.'];
+  if (/\bkan du\b|\bhar du\b|\ber du\b/.test(t) && t.includes('?')) return ['Ja, det kan jeg.', 'Nei, dessverre ikke.'];
+  if (/(er på vei|er her|står utenfor)/.test(t)) return ['Kommer!', 'Døra er åpen.'];
+  if (t.includes('?')) return ['Ja!', 'Nei, dessverre.'];
+  return [];
+}

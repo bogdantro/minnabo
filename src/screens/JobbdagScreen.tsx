@@ -23,6 +23,7 @@ import { formatTime } from '@/lib/datetime';
 import { parseDurationHours } from '@/lib/deviceCalendar';
 import { haptics } from '@/lib/haptics';
 import { safeNavigate, safePush } from '@/lib/nav';
+import { WeatherNote } from '@/components/WeatherNote';
 import { toast } from '@/lib/toast';
 import { pickAndUploadMany } from '@/lib/uploads';
 import { colors, fonts, motion, radius, screenPadding, shadow, text } from '@/theme/theme';
@@ -33,6 +34,7 @@ import { NoShowSheet } from '@/components/rescue/NoShowSheet';
 import { ArrivedSheet } from '@/components/rescue/ArrivedSheet';
 import { NoShowEntryCard } from '@/components/rescue/NoShowEntryCard';
 import { attendanceOf, canReportNoShow } from '@/domain/noShow';
+import { isRepeating } from '@/domain/repeat';
 import { serverMessage } from '@/lib/errors';
 import { BeforeAfter } from '@/components/BeforeAfter';
 import { checklistSuggestions } from '@/domain/checklist';
@@ -299,6 +301,14 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
             <Text style={styles.sosNumber}>112</Text>
           </Pressable>
         </FadeUp>
+
+        {/* the real forecast for the job, from MET */}
+        <WeatherNote
+          category={cat}
+          dateISO={agreement?.scheduledAt ?? proposal.scheduledAt}
+          municipality={listing?.location.municipality}
+          style={[styles.px, styles.mt14]}
+        />
 
         {/* time tracker */}
         <FadeUp delay={100} style={[styles.px, styles.mt14]}>
@@ -575,8 +585,13 @@ export function JobbdagScreen({ proposalId }: { proposalId: string }) {
       </Screen>
 
       <StickyFooter>
-        <Button label={nb.jobWorkspace.finish} icon="check" size="lg" onPress={() => safePush(`/fullfor/${proposalId}`)} />
-        <Text style={[text.meta, styles.center, styles.f12, styles.mt6]}>{nb.jobWorkspace.finishNote(first)}</Text>
+        {/* a fast avtale is finished once, when the season is over (0101) */}
+        {isRepeating(agreement) ? (
+          <Button label={nb.avtaleSum.title} icon="repeat" variant="ink" size="lg" onPress={() => safePush(`/avtale/${proposalId}`)} />
+        ) : (
+          <Button label={nb.jobWorkspace.finish} icon="check" size="lg" onPress={() => safePush(`/fullfor/${proposalId}`)} />
+        )}
+        <Text style={[text.meta, styles.center, styles.f12, styles.mt6]}>{isRepeating(agreement) ? nb.fast.jobbdagNote : nb.jobWorkspace.finishNote(first)}</Text>
       </StickyFooter>
 
       {iAmHelper ? <ArrivedSheet visible={arrivedOpen} onClose={() => setArrivedOpen(false)} proposalId={proposalId} otherFirst={first} /> : null}

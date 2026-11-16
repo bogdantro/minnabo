@@ -41,6 +41,18 @@ export async function shareListing(id: string, title: string): Promise<void> {
   }
 }
 
+/** «Del» on an oppslag: a link that opens it on Oppslagstavla (with its svar). */
+export async function shareNotice(id: string, message: string): Promise<void> {
+  const url = Linking.createURL(`/oppslagstavle?oppslag=${id}`);
+  try {
+    await Share.share({ message: `${message}
+${url}`, url });
+    track('notice_shared', { id });
+  } catch {
+    /* user dismissed the sheet */
+  }
+}
+
 /** Invite a neighbour to MinNabo with a referral link. */
 export async function shareInvite(referrerId: string): Promise<void> {
   const url = Linking.createURL('/velkommen', { queryParams: { ref: referrerId } });

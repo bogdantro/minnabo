@@ -2,14 +2,15 @@ import type { Listing } from './types';
 import { kommuneCentre } from '@/data/kommuner';
 import { mapTileUrl } from '@/config/mapStyle';
 
-export type MapCluster = {
+export type MapCluster<T = Listing> = {
   /** "kommune|place" */
   id: string;
   place: string;
   municipality: string;
   lat: number;
   lon: number;
-  listings: Listing[];
+  /** what is in the circle: oppdrag, or oppslag on the «Gis bort og funnet» map */
+  listings: T[];
 };
 
 const PLACE_SPREAD = 0.05;
@@ -30,9 +31,15 @@ const FIT_MAX_ZOOM = 10;
  * order and not by where it really is: rule 6, the map must never hint at an address.
  */
 export function mapClusters(listings: Listing[]): MapCluster[] {
-  const groups = new Map<string, Listing[]>();
-  for (const l of listings) {
-    const key = `${l.location.municipality}|${l.location.place || l.location.municipality}`;
+  return placeClusters(listings, (l) => l.location);
+}
+
+/** The same grouping for anything else that has a kommune and a place (an oppslag, 0101). */
+export function placeClusters<T>(items: T[], where: (t: T) => { municipality: string; place?: string }): MapCluster<T>[] {
+  const groups = new Map<string, T[]>();
+  for (const l of items) {
+    const w = where(l);
+    const key = `${w.municipality}|${w.place || w.municipality}`;
     groups.set(key, [...(groups.get(key) ?? []), l]);
   }
 
@@ -66,7 +73,7 @@ export function project(lat: number, lon: number, zoom: number): { x: number; y:
 }
 
 /** The closest zoom that shows every circle, and the point in the middle of them (in world pixels). */
-export function fitMap(clusters: MapCluster[], width: number, height: number): { zoom: number; x: number; y: number } {
+export function fitMap(clusters: MapCluster<unknown>[], width: number, height: number): { zoom: number; x: number; y: number } {
   const pad = 0.62;
   for (let zoom = FIT_MAX_ZOOM; zoom >= MIN_ZOOM; zoom--) {
     const pts = clusters.map((c) => project(c.lat, c.lon, zoom));
@@ -82,8 +89,8 @@ export function fitMap(clusters: MapCluster[], width: number, height: number): {
 }
 
 /** Circles that would land on top of each other at this zoom become one. The biggest gives the name. */
-export function mergeNearby(clusters: MapCluster[], zoom: number, minPx: number): MapCluster[] {
-  const out: (MapCluster & { px: { x: number; y: number } })[] = [];
+export function mergeNearby<T>(clusters: MapCluster<T>[], zoom: number, minPx: number): MapCluster<T>[] {
+  const out: (MapCluster<T> & { px: { x: number; y: number } })[] = [];
   for (const c of [...clusters].sort((a, b) => b.listings.length - a.listings.length)) {
     const px = project(c.lat, c.lon, zoom);
     const near = out.find((o) => Math.hypot(o.px.x - px.x, o.px.y - px.y) < minPx);

@@ -1,3 +1,5 @@
+import { categoryArtId } from '@/domain/categories';
+import { WeatherNote } from '@/components/WeatherNote';
 import { useEffect, useRef, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -21,7 +23,7 @@ import {
 } from '@/api/queries';
 import { TimeSheet } from '@/components/chat/ChatSheets';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { formatTime, shortDate } from '@/lib/datetime';
+import { dayMonthYear, formatTime, longDate, shortDate } from '@/lib/datetime';
 import {
   addAgreementToCalendar,
   daysUntil,
@@ -41,6 +43,11 @@ import { NoShowEntryCard } from '@/components/rescue/NoShowEntryCard';
 import { SafetyTip } from '@/components/SafetyTip';
 import { RescuePanel } from '@/components/rescue/RescuePanel';
 import { attendanceOf, canReportNoShow } from '@/domain/noShow';
+import { isRepeating, nextVisit } from '@/domain/repeat';
+import { RepeatCard } from '@/components/avtale/RepeatCard';
+import { BeforeAfterCard } from '@/components/avtale/BeforeAfterCard';
+import { agreementPdfHtml } from '@/lib/agreementPdf';
+import { sharePdf } from '@/lib/pdf';
 import { isOpenListing } from '@/domain/editing';
 import {
   Avatar,
@@ -117,6 +124,7 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
   const [dialog, setDialog] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
   const [eventId, setEventId] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   if (!proposal) {
     return (
@@ -134,7 +142,8 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
   const description = agreement?.description || listing?.task?.description || '';
   const caveats = agreement?.caveats ?? proposal.caveats;
   const place = listing?.location.place || listing?.location.municipality;
-  const start = agreedDate({ scheduledAt: agreement?.scheduledAt ?? proposal.scheduledAt, scheduledText: when });
+  const repeating = isRepeating(agreement);
+  const start = (repeating ? nextVisit(agreement, openedAt) : null) ?? agreedDate({ scheduledAt: agreement?.scheduledAt ?? proposal.scheduledAt, scheduledText: when });
   const days = start ? daysUntil(start) : null;
   const countdown =
     days == null || days < 0 ? null : days === 0 ? nb.avtaleSum.today : days === 1 ? nb.avtaleSum.tomorrow : nb.avtaleSum.inDays(days);
@@ -263,6 +272,36 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
 
   const openChat = () => safePush(`/chat/${proposal.conversationId}`);
 
+  const savePdf = async () => {
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      const repeatText = agreement?.repeatEveryDays && !agreement.repeatEndedAt
+        ? [nb.fast.activeTitle(nb.fast.everyShort[agreement.repeatEveryDays]), agreement.repeatUntil ? nb.fast.until(dayMonthYear(`${agreement.repeatUntil}T12:00:00`)) : null].filter(Boolean).join(' · ')
+        : undefined;
+      const html = agreementPdfHtml({
+        title: jobTitle || nb.avtaleSum.title,
+        clientName: client?.displayName ?? '',
+        helperName: helper?.displayName ?? '',
+        price: formatPrice(price),
+        when,
+        duration,
+        place,
+        description,
+        caveats,
+        repeat: repeatText,
+        agreedAt: longDate(agreedAt),
+        madeAt: longDate(new Date().toISOString()),
+        cancelled,
+      });
+      await sharePdf(html, nb.avtalePdf.filename(jobTitle || nb.avtaleSum.title));
+    } catch {
+      toast.error(nb.avtalePdf.failed, { bottom: 150 });
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   return (
     <View style={styles.flex}>
       <Screen
@@ -375,6 +414,11 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
           </ScaleIn>
         ) : null}
 
+        {/* «Fast avtale» (0101): offer it, or the next visit of the season */}
+        {agreement && !cancelled ? (
+          <RepeatCard proposalId={proposalId} agreement={agreement} otherFirst={first} finished={finished || ls === 'COMPLETION_SENT'} style={[styles.px, styles.mt14]} />
+        ) : null}
+
         {/* a finished job: the same helper again, with one tap */}
         {finished && !cancelled && !iAmHelper ? (
           <FadeUp delay={60} style={[styles.px, styles.mt14]}>
@@ -384,6 +428,15 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
               <Button label={nb.avtaleSum.again} icon="repeat" variant="ink" size="sm" onPress={() => setAgainSheet(true)} />
             </View>
           </FadeUp>
+        ) : null}
+
+        {!cancelled ? (
+          <WeatherNote
+            category={categoryArtId(listing?.category.slug ?? 'annet')}
+            dateISO={agreement?.scheduledAt ?? proposal.scheduledAt}
+            municipality={listing?.location.municipality}
+            style={[styles.px, styles.mt18]}
+          />
         ) : null}
 
         {/* document */}
@@ -463,6 +516,9 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
           </View>
         </FadeUp>
 
+        {/* «Før og etter» from Jobbdag (0101) */}
+        {!cancelled ? <BeforeAfterCard proposalId={proposalId} style={[styles.px, styles.mt14]} /> : null}
+
         {/* first job with someone new: one calm safety tip, until it's hidden */}
         {!cancelled && !finished && other ? (
           <View style={[styles.px, styles.mt14]}>
@@ -518,6 +574,7 @@ export function AvtaleSammendragScreen({ proposalId, answerYes, afterJob }: { pr
           ) : null}
           {/* «Åpne chat» is in the bar at the bottom: no second button for it here */}
           <QuickAction icon="shield" bg={colors.bg} fg={colors.ink} label={nb.avtaleSum.shareTrusted} onPress={() => safePush('/trygge-kontakter')} />
+          <QuickAction icon="file" bg={colors.bg} fg={colors.ink} label={pdfBusy ? nb.avtalePdf.working : nb.avtalePdf.action} onPress={() => void savePdf()} />
         </FadeUp>
 
         {/* the owner, on the job day: the way out when the helper doesn't come */}

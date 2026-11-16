@@ -168,6 +168,23 @@ afterEach(() => {
     /* not loaded */
   }
   try {
+    require('@/lib/chatDrafts').chatDrafts._reset();
+    require('@/lib/localSet')._resetLocalSets();
+  } catch {
+    /* not loaded */
+  }
+  try {
+    require('@mocks/mockInbox').inbox._reset();
+    require('@mocks/mockOppdrag').oppdragMock._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
+    require('@mocks/mockCommunity').community._reset();
+  } catch {
+    /* not loaded */
+  }
+  try {
     require('@mocks/data/safetyStore').safetyStore._reset();
   } catch {
     /* not loaded */
@@ -267,6 +284,10 @@ jest.mock('@react-native-async-storage/async-storage', () => {
         delete store[key];
         return Promise.resolve();
       }),
+      multiRemove: jest.fn((keys: string[]) => {
+        keys.forEach((k) => delete store[k]);
+        return Promise.resolve();
+      }),
       clear: jest.fn(() => {
         store = {};
         return Promise.resolve();
@@ -297,6 +318,22 @@ jest.mock('expo-notifications', () => ({
 }));
 
 jest.mock('expo-device', () => ({ isDevice: true }));
+// 0109/0110 packages: plain stand-ins (no native side under Jest)
+jest.mock('expo-speech', () => ({ speak: jest.fn(), stop: jest.fn(async () => undefined) }));
+jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn(async () => ({ canceled: true, assets: [] })) }));
+jest.mock('expo-video', () => {
+  const { View } = require('react-native');
+  return { useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn() }), VideoView: (props: object) => require('react').createElement(View, props) };
+});
+jest.mock('expo-speech-recognition', () => ({
+  ExpoSpeechRecognitionModule: {
+    requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+    start: jest.fn(),
+    stop: jest.fn(),
+    isRecognitionAvailable: jest.fn(() => true),
+  },
+  useSpeechRecognitionEvent: jest.fn(),
+}));
 
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),

@@ -32,11 +32,15 @@ export function PhotoBlurEditor({
   folder,
   onClose,
   onSaved,
+  bucket = 'listing-images',
 }: {
   uri: string | null;
   folder: string;
   onClose: () => void;
-  onSaved: (publicUrl: string) => void;
+  /** `path` is the stored file; `publicUrl` is empty for the private chat bucket */
+  onSaved: (publicUrl: string, path: string) => void;
+  /** a chat photo stays private (0109) */
+  bucket?: 'listing-images' | 'chat-attachments';
 }) {
   const insets = useSafeAreaInsets();
   const frame = useRef<View>(null);
@@ -76,9 +80,9 @@ export function PhotoBlurEditor({
     setSaving(true);
     try {
       const file = await captureViewAsFile(frame.current, 'jpg');
-      const { publicUrl } = await uploadCaptured('listing-images', folder, file);
+      const { publicUrl, path } = await uploadCaptured(bucket, folder, file);
       haptics.success();
-      onSaved(publicUrl);
+      onSaved(publicUrl, path);
     } catch {
       toast.error(nb.blur.failed);
     } finally {

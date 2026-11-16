@@ -2,14 +2,12 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { ListingQuestions } from '@/components/ListingQuestions';
 import { HelperSlotsCard, NoOffersTips } from '@/components/ListingOwnerCards';
 import { ProfileThanks, ThankCardPicker } from '@/components/ThankCards';
-import { NewSinceLine } from '@/components/NewSinceLine';
 import { HelpScreen } from '@/screens/HelpScreen';
 import { AgreedSumScreen } from '@/screens/AgreedSumScreen';
 import { YearRecapScreen } from '@/screens/YearRecapScreen';
 import { UpdateScreen, needsAppUpdate } from '@/components/AppGates';
 import { isOlderVersion } from '@/domain/appVersion';
 import { isNewHelper } from '@/domain/newHelper';
-import { newSinceIndex } from '@/lib/feedSeen';
 import { fitMap, mapClusters, MAX_ZOOM, mergeNearby, project } from '@/domain/mapClusters';
 import { kommuneCentre } from '@/data/kommuner';
 import type { Listing } from '@/domain/types';
@@ -205,27 +203,6 @@ describe('small rules', () => {
     expect(isNewHelper({ ...fresh, memberSinceDate: '2026-01-01' }, now)).toBe(false);
   });
 
-  test('«Nytt siden sist» sits before the first post already seen', () => {
-    const at = (h: number) => new Date(1000 * HOUR - h * HOUR).toISOString();
-    const posts = [{ createdAt: at(1) }, { createdAt: at(2) }, { createdAt: at(9) }];
-    expect(newSinceIndex(posts, 1000 * HOUR - 5 * HOUR, 1000 * HOUR)).toBe(2);
-  });
-
-  test('no line on a first visit, or when everything is new or old', () => {
-    const at = (h: number) => new Date(1000 * HOUR - h * HOUR).toISOString();
-    const posts = [{ createdAt: at(1) }, { createdAt: at(2) }];
-    expect(newSinceIndex(posts, null, 1000 * HOUR)).toBe(-1);
-    expect(newSinceIndex(posts, 1000 * HOUR - 5 * HOUR, 1000 * HOUR)).toBe(-1);
-    expect(newSinceIndex(posts, 1000 * HOUR, 1000 * HOUR)).toBe(-1);
-  });
-
-  test('an old hasteoppdrag on top does not pull the line up', () => {
-    const now = 1000 * HOUR;
-    const at = (h: number) => new Date(now - h * HOUR).toISOString();
-    const posts = [{ createdAt: at(50), urgentUntil: at(-5) }, { createdAt: at(1) }, { createdAt: at(9) }];
-    expect(newSinceIndex(posts, now - 5 * HOUR, now)).toBe(2);
-  });
-
   test('the map groups by place and never uses more than the kommune centre', () => {
     const a = listing({ id: 'a' });
     const b = listing({ id: 'b' });
@@ -259,10 +236,5 @@ describe('small rules', () => {
 
   test('a post in a kommune the map does not know is left out, not misplaced', () => {
     expect(mapClusters([listing({ location: { municipality: 'Ukjent', place: 'Et sted' } })])).toEqual([]);
-  });
-
-  test('the new-line component reads as a heading for what was seen', async () => {
-    await renderWithProviders(<NewSinceLine />);
-    expect(screen.getByText('Du har sett det under her')).toBeTruthy();
   });
 });

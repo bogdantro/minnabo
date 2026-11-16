@@ -13,6 +13,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { seniorMode } from '@/lib/seniorMode';
+import { SHARED_STREET_CATEGORIES } from '@/domain/community';
 import nb from '@/i18n/nb';
 import { draftStore } from '@/data/draftStore';
 import { LAUNCH_KOMMUNER, WHOLE_KOMMUNE } from '@/data/kommuner';
@@ -20,12 +22,15 @@ import { AreaSearch } from '@/components/AreaSearch';
 import { detectKommune, locationErrorText } from '@/lib/geo';
 import { pickAndUpload, pickAndUploadMany } from '@/lib/uploads';
 import { PhotoBlurEditor, canBlurPhotos } from '@/components/PhotoBlurEditor';
-import { slugForArtId, categoryLabel } from '@/domain/categories';
-import { useListing, useListingEditData, useMyListings, usePriceGuidance, useAppSettings, useFollowedProfileIds } from '@/api/queries';
+import { PhotoOrderControls } from '@/components/PhotoOrder';
+import { DraftRow } from '@/components/DraftCard';
+import { slugForArtId, categoryLabel, categoryArtId } from '@/domain/categories';
+import { useListing, useListingEditData, useMyListings, usePriceGuidance, useAppSettings, useFollowedProfileIds, useDraftFromPhoto } from '@/api/queries';
 import { isOpenListing } from '@/domain/editing';
 import { isUrgent, URGENCIES } from '@/domain/urgent';
 import { formatAmount } from '@/components/ui/Field';
 import { toast } from '@/lib/toast';
+import { haptics } from '@/lib/haptics';
 import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
@@ -94,6 +99,9 @@ import {
   validateStep,
   whenLabel,
   wizardDraft,
+  draftHasContent,
+  newDraftId,
+  type SavedDraft,
   type WizardError,
   type WizardState,
 } from './wizardModel';
@@ -156,7 +164,12 @@ export function LeggUtWizard() {
   const { userId } = useSession();
   const me = useCurrentUser();
   // Edit mode: /legg-ut?rediger=<id>[&tilbake=<path>] reopens a published oppdrag.
-  const params = useLocalSearchParams<{ rediger?: string; tilbake?: string; kopier?: string; kategori?: string }>();
+  const params = useLocalSearchParams<{ rediger?: string; tilbake?: string; kopier?: string; kategori?: string; utkast?: string; tittel?: string }>();
+  // which saved draft this is: the one opened from «Fortsett», or a new one
+  const [draftId] = useState(() => (typeof params.utkast === 'string' && params.utkast ? params.utkast : newDraftId()));
+  const resuming = typeof params.utkast === 'string' && !!params.utkast;
+  // other drafts, offered on step 1 of a new oppdrag
+  const [otherDrafts, setOtherDrafts] = useState<SavedDraft[]>([]);
   const editId = typeof params.rediger === 'string' && params.rediger ? params.rediger : undefined;
   const editing = !!editId;
   // «Legg ut igjen»: /legg-ut?kopier=<id> – a NEW oppdrag with an older one filled in
@@ -166,7 +179,11 @@ export function LeggUtWizard() {
   const editData = useListingEditData(sourceId);
   const [editSeeded, setEditSeeded] = useState(false);
   // "Maks avstand til hjelperen" starts on the website's default (platform.default_radius_km), inside the slider's 1–30 km
-  const { defaultRadiusKm } = useAppSettings();
+  const { defaultRadiusKm, aiEnabled } = useAppSettings();
+  // «Skriv oppdraget fra bildet» (0101): the storage path of the first photo taken here, and whether it was used
+  const [aiPhotoPath, setAiPhotoPath] = useState<string | null>(null);
+  const [aiUsed, setAiUsed] = useState(false);
+  const photoDraft = useDraftFromPhoto();
   // «Nå i november: Snømåking» on Oppdrag opens /legg-ut?kategori=snomaking with it chosen
   const startCat = !sourceId && typeof params.kategori === 'string' && params.kategori in FORMS ? (params.kategori as CategoryId) : undefined;
   const [s, setS] = useState<WizardState>(() => {
@@ -174,7 +191,10 @@ export function LeggUtWizard() {
       ...emptyWizard(me.municipality ?? ''),
       ...(defaultRadiusKm ? { km: Math.min(30, Math.max(1, Math.round(defaultRadiusKm))) } : {}),
     };
-    return startCat ? { ...base, ...applyCategory(base, startCat) } : base;
+    // «Få hjelp» from Sesongsjekk (0108): /legg-ut?kategori=…&tittel=… starts with the task as the title
+    const startTitle = !sourceId && typeof params.tittel === 'string' ? params.tittel.slice(0, 80) : '';
+    const withCat = startCat ? { ...base, ...applyCategory(base, startCat) } : base;
+    return startTitle ? { ...withCat, title: startTitle } : withCat;
   });
   const [step, setStep] = useState(1);
   // every step starts at its top, however far down the previous one was scrolled
@@ -204,6 +224,8 @@ export function LeggUtWizard() {
   }, [err, errN, targets]);
   const [kSheet, setKSheet] = useState(false);
   const [blurFor, setBlurFor] = useState<string | null>(null);
+  // the photo picked to become the cover or move (Legg ut, photos)
+  const [photoSel, setPhotoSel] = useState<number | null>(null);
   const followed = useFollowedProfileIds().data ?? [];
   const [closeOpen, setCloseOpen] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -240,18 +262,22 @@ export function LeggUtWizard() {
   useEffect(() => {
     if (editing || copyId) return;
     let alive = true;
-    wizardDraft.load().then((d) => {
-      // a chosen category starts fresh unless there's a draft with something in it
-      if (alive && d && (!startCat || d.state.cat || d.state.title.trim())) {
-        setS(d.state);
-        // a draft from when the wizard had 9 steps may point past the last one
-        setStep(Math.min(Math.max(d.step, 1), LAST));
-      }
-    });
+    if (resuming) {
+      wizardDraft.load(draftId).then((d) => {
+        if (alive && d) {
+          setS(d.state);
+          // a draft from when the wizard had 9 steps may point past the last one
+          setStep(Math.min(Math.max(d.step, 1), LAST));
+        }
+      });
+    } else {
+      // a new oppdrag: the half-written ones stay, and step 1 offers them
+      wizardDraft.list().then((all) => alive && setOtherDrafts(all.filter(draftHasContent)));
+    }
     return () => {
       alive = false;
     };
-  }, [editing, copyId, startCat]);
+  }, [editing, copyId, resuming, draftId]);
 
   // The kommune on the profile fills an empty Kommune – also when it arrives after the first
   // render, or a saved draft without one is loaded afterwards.
@@ -277,8 +303,8 @@ export function LeggUtWizard() {
   const flush = useCallback(() => {
     if (editing || !dirty.current || discarded.current) return;
     dirty.current = false;
-    void wizardDraft.save(latest.current.s, latest.current.step);
-  }, [editing]);
+    void wizardDraft.save(latest.current.s, latest.current.step, draftId);
+  }, [editing, draftId]);
   useEffect(() => {
     if (!touched.current) return;
     dirty.current = true;
@@ -319,7 +345,7 @@ export function LeggUtWizard() {
     else setCloseOpen(true);
   };
   const saveDraft = async () => {
-    await wizardDraft.save(s, step);
+    await wizardDraft.save(s, step, draftId);
     toast.success(nb.wizard.draftSaved, { icon: 'bookmark', bottom: 130 });
   };
   const preview = () => {
@@ -333,8 +359,10 @@ export function LeggUtWizard() {
       }
     }
     draftStore.set(buildListing(s, days), {
-      extras: extrasFor(s, today),
+      // posted in senior mode: «Hjelp for eldre» on the card (0110)
+      extras: { ...extrasFor(s, today), fromSenior: seniorMode.get() || undefined },
       editId,
+      draftId,
       back: typeof params.tilbake === 'string' && params.tilbake ? params.tilbake : editId ? `/oppdrag/${editId}` : undefined,
     });
     router.push('/legg-ut/forhandsvisning');
@@ -380,6 +408,7 @@ export function LeggUtWizard() {
       setUploading(0);
       if (!r) return;
       touched.current = true;
+      setAiPhotoPath((cur) => cur ?? r.path);
       setS((p) => ({ ...p, photos: [...p.photos, r.publicUrl].slice(0, MAX_PHOTOS) }));
       toast.success(nb.wizard.photosAdded(1), { icon: 'image', bottom: 130 });
     } catch (e) {
@@ -393,7 +422,9 @@ export function LeggUtWizard() {
     try {
       // Pick several at once; uploads run in parallel.
       if (!userId) throw new Error(nb.wizard.photoFailed);
-      const urls = (await pickAndUploadMany({ bucket: 'listing-images', folder: userId, max: room, onStart: setUploading })).map((r) => r.publicUrl);
+      const picked = await pickAndUploadMany({ bucket: 'listing-images', folder: userId, max: room, onStart: setUploading });
+      const urls = picked.map((r) => r.publicUrl);
+      if (picked[0]) setAiPhotoPath((cur) => cur ?? picked[0].path);
       setUploading(0);
       if (!urls.length) return;
       touched.current = true;
@@ -404,6 +435,22 @@ export function LeggUtWizard() {
       setUploading(0);
       toast.error(serverMessage(e, nb.wizard.photoFailed), { bottom: 130 });
     }
+  };
+
+  // the suggestion fills the fields; nothing is posted until the person has seen it all
+  const draftFromPhoto = () => {
+    if (!aiPhotoPath || photoDraft.isPending) return;
+    photoDraft.mutate(aiPhotoPath, {
+      onSuccess: (d) => {
+        haptics.success();
+        setAiUsed(true);
+        const cat = categoryArtId(d.categorySlug);
+        edit({ ...applyCategory(s, cat), title: d.title.slice(0, 60), desc: d.description });
+        toast.success(nb.wizard.s1.aiDone, { icon: 'sparkle', bottom: 130 });
+        go(2, 'forward');
+      },
+      onError: (e) => toast.error(serverMessage(e, nb.toast.genericError), { bottom: 130 }),
+    });
   };
 
   const errorLine = err ? (
@@ -487,6 +534,15 @@ export function LeggUtWizard() {
             {step >= 2 && step < LAST ? <MiniPreview listing={live} /> : null}
           {step === 1 ? (
             <>
+              {/* a new oppdrag never replaces the ones you were writing: they are right here */}
+              {otherDrafts.length && !s.cat && !s.title.trim() ? (
+                <FadeUp style={[styles.drafts, shadow.card]} testID="wizard-drafts">
+                  <Text style={[text.eyebrow, styles.draftsTitle]}>{nb.draft.continueTitle}</Text>
+                  {otherDrafts.slice(0, 3).map((d) => (
+                    <DraftRow key={d.id} draft={d} onPress={() => router.replace(`/legg-ut?utkast=${d.id}`)} />
+                  ))}
+                </FadeUp>
+              ) : null}
               <Text style={styles.q} accessibilityRole="header">{nb.wizard.s1.q}</Text>
               <Text style={styles.qs}>{nb.wizard.s1.sub}</Text>
               {/* photo first: start with a picture of the job – it comes along to step 3 */}
@@ -529,6 +585,28 @@ export function LeggUtWizard() {
                   </>
                 )}
               </FadeUp>
+              {aiEnabled && aiPhotoPath && !aiUsed && !s.title.trim() ? (
+                <FadeUp style={[styles.aiCard, shadow.card]}>
+                  <View style={styles.pfRow}>
+                    <View style={styles.aiIc}>
+                      <Icon name="sparkle" size={20} color={colors.ink} />
+                    </View>
+                    <View style={styles.flex}>
+                      <Text style={text.label}>{nb.wizard.s1.aiTitle}</Text>
+                      <Text style={text.meta}>{nb.wizard.s1.aiSub}</Text>
+                    </View>
+                  </View>
+                  <Button
+                    label={photoDraft.isPending ? nb.wizard.s1.aiWorking : nb.wizard.s1.aiCta}
+                    icon="sparkle"
+                    variant="ink"
+                    size="sm"
+                    loading={photoDraft.isPending}
+                    onPress={draftFromPhoto}
+                  />
+                  <Text style={styles.aiPrivacy}>{nb.wizard.s1.aiPrivacy}</Text>
+                </FadeUp>
+              ) : null}
               <View ref={target('cat')} collapsable={false} />
               <Shake shakeKey={errOn('cat') ? errN : 0} style={[styles.ctgrid, errOn('cat') && styles.ctgridErr]}>
                 {CATS.map((c, i) => {
@@ -682,7 +760,15 @@ export function LeggUtWizard() {
               <View style={styles.phgrid}>
                 {s.photos.map((url, i) => (
                   <ScaleIn key={url} style={styles.phCell}>
-                    <Image source={{ uri: url }} style={styles.ph} accessibilityIgnoresInvertColors />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: photoSel === i }}
+                      accessibilityLabel={nb.photoOrder.select(i + 1)}
+                      onPress={() => setPhotoSel(photoSel === i ? null : i)}
+                      style={[styles.phTap, photoSel === i && styles.phSel]}
+                    >
+                      <Image source={{ uri: url }} style={styles.ph} accessibilityIgnoresInvertColors />
+                    </Pressable>
                     {i === 0 ? (
                       <View style={styles.phcover}>
                         <Text style={[text.pill, { fontSize: 10.5 }]}>{nb.wizard.s3.cover}</Text>
@@ -692,6 +778,7 @@ export function LeggUtWizard() {
                       accessibilityRole="button"
                       accessibilityLabel={nb.wizard.s3.removePhoto(i + 1)}
                       onPress={() => {
+                        setPhotoSel(null);
                         edit({ photos: s.photos.filter((p) => p !== url) });
                         toast.success(nb.wizard.photoRemoved, { icon: 'trash', bottom: 130 });
                       }}
@@ -720,6 +807,18 @@ export function LeggUtWizard() {
                   </View>
                 ) : null}
               </View>
+              {photoSel !== null ? (
+                <PhotoOrderControls
+                  photos={s.photos}
+                  selected={photoSel}
+                  onChange={(photos, sel) => {
+                    edit({ photos });
+                    setPhotoSel(sel);
+                  }}
+                />
+              ) : s.photos.length > 1 ? (
+                <Text style={[text.hint, styles.mt12]}>{nb.photoOrder.hint}</Text>
+              ) : null}
               <Note style={styles.mt12}>{nb.wizard.s3.photoNote}</Note>
             </>
           ) : null}
@@ -1130,6 +1229,18 @@ export function LeggUtWizard() {
                   <Toggle value={!!s.firstToFollowed} onValueChange={(v) => edit({ firstToFollowed: v })} accessibilityLabel={nb.firstRefusal.title} />
                 </View>
               ) : null}
+              {s.cat && SHARED_STREET_CATEGORIES.includes(s.cat) && !editId ? (
+                <View style={styles.firstRow}>
+                  <View style={styles.firstIcon}>
+                    <Icon name="users" size={18} color={colors.limeDeep} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Text style={[text.rowTitle, { fontFamily: text.label.fontFamily }]}>{nb.felles.shared.toggle}</Text>
+                    <Text style={text.meta}>{nb.felles.shared.toggleSub}</Text>
+                  </View>
+                  <Toggle value={!!s.sharedStreet} onValueChange={(v) => edit({ sharedStreet: v })} accessibilityLabel={nb.felles.shared.toggle} />
+                </View>
+              ) : null}
               <View style={styles.sgroups}>
                 <SumGroup icon="clip" title={nb.wizard.s9.groups.oppdrag} rows={sum.oppdrag} onEdit={(n) => go(n, 'back', true)} />
                 <SumGroup icon="pin" title={nb.wizard.s9.groups.sted} rows={sum.stedTid} onEdit={(n) => go(n, 'back', true)} />
@@ -1208,7 +1319,7 @@ export function LeggUtWizard() {
               label={nb.wizard.saveAndClose}
               variant="ink"
               onPress={async () => {
-                await wizardDraft.save(s, step);
+                await wizardDraft.save(s, step, draftId);
                 setCloseOpen(false);
                 if (router.canGoBack()) router.back();
                 else router.replace('/');
@@ -1220,7 +1331,7 @@ export function LeggUtWizard() {
               style={styles.discard}
               onPress={async () => {
                 discarded.current = true;
-                await wizardDraft.clear();
+                await wizardDraft.clear(draftId);
                 setCloseOpen(false);
                 if (router.canGoBack()) router.back();
                 else router.replace('/');
@@ -1386,6 +1497,8 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 const styles = StyleSheet.create({
+  drafts: { borderRadius: radius.card, backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 18, borderWidth: 1.5, borderColor: colors.limeTint },
+  draftsTitle: { color: colors.limeDeep, marginTop: 4, marginBottom: 2 },
   repeatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
@@ -1423,6 +1536,9 @@ const styles = StyleSheet.create({
   photoFirst: { marginTop: 18, borderRadius: radius.card, backgroundColor: colors.white, padding: 14, gap: 12 },
   pfRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pfIc: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
+  aiCard: { marginTop: 12, borderRadius: radius.card, backgroundColor: colors.limeTint, padding: 14, gap: 12 },
+  aiIc: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
+  aiPrivacy: { ...text.meta, fontSize: 12, color: colors.ink2 },
   pfBtns: { flexDirection: 'row', gap: 8 },
   pfThumbs: { flexDirection: 'row' },
   pfThumb: { width: 44, height: 44, borderRadius: 12, borderWidth: 2, borderColor: colors.white },
@@ -1517,6 +1633,8 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 },
   phgrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   phCell: { width: '31%', aspectRatio: 1 },
+  phTap: { width: '100%', height: '100%', borderRadius: 18 },
+  phSel: { borderWidth: 3, borderColor: colors.ink },
   ph: { width: '100%', height: '100%', borderRadius: 18 },
   phcover: {
     position: 'absolute',

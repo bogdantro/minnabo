@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { serverMessage } from '@/lib/errors';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Listing, PublicProfile, Review } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import nb from '@/i18n/nb';
@@ -11,6 +11,8 @@ import { toast } from '@/lib/toast';
 import { dayMonthYear } from '@/lib/datetime';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { Avatar, Button, Chip, ChipRow, FadeUp, Field, GrowBar, Icon, Input, Pill, Sheet, TextLink } from '@/components/ui';
+import { Image } from '@/components/ui/Image';
+import { ImageViewer } from '@/components/ImageViewer';
 
 type Filter = 'alle' | 'five' | 'hjelper' | 'oppdragsgiver';
 type Role = 'hjelper' | 'oppdragsgiver' | undefined;
@@ -124,6 +126,8 @@ function ReviewCard({ review: r, listing, role, first }: { review: Review; listi
   const reply = useReplyToReview();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
+  const [photoAt, setPhotoAt] = useState<number | null>(null);
+  const photos = r.imageUrls ?? [];
   const send = () =>
     reply.mutate(
       { reviewId: r.id, reply: draft.trim() },
@@ -158,6 +162,16 @@ function ReviewCard({ review: r, listing, role, first }: { review: Review; listi
         </View>
       ) : null}
       {r.comment ? <Text style={styles.revText}>{r.comment}</Text> : null}
+      {photos.length ? (
+        <View style={styles.revPhotos}>
+          {photos.map((url, i) => (
+            <Pressable key={url} accessibilityRole="imagebutton" accessibilityLabel={nb.review.photoOpen(i + 1, photos.length)} onPress={() => setPhotoAt(i)} style={styles.revPhoto}>
+              <Image source={{ uri: url }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+            </Pressable>
+          ))}
+          <ImageViewer images={photoAt === null ? [] : photos} index={photoAt ?? 0} caption={listing?.title} onClose={() => setPhotoAt(null)} />
+        </View>
+      ) : null}
       {r.tags?.length ? (
         <View style={styles.wrapRow6}>
           {r.tags.map((t) => (
@@ -208,6 +222,8 @@ function ReviewCard({ review: r, listing, role, first }: { review: Review; listi
 }
 
 const styles = StyleSheet.create({
+  revPhotos: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  revPhoto: { width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.track },
   wrap: { gap: 14, paddingTop: 18 },
   px: { paddingHorizontal: screenPadding },
   flex: { flex: 1, minWidth: 0 },

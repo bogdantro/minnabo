@@ -20,14 +20,14 @@ test('«Rekkevidde» really changes which kommuner the oppdrag come from', async
 
   // open the location sheet, pick «Nabokommuner», «Vis oppdrag»
   await fireEvent.press(await screen.findByLabelText(/Bare min kommune/));
-  await fireEvent.press(await screen.findByRole('tab', { name: 'Nabokommuner' }));
+  await fireEvent.press(await screen.findByRole('radio', { name: 'Nabokommuner' }));
   await fireEvent.press(screen.getByText('Vis oppdrag'));
   await waitFor(() => expect(askedFor(spy)).toEqual(['Lillehammer', 'Øyer', 'Gausdal', 'Ringsaker', 'Gjøvik']));
   expect(locationScope.getReach()).toBe(1);
 
   // and «Innlandet» asks for every kommune in the county
   await fireEvent.press(await screen.findByLabelText(/Nabokommuner/));
-  await fireEvent.press(await screen.findByRole('tab', { name: 'Innlandet' }));
+  await fireEvent.press(await screen.findByRole('radio', { name: 'Innlandet' }));
   await fireEvent.press(screen.getByText('Vis oppdrag'));
   await waitFor(() => expect(askedFor(spy).length).toBeGreaterThan(20));
 });

@@ -182,7 +182,8 @@ export function GiTilbudSheet({ listing, visible, onClose, onSent, onOpenChat, e
         id = conv.id;
         qc.invalidateQueries({ queryKey: chatKeys.messages(conv.id) });
         qc.invalidateQueries({ queryKey: ['conversations'] });
-        qc.invalidateQueries({ queryKey: ['proposals', 'listing', listing.id] });
+        // every list of tilbud: this oppdrag's, and «Mine tilbud» (the youth app reads ['proposals', 'sent'])
+        qc.invalidateQueries({ queryKey: ['proposals'] });
       }
       haptics.success();
       setConvId(id);

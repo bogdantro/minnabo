@@ -46,6 +46,11 @@ export type ListingCardProps = {
   statusBadge?: { label: string; tone: 'dark' | 'ok' | 'warn' | 'neutral' };
   online?: boolean;
   saved?: boolean;
+  /**
+   * Marketplace look: a real photo runs across the top of the card instead of sitting in the thumb.
+   * Ignored without a photo (category art stays a thumb, so cards without photos stay compact).
+   */
+  photoTop?: boolean;
   /** Omit to hide the heart. */
   onToggleSave?: () => void;
   /** Heart label override, e.g. "Fjern Bære sofa fra lagrede" (Lagrede). */
@@ -53,6 +58,12 @@ export type ListingCardProps = {
   /** The oppdrag id: tapping the card lets its photo grow into the detail gallery (lib/heroTransition). */
   heroId?: string;
   onPress?: () => void;
+  /** the card's own menu (0110): Lagre, Del, Skjul, Rapporter */
+  onLongPress?: () => void;
+  /** small facts under the place (0110): «Ingen tilbud ennå – vær først», «Svarer raskt» … */
+  tags?: { label: string; icon?: IconName; tone?: 'lime' | 'cyan' | 'warn' | 'neutral' }[];
+  /** «Kompakt liste»: no photo across the top, two lines of facts */
+  compact?: boolean;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 };
@@ -128,8 +139,12 @@ export function ListingCard({
   saved = false,
   onToggleSave,
   saveLabel,
+  photoTop = false,
   heroId,
   onPress,
+  onLongPress,
+  tags,
+  compact = false,
   testID,
   style,
 }: ListingCardProps) {
@@ -148,60 +163,95 @@ export function ListingCard({
     .filter(Boolean)
     .join(', ');
 
+  const wide = photoTop && !!photoUri && !compact;
+
+  const badges =
+    statusBadge || kind || urgent || extraBadge ? (
+      <View style={styles.badges}>
+        {statusBadge ? (
+          <Pill label={statusBadge.label} tone={statusBadge.tone} />
+        ) : (
+          <Pill label={kind === 'offer' ? 'Tilbyr hjelp' : 'Trenger hjelp'} tone={kind} dot />
+        )}
+        {urgent ? <Pill label="Haster" icon="zap" tone="warn" /> : null}
+        {extraBadge ? <Pill label={extraBadge.label} icon={extraBadge.icon} tone="neutral" /> : null}
+        {/* without a person on top, the age stays at the end of the pills */}
+        {posted && !ownerName ? (
+          <Text style={styles.posted} numberOfLines={1}>
+            {posted}
+          </Text>
+        ) : null}
+      </View>
+    ) : null;
+
+  // Who is asking comes first, like a post from a neighbour: the face, the name with stars, and when.
+  const person = ownerName ? (
+    <View style={styles.person}>
+      {owner ? <Avatar initials={owner.initials} uri={owner.avatarUrl} seed={owner.id} size={sizes.listingOwnerFace} ring={false} /> : null}
+      <View style={styles.personText}>
+        <View style={styles.meta}>
+          <Text style={[text.metaBold, styles.personName, styles.shrink]} numberOfLines={1}>
+            {ownerName}
+          </Text>
+          {ownerRating != null ? <Stars rating={ownerRating} /> : null}
+          {verified ? (
+            <View style={styles.vmini}>
+              <VerifiedIcon size={14} />
+              <Text style={[text.verified, { fontSize: 12, color: colors.verified }]}>Verifisert</Text>
+            </View>
+          ) : null}
+        </View>
+        {posted ? (
+          <Text style={text.small} numberOfLines={1}>
+            {posted}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  ) : null;
+
   return (
     <View style={[styles.card, shadow.card, style]} testID={testID}>
       <PressableScale
         accessibilityRole="button"
-        accessibilityLabel={a11y}
+        accessibilityLabel={a11y + (tags?.length ? `, ${tags.map((t) => t.label).join(', ')}` : '')}
         onPress={press}
+        onLongPress={onLongPress}
+        delayLongPress={380}
         scaleTo={0.985}
-        style={styles.inner}
+        style={wide ? styles.innerWide : styles.inner}
       >
-        <View ref={thumb} collapsable={false} style={styles.thumb}>
+        <View ref={thumb} collapsable={false} style={wide ? styles.photo : styles.thumb}>
           <CategoryArt category={category} uri={photoUri} radius={radius.thumb} style={StyleSheet.absoluteFill} />
           {photoUri ? (
             <View style={[styles.catTag, shadow.card]} accessible accessibilityLabel={categoryLabel(category)}>
               <Icon name={category} size={15} color={colors.ink} />
             </View>
           ) : null}
+          {wide && badges ? <View style={styles.photoBadges}>{badges}</View> : null}
           {online ? <View style={styles.online} /> : null}
         </View>
-        <View style={styles.body}>
-          <View style={styles.badges}>
-            {statusBadge ? (
-              <Pill label={statusBadge.label} tone={statusBadge.tone} />
-            ) : (
-              <Pill label={kind === 'offer' ? 'Tilbyr hjelp' : 'Trenger hjelp'} tone={kind} dot />
-            )}
-            {urgent ? <Pill label="Haster" icon="zap" tone="warn" /> : null}
-            {extraBadge ? <Pill label={extraBadge.label} icon={extraBadge.icon} tone="neutral" /> : null}
-            {posted ? (
-              <Text style={styles.posted} numberOfLines={1}>
-                {posted}
-              </Text>
-            ) : null}
-          </View>
-          <Text style={styles.title} numberOfLines={2}>
+        <View style={[styles.body, wide && styles.bodyWide]}>
+          {person}
+          <Text style={[styles.title, wide && styles.titleWide]} numberOfLines={2}>
             {title}
           </Text>
-          {ownerName ? (
-            <View style={styles.meta}>
-              {owner ? <Avatar initials={owner.initials} uri={owner.avatarUrl} seed={owner.id} size={20} ring={false} /> : null}
-              <Text style={[text.metaBold, styles.shrink]} numberOfLines={1}>
-                {ownerName}
-              </Text>
-              {ownerRating != null ? <Stars rating={ownerRating} /> : null}
-              {verified ? (
-                <View style={styles.vmini}>
-                  <VerifiedIcon size={14} />
-                  <Text style={[text.verified, { fontSize: 12, color: colors.verified }]}>Verifisert</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
+          {wide ? null : badges}
           {reliable ? <ReliableLine /> : null}
           {place ? <Meta icon="pin">{place}</Meta> : null}
-          {schedule ? <Meta icon={scheduleIcon}>{schedule}</Meta> : null}
+          {schedule && !compact ? <Meta icon={scheduleIcon}>{schedule}</Meta> : null}
+          {tags?.length ? (
+            <View style={styles.tags}>
+              {tags.slice(0, compact ? 2 : 4).map((t) => (
+                <View key={t.label} style={[styles.tag, t.tone && TAG_TONE[t.tone]]}>
+                  {t.icon ? <Icon name={t.icon} size={12} color={t.tone === 'lime' ? colors.limeDeep : t.tone === 'cyan' ? colors.cyanDeep : t.tone === 'warn' ? colors.warn : colors.ink2} /> : null}
+                  <Text style={styles.tagText} numberOfLines={1}>
+                    {t.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
           <View style={styles.foot}>
             <View style={styles.price}>
               {priceLabel ? <Text style={text.priceLabel}>{priceLabel}</Text> : null}
@@ -216,12 +266,25 @@ export function ListingCard({
         </View>
       </PressableScale>
       {/* on the photo's corner, so the title gets the whole width */}
-      {onToggleSave ? <SaveButton saved={saved} onPress={onToggleSave} label={saveLabel} style={[styles.saveAbs, !saved && styles.saveOnPhoto]} /> : null}
+      {onToggleSave ? (
+        <SaveButton saved={saved} onPress={onToggleSave} label={saveLabel} style={[wide ? styles.saveWide : styles.saveAbs, !saved && styles.saveOnPhoto]} />
+      ) : null}
     </View>
   );
 }
 
+const TAG_TONE = {
+  lime: { backgroundColor: colors.limeTint },
+  cyan: { backgroundColor: colors.cyanTint },
+  warn: { backgroundColor: colors.warnTint },
+  neutral: { backgroundColor: colors.surface2 },
+} as const;
+
 const styles = StyleSheet.create({
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 24, paddingHorizontal: 8, borderRadius: 12, backgroundColor: colors.surface2, maxWidth: '100%' },
+  // flexShrink lets a long tag end in «…» instead of being cut off at the card's edge
+  tagText: { fontFamily: text.metaBold.fontFamily, fontSize: 12, color: colors.ink2, flexShrink: 1 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.listingCard,
@@ -229,6 +292,9 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
   },
   inner: { flexDirection: 'row', gap: 14, padding: 12 },
+  innerWide: { padding: 10, gap: 12 },
+  photo: { width: '100%', aspectRatio: sizes.listingPhotoAspect, borderRadius: radius.thumb, overflow: 'hidden' },
+  photoBadges: { position: 'absolute', left: 10, right: 56, top: 10 },
   thumb: {
     width: sizes.listingThumbW,
     minHeight: sizes.listingThumbMinH,
@@ -248,9 +314,14 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
   },
   body: { flex: 1, minWidth: 0, gap: 6, paddingVertical: 2 },
+  bodyWide: { paddingHorizontal: 4, paddingBottom: 2 },
+  person: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 2 },
+  personText: { flex: 1, minWidth: 0 },
+  personName: { fontSize: 14 },
   badges: { flexDirection: 'row', alignItems: 'center', gap: 6, overflow: 'hidden' },
   posted: { ...text.small, flexShrink: 1, marginLeft: 'auto', color: colors.mute },
   title: { fontFamily: text.h3.fontFamily, fontSize: 17, lineHeight: 21, letterSpacing: -0.2, color: colors.ink },
+  titleWide: { fontSize: 19, lineHeight: 23 },
   shrink: { flexShrink: 1 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6, overflow: 'hidden' },
   catTag: { position: 'absolute', left: 6, bottom: 6, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
@@ -267,6 +338,7 @@ const styles = StyleSheet.create({
   },
   saveOn: { backgroundColor: colors.savedBg },
   saveAbs: { position: 'absolute', top: 18, left: 18, width: 34, height: 34, borderRadius: 17 },
+  saveWide: { position: 'absolute', top: 20, right: 20 },
   saveOnPhoto: { backgroundColor: colors.white },
   vmini: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 });

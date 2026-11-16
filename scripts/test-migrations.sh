@@ -31,4 +31,4 @@ for f in "$HERE"/supabase/migrations/*.sql; do
   fi
 done
 echo "ALL MIGRATIONS LOADED"
-$PSQL -q -d app -f "$HERE/supabase/tests/new_features_checks.sql" 2>&1 | grep -vE "^(NOTICE|DROP|CREATE)|does not exist, skipping" | tail -6
+$PSQL -q -d app -f "$HERE/supabase/tests/new_features_checks.sql" 2>&1 | grep -E "ERROR|CONTEXT|ALL CHECKS" | head -4

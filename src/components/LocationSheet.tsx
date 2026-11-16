@@ -1,40 +1,39 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { townLabel, townOf } from '@/lib/places';
 import nb from '@/i18n/nb';
 import { detectKommune, locationErrorText } from '@/lib/geo';
 import type { Reach } from '@/lib/locationScope';
+import { haptics } from '@/lib/haptics';
 import { KommuneWaitlist } from '@/components/KommuneWaitlist';
-import { KOMMUNE_NEIGHBOURS, LAUNCH_KOMMUNER, isLaunchKommune, kommuneGroupNames } from '@/data/kommuner';
-import { colors, motion, text } from '@/theme/theme';
-import {
-  Button,
-  FadeUp,
-  Field,
-  Icon,
-  OptionCard,
-  Radio,
-  ScaleIn,
-  Segmented,
-  Sheet,
-} from './ui';
+import { KOMMUNE_NEIGHBOURS, LAUNCH_KOMMUNER, expandKommuner, isLaunchKommune, kommuneGroup, kommuneGroupNames } from '@/data/kommuner';
+import { colors, fonts, radius, text } from '@/theme/theme';
+import { Button, FadeUp, Icon, ScaleIn, Sheet, Spinner } from './ui';
 
-/** One reach ring: grows/brightens with a spring when it becomes part of the reach. */
-function Ring({ size, on }: { size: number; on: boolean }) {
-  const s = useSharedValue(on ? 1 : 0.92);
-  useEffect(() => {
-    s.set(withSpring(on ? 1 : 0.92, motion.spring));
-  }, [on, s]);
-  const anim = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
+const REACHES: Reach[] = [0, 1, 2];
+/** How many kommune names the «Du ser oppdrag fra» line spells out before «+ N til». */
+const NAMES_SHOWN = 4;
+
+/** The reach as rings: one, two or three, the outer ones dashed until they are part of it. */
+function ReachRings({ reach, on }: { reach: Reach; on: boolean }) {
   return (
-    <Animated.View
-      style={[
-        styles.ring,
-        { width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2, borderRadius: size / 2 },
-        on ? styles.ringOn : styles.ringOff,
-        anim,
-      ]}
-    />
+    <View style={styles.rings} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      {[2, 1, 0].map((r) => {
+        const size = 18 + r * 12;
+        const inside = r <= reach;
+        return (
+          <View
+            key={r}
+            style={[
+              styles.ring,
+              { width: size, height: size, borderRadius: size / 2, marginLeft: -size / 2, marginTop: -size / 2 },
+              inside ? (on ? styles.ringOnSel : styles.ringOn) : styles.ringOff,
+            ]}
+          />
+        );
+      })}
+      <View style={[styles.ringDot, on && styles.ringDotSel]} />
+    </View>
   );
 }
 
@@ -44,14 +43,18 @@ export type LocationSheetProps = {
   kommune?: string;
   reach: Reach;
   /** Apply the draft (profile kommune + reach). */
-  onApply: (kommune: string, reach: Reach) => void;
+  /** `place`: the town «Bruk posisjonen min» found, when that kommune is the one chosen */
+  onApply: (kommune: string, reach: Reach, place?: string) => void;
 };
 
 /**
- * "Hvor vil du se oppdrag?" – GPS, kommune list (own + neighbours) and the
- * reach segmented control with animated rings. Changes apply on "Vis oppdrag".
+ * "Hvor vil du se oppdrag?" (redesigned 2026-11-14): the position as a soft card that turns into «Fant deg»,
+ * the kommuner as a two-column grid where the ones that count as one area are marked «Med», the reach as three
+ * clear choices with rings, a line saying exactly which kommuner that covers, and «Vis oppdrag» pinned at the bottom.
+ * Nothing changes until «Vis oppdrag».
  */
 export function LocationSheet({ visible, onClose, kommune, reach, onApply }: LocationSheetProps) {
+  const [foundTown, setFoundTown] = useState<string | undefined>(undefined);
   const [draftK, setDraftK] = useState(kommune ?? '');
   const [draftR, setDraftR] = useState<Reach>(reach);
   const [locating, setLocating] = useState(false);
@@ -76,6 +79,8 @@ export function LocationSheet({ visible, onClose, kommune, reach, onApply }: Loc
   const options = [...new Set([...near, ...LAUNCH_KOMMUNER])];
   // a kommune chosen before the list was narrowed stays selectable
   if (draftK && !options.includes(draftK)) options.unshift(draftK);
+  // the kommuner that come along with the chosen one, even on «Bare min kommune»
+  const along = draftK ? kommuneGroup(draftK).slice(1) : [];
 
   const locate = async () => {
     if (locating) return;
@@ -84,127 +89,222 @@ export function LocationSheet({ visible, onClose, kommune, reach, onApply }: Loc
     const res = await detectKommune();
     setLocating(false);
     if ('municipality' in res) {
+      haptics.success();
       setFound(res.municipality);
+      setFoundTown(townOf(res.place, res.municipality));
       setDraftK(res.municipality);
     } else {
       setErr(locationErrorText(res.error));
     }
   };
 
-  const r = nb.oppdrag.reach[draftR];
+  const who = draftK || base || '';
+  const covered = who ? expandKommuner(who, draftR) : [];
+  const coverLine =
+    draftR === 2
+      ? nb.oppdrag.coverAll
+      : covered.length <= NAMES_SHOWN
+        ? covered.join(', ')
+        : nb.oppdrag.coverMore(covered.slice(0, NAMES_SHOWN).join(', '), covered.length - NAMES_SHOWN);
+
+  const footer = (
+    <Button
+      label={nb.oppdrag.apply}
+      size="lg"
+      iconRight="arrow"
+      disabled={!draftK}
+      onPress={() => onApply(draftK, draftR, draftK === found ? foundTown : undefined)}
+    />
+  );
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={nb.oppdrag.sheetTitle} titleSize="h2" scroll>
-      <Button
-        label={locating ? nb.oppdrag.locating : nb.oppdrag.useLocation}
-        icon={locating ? undefined : 'locate'}
-        variant="ink"
-        loading={locating}
+    <Sheet visible={visible} onClose={onClose} title={nb.oppdrag.sheetTitle} subtitle={nb.oppdrag.sheetSub} titleSize="h2" scroll heightRatio={0.92} footer={footer}>
+      {/* the position: one soft card that becomes the answer */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={found ? nb.oppdrag.found(townLabel(foundTown, found)) : nb.oppdrag.useLocation}
+        accessibilityState={{ busy: locating }}
         onPress={locate}
-      />
-      {found ? (
-        <FadeUp style={styles.found}>
-          <ScaleIn style={styles.okCircle}>
-            <Icon name="check" size={14} color={colors.white} />
-          </ScaleIn>
-          <Text style={[text.okChip, { fontSize: 14 }]}>{nb.oppdrag.found(found)}</Text>
-        </FadeUp>
-      ) : null}
+        style={({ pressed }) => [styles.gps, found && styles.gpsFound, pressed && styles.pressed]}
+      >
+        <View style={[styles.gpsIc, found && styles.gpsIcFound]}>
+          {locating ? (
+            <Spinner size={18} color={colors.cyanDeep} />
+          ) : found ? (
+            <ScaleIn>
+              <Icon name="check" size={18} color={colors.white} />
+            </ScaleIn>
+          ) : (
+            <Icon name="locate" size={19} color={colors.cyanDeep} />
+          )}
+        </View>
+        <View style={styles.flex}>
+          <Text style={styles.gpsTitle} numberOfLines={1}>
+            {locating ? nb.oppdrag.locating : found ? nb.oppdrag.found(townLabel(foundTown, found)) : nb.oppdrag.useLocation}
+          </Text>
+          <Text style={styles.gpsSub}>{found ? nb.oppdrag.foundSub : nb.oppdrag.useLocationSub}</Text>
+        </View>
+        {!locating && !found ? <Icon name="right" size={18} color={colors.cyanDeep} /> : null}
+      </Pressable>
       {err ? <Text style={[text.error, styles.err]}>{err}</Text> : null}
 
-      <Field label={nb.oppdrag.kommuneLabel} hint={nb.oppdrag.kommuneHint} style={styles.mt22}>
-        <View style={styles.klist} accessibilityRole="radiogroup">
-          {options.map((k) => (
-            <OptionCard
-              key={k}
-              selected={draftK === k}
-              onPress={() => setDraftK(k)}
-              accessibilityLabel={k}
-              style={styles.kopt}
-            >
-              <Radio selected={draftK === k} />
-              <Text style={[text.optionName, styles.flex, { fontSize: 15 }]}>{k}</Text>
-            </OptionCard>
-          ))}
+      {/* the kommuner, two by two */}
+      <View style={styles.head}>
+        <Text style={styles.headTitle}>{nb.oppdrag.kommuneLabel}</Text>
+        <View style={styles.privacy}>
+          <Icon name="shield" size={12} color={colors.mute} />
+          <Text style={styles.privacyText}>{nb.oppdrag.kommuneHint}</Text>
         </View>
-      </Field>
+      </View>
+      <View style={styles.grid} accessibilityRole="radiogroup" accessibilityLabel={nb.oppdrag.kommuneLabel}>
+        {options.map((k) => {
+          const on = draftK === k;
+          const comes = along.includes(k);
+          return (
+            <Pressable
+              key={k}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={k}
+              accessibilityHint={comes ? nb.oppdrag.comesAlongA11y(draftK) : undefined}
+              onPress={() => {
+                haptics.select();
+                setDraftK(k);
+              }}
+              style={({ pressed }) => [styles.tile, comes && styles.tileAlong, on && styles.tileOn, pressed && styles.pressed]}
+            >
+              <Text style={[styles.tileText, on && styles.tileTextOn]} numberOfLines={1}>
+                {k}
+              </Text>
+              {on ? (
+                <View style={styles.tick}>
+                  <Icon name="check" size={12} color={colors.ink} />
+                </View>
+              ) : comes ? (
+                <View style={styles.alongTag}>
+                  <Text style={styles.alongText}>{nb.oppdrag.comesAlong}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+      {along.length ? (
+        <FadeUp key={draftK}>
+          <Text style={styles.alongNote}>{nb.oppdrag.groupNote(kommuneGroupNames(draftK))}</Text>
+        </FadeUp>
+      ) : null}
       <View style={styles.waitlist}>
         <KommuneWaitlist />
       </View>
 
-      <Text style={[text.label, styles.reachLabel]}>{nb.oppdrag.reachLabel}</Text>
-      <View style={styles.reachRow}>
-        <View style={styles.rings} accessibilityElementsHidden>
-          <Ring size={92} on={draftR >= 2} />
-          <Ring size={66} on={draftR >= 1} />
-          <Ring size={40} on />
-          <View style={styles.center} />
-        </View>
-        <View style={styles.reachText}>
-          <Text style={[text.h4, { fontFamily: text.h3.fontFamily, fontSize: 17 }]}>{r.name}</Text>
-          <Text style={text.meta}>
-            {r.desc(draftR === 0 && (draftK || base) ? kommuneGroupNames(draftK || base!) : draftK || base || nb.oppdrag.yourKommune)}
+      {/* how far: three choices with rings */}
+      <View style={styles.head}>
+        <Text style={styles.headTitle}>{nb.oppdrag.reachLabel}</Text>
+      </View>
+      <View style={styles.reaches} accessibilityRole="radiogroup" accessibilityLabel={nb.oppdrag.reachLabel}>
+        {REACHES.map((r) => {
+          const on = draftR === r;
+          const x = nb.oppdrag.reach[r];
+          return (
+            <Pressable
+              key={r}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={x.short}
+              accessibilityHint={x.desc(r === 0 && who ? kommuneGroupNames(who) : who || nb.oppdrag.yourKommune)}
+              onPress={() => {
+                haptics.select();
+                setDraftR(r);
+              }}
+              style={({ pressed }) => [styles.reach, on && styles.reachOn, pressed && styles.pressed]}
+            >
+              <ReachRings reach={r} on={on} />
+              <View style={styles.flex}>
+                <Text style={styles.reachName}>{x.name}</Text>
+                <Text style={styles.reachDesc} numberOfLines={2}>
+                  {x.desc(r === 0 && who ? kommuneGroupNames(who) : who || nb.oppdrag.yourKommune)}
+                </Text>
+              </View>
+              <View style={[styles.radio, on && styles.radioOn]}>{on ? <View style={styles.radioDot} /> : null}</View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {who ? (
+        <View style={styles.cover} accessible accessibilityLabel={`${nb.oppdrag.coverLabel} ${coverLine}`}>
+          <Icon name="eye" size={15} color={colors.limeDeep} />
+          <Text style={styles.coverText}>
+            <Text style={styles.coverLabel}>{nb.oppdrag.coverLabel} </Text>
+            {coverLine}
           </Text>
         </View>
-      </View>
-      <Segmented<`${Reach}`>
-        value={`${draftR}`}
-        onChange={(v) => setDraftR(Number(v) as Reach)}
-        options={nb.oppdrag.reach.map((x, i) => ({ value: `${i}` as `${Reach}`, label: x.short }))}
-        accessibilityLabel={nb.oppdrag.reachLabel}
-      />
-      <Button
-        label={nb.oppdrag.apply}
-        size="lg"
-        disabled={!draftK}
-        onPress={() => onApply(draftK, draftR)}
-        style={styles.apply}
-      />
+      ) : null}
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  waitlist: { marginTop: 12 },
-  flex: { flex: 1 },
-  mt22: { marginTop: 22 },
-  found: {
-    marginTop: 10,
+  flex: { flex: 1, minWidth: 0 },
+  pressed: { opacity: 0.8 },
+  err: { marginTop: 10 },
+
+  gps: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 12, borderRadius: radius.card, backgroundColor: colors.cyanTint },
+  gpsFound: { backgroundColor: colors.okTint },
+  gpsIc: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  gpsIcFound: { backgroundColor: colors.ok },
+  gpsTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
+  gpsSub: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17, color: colors.ink2 },
+
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 24, marginBottom: 10 },
+  headTitle: { fontFamily: fonts.display, fontSize: 17, color: colors.ink },
+  privacy: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
+  privacyText: { fontFamily: fonts.body, fontSize: 12, color: colors.mute },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tile: {
+    width: '48.5%',
+    flexGrow: 1,
+    minHeight: 50,
+    paddingLeft: 14,
+    paddingRight: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: colors.okTint,
+    gap: 6,
   },
-  okCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.ok,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  err: { marginTop: 10 },
-  klist: { gap: 8 },
-  kopt: { paddingVertical: 12, paddingHorizontal: 14 },
-  reachLabel: { marginTop: 24, marginBottom: 12 },
-  reachRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
-  rings: { width: 92, height: 92 },
+  tileAlong: { backgroundColor: colors.limeTint, borderColor: colors.limeTint },
+  tileOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  tileText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.ink },
+  tileTextOn: { color: colors.white, fontFamily: fonts.bodyBold },
+  tick: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
+  alongTag: { height: 22, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.white, justifyContent: 'center' },
+  alongText: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.limeDeep },
+  alongNote: { marginTop: 8, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17, color: colors.mute },
+  waitlist: { marginTop: 12 },
+
+  reaches: { gap: 8 },
+  reach: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 18, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.white },
+  reachOn: { borderColor: colors.ink, backgroundColor: colors.limeTint },
+  reachName: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
+  reachDesc: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17, color: colors.ink2 },
+  rings: { width: 46, height: 46 },
   ring: { position: 'absolute', left: '50%', top: '50%', borderWidth: 1.5 },
-  ringOn: { backgroundColor: colors.reachRingOn, borderColor: colors.limeDot, borderStyle: 'solid' },
-  ringOff: { backgroundColor: colors.hairline, borderColor: colors.dashed, borderStyle: 'dashed' },
-  center: {
-    position: 'absolute',
-    left: 40,
-    top: 40,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.ink,
-    boxShadow: `0 0 0 4px ${colors.white}`,
-  },
-  reachText: { flex: 1, gap: 4 },
-  apply: { marginTop: 22 },
+  // not chosen: the rings in grey, so only the chosen reach looks lit
+  ringOn: { borderColor: colors.faint, backgroundColor: 'transparent' },
+  ringOnSel: { borderColor: colors.limeDeep, backgroundColor: colors.reachRingOn },
+  ringOff: { borderColor: colors.dashed, borderStyle: 'dashed', backgroundColor: 'transparent' },
+  ringDot: { position: 'absolute', left: 19, top: 19, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.ink2 },
+  ringDotSel: { backgroundColor: colors.ink },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
+  radioOn: { borderColor: colors.ink },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.ink },
+
+  cover: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12, marginBottom: 6, padding: 12, borderRadius: 16, backgroundColor: colors.surface2 },
+  coverText: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.ink2 },
+  coverLabel: { fontFamily: fonts.bodyBold, color: colors.ink },
 });

@@ -249,6 +249,28 @@ export const chatRepository = {
     return msg;
   },
 
+  /** Database-side changes (an edit, 0109). */
+  _patchMessage(conversationId: string, messageId: string, patch: Partial<Message>): void {
+    messages[conversationId] = (messages[conversationId] ?? []).map((m) => (m.id === messageId ? { ...m, ...patch } : m));
+  },
+  /** A message as the database writes it (a video or PDF, 0109). */
+  _addMine(conversationId: string, patch: Partial<Message>, preview: string): Message {
+    const msg: Message = {
+      id: nextId('m'),
+      conversationId,
+      authorProfileId: CURRENT_USER_ID,
+      text: '',
+      kind: 'TEXT',
+      createdAt: new Date().toISOString(),
+      delivery: 'SENT',
+      ...patch,
+    };
+    messages[conversationId] = [...(messages[conversationId] ?? []), msg];
+    touchConversation(conversationId, preview, true);
+    return msg;
+  },
+  allMessages: (): Message[] => Object.values(messages).flat(),
+
   /** Test helper: a message arriving from the other participant. */
   _receive(conversationId: string, text: string, authorProfileId: string): Message {
     const msg: Message = {

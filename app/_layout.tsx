@@ -33,6 +33,7 @@ import { ToastHost } from '@/components/ToastHost';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { AccountGuard } from '@/components/AccountGuard';
 import { PushBridge } from '@/components/PushBridge';
+import { ShakeToReport } from '@/components/ShakeToReport';
 import { NotificationsReadOnVisit } from '@/components/NotificationsReadOnVisit';
 import { HeroOverlay } from '@/components/HeroOverlay';
 import { AppLockGate } from '@/components/AppLockGate';
@@ -121,6 +122,7 @@ export default function RootLayout() {
               </MaintenanceGate>
               <AccountGuard />
               <PushBridge />
+              <ShakeToReport />
               <NotificationsReadOnVisit />
               <ReviewGate />
               <AppBridges />

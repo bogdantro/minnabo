@@ -2,8 +2,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import type { Listing } from '@/domain/types';
 import { categoryArtId } from '@/domain/categories';
 import { formatHourly, formatPrice } from '@/domain/price';
-import { isNewHelper } from '@/domain/newHelper';
-import { useIsSaved } from '@/api/queries';
+import { useIsSaved, usePriceGuidance } from '@/api/queries';
 import { isUrgent } from '@/domain/urgent';
 import { isOffer, offerAvailability } from '@/domain/offer';
 import { useAlwaysShowsUp } from './ReliableBadge';
@@ -12,6 +11,7 @@ import { safePush } from '@/lib/nav';
 import { toast } from '@/lib/toast';
 import nb from '@/i18n/nb';
 import { ListingCard, type ListingCardProps } from './ui/ListingCard';
+import { useFeedInfo } from './oppdrag/feed';
 
 /** Price row of the card: "Budsjett 400 kr", "Fra 300 kr", "Ønsker tilbud", "Frivillig". */
 export function listingPrice(l: Listing): { label: string; value: string } {
@@ -40,8 +40,6 @@ export function listingSchedule(l: Listing): string | undefined {
 function extraBadge(l: Listing): ListingCardProps['extraBadge'] {
   if (l.task?.isDugnad) return { label: nb.card.dugnad, icon: 'users' };
   if (l.task?.recurrence) return { label: nb.card.recurring, icon: 'repeat' };
-  // a helper with no reviews yet still deserves a chance: say why, instead of showing nothing
-  if (isOffer(l) && isNewHelper(l.owner, new Date())) return { label: nb.card.newHelper, icon: 'sparkle' };
   return undefined;
 }
 
@@ -66,6 +64,23 @@ export function OppdragCard({ listing, onPress, statusBadge, showVerified, isNew
   const price = listingPrice(listing);
   // on «Tilbyr hjelp» the owner is the helper, so their track record belongs on the card
   const reliable = useAlwaysShowsUp(isOffer(listing) ? listing.owner.id : undefined);
+  // on the Oppdrag tab (0110): small facts, the paler look once opened, the card menu
+  const feed = useFeedInfo();
+  const guide = usePriceGuidance(feed && !isOffer(listing) ? listing.category.slug : undefined).data;
+  const tags: NonNullable<ListingCardProps['tags']> = [];
+  if (feed && !isOffer(listing)) {
+    if (feed.offerCounts[listing.id] === 0) tags.push({ label: nb.op.tags.noOffers, icon: 'sparkle', tone: 'lime' });
+    if (listing.fromSenior) tags.push({ label: nb.op.tags.senior, icon: 'heart', tone: 'warn' });
+    if (feed.nabolagPlaces.has(listing.location.place)) tags.push({ label: nb.op.tags.nabolag, icon: 'home', tone: 'cyan' });
+    else if (feed.kommune && listing.location.municipality && listing.location.municipality !== feed.kommune) {
+      tags.push({ label: listing.location.municipality, icon: 'pin' });
+    }
+    if (feed.fast.has(listing.owner.id)) tags.push({ label: nb.op.tags.fast, icon: 'zap' });
+    if (listing.estimatedMinutes) tags.push({ label: nb.op.tags.duration(listing.estimatedMinutes), icon: 'clock' });
+    if (listing.task?.equipment) tags.push({ label: nb.op.tags.equipment(listing.task.equipment.slice(0, 24)), icon: 'montering' });
+    // a price is never shown without the payment note on the tab (rule 4)
+    if (guide && !listing.price) tags.push({ label: nb.op.tags.price(formatPrice({ amountMinor: guide.low * 100, currency: 'NOK' }), formatPrice({ amountMinor: guide.high * 100, currency: 'NOK' })), icon: 'tag' });
+  }
 
   const onToggleSave = () => {
     toggle();
@@ -83,6 +98,7 @@ export function OppdragCard({ listing, onPress, statusBadge, showVerified, isNew
       title={listing.title}
       category={categoryArtId(listing.category.slug)}
       photoUri={listing.images[0]?.url}
+      photoTop
       ownerName={listing.owner.displayName}
       ownerRating={listing.owner.rating?.count ? listing.owner.rating.average : null}
       owner={{ id: listing.owner.id, initials: listing.owner.initials, avatarUrl: listing.owner.avatarUrl }}
@@ -100,6 +116,9 @@ export function OppdragCard({ listing, onPress, statusBadge, showVerified, isNew
       saved={saved}
       onToggleSave={onToggleSave}
       heroId={onPress ? undefined : listing.id}
+      tags={tags}
+      compact={!!feed?.compact}
+      onLongPress={feed?.onMenu ? () => feed.onMenu!(listing) : undefined}
       onPress={onPress ?? (() => safePush(`/oppdrag/${listing.id}`))}
     />
   );

@@ -1,4 +1,5 @@
-import type { NoticeboardPost, NoticeComment, NoticeKind } from '@/domain/types';
+import type { EventType, NoticeboardPost, NoticeComment, NoticeKind } from '@/domain/types';
+import type { NoticeTopic } from '@/domain/community';
 import { UserError } from '@/lib/errors';
 import { profileRepository } from './profileRepository';
 
@@ -56,23 +57,42 @@ export const noticeboardStore = {
     municipality: string;
     /** storage path in `listing-images` */
     imagePath?: string;
+    imagePaths?: string[];
     neighbourhoodId?: string;
     isDugnad?: boolean;
     eventAt?: string;
+    /** an arrangement (0101); DUGNAD also sets isDugnad */
+    eventType?: EventType;
+    /** «Avstemning»: 2–6 choices (0101) */
+    pollOptions?: string[];
+    topic?: NoticeTopic;
+    organisationId?: string;
+    repeatWeekly?: boolean;
   }): NoticeboardPost {
+    if (input.topic === 'RIDE' && profileRepository.getProfile(profileRepository.currentUserId)?.youthAge) {
+      throw new UserError('Samkjøring er ikke tilgjengelig for ungdomskontoer.');
+    }
+    const lifetime = input.topic === 'FOOD' ? 24 : input.topic === 'OUTAGE' ? 6 : 0;
     const post: NoticeboardPost = {
       id: `n-${Date.now()}-${seq++}`,
-      kind: input.kind,
+      kind: input.topic ? 'GENERAL' : input.kind,
+      topic: input.topic,
+      expiresAt: lifetime ? new Date(Date.now() + lifetime * 3600 * 1000).toISOString() : undefined,
+      organisationId: input.organisationId,
+      repeatWeekly: input.repeatWeekly || undefined,
       title: input.title.trim(),
       body: input.body.trim(),
       place: input.place.trim(),
       municipality: input.municipality.trim(),
       authorProfileId: profileRepository.currentUserId,
       createdAt: new Date().toISOString(),
-      imageUrl: input.imagePath,
+      imageUrl: input.imagePaths?.[0] ?? input.imagePath,
+      imageUrls: input.imagePaths ?? (input.imagePath ? [input.imagePath] : undefined),
       neighbourhoodId: input.neighbourhoodId,
       isDugnad: input.isDugnad,
       eventAt: input.eventAt,
+      eventType: input.eventType ?? (input.isDugnad ? 'DUGNAD' : undefined),
+      pollOptions: input.pollOptions && input.pollOptions.length >= 2 ? input.pollOptions : undefined,
     };
     posts = [post, ...posts];
     return post;
@@ -85,7 +105,7 @@ export const noticeboardStore = {
     posts = posts.filter((p) => p.id !== id);
   },
   get: (id: string): NoticeboardPost | undefined => posts.find((p) => p.id === id),
-  update(id: string, patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; done?: boolean }): NoticeboardPost {
+  update(id: string, patch: { kind?: NoticeKind; title?: string; body?: string; imagePath?: string | null; imagePaths?: string[]; done?: boolean }): NoticeboardPost {
     const cur = posts.find((p) => p.id === id);
     if (!cur || cur.authorProfileId !== profileRepository.currentUserId) throw new UserError('Ikke tilgang.');
     const next: NoticeboardPost = {
@@ -93,7 +113,8 @@ export const noticeboardStore = {
       kind: patch.kind ?? cur.kind,
       title: patch.title?.trim() ?? cur.title,
       body: patch.body?.trim() ?? cur.body,
-      imageUrl: patch.imagePath === undefined ? cur.imageUrl : patch.imagePath ?? undefined,
+      imageUrl: patch.imagePaths !== undefined ? patch.imagePaths[0] : patch.imagePath === undefined ? cur.imageUrl : patch.imagePath ?? undefined,
+      imageUrls: patch.imagePaths !== undefined ? patch.imagePaths : patch.imagePath === undefined ? cur.imageUrls : patch.imagePath ? [patch.imagePath] : [],
       doneAt: patch.done === undefined ? cur.doneAt : patch.done ? new Date().toISOString() : undefined,
       editedAt: patch.title !== undefined || patch.body !== undefined ? new Date().toISOString() : cur.editedAt,
     };
@@ -101,11 +122,16 @@ export const noticeboardStore = {
     return next;
   },
   comments: (noticeId: string): NoticeComment[] => comments.filter((c) => c.noticeId === noticeId),
-  addComment(noticeId: string, body: string, authorProfileId = profileRepository.currentUserId): NoticeComment {
+  keep(id: string): void {
+    posts = posts.map((p) => (p.id === id ? { ...p, stillAskedAt: undefined, autoClosed: undefined, doneAt: undefined } : p));
+  },
+  addComment(noticeId: string, body: string, authorProfileId = profileRepository.currentUserId, parentId?: string): NoticeComment {
     const post = posts.find((p) => p.id === noticeId);
     if (!post) throw new UserError('Fant ikke oppslaget.');
     if (post.doneAt) throw new UserError('Oppslaget er avsluttet.');
-    const c: NoticeComment = { id: `nc-${Date.now()}-${seq++}`, noticeId, authorProfileId, body: body.trim(), createdAt: new Date().toISOString() };
+    // one level deep, like the database (0099)
+    const parent = parentId ? comments.find((x) => x.id === parentId) : undefined;
+    const c: NoticeComment = { id: `nc-${Date.now()}-${seq++}`, noticeId, parentId: parent ? (parent.parentId ?? parent.id) : undefined, authorProfileId, body: body.trim(), createdAt: new Date().toISOString() };
     comments = [...comments, c];
     return c;
   },
@@ -119,6 +145,14 @@ export const noticeboardStore = {
     else next.add(id);
     saved = next;
     return [...saved];
+  },
+  /** An oppslag written by the database itself (the «Lån ut» oppslag of an Utlån thing, 0107). */
+  _insert(post: NoticeboardPost): void {
+    posts = [post, ...posts];
+  },
+  /** Tests: put an oppslag in a state the app reaches on its own over weeks (0099 tidy-up, several photos). */
+  _patch(id: string, patch: Partial<NoticeboardPost>): void {
+    posts = posts.map((p) => (p.id === id ? { ...p, ...patch } : p));
   },
   _reset(): void {
     posts = [...SEED];

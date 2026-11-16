@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { chatDrafts } from '@/lib/chatDrafts';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -225,8 +226,21 @@ export function Composer({
   replyTo,
   onCancelReply,
   hasAgreement,
+  conversationId,
+  myReplies = [],
+  suggested = [],
+  onSaveReply,
+  onRemoveReply,
 }: {
   first: string;
+  /** keeps unsent text as a draft (0109) */
+  conversationId?: string;
+  /** «Mine hurtigsvar» (0109), first in the row */
+  myReplies?: string[];
+  /** «Forslag» to the last message (0109) */
+  suggested?: string[];
+  onSaveReply?: (text: string) => void;
+  onRemoveReply?: (text: string) => void;
   /** set while answering a specific message */
   replyTo?: { name: string; preview: string } | null;
   onCancelReply?: () => void;
@@ -242,7 +256,7 @@ export function Composer({
 }) {
   const insets = useSafeAreaInsets();
   const keyboardOpen = useKeyboardVisible();
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(() => (conversationId ? chatDrafts.get(conversationId) : ''));
   const [focused, setFocused] = useState(false);
   const lastPing = useRef(0);
   const input = useRef<TextInput>(null);
@@ -254,6 +268,7 @@ export function Composer({
 
   const change = (v: string) => {
     setValue(v);
+    if (conversationId) chatDrafts.set(conversationId, v);
     if (v && onTyping && Date.now() - lastPing.current > 2000) {
       lastPing.current = Date.now();
       onTyping();
@@ -264,6 +279,7 @@ export function Composer({
     if (!t) return;
     onSend(t);
     setValue('');
+    if (conversationId) chatDrafts.set(conversationId, '');
   };
 
   // ---- talemelding: the send button is a microphone while the text field is empty
@@ -293,7 +309,7 @@ export function Composer({
     <View style={[styles.composer, { paddingBottom: keyboardOpen ? 10 : Math.max(26, insets.bottom + 10) }]}>
       <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
       <View style={[StyleSheet.absoluteFill, styles.composerBg]} />
-      {replies.length ? (
+      {replies.length || myReplies.length || suggested.length || (onSaveReply && can) ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -301,7 +317,19 @@ export function Composer({
           contentContainerStyle={styles.qr}
           accessibilityLabel={nb.chat.quickRepliesLabel}
         >
-          {replies.map((q) => (
+          {/* what I typed can become one of «Mine hurtigsvar» */}
+          {onSaveReply && can && !myReplies.includes(value.trim()) ? (
+            <Chip label={nb.innboks.chat.saveReply} icon="bookmark" size="sm" onPress={() => onSaveReply(value.trim())} style={styles.qrSave} />
+          ) : null}
+          {suggested.map((q) => (
+            <Chip key={`s-${q}`} label={q} icon="sparkle" size="sm" onPress={() => onSend(q)} accessibilityLabel={`${nb.innboks.chat.suggested}: ${q}`} style={styles.qrChip} />
+          ))}
+          {myReplies.map((q) => (
+            <Pressable key={`m-${q}`} onLongPress={() => onRemoveReply?.(q)} accessibilityHint={nb.innboks.chat.removeReply}>
+              <Chip label={q} icon="bookmark" size="sm" onPress={() => onSend(q)} accessibilityLabel={`${nb.innboks.chat.myReplies}: ${q}`} style={styles.qrChip} />
+            </Pressable>
+          ))}
+          {replies.filter((q) => !suggested.includes(q) && !myReplies.includes(q)).map((q) => (
             <Chip key={q} label={q} size="sm" onPress={() => onSend(q)} accessibilityLabel={q} style={styles.qrChip} />
           ))}
         </ScrollView>
@@ -433,6 +461,7 @@ const styles = StyleSheet.create({
   composerBg: { backgroundColor: colors.footBg },
   qr: { gap: 8, paddingHorizontal: 12, paddingBottom: 10 },
   qrChip: { backgroundColor: colors.surface2 },
+  qrSave: { backgroundColor: colors.limeTint },
   crow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
   cin: {
     flex: 1,

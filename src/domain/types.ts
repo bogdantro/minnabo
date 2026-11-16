@@ -1,3 +1,4 @@
+import type { NoticeTopic } from './community';
 import type { Price } from './price';
 import type { ProposalStatus } from './proposalMachine';
 
@@ -120,21 +121,36 @@ export type NoticeboardPost = {
   isDugnad?: boolean;
   /** ISO – when the dugnad is */
   eventAt?: string;
+  /** every photo, cover first (0099); imageUrl is the first of them */
+  imageUrls?: string[];
+  /** storage paths, same order as imageUrls (kept when editing) */
+  imagePaths?: string[];
+  /** an arrangement (0101): dugnad is one kind */
+  eventType?: EventType;
+  /** «Avstemning» (0101): 2–6 choices */
+  pollOptions?: string[];
+  pollClosesAt?: string;
+  /** the owner was asked «Er oppslaget fortsatt aktuelt?» (0099) */
+  stillAskedAt?: string;
+  /** closed by itself after 21 days without an answer: can be opened again */
+  autoClosed?: boolean;
   /** hearts on the oppslag (0094) */
   likes?: number;
   likedByMe?: boolean;
-};
-
-/** A request to borrow a tool (0090). */
-export type ToolBooking = {
-  id: string;
-  noticeId: string;
-  borrowerId: string;
-  /** yyyy-mm-dd */
-  from: string;
-  to: string;
-  note?: string;
-  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'RETURNED' | 'CANCELLED';
+  /** a «Lån ut» oppslag is a thing on Utlån too (0107): borrowing goes through it */
+  lendItemId?: string;
+  /** a newer kind of oppslag (0108), stored on a GENERAL oppslag */
+  topic?: NoticeTopic;
+  /** ISO – overskuddsmat and strømbrudd close by themselves then */
+  expiresAt?: string;
+  /** ISO – a vert pinned it to the top of the nabolag */
+  pinnedAt?: string;
+  /** posted by a lag / forening (0108) */
+  organisationId?: string;
+  /** an arrangement from a partner (set in Admin) */
+  partnerId?: string;
+  /** an arrangement that happens every week */
+  repeatWeekly?: boolean;
 };
 
 /** A public question on a post, and the owner's answer (0088). */
@@ -190,6 +206,8 @@ export type PoliceCertificate = {
 export type NoticeComment = {
   id: string;
   noticeId: string;
+  /** set on a reply to another answer: the first answer in that little thread (0099) */
+  parentId?: string;
   authorProfileId: string;
   body: string;
   createdAt: string;
@@ -221,6 +239,9 @@ export type Partner = {
   coverUrl?: string;
   gallery?: string[];
   /** the partner's own price list (0070), e.g. { name: 'Herreklipp', price: 'fra 450 kr' } */
+  /** «Fordeler for hjelpere» (0101); the code is fetched separately and only shown to helpers */
+  helperOffer?: string;
+  helperOfferUntil?: string;
   prices?: PartnerPrice[];
 };
 
@@ -233,6 +254,12 @@ export type Donation = {
   amountKr: number;
   period: string;
   transferredAt: string;
+  /** what the money did, told by the lag (0108) */
+  storyTitle?: string;
+  storyBody?: string;
+  storyImageUrl?: string;
+  municipality?: string;
+  organisationId?: string;
 };
 
 export type SkillEndorsement = {
@@ -381,6 +408,10 @@ export type Listing = {
   helpersNeeded?: number;
   /** ISO – «Send til faste hjelpere først»: only the helpers the owner follows see it until then */
   firstToFollowedUntil?: string;
+  /** «Del hjelperen med naboene» (0108): neighbours on the street can join a snømåking / hage oppdrag */
+  sharedStreet?: boolean;
+  /** posted in senior mode: «Hjelp for eldre» on the card (0110) */
+  fromSenior?: boolean;
   /**
    * Set by MinNabo's moderation; only the owner ever receives a hidden oppdrag.
    * `pendingReview`: a first oppdrag waiting for approval (shown as "Venter på godkjenning", not as hidden).
@@ -446,6 +477,11 @@ export type AgreementSnapshot = {
   confirmRequestedAt?: string;
   /** ISO – the owner was told the helper hasn't confirmed / answered */
   ownerWarnedAt?: string;
+  /** «Fast avtale» (0101): every 7, 14 or 28 days from scheduledAt */
+  repeatEveryDays?: 7 | 14 | 28;
+  /** the last day of the season, YYYY-MM-DD */
+  repeatUntil?: string;
+  repeatEndedAt?: string;
 };
 
 export type HelperStatus = 'ON_THE_WAY' | 'ARRIVED';
@@ -529,6 +565,9 @@ export type ConversationStatusTag = 'NEW_OFFER' | 'OFFER_ACCEPTED' | 'REVISION_P
 
 export type MessageDelivery = 'SENT' | 'DELIVERED' | 'READ';
 
+/** The card under a link in the chat, made by the link-preview edge function. */
+export type LinkPreview = { url: string; host: string; title: string; description: string | null; site: string | null; image: string | null };
+
 export type Message = {
   id: string;
   conversationId: string;
@@ -560,7 +599,14 @@ export type Message = {
   /** ISO – the author deleted it; the bubble says «Meldingen ble slettet» */
   deletedAt?: string;
   /** a voice message written out as text */
+  /** «Vis på norsk» (0101): made once, kept for both */
+  translationNb?: string;
   transcript?: string;
+  /** ISO – changed by its author within 15 minutes («redigert», 0109) */
+  editedAt?: string;
+  /** a short video or a PDF on a TEXT message (0109); attachmentUrl is the file */
+  attachmentKind?: 'VIDEO' | 'FILE';
+  fileName?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -583,6 +629,8 @@ export type Review = {
   repliedAt?: string;
   /** PENDING: a review a youth gave or got waits for a moderator (0094) */
   approval?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  /** photos of the finished job (0099) */
+  imageUrls?: string[];
 };
 
 export type ReportTargetType =
@@ -675,6 +723,10 @@ export type Conversation = {
   archived?: boolean;
   /** Innboks filter: 'client' = I get help, 'helper' = I help. Undefined on chats about an oppslag. */
   role?: 'client' | 'helper';
+  /** mine only (0109): pinned to the top, snoozed or muted until a time (ISO) */
+  pinnedAt?: string;
+  snoozedUntil?: string;
+  mutedUntil?: string;
 };
 
 export type ListingFilter = {
@@ -694,3 +746,77 @@ export type ListingFilter = {
 };
 
 export type ListingSort = 'RELEVANCE' | 'DISTANCE' | 'NEWEST' | 'PRICE';
+
+// ---------------------------------------------------------------- 0101 expansion
+export type EventType = 'DUGNAD' | 'LOPPEMARKED' | 'QUIZ' | 'FEST' | 'MOTE' | 'TUR' | 'ANNET';
+export type RsvpStatus = 'GOING' | 'MAYBE';
+export type EventRsvps = { going: number; maybe: number; mine: RsvpStatus | null; goingIds: string[] };
+export type NoticePoll = { counts: number[]; total: number; mine: number | null };
+export type NoticeQueue = { waiting: number; mine: '' | 'QUEUED' | 'OFFERED' | 'TAKEN' | 'SKIPPED'; position: number };
+export type NoticeReservation = { profileId: string; status: 'QUEUED' | 'OFFERED' | 'TAKEN' | 'SKIPPED'; createdAt: string };
+export type NoticeReactionEmoji = '👍' | '😂' | '😮' | '🙏' | '🎉';
+export type NoticeReaction = { profileId: string; emoji: NoticeReactionEmoji };
+export type EventMessage = { id: string; noticeId: string; authorProfileId: string; body: string; createdAt: string };
+export type PhotoDraft = { categorySlug: string; title: string; description: string };
+export type LendCategory = 'VERKTOY' | 'HAGE' | 'FRITID' | 'KJOKKEN' | 'TRANSPORT' | 'ANNET';
+export type LendItem = {
+  id: string;
+  ownerId: string;
+  title: string;
+  category: LendCategory;
+  note?: string;
+  imagePath?: string;
+  imageUrl?: string;
+  municipality: string;
+  active: boolean;
+  createdAt: string;
+  /** its «Lån ut» oppslag on Oppslagstavla (0107) */
+  noticeId?: string;
+  /** set → only for the members of this nabolag, like an oppslag (0107) */
+  neighbourhoodId?: string;
+};
+export type LendRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
+export type LendRequest = {
+  id: string;
+  itemId: string;
+  itemTitle: string;
+  ownerId: string;
+  borrowerId: string;
+  fromDate: string;
+  toDate: string;
+  note?: string;
+  status: LendRequestStatus;
+  /** the owner's answer («Hentes i garasjen etter kl. 17», 0104) */
+  reply?: string;
+  createdAt: string;
+};
+/** Days a thing is already lent out (0104): dates only, never who. */
+export type LendBusy = { fromDate: string; toDate: string };
+export type CategoryJobs = { categorySlug: string; jobs: number };
+/** Whose avtale it is in a household's «Hvem kommer når» (0105). */
+export type HouseholdWho = 'me' | 'partner' | 'both';
+export type Household = {
+  inHousehold: boolean;
+  /** when the two became a household (0105) */
+  since?: string;
+  code?: { code: string; expiresAt: string };
+  partner?: { id: string; name: string };
+  listings: { id: string; title: string; status: string; createdAt: string; categorySlug?: string; imageUrl?: string }[];
+  /** the coming avtaler of both adults (0105); before 0105 only the partner's, without `who` */
+  agreements: {
+    proposalId: string;
+    title: string;
+    scheduledAt?: string;
+    scheduledText?: string;
+    with: string;
+    who?: HouseholdWho;
+    categorySlug?: string;
+  }[];
+};
+export type GuardianYouth = {
+  id: string;
+  name: string;
+  age?: number;
+  agreements: { title: string; with: string; scheduledAt?: string; scheduledText?: string; place?: string }[];
+  trip?: { startedAt: string; dueAt: string; checkedInAt?: string; alertedAt?: string };
+};

@@ -1,4 +1,9 @@
 import type {
+  EventType,
+  EventMessage,
+  LendCategory,
+  LendItem,
+  LendRequestStatus,
   AgreementSnapshot,
   AgreementTimeProposal,
   AppNotification,
@@ -21,6 +26,7 @@ import type {
 } from '@/domain/types';
 import { categoryBySlug } from '@/domain/categories';
 import { publicUrl } from '@/lib/storage';
+import type { NoticeTopic } from '@/domain/community';
 
 // ---------------------------------------------------------------------------
 // row shapes (a subset of the generated DB types — the columns the app reads)
@@ -79,6 +85,8 @@ export type ListingRow = {
   edited_at?: string | null;
   urgent_until?: string | null;
   helpers_needed?: number | null;
+  shared_street?: boolean | null;
+  from_senior?: boolean | null;
   first_to_followed_until?: string | null;
   invited_profile_id?: string | null;
   admin_hidden?: boolean | null;
@@ -148,6 +156,10 @@ export type MessageRow = {
   reply_to_id?: string | null;
   deleted_at?: string | null;
   transcript?: string | null;
+  translation_nb?: string | null;
+  edited_at?: string | null;
+  attachment_kind?: 'VIDEO' | 'FILE' | null;
+  file_name?: string | null;
 };
 
 export type AgreementRow = {
@@ -169,6 +181,9 @@ export type AgreementRow = {
   helper_status_place?: string | null;
   confirm_requested_at?: string | null;
   owner_warned_at?: string | null;
+  repeat_every_days?: number | null;
+  repeat_until?: string | null;
+  repeat_ended_at?: string | null;
 };
 
 export type ReviewRow = {
@@ -184,6 +199,7 @@ export type ReviewRow = {
   reply?: string | null;
   replied_at?: string | null;
   approval?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  image_paths?: string[] | null;
 };
 
 export type NotificationRow = {
@@ -208,7 +224,16 @@ export type ConversationRow = {
   notice_place?: string | null;
   last_message_preview: string;
   last_message_at: string;
-  conversation_participants: { profile: ProfileRow; profile_id?: string; last_read_at?: string | null; last_delivered_at?: string | null; archived_at?: string | null }[];
+  conversation_participants: {
+    profile: ProfileRow;
+    profile_id?: string;
+    last_read_at?: string | null;
+    last_delivered_at?: string | null;
+    archived_at?: string | null;
+    pinned_at?: string | null;
+    snoozed_until?: string | null;
+    muted_until?: string | null;
+  }[];
   message_reads?: { profile_id: string; last_read_at: string }[] | null;
   /** newest message only (embedded with order + limit 1) */
   messages?: { author_id: string; kind: string; created_at: string; text?: string | null; deleted_at?: string | null }[] | null;
@@ -304,6 +329,8 @@ export function toListing(row: ListingRow): Listing {
     editedAt: row.edited_at ?? undefined,
     urgentUntil: row.urgent_until ?? undefined,
     helpersNeeded: row.helpers_needed ?? undefined,
+    sharedStreet: row.shared_street || undefined,
+    fromSenior: row.from_senior || undefined,
     firstToFollowedUntil: row.first_to_followed_until ?? undefined,
     invitedProfileId: row.invited_profile_id ?? undefined,
     moderation:
@@ -374,7 +401,7 @@ export function toMessage(row: MessageRow): Message {
     kind: row.kind,
     proposalId: row.proposal_id ?? undefined,
     // the path in the private bucket – SupabaseApiClient swaps it for a signed link
-    attachmentUrl: (row.kind === 'IMAGE' || row.kind === 'AUDIO') && !row.deleted_at ? row.attachment_path ?? undefined : undefined,
+    attachmentUrl: (row.kind === 'IMAGE' || row.kind === 'AUDIO' || row.attachment_kind) && !row.deleted_at ? row.attachment_path ?? undefined : undefined,
     audioMs: row.kind === 'AUDIO' ? row.audio_ms ?? 0 : undefined,
     createdAt: row.created_at,
     // stored on the server = "Sendt"; "Levert" / "Lest" are added by withReadState
@@ -384,6 +411,10 @@ export function toMessage(row: MessageRow): Message {
     replyToId: row.reply_to_id ?? undefined,
     deletedAt: row.deleted_at ?? undefined,
     transcript: row.transcript ?? undefined,
+    translationNb: row.translation_nb ?? undefined,
+    editedAt: row.edited_at ?? undefined,
+    attachmentKind: row.attachment_kind ?? undefined,
+    fileName: row.file_name ?? undefined,
   };
 }
 
@@ -432,6 +463,9 @@ export function toAgreement(row: AgreementRow): AgreementSnapshot {
     helperStatusPlace: row.helper_status_place ?? undefined,
     confirmRequestedAt: row.confirm_requested_at ?? undefined,
     ownerWarnedAt: row.owner_warned_at ?? undefined,
+    repeatEveryDays: (row.repeat_every_days as 7 | 14 | 28 | null) ?? undefined,
+    repeatUntil: row.repeat_until ?? undefined,
+    repeatEndedAt: row.repeat_ended_at ?? undefined,
   };
 }
 
@@ -454,6 +488,8 @@ export type PartnerRow = {
   cover_path?: string | null;
   gallery?: string[] | null;
   prices?: unknown;
+  helper_offer?: string | null;
+  helper_offer_until?: string | null;
 };
 
 /** Only well-formed rows from the partner's price list – it's edited on the website. */
@@ -481,6 +517,8 @@ export function toPartner(row: PartnerRow): Partner {
     categorySlug: row.category_slug ?? null,
     about: row.about ?? undefined,
     offer: row.offer ?? undefined,
+    helperOffer: row.helper_offer ?? undefined,
+    helperOfferUntil: row.helper_offer_until ?? undefined,
     address: row.address ?? undefined,
     phone: row.phone ?? undefined,
     email: row.email ?? undefined,
@@ -497,6 +535,11 @@ export type DonationRow = {
   amount_kr: number;
   period: string;
   transferred_at: string;
+  story_title?: string | null;
+  story_body?: string | null;
+  story_image_path?: string | null;
+  municipality?: string | null;
+  organisation_id?: string | null;
 };
 
 export function toDonation(row: DonationRow): Donation {
@@ -506,6 +549,11 @@ export function toDonation(row: DonationRow): Donation {
     amountKr: row.amount_kr,
     period: row.period,
     transferredAt: row.transferred_at,
+    storyTitle: row.story_title ?? undefined,
+    storyBody: row.story_body ?? undefined,
+    storyImageUrl: publicUrl('listing-images', row.story_image_path ?? null),
+    municipality: row.municipality ?? undefined,
+    organisationId: row.organisation_id ?? undefined,
   };
 }
 
@@ -524,6 +572,18 @@ export type NoticeRow = {
   neighbourhood_id?: string | null;
   is_dugnad?: boolean | null;
   event_at?: string | null;
+  image_paths?: string[] | null;
+  event_type?: string | null;
+  poll_options?: string[] | null;
+  poll_closes_at?: string | null;
+  still_asked_at?: string | null;
+  auto_closed?: boolean | null;
+  topic?: string | null;
+  expires_at?: string | null;
+  pinned_at?: string | null;
+  organisation_id?: string | null;
+  partner_id?: string | null;
+  repeat_weekly?: boolean | null;
 };
 
 export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
@@ -538,12 +598,27 @@ export function toNoticeboardPost(row: NoticeRow): NoticeboardPost {
     // `.select('*')` returns no `municipality` until then.
     municipality: row.municipality ?? '',
     createdAt: row.created_at,
-    imageUrl: publicUrl('listing-images', row.image_path ?? null),
+    imageUrl: publicUrl('listing-images', row.image_paths?.[0] ?? row.image_path ?? null),
+    imageUrls: (row.image_paths?.length ? row.image_paths : row.image_path ? [row.image_path] : [])
+      .map((p) => publicUrl('listing-images', p)!)
+      .filter(Boolean),
+    imagePaths: row.image_paths?.length ? row.image_paths : row.image_path ? [row.image_path] : [],
+    stillAskedAt: row.still_asked_at ?? undefined,
+    autoClosed: row.auto_closed || undefined,
     doneAt: row.done_at ?? undefined,
     editedAt: row.edited_at ?? undefined,
     neighbourhoodId: row.neighbourhood_id ?? undefined,
     isDugnad: row.is_dugnad || undefined,
     eventAt: row.event_at ?? undefined,
+    eventType: (row.event_type as EventType | null) ?? (row.is_dugnad ? 'DUGNAD' : undefined),
+    pollOptions: row.poll_options?.length ? row.poll_options : undefined,
+    pollClosesAt: row.poll_closes_at ?? undefined,
+    topic: (row.topic as NoticeTopic | null) ?? undefined,
+    expiresAt: row.expires_at ?? undefined,
+    pinnedAt: row.pinned_at ?? undefined,
+    organisationId: row.organisation_id ?? undefined,
+    partnerId: row.partner_id ?? undefined,
+    repeatWeekly: row.repeat_weekly || undefined,
   };
 }
 
@@ -561,6 +636,7 @@ export function toReview(row: ReviewRow): Review {
     reply: row.reply ?? undefined,
     repliedAt: row.replied_at ?? undefined,
     approval: row.approval ?? undefined,
+    imageUrls: (row.image_paths ?? []).map((p) => publicUrl('listing-images', p)!).filter(Boolean),
   };
 }
 
@@ -702,6 +778,9 @@ export function toConversation(row: ConversationRow, meId: string, meta?: Conver
     statusTag: statusTag(latestProposal?.status),
     archived: !!mine?.archived_at,
     role,
+    pinnedAt: mine?.pinned_at ?? undefined,
+    snoozedUntil: mine?.snoozed_until ?? undefined,
+    mutedUntil: mine?.muted_until ?? undefined,
   };
 }
 
@@ -736,3 +815,51 @@ export function toTimeProposal(row: TimeProposalRow): AgreementTimeProposal {
     status: row.status as AgreementTimeProposal['status'],
   };
 }
+
+// ---------------------------------------------------------------- 0101 expansion
+export type EventMessageRow = { id: string; notice_id: string; author_id: string; body: string; created_at: string };
+export function toEventMessage(r: EventMessageRow): EventMessage {
+  return { id: r.id, noticeId: r.notice_id, authorProfileId: r.author_id, body: r.body, createdAt: r.created_at };
+}
+
+export type LendItemRow = {
+  id: string;
+  owner_id: string;
+  title: string;
+  category: LendCategory;
+  note: string | null;
+  image_path: string | null;
+  municipality: string;
+  active: boolean;
+  created_at: string;
+  notice_id?: string | null;
+  neighbourhood_id?: string | null;
+};
+export function toLendItem(r: LendItemRow): LendItem {
+  return {
+    id: r.id,
+    ownerId: r.owner_id,
+    title: r.title,
+    category: r.category,
+    note: r.note ?? undefined,
+    imagePath: r.image_path ?? undefined,
+    imageUrl: publicUrl('listing-images', r.image_path) ?? undefined,
+    municipality: r.municipality,
+    active: r.active,
+    createdAt: r.created_at,
+    noticeId: r.notice_id ?? undefined,
+    neighbourhoodId: r.neighbourhood_id ?? undefined,
+  };
+}
+
+export type LendRequestRow = {
+  id: string;
+  item_id: string;
+  borrower_id: string;
+  from_date: string;
+  to_date: string;
+  note: string | null;
+  status: LendRequestStatus;
+  reply?: string | null;
+  created_at: string;
+};

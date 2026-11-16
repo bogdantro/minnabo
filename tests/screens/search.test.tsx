@@ -1,5 +1,6 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { SearchScreen } from '@/screens/SearchScreen';
+import { apiClient } from '@/api/client';
 import { renderWithProviders } from '../testUtils';
 
 const PH = 'Søk etter plen, flytting, datahjelp …';
@@ -8,7 +9,8 @@ test('shows an empty state for a query with no matches', async () => {
   await renderWithProviders(<SearchScreen />);
   fireEvent.changeText(screen.getByPlaceholderText(PH), 'xyzzy');
   await waitFor(() => expect(screen.getByText('Ingen treff på «xyzzy»')).toBeTruthy());
-  expect(screen.getByText('Legg ut et oppdrag')).toBeTruthy();
+  // 0110: the button starts Legg ut with what was searched for
+  expect(screen.getByText('Legg ut et oppdrag om «xyzzy»')).toBeTruthy();
 });
 
 test('a search finds both oppdrag and «Tilbyr hjelp» (asked 2026-11-06)', async () => {
@@ -66,7 +68,46 @@ test('an initialCategory pre-filters and shows as an active filter chip', async 
 
 test('recent and popular searches show when the field is empty', async () => {
   await renderWithProviders(<SearchScreen />);
-  expect(await screen.findByText('Populært i Lillehammer')).toBeTruthy();
-  await fireEvent.press(screen.getByText('Plen'));
+  // 0110: what people in the kommune search for most, from the database
+  expect(await screen.findByText('Populære søk')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Flytting'));
+  await waitFor(() => expect(screen.getByText('Hjelp med flytting')).toBeTruthy());
+});
+
+test('a typo still finds the oppdrag, and says so (0110)', async () => {
+  await renderWithProviders(<SearchScreen />);
+  fireEvent.changeText(screen.getByPlaceholderText(PH), 'flyting');
+  // the exact search comes back empty first, then the loose match runs: give it time
+  await waitFor(
+    () => {
+      expect(screen.getByText('Hjelp med flytting')).toBeTruthy();
+      expect(screen.getByText('Viser treff for noe som ligner «flyting»')).toBeTruthy();
+    },
+    { timeout: 5000 },
+  );
+});
+
+test('«Etter jobb» keeps only what says it can be done in the evening (0110)', async () => {
+  await renderWithProviders(<SearchScreen />);
+  fireEvent.changeText(screen.getByPlaceholderText(PH), 'plen');
   await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
+  await fireEvent.press(screen.getByText('Etter jobb'));
+  await waitFor(() => expect(screen.queryByText('Klippe plen')).toBeNull());
+});
+
+test('popular searches count a finished search, never the letters on the way (0110)', async () => {
+  const log = jest.spyOn(apiClient, 'logSearchTerm');
+  try {
+    await renderWithProviders(<SearchScreen />);
+    const field = screen.getByPlaceholderText(PH);
+    fireEvent.changeText(field, 'fl');
+    await screen.findByText('Hjelp med flytting', {}, { timeout: 4000 });
+    expect(log).not.toHaveBeenCalled();
+    fireEvent.changeText(field, 'flytting');
+    fireEvent(field, 'submitEditing', { nativeEvent: { text: 'flytting' } });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][1]).toBe('flytting');
+  } finally {
+    log.mockRestore();
+  }
 });

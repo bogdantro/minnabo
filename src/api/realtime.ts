@@ -84,11 +84,44 @@ export function useConversationChannel(conversationId: string, visible = true): 
   }, [conversationId, qc]);
 }
 
+type TypingChannel = { channel: ReturnType<typeof supabase.channel>; listeners: Set<(from?: string) => void>; refs: number };
 /**
- * Typing indicator for one open conversation. `notifyTyping()` broadcasts a
- * lightweight ping (throttled by the caller); `counterpartTyping` flips true
- * when the other side pings and clears itself after a short idle timeout.
- * No-op under mocks — there is no peer to hear it.
+ * One channel per conversation, shared: the open chat and its row in Innboks (0109) both listen without joining
+ * the same topic twice (a second join closes the first).
+ */
+const typingChannels = new Map<string, TypingChannel>();
+
+function joinTyping(conversationId: string, onPing: (from?: string) => void): () => void {
+  let entry = typingChannels.get(conversationId);
+  if (!entry) {
+    const channel = supabase.channel(`typing:${conversationId}`, { config: { broadcast: { self: false } } });
+    const created: TypingChannel = { channel, listeners: new Set(), refs: 0 };
+    channel
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        const from = (payload as { payload?: { from?: string } }).payload?.from;
+        created.listeners.forEach((l) => l(from));
+      })
+      .subscribe();
+    typingChannels.set(conversationId, created);
+    entry = created;
+  }
+  const e = entry;
+  e.refs += 1;
+  e.listeners.add(onPing);
+  return () => {
+    e.listeners.delete(onPing);
+    e.refs -= 1;
+    if (e.refs <= 0) {
+      typingChannels.delete(conversationId);
+      supabase.removeChannel(e.channel);
+    }
+  };
+}
+
+/**
+ * Typing indicator for one conversation. `notifyTyping()` broadcasts a lightweight ping (throttled by the
+ * caller); `counterpartTyping` flips true when the other side pings and clears itself after a short idle
+ * timeout. No-op under mocks — there is no peer to hear it.
  */
 export function useTypingChannel(conversationId: string): {
   counterpartTyping: boolean;
@@ -96,33 +129,24 @@ export function useTypingChannel(conversationId: string): {
 } {
   const { userId } = useSession();
   const [counterpartTyping, setCounterpartTyping] = useState(false);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!conversationId || !userId) return;
-    const channel = supabase.channel(`typing:${conversationId}`, {
-      config: { broadcast: { self: false } },
+    const leave = joinTyping(conversationId, (from) => {
+      if (from === userId) return;
+      setCounterpartTyping(true);
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+      clearTimer.current = setTimeout(() => setCounterpartTyping(false), 4000);
     });
-    channel
-      .on('broadcast', { event: 'typing' }, (payload) => {
-        if ((payload as { payload?: { from?: string } }).payload?.from === userId) return;
-        setCounterpartTyping(true);
-        if (clearTimer.current) clearTimeout(clearTimer.current);
-        clearTimer.current = setTimeout(() => setCounterpartTyping(false), 4000);
-      })
-      .subscribe();
-    channelRef.current = channel;
-
     return () => {
       if (clearTimer.current) clearTimeout(clearTimer.current);
-      supabase.removeChannel(channel);
-      channelRef.current = null;
+      leave();
     };
   }, [conversationId, userId]);
 
   const notifyTyping = () => {
-    const ch = channelRef.current;
+    const ch = typingChannels.get(conversationId)?.channel;
     if (!ch || typeof ch.send !== 'function') return;
     try {
       ch.send({ type: 'broadcast', event: 'typing', payload: { from: userId } });
@@ -262,7 +286,12 @@ export function usePresence(): Set<string> {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          void channel.track({ profileId: userId, at: Date.now() });
+          // «Vis når jeg er aktiv» off (0109): listen, but never announce myself
+          void Promise.resolve(supabase.rpc('my_chat_settings'))
+            .then(({ data }) => {
+              if (!(data as { hideOnline?: boolean } | null)?.hideOnline) void channel.track({ profileId: userId, at: Date.now() });
+            })
+            .catch(() => void channel.track({ profileId: userId, at: Date.now() }));
         }
       });
 

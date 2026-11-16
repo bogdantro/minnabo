@@ -10,6 +10,12 @@ export const featureFlags = {
   businessForm: false,
   /** Politiattest on Verifisering and the badge. Off until the lawyer has answered (docs/LEFT_OUT.md). */
   policeCertificate: false,
+  /** «Fordeler for hjelpere» on Fellesskap (0101). Hidden for now (asked 2026-11-12); the backend and admin field are ready. */
+  helperPerks: false,
+  /** The «Oppdrag for meg» card on the Oppdrag tab. Hidden for now (asked 2026-11-14); /oppdrag-for-meg still works. */
+  forMeOnHome: false,
+  /** «Nabotilbud» from partners on Fellesskap (0108). Hidden for now (asked 2026-11-15). */
+  neighbourOffers: false,
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

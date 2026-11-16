@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useCategoryCatalog } from '@/hooks/useCategories';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { townLabel } from '@/lib/places';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
 import { categoryArtId, categoryLabel } from '@/domain/categories';
@@ -12,8 +13,6 @@ import { toast } from '@/lib/toast';
 import { colors, radius, screenPadding, shadow, text, type CategoryId } from '@/theme/theme';
 import { LocationSheet } from '@/components/LocationSheet';
 import { OppdragCard } from '@/components/OppdragCard';
-import { NewSinceLine } from '@/components/NewSinceLine';
-import { newSinceIndex, useFeedSeen } from '@/lib/feedSeen';
 import {
   Button,
   Chip,
@@ -57,7 +56,7 @@ export function SeeAllScreen({ initialCategory, kind = 'need' }: { initialCatego
   useCategoryCatalog(); // labels and colours follow the website's settings
   const router = useRouter();
   const me = useCurrentUser();
-  const { municipality, municipalities, reach, setReach, setKommune, ready } = useLocationScope();
+  const { municipality, municipalities, reach, setReach, setKommune, ready, town } = useLocationScope();
   const offer = kind === 'offer';
   const jobs = useListings({ type: offer ? 'SERVICE_OFFER' : 'TASK_REQUEST', municipalities }, 'NEWEST');
   const [cat, setCat] = useState<CategoryId | null>(initialCategory ? categoryArtId(initialCategory) : null);
@@ -87,15 +86,12 @@ export function SeeAllScreen({ initialCategory, kind = 'need' }: { initialCatego
     return seen;
   }, [all]);
   const items = useMemo(() => sortList(cat ? all.filter((l) => categoryArtId(l.category.slug) === cat) : all, sort), [all, cat, sort]);
-  const seen = useFeedSeen(offer ? 'all-offers' : 'all');
   // the line only means something while the list runs newest first; without distances «Nærmest» does
-  const byDate = sort === 'new' || (sort === 'near' && items.every((l) => l.location.distanceKm == null));
-  const newLine = byDate ? newSinceIndex(items, seen, openedAt) : -1;
   const loading = jobs.isLoading || !ready;
 
-  const applyLocation = (k: string, r: Reach) => {
+  const applyLocation = (k: string, r: Reach, place?: string) => {
     setLocOpen(false);
-    setKommune(k);
+    setKommune(k, place);
     setReach(r);
     toast.success(nb.oppdrag.showing(nb.oppdrag.reach[r].name, k), { icon: 'pin' });
   };
@@ -120,7 +116,7 @@ export function SeeAllScreen({ initialCategory, kind = 'need' }: { initialCatego
               <View style={styles.row8}>
                 <Icon name="pin" size={16} color={colors.faint} />
                 <Text style={[text.bodySemi, styles.locText]} numberOfLines={1}>
-                  {municipality ? `${nb.oppdrag.kommune(municipality)} · ${nb.oppdrag.reach[reach].name}` : nb.oppdrag.reach[2].name}
+                  {municipality ? `${townLabel(town, municipality)} · ${nb.oppdrag.reach[reach].name}` : nb.oppdrag.reach[2].name}
                 </Text>
               </View>
               <TextLink label={nb.seAlle.change} icon={null} onPress={() => setLocOpen(true)} />
@@ -185,7 +181,6 @@ export function SeeAllScreen({ initialCategory, kind = 'need' }: { initialCatego
         renderItem={({ item: l, index: i }) => (
           // only the first screenful fades in; later pages appear at once
           <FadeUp delay={i < 10 ? (i + 1) * 50 : 0} style={styles.px}>
-            {i === newLine ? <NewSinceLine /> : null}
             <OppdragCard listing={l} statusBadge={undefined} showVerified={false} isNew={Date.parse(l.createdAt) >= openedAt - DAY_MS} />
           </FadeUp>
         )}

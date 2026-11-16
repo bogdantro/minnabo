@@ -3,6 +3,8 @@ import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import type { NotificationPrefs } from '@/api/ApiClient';
+import { useSeniorMode } from '@/lib/seniorMode';
+import { townLabel } from '@/lib/places';
 import nb from '@/i18n/nb';
 import { useMyListings, useMySettings, useProfile, useUpdateNotificationPrefs, useUpdateProfile } from '@/api/queries';
 import { signOut } from '@/auth/session';
@@ -13,6 +15,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { haptics } from '@/lib/haptics';
 import { useLocationScope, type Reach } from '@/lib/locationScope';
 import { safePush } from '@/lib/nav';
+import { useShakeSetting } from '@/lib/shake';
 import { toast } from '@/lib/toast';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
 import { GuardianSheet } from '@/components/GuardianSheet';
@@ -43,7 +46,7 @@ export function SettingsScreen() {
   const savePrefs = useUpdateNotificationPrefs();
   const update = useUpdateProfile();
   const { data: myListings } = useMyListings('TASK_REQUEST');
-  const { municipality, reach, setKommune, setReach } = useLocationScope();
+  const { municipality, reach, setKommune, setReach, town } = useLocationScope();
   const flags = useFeatureFlags();
 
   const [locOpen, setLocOpen] = useState(false);
@@ -53,6 +56,8 @@ export function SettingsScreen() {
   const [big, setBig] = useState(false);
 
   const version = Constants.expoConfig?.version ?? '';
+  const shake = useShakeSetting();
+  const [senior, setSenior] = useSeniorMode();
   const paused = !!profile?.paused;
   const hidden = (myListings ?? []).filter((l) => !['PAUSED', 'ARCHIVED', 'REMOVED', 'COMPLETED', 'REVIEWED', 'CANCELLED', 'EXPIRED'].includes(l.status)).length;
   const verified = (k: 'PHONE' | 'EMAIL') => !!profile?.verifications.some((v) => v.kind === k && v.verified);
@@ -81,9 +86,9 @@ export function SettingsScreen() {
       },
     );
 
-  const applyLocation = (k: string, r: Reach) => {
+  const applyLocation = (k: string, r: Reach, place?: string) => {
     setLocOpen(false);
-    setKommune(k);
+    setKommune(k, place);
     setReach(r);
     toast.success(nb.oppdrag.showing(nb.oppdrag.reach[r].name, k), { icon: 'pin' });
   };
@@ -160,7 +165,7 @@ export function SettingsScreen() {
           icon="pin"
           iconBg={colors.limeTint}
           iconColor={colors.limeDeep}
-          title={municipality ? nb.innstillinger.kommune(municipality) : nb.innstillinger.pickKommune}
+          title={municipality ? townLabel(town, municipality) : nb.innstillinger.pickKommune}
           subtitle={nb.oppdrag.reach[reach].name}
           right={<Text style={text.meta}>{nb.innstillinger.change}</Text>}
           chevron
@@ -220,6 +225,20 @@ export function SettingsScreen() {
         ) : null}
       </View>
 
+      {Platform.OS !== 'web' ? (
+        <>
+          <Sec>{nb.innstillinger.secFeedback}</Sec>
+          <Group>
+            <ListRow
+              icon="phone"
+              title={nb.shakeReport.setting}
+              subtitle={nb.shakeReport.settingSub}
+              right={<Toggle value={shake.on} onValueChange={shake.set} accessibilityLabel={nb.shakeReport.setting} />}
+            />
+          </Group>
+        </>
+      ) : null}
+
       <Sec>{nb.innstillinger.secText}</Sec>
       <View style={styles.px}>
         <View style={[styles.card, styles.pad, styles.gap14, shadow.card]}>
@@ -255,6 +274,29 @@ export function SettingsScreen() {
           ) : null}
         </View>
       </View>
+
+      {/* «Enkel visning» (0101): a simple start with big buttons, on this phone */}
+      {!me.isYouth ? (
+        <View style={styles.seniorGap}>
+        <Group>
+          <ListRow
+            icon="home"
+            title={nb.senior.settingTitle}
+            subtitle={nb.senior.settingSub}
+            right={
+              <Toggle
+                value={senior}
+                onValueChange={(v) => {
+                  setSenior(v);
+                  toast.info(v ? nb.senior.on : nb.senior.off, { icon: 'home' });
+                }}
+                accessibilityLabel={nb.senior.settingTitle}
+              />
+            }
+          />
+        </Group>
+        </View>
+      ) : null}
 
       <Sec>{nb.innstillinger.secPrivacy}</Sec>
       <Group>
@@ -329,6 +371,7 @@ function Group({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  seniorGap: { marginTop: 12 },
   flex: { flex: 1, minWidth: 0 },
   px: { paddingHorizontal: screenPadding },
   mt8: { marginTop: 8 },

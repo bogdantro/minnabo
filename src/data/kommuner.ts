@@ -92,7 +92,15 @@ export const KOMMUNE_NEIGHBOURS: Record<string, readonly string[]> = {
  * sees oppdrag from all of them, even on «Bare min kommune», and hears about every new one.
  * The database has the same list (kommune_group, migration 0085) – change both.
  */
-export const KOMMUNE_GROUPS: readonly (readonly string[])[] = [['Lillehammer', 'Øyer', 'Gausdal']];
+/**
+ * Kommuner that count as one area: someone in one of them sees oppdrag from all of them, even on «Bare min
+ * kommune». Must match kommune_group() in the database (0085, Hamar/Ringsaker/Stange added in 0100).
+ */
+export const KOMMUNE_GROUPS: readonly (readonly string[])[] = [
+  ['Lillehammer', 'Øyer', 'Gausdal'],
+  // asked 2026-11-10
+  ['Hamar', 'Ringsaker', 'Stange'],
+];
 
 /** 'Øyer' -> ['Øyer', 'Lillehammer', 'Gausdal'] (own kommune first); a kommune outside a group is alone. */
 export function kommuneGroup(k: string): string[] {

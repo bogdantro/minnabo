@@ -1,21 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FileBubble, ListingLinkCard, VideoBubble, sharedListingId } from './ChatPlus';
 import { Image } from '@/components/ui/Image';
 import type { Message } from '@/domain/types';
 import nb from '@/i18n/nb';
 import { formatTime } from '@/lib/datetime';
 import { colors, radius, shadow, text } from '@/theme/theme';
 import { Avatar, Button, FadeUp, Icon, ScaleIn, type IconKey } from '@/components/ui';
+import { REACTIONS, reactionChips } from '@/domain/reactions';
+import { haptics } from '@/lib/haptics';
 import { VoiceBubble } from './Voice';
-import { QuotedMessage, RichText, ScamWarning, SwipeToReply, TranscriptLine } from './MessageExtras';
-
-/** Reactions offered on tap (stored as emoji; drawn as icons like the design). */
-export const REACTIONS: { emoji: string; icon: IconKey; color: string; filled?: boolean }[] = [
-  { emoji: '👍', icon: 'thumb', color: colors.cyan2 },
-  { emoji: '❤️', icon: 'heart', color: colors.heart, filled: true },
-  { emoji: '😊', icon: 'smile', color: colors.star },
-  { emoji: '✅', icon: 'check', color: colors.ok },
-];
-const iconFor = (emoji: string) => REACTIONS.find((r) => r.emoji === emoji);
+import { LinkPreviewCard, QuotedMessage, RichText, ScamWarning, SwipeToReply, TranscriptLine, TranslateLine } from './MessageExtras';
 
 /* ---------- time proposals (sent as text with a marker) ---------- */
 
@@ -72,6 +66,8 @@ type RowProps = {
   statusText?: string;
   onSelect: () => void;
   onReact: (emoji: string) => void;
+  /** the × in the reaction bar */
+  onCloseReactions: () => void;
   onLongPress: () => void;
   onRetry: () => void;
   /** the message this one answers */
@@ -82,6 +78,10 @@ type RowProps = {
   transcriptsEnabled: boolean;
   transcribing: boolean;
   onTranscribe: () => void;
+  /** «Vis på norsk» (0101) */
+  translateEnabled: boolean;
+  translating: boolean;
+  onTranslate: () => void;
 };
 
 /** `.mrow` – bubble with tap → reaction popover, reaction chips, ticks, status line. */
@@ -97,6 +97,7 @@ export function MessageRow({
   statusText,
   onSelect,
   onReact,
+  onCloseReactions,
   onLongPress,
   onRetry,
   quoted,
@@ -105,11 +106,18 @@ export function MessageRow({
   transcriptsEnabled,
   transcribing,
   onTranscribe,
+  translateEnabled,
+  translating,
+  onTranslate,
 }: RowProps) {
   const gone = !!m.deletedAt;
   const isImg = m.kind === 'IMAGE' && !!m.attachmentUrl;
   const isVoice = m.kind === 'AUDIO' && !!m.attachmentUrl;
-  const reactions = Object.entries(m.reactions ?? {}).filter(([, ids]) => ids.length);
+  // a short video or a PDF rides on a TEXT message (0109)
+  const isVideo = m.attachmentKind === 'VIDEO' && !!m.attachmentUrl;
+  const isFile = m.attachmentKind === 'FILE' && !!m.attachmentUrl;
+  const shared = m.kind === 'TEXT' && !m.attachmentKind ? sharedListingId(m.text) : null;
+  const chips = reactionChips(m.reactions, meId);
   const tick: IconKey | null = !mine || m.failed ? null : m.pending ? 'clock' : m.delivery === 'SENT' ? 'check' : 'checks';
   return (
     <SwipeToReply enabled={!gone && !m.pending && !m.failed} onReply={onReply}>
@@ -125,21 +133,35 @@ export function MessageRow({
         {selected ? (
           <ScaleIn style={[styles.rpop, mine ? styles.rpopMe : styles.rpopThem, shadow.large]}>
             <View style={styles.rpopRow} accessibilityRole="toolbar" accessibilityLabel={nb.chat.reactGroup}>
-              {REACTIONS.map((r) => {
-                const on = !!m.reactions?.[r.emoji]?.includes(meId);
+              {REACTIONS.map((emoji) => {
+                const ids = m.reactions?.[emoji] ?? [];
+                const on = ids.includes(meId);
                 return (
                   <Pressable
-                    key={r.emoji}
+                    key={emoji}
                     accessibilityRole="button"
-                    accessibilityLabel={nb.chat.reactions[r.emoji]}
+                    accessibilityLabel={nb.reactions.a11y(emoji, ids.length, on)}
                     accessibilityState={{ selected: on }}
-                    onPress={() => onReact(r.emoji)}
+                    onPress={() => {
+                      haptics.light();
+                      onReact(emoji);
+                    }}
                     style={({ pressed }) => [styles.rbtn, on && styles.rbtnOn, pressed && styles.rbtnPressed]}
                   >
-                    <Icon name={r.icon} size={22} color={on ? colors.cyanDeep : colors.ink2} filled={on && r.filled} />
+                    <Text style={styles.rbtnEmoji}>{emoji}</Text>
+                    {ids.length ? <Text style={[styles.rbtnN, on && styles.rbtnNOn]}>{ids.length}</Text> : null}
                   </Pressable>
                 );
               })}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={nb.chat.reactClose}
+                onPress={onCloseReactions}
+                hitSlop={4}
+                style={({ pressed }) => [styles.rbtn, styles.rclose, pressed && styles.pressed]}
+              >
+                <Icon name="x" size={17} color={colors.ink2} />
+              </Pressable>
             </View>
           </ScaleIn>
         ) : null}
@@ -153,6 +175,9 @@ export function MessageRow({
           style={({ pressed }) => [
             styles.bub,
             mine ? styles.bubOut : styles.bubIn,
+            // a run of messages reads as one block (Messenger): only the last one has the tail
+            !firstOfGroup && (mine ? styles.joinTopMe : styles.joinTopThem),
+            !showAvatar && (mine ? styles.joinBottomMe : styles.joinBottomThem),
             isImg && styles.imgBub,
             selected && shadow.reactSel,
             pressed && styles.pressed,
@@ -177,10 +202,19 @@ export function MessageRow({
               <VoiceBubble uri={m.attachmentUrl!} ms={m.audioMs ?? 0} mine={mine} />
               <TranscriptLine m={m} mine={mine} enabled={transcriptsEnabled} loading={transcribing} onAsk={onTranscribe} />
             </>
+          ) : isVideo ? (
+            <VideoBubble uri={m.attachmentUrl!} mine={mine} />
+          ) : isFile ? (
+            <FileBubble name={m.fileName ?? 'dokument.pdf'} uri={m.attachmentUrl!} mine={mine} />
           ) : (
-            <RichText value={m.text} mine={mine} />
+            <>
+              <RichText value={m.text} mine={mine} />
+              {shared ? <ListingLinkCard id={shared} mine={mine} /> : m.kind === 'TEXT' ? <LinkPreviewCard textValue={m.text} mine={mine} /> : null}
+              {!mine ? <TranslateLine m={m} enabled={translateEnabled} loading={translating} onAsk={onTranslate} /> : null}
+            </>
           )}
           <View style={[styles.btime, isImg && styles.btimeImg]}>
+            {m.editedAt && !gone ? <Text style={[text.time, mine && !isImg && styles.timeOnDark]}>{`${nb.innboks.chat.edited} ·`}</Text> : null}
             <Text style={[text.time, mine && !isImg && styles.timeOnDark]}>{formatTime(m.createdAt)}</Text>
             {tick ? (
               <Icon name={tick} size={14} color={m.delivery === 'READ' ? (isImg ? colors.cyan : colors.readTick) : mine && !isImg ? colors.onInk72 : colors.faint} />
@@ -188,24 +222,23 @@ export function MessageRow({
           </View>
         </Pressable>
         {!mine && !gone && m.kind === 'TEXT' ? <ScamWarning m={m} hasAgreement={hasAgreement} /> : null}
-        {reactions.length ? (
+        {chips.length ? (
           <View style={[styles.rchips, mine ? styles.rchipsMe : styles.rchipsThem]}>
-            {reactions.map(([emoji, ids]) => {
-              const r = iconFor(emoji);
-              return (
-                <ScaleIn key={emoji}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${emoji} ${ids.length}`}
-                    onPress={() => onReact(emoji)}
-                    style={[styles.rchip, shadow.card, ids.includes(meId) && styles.rchipMine]}
-                  >
-                    {r ? <Icon name={r.icon} size={14} color={r.color} filled={r.filled} /> : <Text style={styles.emoji}>{emoji}</Text>}
-                    <Text style={styles.rchipN}>{ids.length}</Text>
-                  </Pressable>
-                </ScaleIn>
-              );
-            })}
+            {chips.map((c) => (
+              <ScaleIn key={c.emoji}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={nb.reactions.a11y(c.emoji, c.n, c.on)}
+                  accessibilityState={{ selected: c.on }}
+                  onPress={() => onReact(c.emoji)}
+                  hitSlop={{ top: 9, bottom: 9 }}
+                  style={[styles.rchip, shadow.card, c.on && styles.rchipMine]}
+                >
+                  <Text style={styles.emoji}>{c.emoji}</Text>
+                  <Text style={[styles.rchipN, c.on && styles.rchipNMine]}>{c.n}</Text>
+                </Pressable>
+              </ScaleIn>
+            ))}
           </View>
         ) : null}
         {m.failed ? (
@@ -314,39 +347,60 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   sysIc: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ok, alignItems: 'center', justifyContent: 'center' },
-  mrow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 4 },
-  gap: { marginTop: 12 },
+  mrow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 2 },
+  gap: { marginTop: 14 },
   me: { justifyContent: 'flex-end' },
   them: { justifyContent: 'flex-start' },
   avsp: { width: 28 },
   mcol: { maxWidth: '78%', minWidth: 0, alignItems: 'flex-start' },
   mcolMe: { alignItems: 'flex-end' },
-  bub: { paddingVertical: 11, paddingHorizontal: 15, borderRadius: 22, maxWidth: '100%' },
-  bubIn: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderBottomLeftRadius: 7 },
-  bubOut: { backgroundColor: colors.ink, borderBottomRightRadius: 7 },
+  bub: { paddingVertical: 8, paddingHorizontal: 13, borderRadius: 20, maxWidth: '100%' },
+  bubIn: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line2, borderBottomLeftRadius: 6 },
+  bubOut: { backgroundColor: colors.ink, borderBottomRightRadius: 6 },
+  joinTopThem: { borderTopLeftRadius: 6 },
+  joinTopMe: { borderTopRightRadius: 6 },
+  joinBottomThem: { borderBottomLeftRadius: 20 },
+  joinBottomMe: { borderBottomRightRadius: 20 },
   imgBub: { padding: 5 },
   goneRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   goneText: { fontFamily: text.body.fontFamily, fontSize: 14, fontStyle: 'italic' },
   photo: { width: 228, height: 164, borderRadius: 17 },
-  btime: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 4 },
+  btime: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, marginTop: 1 },
   btimeImg: { paddingHorizontal: 8, paddingBottom: 4 },
   timeOnDark: { color: colors.onInk72 },
   pintag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 5 },
   pintagText: { fontFamily: text.label.fontFamily, fontSize: 11, letterSpacing: 0.22 },
-  rpop: { position: 'absolute', bottom: '100%', marginBottom: 6, zIndex: 9 },
+  rpop: { position: 'absolute', bottom: '100%', marginBottom: 6, zIndex: 9, borderRadius: radius.pill },
   rpopMe: { right: 0 },
   rpopThem: { left: 0 },
   rpopRow: {
     flexDirection: 'row',
-    gap: 2,
-    padding: 4,
+    gap: 4,
+    padding: 5,
     backgroundColor: colors.white,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.line,
   },
-  rbtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  rbtnOn: { backgroundColor: colors.cyanTint },
+  // the Oppslagstavle bar: soft grey pills, mine in lime with the count
+  rbtn: {
+    minWidth: 44,
+    height: 44,
+    paddingHorizontal: 9,
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.bg,
+  },
+  rbtnOn: { backgroundColor: colors.limeTint, borderColor: colors.limeDeep },
+  rbtnEmoji: { fontSize: 20, lineHeight: 24 },
+  rbtnN: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink2 },
+  rbtnNOn: { color: colors.limeDeep },
+  rclose: { backgroundColor: colors.white, borderColor: colors.line },
   rbtnPressed: { transform: [{ scale: 1.25 }] },
   rchips: { flexDirection: 'row', gap: 4, marginTop: -7, zIndex: 2 },
   rchipsMe: { marginRight: 10 },
@@ -362,9 +416,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  rchipMine: { borderColor: colors.chipCyanBorder },
+  rchipMine: { backgroundColor: colors.limeTint, borderColor: colors.limeDeep },
+  rchipNMine: { color: colors.limeDeep },
   rchipN: { fontFamily: text.label.fontFamily, fontSize: 12, color: colors.ink2 },
-  emoji: { fontSize: 13 },
+  emoji: { fontSize: 14, lineHeight: 18 },
   mstat: { fontFamily: text.bodySemi.fontFamily, fontSize: 11.5, color: colors.faint, marginTop: 5 },
   failed: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   mtime: { fontFamily: text.body.fontFamily, fontSize: 11.5, color: colors.faint, marginTop: 5, paddingHorizontal: 6 },

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ModerationBanner } from '@/components/ModerationBanner';
-import { FirstRefusalNote, HelperSlotsCard, NoOffersTips } from '@/components/ListingOwnerCards';
+import { FirstRefusalNote, HelperSlotsCard, NoOffersTips, ViewsCard } from '@/components/ListingOwnerCards';
+import { SharedStreetCard } from '@/components/SharedStreetCard';
 import { AreaMap } from '@/components/AreaMap';
 import { ImageViewer } from '@/components/ImageViewer';
 import { ShareListingSheet } from '@/components/ShareCards';
@@ -24,6 +25,7 @@ import { canEditListing, canEditProposal, editListingHref, isOpenListing, isTake
 import { isUrgent, urgentDayLabel } from '@/domain/urgent';
 import { heroTransition, useHeroFlight } from '@/lib/heroTransition';
 import {
+  useRecordListingView,
   useIsSaved,
   useListingOfferCount,
   useProfile,
@@ -81,6 +83,8 @@ export function TaskDetailScreen({ listing, onBack, showTips = false }: { listin
   const owner = listing.owner;
   const first = owner.displayName.split(' ')[0];
   const isOwner = !!me.id && owner.id === me.id;
+  // counted once per neighbour who opens it (never the owner)
+  useRecordListingView(listing.id, !isOwner && !!me.id);
   const homeNotes = useSharedContact(!isOwner && me.id ? owner.id : undefined).data?.homeNotes;
   const cat = categoryArtId(listing.category.slug);
   const price = listingPrice(listing);
@@ -160,7 +164,7 @@ export function TaskDetailScreen({ listing, onBack, showTips = false }: { listin
             accessibilityLabel={unread > 0 ? `Varsler, ${unread} uleste` : 'Varsler'}
             onPress={() => safePush('/varsler')}
           />
-          <Pressable accessibilityRole="link" accessibilityLabel="Åpne profil" onPress={() => safePush('/profil')} style={styles.avbtn}>
+          <Pressable accessibilityRole="link" accessibilityLabel="Åpne profil" onPress={() => safePush(me.isYouth ? '/ung' : '/profil')} style={styles.avbtn}>
             <Avatar initials={me.initials} uri={me.avatarUrl} me size={32} />
           </Pressable>
         </View>
@@ -183,8 +187,10 @@ export function TaskDetailScreen({ listing, onBack, showTips = false }: { listin
             {listing.title}
           </Text>
           {isOwner ? <ModerationBanner listing={listing} /> : null}
+          {isOwner ? <ViewsCard listing={listing} offers={offerCount?.count ?? 0} /> : null}
           {isOwner ? <NoOffersTips listing={listing} offers={offerCount?.count ?? 0} force={showTips} /> : null}
           <HelperSlotsCard listing={listing} isOwner={isOwner} />
+          <SharedStreetCard listing={listing} isOwner={isOwner} />
           <FirstRefusalNote listing={listing} isOwner={isOwner} ownerFirst={first} />
           {/* "Be om hjelp igjen": only the invited helper and the owner get here */}
           {listing.invitedProfileId ? (
@@ -401,6 +407,17 @@ export function TaskDetailScreen({ listing, onBack, showTips = false }: { listin
               <Text style={text.meta}>{isTakenListing(listing.status) ? nb.detail.takenSub : nb.detail.unavailableSub}</Text>
             </View>
           </View>
+        ) : me.isYouth ? (
+          // a youth account can't start a chat: it opens with the tilbud (rule 5)
+          <View style={styles.youthFoot}>
+            <View style={styles.youthNote}>
+              <View style={styles.youthNoteIcon}>
+                <Icon name="lock" size={15} color={colors.cyanDeep} />
+              </View>
+              <Text style={[text.meta, styles.flex1, styles.youthNoteText]}>{nb.youth.msgAfterOffer}</Text>
+            </View>
+            <Button label={nb.detail.giveOffer} iconRight="arrow" size="lg" onPress={() => setSheet(true)} />
+          </View>
         ) : (
           <FooterRow>
             <Button
@@ -530,6 +547,10 @@ function Gallery({ listing, saved, onSave, onShare }: { listing: Listing; saved:
 
 const styles = StyleSheet.create({
   youthPill: { alignSelf: 'flex-start', marginTop: 4 },
+  youthFoot: { gap: 10 },
+  youthNote: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: radius.card, backgroundColor: colors.cyanTint },
+  youthNoteIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  youthNoteText: { color: colors.ink2 },
   wrap: { flex: 1, backgroundColor: colors.bg },
   px: { paddingHorizontal: screenPadding },
   // CSS `flex: 1` never shrinks below the label; grow from the content width instead.

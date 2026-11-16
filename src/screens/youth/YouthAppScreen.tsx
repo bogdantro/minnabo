@@ -1,23 +1,24 @@
 import { useMemo, useState } from 'react';
 import { serverMessage } from '@/lib/errors';
 import { useActiveCategories } from '@/hooks/useCategories';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from '@/components/ui/Image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HelperArt, YouthArt } from '@/components/art/Scenes';
 import { GuardianSheet } from '@/components/GuardianSheet';
-import { ImageViewer } from '@/components/ImageViewer';
 import { LocationSheet } from '@/components/LocationSheet';
+import { AttestCard } from '@/components/profile/AttestCard';
+import { townLabel } from '@/lib/places';
 import nb from '@/i18n/nb';
 import type { Listing } from '@/domain/types';
 import { categoryArtId, categoryLabel } from '@/domain/categories';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
-import { useConversations, useListings, useListingsByIds, useProfile, useSentProposals, useStartConversation } from '@/api/queries';
+import { useConversations, useListings, useListingsByIds, useProfile, useSentProposals } from '@/api/queries';
 import { formatPrice } from '@/domain/price';
-import { formatFriendlyDate } from '@/lib/calendar';
 import { haptics } from '@/lib/haptics';
+import { postedAgo } from '@/lib/datetime';
 import { safePush } from '@/lib/nav';
 import { useLocationScope, type Reach } from '@/lib/locationScope';
 import { useVippsIdentity } from '@/auth/identity';
@@ -35,57 +36,35 @@ import {
 } from '@/theme/theme';
 import { NavFrame, NavItem, PostButton } from '@/components/BottomNav';
 import { YouthOffers, type Offer, type OfferStatus } from './YouthOffers';
+import { ConversationRow, ThreadRow } from '@/components/inbox/ConversationRow';
 import { YouthPhoto } from './YouthPhoto';
 import { listingPlace, listingPrice, listingSchedule } from '@/components/OppdragCard';
 import {
-  AmountInput,
   Avatar,
   Button,
-  CategoryArt,
   Chip,
   ChipRow,
-  DrawnCheck,
   ErrorState,
   FadeUp,
-  Field,
   Icon,
-  IconButton,
-  Input,
-  KeyValueRow,
   ListGroup,
   ListingCard,
   ListingListSkeleton,
   ListRow,
-  Note,
   PaymentNote,
-  Pill,
   PressableScale,
   ScaleIn,
   Screen,
   SectionHeader,
   Sheet,
-  SlideIn,
-  Spinner,
-  StatTile,
-  TextLink,
   type IconKey,
 } from '@/components/ui';
-import { DateField } from '@/components/ui/DateField';
 import { EmptyScene } from '@/components/ui/EmptyScene';
-import { TimeField } from '@/components/ui/TimeField';
 
 const logo = require('../../../assets/logo-icon.png');
 
 type View4 = 'oppdrag' | 'tilbud' | 'innboks' | 'profil';
 
-/** Noon when only a day is chosen, so a chosen day never slips to the day before in another time zone. */
-const atTime = (d: Date, hhmm: string) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  const at = new Date(d);
-  at.setHours(h || 0, m || 0, 0, 0);
-  return at.toISOString();
-};
-type SheetStep = 'detail' | 'form' | 'busy' | 'done';
 
 /** `.ubadge` – ink pill with lime shield. */
 function YouthBadge() {
@@ -109,12 +88,12 @@ export function YouthAppScreen() {
   const CATS: (CategoryId | null)[] = [null, ...active];
   // empty for the moment it takes to load who is signed in
   const id = useVippsIdentity() ?? { name: '', firstName: '', initials: '·', birthYear: 0, age: 0, phoneMasked: '', youth: true };
-  const { municipality, municipalities, ready, reach, setKommune, setReach } = useLocationScope();
+  const { municipality, municipalities, ready, reach, setKommune, setReach, town } = useLocationScope();
   // youth accounts skip Oppsett, so the kommune is chosen here
   const [locOpen, setLocOpen] = useState(false);
-  const applyLocation = (k: string, r: Reach) => {
+  const applyLocation = (k: string, r: Reach, place?: string) => {
     setLocOpen(false);
-    setKommune(k);
+    setKommune(k, place);
     setReach(r);
     toast.success(nb.oppdrag.showing(nb.oppdrag.reach[r].name, k), { icon: 'pin' });
   };
@@ -134,17 +113,8 @@ export function YouthAppScreen() {
     setLocOpen(true);
   }
   const qc = useQueryClient();
-  const startConversation = useStartConversation();
   const sent = useSentProposals(!!userId);
   const convs = useConversations();
-  const [cur, setCur] = useState<Listing | null>(null);
-  const [step, setStep] = useState<SheetStep>('detail');
-  const [amount, setAmount] = useState('');
-  const [whenDay, setWhenDay] = useState<Date | null>(null);
-  const [whenTime, setWhenTime] = useState<string | null>(null);
-  const [photo, setPhoto] = useState<number | null>(null);
-  const [msg, setMsg] = useState('');
-  const [tried, setTried] = useState(false);
   const [lock, setLock] = useState<string | null>(null);
 
   const tasks = useMemo(
@@ -205,67 +175,12 @@ export function YouthAppScreen() {
   );
   const chatCount = chats.length + offerChats.length;
 
-  const open = (l: Listing) => {
-    setCur(l);
-    setStep('detail');
-  };
-  const toForm = () => {
-    if (!cur) return;
-    const p = listingPrice(cur);
-    setAmount(p.label && cur.price ? String(Math.round(cur.price.amountMinor / 100)) : '');
-    setMsg('');
-    setTried(false);
-    setWhenDay(null);
-    setWhenTime(null);
-    setStep('form');
-  };
 
-  const amountOk = Number(amount) > 0;
-  const msgOk = msg.trim().length >= 10;
-
-  const send = () => {
-    if (!cur) return;
-    if (!amountOk || !msgOk) {
-      setTried(true);
-      return;
-    }
-    setStep('busy');
-    const listing = cur;
-    startConversation
-      .mutateAsync(listing.id)
-      .then((conv) =>
-        apiClient.sendProposal({
-          conversationId: conv.id,
-          listingId: listing.id,
-          priceAmountMinor: Number(amount) * 100,
-          message: msg.trim(),
-          // both are optional: a youth often just writes when in the message
-          scheduledText: whenDay ? `${formatFriendlyDate(whenDay)}${whenTime ? ` kl. ${whenTime}` : ''}` : nb.youth.flexible,
-          scheduledAt: whenDay && whenTime ? atTime(whenDay, whenTime) : null,
-        }),
-      )
-      .then(() => {
-        refreshOffers();
-        setStep('done');
-      })
-      .catch((e: unknown) => {
-        setStep('form');
-        toast.error(serverMessage(e, nb.giTilbud.sendFailed));
-      });
-  };
-
-  const closeSheet = () => {
-    setCur(null);
-  };
-  const go = (v: View4) => {
-    setCur(null);
-    setView(v);
-  };
-  const openJob = (listingId: string) => {
-    const l = (jobs.data ?? []).find((x) => x.id === listingId) ?? offerListings[listingId];
-    if (l) open(l);
-  };
-  const first = cur?.owner.displayName.split(' ')[0] ?? '';
+  const go = (v: View4) => setView(v);
+  // an oppdrag opens its own page, the same as for everyone else (asked 2026-11-10); the youth version of
+  // the page hides «Send melding» and gives the tilbud from there
+  const open = (l: Listing) => safePush(`/oppdrag/${l.id}`);
+  const openJob = (listingId: string) => safePush(`/oppdrag/${listingId}`);
 
   return (
     <View style={styles.flex}>
@@ -308,7 +223,7 @@ export function YouthAppScreen() {
                   <Icon name="pin" size={18} color={colors.limeDeep} />
                 </View>
                 <Text style={[text.label, styles.locK]} numberOfLines={1}>
-                  {municipality ? nb.oppdrag.kommune(municipality) : nb.youth.pickKommune}
+                  {municipality ? townLabel(town, municipality) : nb.youth.pickKommune}
                 </Text>
                 <View style={styles.locChange}>
                   <Text style={styles.locChangeText}>{nb.oppdrag.change}</Text>
@@ -320,20 +235,6 @@ export function YouthAppScreen() {
                   {nb.youth.searchCta}
                 </Text>
               </Pressable>
-            </FadeUp>
-            <FadeUp delay={70} style={[styles.px, styles.statRow]}>
-              {[
-                { n: jobs.data?.length ?? 0, label: nb.youth.statJobs, on: () => undefined },
-                { n: pending, label: nb.youth.statWaiting, on: () => go('tilbud') },
-                { n: chatCount, label: nb.youth.statChats(chatCount), on: () => go('innboks') },
-              ].map((s) => (
-                <Pressable key={s.label} accessibilityRole="button" accessibilityLabel={`${s.n} ${s.label}`} onPress={s.on} style={[styles.statTile, shadow.card]}>
-                  <Text style={styles.statNum}>{s.n}</Text>
-                  <Text style={styles.statLabel} numberOfLines={2}>
-                    {s.label}
-                  </Text>
-                </Pressable>
-              ))}
             </FadeUp>
             <FadeUp delay={110} style={[styles.px, styles.mt14]}>
               <PressableScale accessibilityRole="button" accessibilityLabel={nb.youth.offerCta} onPress={() => router.push('/legg-ut/tilbyr')} style={[styles.offerCard, shadow.medium]}>
@@ -387,8 +288,11 @@ export function YouthAppScreen() {
                         title={l.title}
                         category={categoryArtId(l.category.slug)}
                         photoUri={l.images[0]?.url}
+                        photoTop
                         ownerName={l.owner.displayName}
                         ownerRating={l.owner.rating?.count ? l.owner.rating.average : null}
+                        owner={{ id: l.owner.id, initials: l.owner.initials, avatarUrl: l.owner.avatarUrl }}
+                        posted={postedAgo(l.createdAt).replace(/^for /, '')}
                         place={listingPlace(l)}
                         schedule={listingSchedule(l)}
                         priceLabel={p.label}
@@ -403,30 +307,55 @@ export function YouthAppScreen() {
             </View>
             <View style={[styles.px, styles.mt22]}>
               <Text style={[text.sectionTitle, styles.moreTitle]}>{nb.youth.more}</Text>
-              <View style={styles.tiles}>
+              <View style={styles.doors}>
                 {[
                   { icon: 'users' as const, title: nb.youth.community, sub: nb.youth.communitySub, bg: colors.warnTint, fg: colors.warn, to: '/fellesskap-ung' as const },
                   { icon: 'pinned' as const, title: nb.youth.board, sub: nb.youth.boardSub, bg: colors.cyanTint, fg: colors.cyanDeep, to: '/oppslagstavle' as const },
                   { icon: 'bookmark' as const, title: nb.youth.savedSearches, sub: nb.youth.savedSearchesSub, bg: colors.limeTint, fg: colors.limeDeep, to: '/lagrede' as const },
-                ].map((t) => (
-                  <PressableScale key={t.title} accessibilityRole="link" accessibilityLabel={t.title} onPress={() => router.push(t.to)} style={[styles.tile, shadow.card]}>
-                    <View style={[styles.tileIcon, { backgroundColor: t.bg }]}>
-                      <Icon name={t.icon} size={20} color={t.fg} />
+                ].map((t, i, all) => (
+                  <PressableScale
+                    key={t.title}
+                    accessibilityRole="link"
+                    accessibilityLabel={t.title}
+                    onPress={() => router.push(t.to)}
+                    scaleTo={0.985}
+                    style={[styles.door, i === 0 && styles.doorFirst, i === all.length - 1 && styles.doorLast]}
+                  >
+                    {/* the base design's ring-framed disc */}
+                    <View style={[styles.doorRing, { borderColor: t.fg }]}>
+                      <View style={[styles.doorDisc, { backgroundColor: t.bg }]}>
+                        <Icon name={t.icon} size={20} color={t.fg} />
+                      </View>
                     </View>
-                    <Text style={styles.tileTitle}>{t.title}</Text>
-                    <Text style={text.meta}>{t.sub}</Text>
+                    <View style={styles.flex}>
+                      <Text style={styles.doorTitle}>{t.title}</Text>
+                      <Text style={text.meta} numberOfLines={1}>
+                        {t.sub}
+                      </Text>
+                    </View>
+                    <View style={styles.doorGo}>
+                      <Icon name="right" size={16} color={colors.ink} />
+                    </View>
+                    {i < all.length - 1 ? <View style={styles.doorSep} /> : null}
                   </PressableScale>
                 ))}
               </View>
-              <Pressable accessibilityRole="link" onPress={() => router.push('/sikkerhet')} style={styles.safe}>
-                <View style={styles.safeIcon}>
-                  <Icon name="shield" size={18} color={colors.lime} />
+              <PressableScale accessibilityRole="link" onPress={() => router.push('/sikkerhet')} scaleTo={0.985} style={[styles.safe, shadow.medium]}>
+                <View style={styles.safeBlob} />
+                <View style={styles.safeRing}>
+                  <View style={styles.safeIcon}>
+                    <Icon name="shield" size={20} color={colors.ink} />
+                  </View>
                 </View>
                 <View style={styles.flex}>
-                  <Text style={text.label}>{nb.youth.safetyCardTitle}</Text>
-                  <Text style={text.meta}>{nb.youth.safetyCardBody}</Text>
+                  <Text style={styles.safeTitle}>{nb.youth.safetyCardTitle}</Text>
+                  <Text style={styles.safeBody}>{nb.youth.safetyCardBody}</Text>
+                  <View style={styles.safeGo}>
+                    <Text style={styles.safeGoText}>{nb.youth.safetyCardCta}</Text>
+                    <Icon name="arrow" size={14} color={colors.lime} />
+                  </View>
                 </View>
-              </Pressable>
+              </PressableScale>
               <PaymentNote style={styles.noteCenter} />
             </View>
           </>
@@ -439,97 +368,132 @@ export function YouthAppScreen() {
         ) : null}
 
         {view === 'innboks' ? (
-          <View style={[styles.px, styles.stack]}>
-            <FadeUp>
-              <Text style={text.h1}>{nb.youth.tabs.innboks}</Text>
+          <View style={styles.stack}>
+            <FadeUp style={styles.px}>
+              <Text style={text.h1} accessibilityRole="header">
+                {nb.youth.tabs.innboks}
+              </Text>
+              <Text style={[text.meta, styles.mt4]}>{nb.youth.inboxCount(offerChats.length + chats.length)}</Text>
             </FadeUp>
-            <FadeUp delay={50} style={styles.lockNote}>
-              <Icon name="lock" size={16} color={colors.mute} />
+            {offerChats.length > 1 ? (
+              <FadeUp delay={40}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.faces}>
+                  {offerChats.map((c) => (
+                    <Pressable key={c.id} accessibilityRole="link" accessibilityLabel={c.counterpart.displayName} onPress={() => safePush(`/chat/${c.id}`)} style={styles.face}>
+                      <View style={[styles.faceRing, c.unread && styles.faceRingOn]}>
+                        <Avatar initials={c.counterpart.initials} uri={c.counterpart.avatarUrl} seed={c.counterpart.id} size={54} online={c.counterpart.online} ring={false} />
+                      </View>
+                      <Text style={[styles.faceName, c.unread && styles.faceNameOn]} numberOfLines={1}>
+                        {c.counterpart.displayName.split(' ')[0]}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </FadeUp>
+            ) : null}
+            {offerChats.length + chats.length === 0 ? (
+              <FadeUp delay={80} style={[styles.px, styles.inboxEmpty]}>
+                <View style={styles.inboxEmptyRing}>
+                  <View style={styles.inboxEmptyDisc}>
+                    <Icon name="msg" size={26} color={colors.cyanDeep} />
+                  </View>
+                </View>
+                <Text style={[text.label, styles.centerText, styles.emptyText]}>{nb.youth.noChats}</Text>
+                <Button label={nb.youth.findMore} icon="search" size="sm" block={false} align="center" onPress={() => go('oppdrag')} />
+              </FadeUp>
+            ) : (
+              <FadeUp delay={80} style={styles.px}>
+                <View style={styles.panel}>
+                  {offerChats.map((c, n) => (
+                    <View key={c.id}>
+                      <ConversationRow c={c} unread={!!c.unread} onPress={() => safePush(`/chat/${c.id}`)} extraTag={c.unread ? { label: nb.youth.askedYou, tone: 'dark' } : undefined} />
+                      {n < offerChats.length - 1 || chats.length ? <View style={styles.sep} /> : null}
+                    </View>
+                  ))}
+                  {chats.map((c, n) => (
+                    <View key={c.id}>
+                      <ThreadRow
+                        name={c.who}
+                        initials={c.who.slice(0, 2).toUpperCase()}
+                        seed={c.who}
+                        title={c.title}
+                        preview={`${nb.youth.you}${c.message}`}
+                        tag={c.status === 'godtatt' ? { label: nb.youth.accepted, tone: 'ok' } : undefined}
+                        onPress={c.conversationId ? () => safePush(`/chat/${c.conversationId}`) : undefined}
+                      />
+                      {n < chats.length - 1 ? <View style={styles.sep} /> : null}
+                    </View>
+                  ))}
+                </View>
+              </FadeUp>
+            )}
+            <FadeUp delay={120} style={[styles.lockNote, styles.mx]}>
+              <View style={styles.inboxLockIcon}>
+                <Icon name="lock" size={16} color={colors.cyanDeep} />
+              </View>
               <Text style={[text.meta, styles.lockNoteText]}>{nb.youth.inboxNote}</Text>
             </FadeUp>
-            {offerChats.map((c, i) => (
-              <FadeUp key={c.id} delay={100 + i * 50}>
-                <Pressable
-                  accessibilityRole="link"
-                  accessibilityLabel={`${c.counterpart.displayName}, ${c.listing.title}`}
-                  onPress={() => safePush(`/chat/${c.id}`)}
-                  style={styles.orow}
-                >
-                  <Avatar initials={c.counterpart.initials} uri={c.counterpart.avatarUrl} seed={c.counterpart.id} size={48} ring={false} />
-                  <View style={styles.orowBody}>
-                    <Text style={text.cardTitle}>{c.counterpart.displayName}</Text>
-                    <Text style={text.meta} numberOfLines={1}>
-                      {c.listing.title}
-                    </Text>
-                    <Text style={text.meta} numberOfLines={1}>
-                      {c.lastMessageMine ? nb.youth.you : ''}
-                      {c.lastMessagePreview}
-                    </Text>
-                  </View>
-                  {c.unread ? <Pill label={nb.youth.askedYou} tone="dark" /> : null}
-                </Pressable>
-              </FadeUp>
-            ))}
-            {chatCount === 0 ? (
-              <Text style={[text.body, styles.empty]}>{nb.youth.noChats}</Text>
-            ) : (
-              chats.map((c, i) => (
-                <FadeUp key={c.id} delay={100 + i * 50}>
-                 <Pressable
-                  accessibilityRole="link"
-                  accessibilityLabel={`${c.who}, ${c.title}`}
-                  disabled={!c.conversationId}
-                  onPress={() => c.conversationId && safePush(`/chat/${c.conversationId}`)}
-                  style={styles.orow}
-                 >
-                  <Avatar initials={c.who.slice(0, 2)} seed={c.who} size={48} ring={false} />
-                  <View style={styles.orowBody}>
-                    <Text style={text.cardTitle}>{c.who}</Text>
-                    <Text style={text.meta} numberOfLines={1}>
-                      {c.title}
-                    </Text>
-                    <Text style={text.meta} numberOfLines={1}>
-                      {nb.youth.you}
-                      {c.message}
-                    </Text>
-                  </View>
-                  {c.status === 'godtatt' ? <Pill label={nb.youth.accepted} tone="ok" /> : null}
-                 </Pressable>
-                </FadeUp>
-              ))
-            )}
           </View>
         ) : null}
 
         {view === 'profil' ? (
           <View style={[styles.px, styles.stack16]}>
             <FadeUp style={styles.profileHead}>
-              <YouthPhoto userId={userId ?? ''} initials={id.initials} uri={profile?.avatarUrl} />
-              <Text style={text.h2}>{id.name}</Text>
+              <View style={styles.pcover} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <View style={[styles.pblob, styles.pblobL]} />
+                <View style={[styles.pblob, styles.pblobR]} />
+                <View style={styles.pring} />
+                <View style={[styles.pdot, styles.pdot1]} />
+                <View style={[styles.pdot, styles.pdot2]} />
+              </View>
+              <View style={styles.pav}>
+                <YouthPhoto userId={userId ?? ''} initials={id.initials} uri={profile?.avatarUrl} />
+              </View>
+              <Text style={styles.pname}>{id.name}</Text>
               <Text style={text.meta}>{nb.youth.ageLine(id.age, municipality ?? '')}</Text>
               <YouthBadge />
             </FadeUp>
-            <FadeUp delay={100} style={styles.stats}>
-              <StatTile value={String(profile?.completedTasks ?? 0)} label={nb.youth.doneJobs} />
-              <StatTile
-                value={profile?.rating?.count ? profile.rating.average.toFixed(1).replace('.', ',') : '–'}
-                label={nb.youth.fromReviews(profile?.rating?.count ?? 0)}
-              />
+            <FadeUp delay={100} style={[styles.pstats, shadow.card]}>
+              <View style={styles.pstat} accessible accessibilityLabel={`${profile?.completedTasks ?? 0} ${nb.youth.doneJobs}`}>
+                <Text style={styles.pstatNum}>{String(profile?.completedTasks ?? 0)}</Text>
+                <Text style={styles.pstatLabel}>{nb.youth.doneJobs}</Text>
+              </View>
+              <View style={[styles.pstat, styles.pstatSep]} accessible accessibilityLabel={nb.youth.reviewsCount(profile?.rating?.count ?? 0)}>
+                <View style={styles.row6c}>
+                  {profile?.rating?.count ? <Icon name="star" size={17} color={colors.star} filled /> : null}
+                  <Text style={styles.pstatNum}>{profile?.rating?.count ? profile.rating.average.toFixed(1).replace('.', ',') : '–'}</Text>
+                </View>
+                <Text style={styles.pstatLabel}>{nb.youth.reviewsCount(profile?.rating?.count ?? 0)}</Text>
+              </View>
+              <View style={[styles.pstat, styles.pstatSep]} accessible accessibilityLabel={`${offers.length} ${nb.youth.offersSent}`}>
+                <Text style={styles.pstatNum}>{offers.length}</Text>
+                <Text style={styles.pstatLabel}>{nb.youth.offersSent}</Text>
+              </View>
             </FadeUp>
+            {/* «Attest fra MinNabo» (0101) */}
+            {profile ? (
+              <FadeUp delay={115}>
+                <AttestCard profile={profile} />
+              </FadeUp>
+            ) : null}
             <FadeUp delay={130}>
+              <Text style={[text.eyebrow, styles.mb8]}>{nb.youth.exploreTitle}</Text>
               <ListGroup>
-                <ListRow icon="search" title={nb.youth.searchCta} onPress={() => router.push('/sok')} />
-                <ListRow icon="users" title={nb.youth.community} subtitle={nb.youth.communitySub} onPress={() => router.push('/fellesskap-ung')} />
-                <ListRow icon="pinned" title={nb.youth.board} subtitle={nb.youth.boardSub} onPress={() => router.push('/oppslagstavle')} />
-                <ListRow icon="bookmark" title={nb.youth.savedSearches} subtitle={nb.youth.savedSearchesSub} onPress={() => router.push('/lagrede')} />
+                <ListRow iconBg={colors.cyanTint} iconColor={colors.cyanDeep} icon="search" title={nb.youth.searchCta} onPress={() => router.push('/sok')} />
+                <ListRow iconBg={colors.warnTint} iconColor={colors.warn} icon="users" title={nb.youth.community} subtitle={nb.youth.communitySub} onPress={() => router.push('/fellesskap-ung')} />
+                <ListRow iconBg={colors.cyanTint} iconColor={colors.cyanDeep} icon="pinned" title={nb.youth.board} subtitle={nb.youth.boardSub} onPress={() => router.push('/oppslagstavle')} />
+                <ListRow iconBg={colors.limeTint} iconColor={colors.limeDeep} icon="home" title={nb.youth.nabolag} subtitle={nb.youth.nabolagSub} onPress={() => router.push('/nabolag')} />
+                <ListRow iconBg={colors.limeTint} iconColor={colors.limeDeep} icon="bookmark" title={nb.youth.savedSearches} subtitle={nb.youth.savedSearchesSub} onPress={() => router.push('/lagrede')} />
+                <ListRow iconBg={colors.cyanTint} iconColor={colors.cyanDeep} icon="montering" title={nb.lend.title} subtitle={nb.lend.youthRow} onPress={() => router.push('/utlan')} />
               </ListGroup>
             </FadeUp>
             <FadeUp delay={200}>
+              <Text style={[text.eyebrow, styles.mb8]}>{nb.youth.accountTitle}</Text>
               <ListGroup>
-                <ListRow icon="hand" title={nb.youth.myPosts} subtitle={nb.youth.myPostsSub} onPress={() => router.push('/mine')} />
-                <ListRow icon="shield" title={nb.youth.safety} subtitle={nb.youth.safetySub} onPress={() => router.push('/sikkerhet')} />
+                <ListRow iconBg={colors.limeTint} iconColor={colors.limeDeep} icon="hand" title={nb.youth.myPosts} subtitle={nb.youth.myPostsSub} onPress={() => router.push('/mine')} />
+                <ListRow iconBg={colors.okTint} iconColor={colors.ok} icon="shield" title={nb.youth.safety} subtitle={nb.youth.safetySub} onPress={() => router.push('/sikkerhet')} />
                 <ListRow icon="lock" title={nb.youth.privacy} onPress={() => router.push('/personvern')} />
-                <ListRow icon="users" title={nb.guardian.rowYouth} subtitle={nb.guardian.rowYouthSub} onPress={() => setGuardian(true)} />
+                <ListRow iconBg={colors.cyanTint} iconColor={colors.cyanDeep} icon="users" title={nb.guardian.rowYouth} subtitle={nb.guardian.rowYouthSub} onPress={() => setGuardian(true)} />
                 <ListRow
                   icon="logout"
                   title={nb.youth.logout}
@@ -577,127 +541,6 @@ export function YouthAppScreen() {
         <NavItem label={nb.youth.tabs.profil} icon="user" active={view === 'profil'} onPress={() => go('profil')} />
       </NavFrame>
 
-      <Sheet visible={!!cur} onClose={closeSheet} scroll>
-        {cur && step === 'detail' ? (
-          <View style={styles.gap14}>
-            <Pressable
-              accessibilityRole={cur.images.length ? 'imagebutton' : undefined}
-              accessibilityLabel={cur.images.length ? nb.detail.openImage(1, cur.images.length) : undefined}
-              disabled={!cur.images.length}
-              onPress={() => setPhoto(0)}
-            >
-              <CategoryArt category={categoryArtId(cur.category.slug)} uri={cur.images[0]?.url} height={170} radius={radius.card} iconSize={44} />
-            </Pressable>
-            <Pill label={nb.youth.openTaskBadge} tone="need" dot />
-            <Text style={text.h2}>{cur.title}</Text>
-            <View style={styles.flatCard}>
-              <KeyValueRow label={nb.youth.place} value={listingPlace(cur)} />
-              <KeyValueRow label={nb.youth.when} value={listingSchedule(cur) ?? '–'} />
-              <KeyValueRow label={listingPrice(cur).label || nb.youth.price} value={listingPrice(cur).value} />
-              <KeyValueRow
-                label={nb.youth.poster}
-                value={`${cur.owner.displayName}${cur.owner.rating?.count ? ` · ★ ${cur.owner.rating.average.toFixed(1).replace('.', ',')}` : ''}`}
-                last
-              />
-            </View>
-            {cur.task?.description ? <Text style={[text.body, { color: colors.ink2 }]}>{cur.task.description}</Text> : null}
-            <View style={styles.lockNote}>
-              <Icon name="lock" size={16} color={colors.mute} />
-              <Text style={[text.meta, styles.lockNoteText]}>{nb.youth.msgAfterOffer}</Text>
-            </View>
-            {sentIds.has(cur.id) ? (
-              <Button label={nb.youth.sentSeeOffers} icon="check" variant="ink" size="lg" onPress={() => go('tilbud')} />
-            ) : (
-              <Button label={nb.youth.giveOffer} size="lg" onPress={toForm} />
-            )}
-          </View>
-        ) : null}
-
-        {cur && step === 'form' ? (
-          <SlideIn style={styles.gap18}>
-            <View style={styles.formHead}>
-              <IconButton icon="back" iconSize={18} accessibilityLabel={nb.login.back} onPress={() => setStep('detail')} />
-              <Text style={[text.h3, styles.flex]}>{nb.youth.giveOffer}</Text>
-            </View>
-            <Field
-              label={nb.youth.priceLabel}
-              hint={`${listingPrice(cur).label || nb.youth.price}: ${listingPrice(cur).value}`}
-              error={tried && !amountOk ? nb.youth.errPrice : null}
-            >
-              <AmountInput value={amount} onChangeText={setAmount} error={tried && !amountOk} accessibilityLabel={nb.youth.priceLabel} />
-            </Field>
-            <Field label={nb.youth.whenCan} hint={nb.youth.whenHint}>
-              <View style={styles.whenBox}>
-                <DateField label={nb.youth.whenDate} value={whenDay} onChange={setWhenDay} placeholder={nb.youth.whenDatePh} showLabel={false} />
-                {whenDay ? (
-                  <FadeUp style={styles.whenMore}>
-                    <TimeField label={nb.youth.whenTime} value={whenTime} onChange={setWhenTime} showLabel={false} />
-                    <TextLink
-                      label={nb.youth.whenClear}
-                      icon={null}
-                      onPress={() => {
-                        setWhenDay(null);
-                        setWhenTime(null);
-                      }}
-                      style={styles.whenClear}
-                    />
-                  </FadeUp>
-                ) : null}
-              </View>
-            </Field>
-            <Field label={nb.youth.message} hint={`${msg.length}/300`} error={tried && !msgOk ? nb.youth.errMsg : null}>
-              <Input
-                multiline
-                value={msg}
-                onChangeText={(v) => setMsg(v.slice(0, 300))}
-                placeholder={nb.youth.messagePh}
-                error={tried && !msgOk}
-                accessibilityLabel={nb.youth.message}
-              />
-            </Field>
-            <View style={styles.seesYouth}>
-              <Icon name="eye" size={16} color={colors.cyanDeep} />
-              <Text style={[text.infoBox, styles.flex]}>{nb.youth.seesYouth(first, id.age)}</Text>
-            </View>
-            <Note>{nb.oppdrag.paymentNote}</Note>
-            <Button label={nb.youth.send} size="lg" onPress={send} />
-          </SlideIn>
-        ) : null}
-
-        {step === 'busy' ? (
-          <View style={styles.busy}>
-            <Spinner size={36} thickness={3.5} color={colors.ink} trackColor={colors.track} />
-            <Text style={text.label}>{nb.youth.sending}</Text>
-          </View>
-        ) : null}
-
-        {cur && step === 'done' ? (
-          <View style={styles.done}>
-            <DrawnCheck size={104} ring={shadow.limeRing10} />
-            <FadeUp delay={150}>
-              <Text style={[text.h2, styles.center]}>{nb.youth.sentTo(first)}</Text>
-            </FadeUp>
-            <FadeUp delay={200}>
-              <Text style={[text.stateBody, styles.center]}>{nb.youth.sentBody(first)}</Text>
-            </FadeUp>
-            <FadeUp delay={230} style={styles.nextBox}>
-              <Text style={[text.eyebrow, styles.nextTitle]}>{nb.youth.nextTitle}</Text>
-              {nb.youth.nextSteps(first).map((t, i) => (
-                <View key={t} style={styles.nextRow}>
-                  <View style={styles.nextNum}>
-                    <Text style={styles.nextNumText}>{i + 1}</Text>
-                  </View>
-                  <Text style={[text.body, styles.flex, styles.nextText]}>{t}</Text>
-                </View>
-              ))}
-            </FadeUp>
-            <FadeUp delay={280} style={styles.doneBtns}>
-              <Button label={nb.youth.seeOffers} variant="ink" size="lg" onPress={() => go('tilbud')} />
-              <Button label={nb.youth.moreJobs} icon="search" variant="ghost" size="lg" onPress={() => go('oppdrag')} />
-            </FadeUp>
-          </View>
-        ) : null}
-      </Sheet>
 
       <Sheet visible={!!lock} onClose={() => setLock(null)}>
         <View style={styles.lockSheet}>
@@ -709,7 +552,6 @@ export function YouthAppScreen() {
           <Button label={nb.youth.understood} variant="ink" onPress={() => setLock(null)} />
         </View>
       </Sheet>
-      <ImageViewer images={photo === null || !cur ? [] : cur.images.map((img) => img.url)} index={photo ?? 0} caption={cur?.title} onClose={() => setPhoto(null)} />
       <GuardianSheet visible={guardian} onClose={() => setGuardian(false)} />
       <LocationSheet visible={locOpen} onClose={() => setLocOpen(false)} kommune={municipality} reach={reach} onApply={applyLocation} />
     </View>
@@ -764,10 +606,6 @@ const styles = StyleSheet.create({
   locChangeText: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink },
   search: { height: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line },
   searchText: { flex: 1, fontFamily: text.body.fontFamily, fontSize: 15, color: colors.mute },
-  statRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  statTile: { flex: 1, minHeight: 74, padding: 11, borderRadius: radius.m, backgroundColor: colors.surface, gap: 1 },
-  statNum: { fontFamily: text.h1.fontFamily, fontSize: 23, lineHeight: 27, color: colors.ink },
-  statLabel: { fontFamily: text.body.fontFamily, fontSize: 12, lineHeight: 15, color: colors.mute },
   offerCard: { minHeight: 138, borderRadius: radius.listingCard, backgroundColor: colors.cyan2, overflow: 'hidden' },
   offerBody: { paddingVertical: 18, paddingLeft: 18, paddingRight: 130, gap: 5 },
   offerTitle: { ...text.h2, fontSize: 24, lineHeight: 28, color: colors.white },
@@ -776,12 +614,66 @@ const styles = StyleSheet.create({
   offerGoText: { fontFamily: text.label.fontFamily, fontSize: 14.5, color: colors.lime },
   noJobs: { alignItems: 'center', gap: 6, paddingVertical: 14 },
   moreTitle: { fontSize: 18, marginBottom: 10 },
+  doors: { borderRadius: radius.listingCard, backgroundColor: colors.white, ...shadow.card },
+  door: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 14 },
+  doorFirst: { borderTopLeftRadius: radius.listingCard, borderTopRightRadius: radius.listingCard },
+  doorLast: { borderBottomLeftRadius: radius.listingCard, borderBottomRightRadius: radius.listingCard },
+  doorRing: { width: 54, height: 54, borderRadius: 27, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  doorDisc: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  doorTitle: { fontFamily: text.label.fontFamily, fontSize: 16, color: colors.ink, marginBottom: 2 },
+  doorGo: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  doorSep: { position: 'absolute', left: 82, right: 0, bottom: 0, height: 1, backgroundColor: colors.line2 },
+  safeTitle: { fontFamily: text.label.fontFamily, fontSize: 16, color: colors.white },
+  safeBody: { fontFamily: text.body.fontFamily, fontSize: 13.5, lineHeight: 19, color: colors.onInk78, marginTop: 2 },
+  safeGo: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  safeGoText: { fontFamily: text.label.fontFamily, fontSize: 13.5, color: colors.lime },
+  safeBlob: { position: 'absolute', right: -50, top: -60, width: 160, height: 160, borderRadius: 80, backgroundColor: colors.onInk16b },
+  safeRing: { width: 54, height: 54, borderRadius: 27, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
+  mt4: { marginTop: 4 },
+  centerText: { textAlign: 'center' },
+  mx: { marginHorizontal: screenPadding },
+  facts: { flexDirection: 'row', gap: 8 },
+  fact: { flex: 1, minWidth: 0, padding: 12, gap: 3, borderRadius: radius.card, backgroundColor: colors.bg },
+  factIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  factLabel: { fontFamily: text.bodySemi.fontFamily, fontSize: 11.5, color: colors.mute },
+  factValue: { fontFamily: text.label.fontFamily, fontSize: 13.5, lineHeight: 17, color: colors.ink },
+  poster: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.card, borderWidth: 1, borderColor: colors.line2 },
+  posterRating: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 30, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.bg },
+  emptyText: { fontSize: 16, lineHeight: 22, maxWidth: 300 },
+  faces: { gap: 14, paddingHorizontal: screenPadding, paddingTop: 4 },
+  face: { width: 62, alignItems: 'center', gap: 5 },
+  faceRing: { padding: 2.5, borderRadius: 34, borderWidth: 2, borderColor: 'transparent' },
+  faceRingOn: { borderColor: colors.lime },
+  faceName: { fontFamily: text.bodySemi.fontFamily, fontSize: 12, color: colors.ink2, maxWidth: 62 },
+  faceNameOn: { fontFamily: text.label.fontFamily, color: colors.ink },
+  panel: { borderRadius: radius.listingCard, backgroundColor: colors.white, overflow: 'hidden' },
+  sep: { height: 1, marginLeft: 82, backgroundColor: colors.line2 },
+  inboxEmpty: { alignItems: 'center', gap: 10, paddingVertical: 24 },
+  inboxEmptyRing: { width: 84, height: 84, borderRadius: 42, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.cyan, alignItems: 'center', justifyContent: 'center' },
+  inboxEmptyDisc: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.cyanTint, alignItems: 'center', justifyContent: 'center' },
+  inboxLockIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  pcover: { alignSelf: 'stretch', height: 112, borderRadius: radius.listingCard, backgroundColor: colors.cyanTint, overflow: 'hidden' },
+  pblob: { position: 'absolute', borderRadius: 999 },
+  pblobL: { width: 190, height: 190, left: -60, top: -50, backgroundColor: colors.limeTint },
+  pblobR: { width: 210, height: 210, right: -80, top: -100, backgroundColor: colors.white, opacity: 0.6 },
+  pring: { position: 'absolute', left: '50%', top: 16, marginLeft: -86, width: 172, height: 172, borderRadius: 86, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.cyan },
+  pdot: { position: 'absolute', borderRadius: 99 },
+  pdot1: { width: 10, height: 10, left: 30, top: 24, backgroundColor: colors.lime },
+  pdot2: { width: 8, height: 8, right: 44, top: 32, backgroundColor: colors.cyan },
+  pav: { marginTop: -56, padding: 4, borderRadius: 60, backgroundColor: colors.white, alignItems: 'center' },
+  pname: { ...text.h2, fontSize: 26, lineHeight: 30, marginTop: 6, textAlign: 'center' },
+  pstats: { flexDirection: 'row', borderRadius: radius.card, backgroundColor: colors.white, paddingVertical: 14 },
+  pstat: { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: 6 },
+  pstatSep: { borderLeftWidth: 1, borderLeftColor: colors.line2 },
+  pstatNum: { fontFamily: text.h1.fontFamily, fontSize: 22, lineHeight: 26, color: colors.ink },
+  pstatLabel: { fontFamily: text.body.fontFamily, fontSize: 12, lineHeight: 15, color: colors.mute, textAlign: 'center' },
+  row6c: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: { flexGrow: 1, flexBasis: '47%', padding: 14, gap: 3, borderRadius: radius.card, backgroundColor: colors.surface },
   tileIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   tileTitle: { ...text.label, fontSize: 15 },
-  safe: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginTop: 10, marginBottom: 14, borderRadius: radius.card, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line },
-  safeIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  safe: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, marginTop: 12, marginBottom: 14, borderRadius: radius.listingCard, backgroundColor: colors.ink, overflow: 'hidden' },
+  safeIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: screenPadding, gap: 12 },
   bleed: { marginHorizontal: -screenPadding },
   errorBox: { height: 360 },
@@ -804,12 +696,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.cyanTint,
   },
   lockNoteText: { flex: 1, color: colors.ink2 },
-  profileHead: { alignItems: 'center', gap: 8 },
+  profileHead: { alignItems: 'center', gap: 6 },
   stats: { flexDirection: 'row', gap: 10 },
   flatCard: {
     paddingVertical: 4,

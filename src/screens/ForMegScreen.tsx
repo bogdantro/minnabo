@@ -21,12 +21,15 @@ import { useSession } from '@/auth/session';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocationScope } from '@/lib/locationScope';
 import { useDismissedLeads } from '@/lib/dismissedLeads';
-import { postedAgo } from '@/lib/datetime';
 import { safePush, leaveFlow } from '@/lib/nav';
+import { useOnceTip } from '@/lib/onceTips';
+import { CoachTip } from '@/components/ui/CoachTip';
+import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import {
   categoryColors,
   colors,
+  fonts,
   motion,
   radius,
   screenPadding,
@@ -39,7 +42,6 @@ import {
   Avatar,
   Button,
   CategoryArt,
-  ChipRow,
   ErrorState,
   FadeInView,
   FadeUp,
@@ -47,7 +49,6 @@ import {
   IconButton,
   ListingCard,
   ListingListSkeleton,
-  PaymentNote,
   Pill,
   PressableScale,
   ScaleIn,
@@ -70,7 +71,7 @@ const SWIPE_DISTANCE = 110;
 const SWIPE_VELOCITY = 900;
 const km = (d: number) => d.toLocaleString('nb-NO', { maximumFractionDigits: 1 });
 
-/** "Hvorfor dette passer" chips: skill match, distance, timing, trust – max three. */
+/** "Hvorfor dette passer" chips: skill match and timing; the distance only when nothing else fits. */
 function whyChips(l: Listing, cat: CategoryId, match: boolean): Why[] {
   const out: Why[] = [];
   if (match) out.push({ icon: 'check', text: nb.forMeg.why.fits(categoryLabel(cat)) });
@@ -78,11 +79,12 @@ function whyChips(l: Listing, cat: CategoryId, match: boolean): Why[] {
   if (/kveld|etter kl/.test(when)) out.push({ icon: 'moon', text: nb.forMeg.why.evening });
   else if (/lør|søn|helg/.test(when)) out.push({ icon: 'sun', text: nb.forMeg.why.weekend });
   else if (/fleksib/.test(when)) out.push({ icon: 'cal', text: nb.forMeg.why.flexible });
-  const d = l.location.distanceKm;
-  if (typeof d === 'number') out.push({ icon: 'pin', text: nb.forMeg.why.away(km(d)) });
-  if (l.owner.verifications.some((v) => v.verified)) out.push({ icon: 'verified', text: nb.forMeg.why.verified });
-  else if (l.owner.rating?.count) out.push({ icon: 'star', text: nb.forMeg.why.rating(km(l.owner.rating.average)) });
-  if (!out.length) out.push({ icon: 'pin', text: nb.forMeg.why.near });
+  // distance and stars are on the card already (the «Hvor» box, next to the name), so they are not repeated here;
+  // the list view has no such box, so it still gets the distance as its line
+  if (!out.length) {
+    const d = l.location.distanceKm;
+    out.push({ icon: 'pin', text: typeof d === 'number' ? nb.forMeg.why.away(km(d)) : nb.forMeg.why.near });
+  }
   return out.slice(0, 3);
 }
 
@@ -112,6 +114,8 @@ export function ForMegScreen() {
   const [anim, setAnim] = useState<{ mode: 'rise' | 'back' | 'backRight'; n: number }>({ mode: 'rise', n: 0 });
   const [savedHere, setSavedHere] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // the first time: how the stack works (once per phone)
+  const swipeTip = useOnceTip('forMegSwipe');
   useEffect(() => () => clearTimeout(timer.current), []);
   // «Angre» lives in a toast that outlives this render: it must read the newest state, not a stale copy
   const goneRef = useRef<string[]>([]);
@@ -262,22 +266,28 @@ export function ForMegScreen() {
         </Text>
         <Text style={[text.meta, styles.sub]}>{nb.forMeg.sub}</Text>
       </FadeUp>
-      <FadeUp delay={100}>
-        <ChipRow style={styles.skills}>
+      <FadeUp delay={100} style={[styles.basis, shadow.card]}>
+        <View style={styles.basisHead}>
+          <View style={styles.basisIc}>
+            <Icon name="check" size={14} color={colors.limeDeep} />
+          </View>
+          <Text style={[styles.basisLabel, styles.flex1]}>{nb.forMeg.basedOn}</Text>
+          <TextLink label={nb.forMeg.change} icon={null} onPress={() => safePush('/profil/rediger')} style={styles.change} />
+        </View>
+        <View style={styles.skills}>
           {skills.map((c) => (
             <View key={c} style={styles.skill}>
-              <Icon name={c} size={15} color={colors.ink} />
+              <Icon name={c} size={14} color={colors.ink} />
               <Text style={styles.skillText}>{categoryLabel(c)}</Text>
             </View>
           ))}
           {municipality ? (
-            <View style={styles.skill}>
-              <Icon name="pin" size={15} color={colors.ink} />
-              <Text style={styles.skillText}>{municipality}</Text>
+            <View style={[styles.skill, styles.skillPlace]}>
+              <Icon name="pin" size={14} color={colors.cyanDeep} />
+              <Text style={[styles.skillText, styles.skillPlaceText]}>{municipality}</Text>
             </View>
           ) : null}
-          <TextLink label={nb.forMeg.change} icon={null} onPress={() => safePush('/profil/rediger')} style={styles.change} />
-        </ChipRow>
+        </View>
       </FadeUp>
 
       {/* view toggle + counter */}
@@ -293,15 +303,19 @@ export function ForMegScreen() {
         />
         {!done && !loading && deck.length > 0 ? (
           <View style={styles.ctr} accessibilityLiveRegion="polite" accessibilityLabel={nb.forMeg.counter(idx + 1, deck.length)}>
-            <View style={styles.bars}>
-              {deck.map((s, i) => (
-                <View key={s.listing.id} style={[styles.bar, i < idx && styles.barDone, i === idx && styles.barOn]} />
-              ))}
-            </View>
-            <Text style={[text.num, styles.ctrNum]}>{nb.forMeg.counter(idx + 1, deck.length)}</Text>
+            <Text style={styles.ctrNum} numberOfLines={1}>
+              {nb.forMeg.counter(idx + 1, deck.length)}
+            </Text>
           </View>
         ) : null}
       </FadeUp>
+      {view === 'stack' && !done && !loading && deck.length > 1 ? (
+        <View style={styles.bars} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+          {deck.map((s, i) => (
+            <View key={s.listing.id} style={[styles.bar, i < idx && styles.barDone, i === idx && styles.barOn]} />
+          ))}
+        </View>
+      ) : null}
 
       {loading ? (
         <ListingListSkeleton count={3} />
@@ -318,6 +332,19 @@ export function ForMegScreen() {
         />
       ) : view === 'stack' && top ? (
         <View>
+          {swipeTip.show ? (
+            <CoachTip
+              icon="swipe"
+              motion="swipe"
+              title={nb.tips.forMegTitle}
+              body={nb.tips.forMegBody}
+              okLabel={nb.tips.ok}
+              hints={{ left: nb.tips.swipeSkip, right: nb.tips.swipeSave }}
+              onDone={swipeTip.done}
+              style={styles.tip}
+              testID="tip-for-meg"
+            />
+          ) : null}
           <View style={styles.stackwrap}>
             {rem[2] ? <BackCard s={rem[2]} depth={2} /> : null}
             {rem[1] ? <BackCard s={rem[1]} depth={1} /> : null}
@@ -330,39 +357,47 @@ export function ForMegScreen() {
               onPress={() => open(top.listing)}
             />
           </View>
-          <View style={styles.controls}>
-            <View style={styles.rcol}>
-              <PressableScale
-                accessibilityRole="button"
-                accessibilityLabel={nb.forMeg.dismiss}
-                onPress={() => hide(top.listing.id, false)}
-                scaleTo={0.88}
-                style={[styles.rbtn, shadow.medium]}
-              >
-                <Icon name="x" size={28} color={colors.danger} />
-              </PressableScale>
-              <Text style={styles.rlab}>{nb.forMeg.dismiss}</Text>
-            </View>
-            <Button
-              label={nb.forMeg.seeAndOffer}
-              iconRight="arrow"
-              size="lg"
-              block={false}
+          {/* skip · open · save: three of one height, each its own shape – the round ones say what they do with
+              icon and colour, the screen reader with words */}
+          <View style={styles.actions}>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={nb.forMeg.dismiss}
+              onPress={() => {
+                haptics.light();
+                hide(top.listing.id, false);
+              }}
+              scaleTo={0.88}
+              style={[styles.rbtn, styles.rbtnSkip, shadow.card]}
+            >
+              <Icon name="x" size={24} color={colors.ink2} strokeWidth={2.4} />
+            </PressableScale>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={nb.forMeg.seeAndOffer}
               onPress={() => open(top.listing)}
+              scaleTo={0.96}
               style={styles.cta}
-            />
-            <View style={styles.rcol}>
-              <PressableScale
-                accessibilityRole="button"
-                accessibilityLabel={nb.forMeg.saveLabel}
-                onPress={() => pass(top.listing.id, 'right')}
-                scaleTo={0.88}
-                style={[styles.rbtn, shadow.medium]}
-              >
-                <Icon name="heart" size={24} color={colors.heart} />
-              </PressableScale>
-              <Text style={styles.rlab}>{nb.forMeg.save}</Text>
-            </View>
+            >
+              <Text style={styles.ctaText} numberOfLines={1}>
+                {nb.forMeg.seeAndOffer}
+              </Text>
+              <View style={styles.ctaGo}>
+                <Icon name="arrow" size={18} color={colors.lime} />
+              </View>
+            </PressableScale>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={nb.forMeg.saveLabel}
+              onPress={() => {
+                haptics.success();
+                pass(top.listing.id, 'right');
+              }}
+              scaleTo={0.88}
+              style={[styles.rbtn, styles.rbtnSave, shadow.card]}
+            >
+              <Icon name="heart" size={22} color={colors.heart} filled />
+            </PressableScale>
           </View>
           <Text style={[text.meta, styles.swipeHint]}>{nb.forMeg.swipeHint}</Text>
           <View style={styles.undoRow}>
@@ -401,7 +436,6 @@ export function ForMegScreen() {
         </View>
       )}
 
-      <PaymentNote style={styles.note} />
       <View style={styles.bottom} />
     </Screen>
   );
@@ -529,46 +563,61 @@ function FrontCard({
           <Icon name={s.cat} size={64} color={c.fg} />
           {l.images[0]?.url ? <CategoryArt category={s.cat} uri={l.images[0].url} style={StyleSheet.absoluteFill} /> : null}
           <Pill label={nb.forMeg.needHelp} tone="need" dot style={[styles.tl, shadow.whiteRing3]} />
-          <Pill label={postedAgo(l.createdAt)} tone="line" icon="clock" style={styles.tr} />
         </View>
         <View style={styles.fbody}>
           <Text style={[text.h3, styles.ftitle]} numberOfLines={2}>
             {l.title}
           </Text>
-          <View style={styles.row10}>
-            <Avatar initials={l.owner.initials} uri={l.owner.avatarUrl} seed={l.owner.id} size={40} />
+          {/* who asks, and the price in its own box */}
+          <View style={styles.person}>
+            <Avatar initials={l.owner.initials} uri={l.owner.avatarUrl} seed={l.owner.id} size={44} />
             <View style={styles.who}>
               <Text style={[text.label, styles.whoName]} numberOfLines={1}>
                 {l.owner.displayName}
               </Text>
-              <View style={styles.starsRow}>
-                {l.owner.rating?.count ? (
-                  <>
-                    <Icon name="star" size={14} color={colors.star} filled />
-                    <Text style={styles.starsVal}>{km(l.owner.rating.average)}</Text>
-                    <Text style={styles.starsMeta} numberOfLines={1}>
-                      {` (${l.owner.rating.count}) · ${categoryLabel(s.cat)}`}
-                    </Text>
-                  </>
-                ) : (
-                  <Text style={styles.starsMeta}>{categoryLabel(s.cat)}</Text>
-                )}
-              </View>
+              {l.owner.rating?.count ? (
+                <View style={styles.starsRow}>
+                  <Icon name="star" size={14} color={colors.star} filled />
+                  <Text style={styles.starsVal}>{km(l.owner.rating.average)}</Text>
+                  <Text style={styles.starsMeta} numberOfLines={1}>
+                    {nb.forMeg.reviews(l.owner.rating.count)}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.starsMeta}>{nb.forMeg.newOwner}</Text>
+              )}
             </View>
-            <View style={styles.priceCol}>
+            <View style={styles.priceBox}>
               <Text style={styles.plabel}>{price.label || nb.forMeg.price}</Text>
-              <Text style={[text.num, price.label ? null : styles.priceSmall]}>{price.value}</Text>
+              <Text style={[styles.priceVal, price.label ? null : styles.priceSmall]} numberOfLines={1}>
+                {price.value}
+              </Text>
             </View>
           </View>
-          <View style={styles.metaRow}>
-            <View style={styles.lmeta}>
-              <Icon name="pin" size={16} color={colors.faint} />
-              <Text style={text.meta}>{listingPlace(l)}</Text>
+          {/* where and when, as two small facts with room for two lines */}
+          <View style={styles.facts}>
+            <View style={styles.fact}>
+              <View style={[styles.factIc, styles.factIcPlace]}>
+                <Icon name="pin" size={15} color={colors.cyanDeep} />
+              </View>
+              <View style={styles.factText}>
+                <Text style={styles.factLabel}>{nb.forMeg.factWhere}</Text>
+                <Text style={styles.factValue} numberOfLines={2}>
+                  {listingPlace(l)}
+                </Text>
+              </View>
             </View>
             {when ? (
-              <View style={styles.lmeta}>
-                <Icon name="cal" size={16} color={colors.faint} />
-                <Text style={text.meta}>{when}</Text>
+              <View style={styles.fact}>
+                <View style={[styles.factIc, styles.factIcWhen]}>
+                  <Icon name="cal" size={15} color={colors.warn} />
+                </View>
+                <View style={styles.factText}>
+                  <Text style={styles.factLabel}>{nb.forMeg.factWhen}</Text>
+                  <Text style={styles.factValue} numberOfLines={2}>
+                    {when}
+                  </Text>
+                </View>
               </View>
             ) : null}
           </View>
@@ -666,39 +715,43 @@ const styles = StyleSheet.create({
   intro: { marginTop: 6, paddingHorizontal: screenPadding, gap: 6 },
   h1: { fontSize: 26, lineHeight: 28, marginTop: 4 },
   sub: { fontSize: 14, lineHeight: 20 },
-  skills: { marginTop: 12, paddingTop: 0 },
+  basis: { marginTop: 14, marginHorizontal: screenPadding, padding: 12, gap: 10, borderRadius: radius.card, backgroundColor: colors.white },
+  basisHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  basisIc: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
+  basisLabel: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink2 },
+  flex1: { flex: 1, minWidth: 0 },
+  skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   skill: {
     height: 32,
-    paddingHorizontal: 12,
+    paddingHorizontal: 11,
     borderRadius: radius.pill,
-    backgroundColor: colors.skillBg,
-    borderWidth: 1,
-    borderColor: colors.line,
+    backgroundColor: colors.bg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
+  skillPlace: { backgroundColor: colors.cyanTint },
   skillText: { ...text.bodySemi, fontSize: 13, lineHeight: 16 },
-  change: { paddingHorizontal: 4, alignSelf: 'center' },
+  skillPlaceText: { color: colors.cyanDeep },
+  change: { minHeight: 32, justifyContent: 'center' },
   toolbar: {
     paddingHorizontal: screenPadding,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 10,
-    marginBottom: 16,
+    gap: 10,
+    marginTop: 16,
   },
-  seg: { width: 190 },
-  ctr: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
-  bars: { flexDirection: 'row', gap: 4, flexShrink: 1, overflow: 'hidden' },
-  bar: { width: 14, height: 5, borderRadius: 3, backgroundColor: colors.barIdle },
-  barOn: { width: 22, backgroundColor: colors.ink },
+  seg: { flex: 1 },
+  ctr: { flexShrink: 0, height: 40, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.ink, justifyContent: 'center' },
+  ctrNum: { fontFamily: text.label.fontFamily, fontSize: 14, color: colors.white },
+  bars: { flexDirection: 'row', gap: 4, marginHorizontal: screenPadding, marginTop: 12 },
+  bar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.barIdle },
+  barOn: { backgroundColor: colors.ink },
   barDone: { backgroundColor: colors.barDone },
-  ctrNum: { fontSize: 15, lineHeight: 18 },
   errorBox: { height: 380 },
 
   stackwrap: { height: 492, marginHorizontal: screenPadding },
+  tip: { marginHorizontal: screenPadding, marginBottom: 14 },
   bcard: {
     position: 'absolute',
     left: 0,
@@ -735,21 +788,27 @@ const styles = StyleSheet.create({
   deco1: { width: 120, height: 120, left: -30, bottom: -50 },
   deco2: { width: 60, height: 60, right: 40, top: 30 },
   tl: { position: 'absolute', left: 14, top: 14 },
-  tr: { position: 'absolute', right: 14, top: 14 },
   fbody: { paddingTop: 16, paddingHorizontal: 18, paddingBottom: 18, gap: 10, flex: 1 },
   ftitle: { fontSize: 22, lineHeight: 25 },
-  row10: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   who: { flex: 1, minWidth: 0, gap: 3 },
   whoName: { fontSize: 14.5 },
   starsRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   starsVal: { fontFamily: text.label.fontFamily, fontSize: 13, color: colors.ink },
   starsMeta: { fontFamily: text.meta.fontFamily, fontSize: 13, color: colors.mute, flexShrink: 1 },
-  priceCol: { alignItems: 'flex-end', gap: 2 },
-  plabel: { fontFamily: text.label.fontFamily, fontSize: 11.5, color: colors.mute },
+  plabel: { fontFamily: text.label.fontFamily, fontSize: 11.5, color: colors.limeDeep },
   priceSmall: { fontSize: 17 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  lmeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   whyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 'auto' },
+  person: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  priceBox: { alignItems: 'flex-end', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: colors.limeTint, maxWidth: '46%' },
+  priceVal: { fontFamily: text.num.fontFamily, fontSize: 22, lineHeight: 26, color: colors.ink },
+  facts: { flexDirection: 'row', gap: 8 },
+  fact: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderRadius: 16, backgroundColor: colors.bg },
+  factIc: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  factIcPlace: { backgroundColor: colors.cyanTint },
+  factIcWhen: { backgroundColor: colors.warnTint },
+  factText: { flex: 1, minWidth: 0 },
+  factLabel: { fontFamily: text.label.fontFamily, fontSize: 11, color: colors.mute, textTransform: 'uppercase', letterSpacing: 0.4 },
+  factValue: { fontFamily: text.bodySemi.fontFamily, fontSize: 13, lineHeight: 17, color: colors.ink },
   why: {
     height: 28,
     paddingHorizontal: 10,
@@ -763,26 +822,23 @@ const styles = StyleSheet.create({
   },
   whyText: { fontFamily: text.bodySemi.fontFamily, fontSize: 12.5, color: colors.ink2 },
 
-  controls: {
-    paddingHorizontal: screenPadding,
+  actions: { marginHorizontal: screenPadding, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rbtn: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
+  rbtnSkip: { backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.line },
+  rbtnSave: { backgroundColor: colors.ink },
+  cta: {
+    flex: 1,
+    height: 58,
+    paddingLeft: 22,
+    paddingRight: 7,
+    borderRadius: 29,
+    backgroundColor: colors.lime,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 4,
-  },
-  rcol: { alignItems: 'center' },
-  rbtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.white,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 10,
   },
-  rbtnOn: { backgroundColor: colors.savedBg },
-  rlab: { fontFamily: text.label.fontFamily, fontSize: 11.5, color: colors.mute, textAlign: 'center', marginTop: 7 },
-  cta: { flex: 1, marginTop: 3 },
+  ctaText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 16, color: colors.ink },
+  ctaGo: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   undoRow: { alignItems: 'center', marginTop: 14 },
   swipeHint: { textAlign: 'center', marginTop: 12 },
   stamp: {
@@ -866,6 +922,5 @@ const styles = StyleSheet.create({
   doneBody: { maxWidth: 290, fontSize: 14, lineHeight: 20 },
   doneActions: { gap: 10, alignSelf: 'stretch', marginTop: 10 },
 
-  note: { justifyContent: 'center', marginTop: 22, marginHorizontal: screenPadding },
   bottom: { height: 48 },
 });

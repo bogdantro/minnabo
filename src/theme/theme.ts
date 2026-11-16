@@ -162,6 +162,9 @@ export const colors = {
   consentOnBorder: '#CDEBA0',
   consentOnBg: '#FBFEF4',
   limeSoft: '#EEF6E4',   // --grad-soft decorative circle
+  limeBlob: 'rgba(255,255,255,0.3)',   // soft circle on a lime card (share card)
+  onLime20: 'rgba(255,255,255,0.45)',  // chip on a lime card
+  onLime35: 'rgba(10,23,64,0.2)',      // empty star on a lime card
   // setup (Oppsett.dc.html)
   radarFill: 'rgba(184,238,60,0.14)',
   radarRing: 'rgba(184,238,60,0.35)',
@@ -374,7 +377,7 @@ export const sizes = {
   iconButton: 44, input: 56, amountInput: 76, chip: 42, chipSm: 36, pill: 26,
   search: 54, locationRow: 56, toggleW: 52, toggleH: 32, checkbox: 26, radio: 24,
   navHeight: 74, navBottom: 16, navSide: 12, fab: 62, fabLift: 30,
-  listingThumbW: 96, listingThumbMinH: 118,
+  listingThumbW: 96, listingThumbMinH: 118, listingPhotoAspect: 1.85, listingOwnerFace: 32,
   minTouch: 44,
   buttonText: 44, saveButton: 38, rowIcon: 40, sectionIcon: 34, chipIcon: 30, count: 19, dot: 10,
   navItemCircle: 40, navIcon: 22, fabIcon: 26, toggleKnob: 26, rangeThumb: 28, rangeTrack: 6,
@@ -488,7 +491,8 @@ export const icons = {
   userX: 'UserX', msgOff: 'MessageCircleOff',
   eye: 'Eye', sun: 'Sun', zap: 'Zap', repeat: 'Repeat', smile: 'Smile', thumb: 'ThumbsUp',
   pinned: 'Pin', gift: 'Gift', map: 'Map', logout: 'LogOut', chart: 'BarChart3', archive: 'Archive',
-  list: 'ListChecks', eyeoff: 'EyeOff', award: 'Award', hand: 'Handshake', key: 'Key', globe: 'Globe', mic: 'Mic',
+  list: 'ListChecks', eyeoff: 'EyeOff', award: 'Award', hand: 'Handshake', swipe: 'ArrowLeftRight', key: 'Key', globe: 'Globe', mic: 'Mic',
+  rain: 'CloudRain', wind: 'Wind',
   undo: 'Undo2', moon: 'Moon', sparkle: 'Sparkle', copy: 'Copy', reply: 'Reply', hourglass: 'Hourglass',
   // categories
   hage: 'Leaf', rengjoring: 'Sparkles', flytting: 'Package', transport: 'Truck', montering: 'Wrench',

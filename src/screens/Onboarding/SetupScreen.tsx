@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
+import { townLabel, townOf } from '@/lib/places';
 import nb from '@/i18n/nb';
 import { sendPendingInvite } from '@/lib/invite';
 import { displayNameOptions } from '@/domain/displayName';
@@ -157,6 +158,8 @@ export function SetupScreen() {
   const [kommune, setKommune] = useState<string | null>(null);
   const [locState, setLocState] = useState<'idle' | 'busy' | 'done'>('idle');
   const [located, setLocated] = useState<string | null>(null);
+  // the town in that kommune («Moelv» in Ringsaker), saved as the area when that kommune is kept
+  const [locatedTown, setLocatedTown] = useState<string | undefined>(undefined);
   // The kommune list stays hidden until the position fails or the person says it's wrong.
   const [manual, setManual] = useState(false);
   const [q, setQ] = useState('');
@@ -214,8 +217,8 @@ export function SetupScreen() {
           initials: initialsOf(name) || 'N',
           purpose: 'BOTH',
           municipality: kommune,
-          // Område is chosen later (Innstillinger, Nabolag) – onboarding only asks for the kommune
-          place: kommune,
+          // the town «Bruk posisjonen min» found (Moelv), when that is the kommune kept; else the kommune itself
+          place: kommune === located && locatedTown ? locatedTown : kommune,
           ...(photo?.path ? { avatar_path: photo.path } : {}),
           onboarded_at: now,
           updated_at: now,
@@ -282,9 +285,10 @@ export function SetupScreen() {
     if ('municipality' in res) {
       setLocState('done');
       setLocated(res.municipality);
+      setLocatedTown(townOf(res.place, res.municipality));
       setKommune(res.municipality);
       setQ('');
-      toastAbove(nb.setup.found(res.municipality), 'pin');
+      toastAbove(nb.setup.found(townLabel(res.place, res.municipality)), 'pin');
     } else {
       setLocState('idle');
       setManual(true);
@@ -481,7 +485,7 @@ export function SetupScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={
-                  locState === 'done' && located ? nb.setup.locDone(located) : nb.setup.locIdle
+                  locState === 'done' && located ? nb.setup.locDone(townLabel(locatedTown, located)) : nb.setup.locIdle
                 }
                 accessibilityState={{ busy: locState === 'busy' }}
                 onPress={locate}
@@ -494,7 +498,7 @@ export function SetupScreen() {
                     {locState === 'busy'
                       ? nb.setup.locBusy
                       : locState === 'done' && located
-                        ? nb.setup.locDone(located)
+                        ? nb.setup.locDone(townLabel(locatedTown, located))
                         : nb.setup.locIdle}
                   </Text>
                   <Text style={text.locSub}>
@@ -512,7 +516,7 @@ export function SetupScreen() {
                   <ScaleIn style={styles.okCircle}>
                     <Icon name="check" size={14} color={colors.white} />
                   </ScaleIn>
-                  <Text style={text.okChip}>{nb.setup.found(located)}</Text>
+                  <Text style={text.okChip}>{nb.setup.found(townLabel(locatedTown, located))}</Text>
                 </FadeUp>
               ) : null}
 

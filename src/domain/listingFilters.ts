@@ -76,3 +76,15 @@ export function matchesFilters(l: Listing, f: ListingFilters, now: Date): boolea
   if (f.urgentOnly && !isUrgent(l)) return false;
   return true;
 }
+
+/** «kveld», «ettermiddag», «etter jobb», «etter kl. 16», «fra 17» – the words people write for after work. */
+const AFTER_WORK = /kveld|ettermiddag|etter jobb|etter arbeid|etter (kl\.? ?)?1[6-9]|fra (kl\.? ?)?1[6-9]/i;
+
+/**
+ * «Etter jobb» in Søk (0110): an oppdrag that says it can be done in the evening, or a helper who says so
+ * (or helps on weekdays without saying when). Only free text says this, so it is a hint, not a promise.
+ */
+export function fitsAfterWork(l: Listing): boolean {
+  if (l.type === 'SERVICE_OFFER') return AFTER_WORK.test(l.offer?.availabilityText ?? '');
+  return AFTER_WORK.test(`${l.task?.scheduledText ?? ''} ${l.task?.description ?? ''}`);
+}

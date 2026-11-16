@@ -167,6 +167,9 @@ export function VoiceBubble({ uri, ms, mine }: { uri: string; ms: number; mine: 
   const ended = loaded && total > 0 && at >= total - 50;
   const frac = total > 0 && !ended ? Math.min(1, at / total) : 0;
   const playing = loaded && status.playing;
+  // «1,5×» and «2×» (0109): a long message in less time
+  const [rate, setRate] = useState<1 | 1.5 | 2>(1);
+  const [trackW, setTrackW] = useState(0);
 
   const failed = (e: unknown) => {
     reportError(e, { where: 'VoiceBubble' });
@@ -210,6 +213,33 @@ export function VoiceBubble({ uri, ms, mine }: { uri: string; ms: number; mine: 
     }
   };
 
+  const nextRate = () => {
+    const r = rate === 1 ? 1.5 : rate === 1.5 ? 2 : 1;
+    setRate(r);
+    haptics.light();
+    try {
+      player.setPlaybackRate(r);
+    } catch {
+      /* the player is made on the first play; the rate is set again then */
+    }
+  };
+  // set the chosen speed on a newly made player
+  useEffect(() => {
+    if (!source) return;
+    try {
+      player.setPlaybackRate(rate);
+    } catch {
+      /* older native module: normal speed */
+    }
+  }, [player, source, rate]);
+
+  // tap the line to jump there
+  const seek = (x: number) => {
+    if (!loaded || trackW <= 0 || total <= 0) return;
+    const sec = (Math.max(0, Math.min(1, x / trackW)) * total) / 1000;
+    void Promise.resolve(player.seekTo(sec)).catch(() => undefined);
+  };
+
   const fg = mine ? colors.white : colors.ink;
   return (
     <View style={styles.voice}>
@@ -223,10 +253,30 @@ export function VoiceBubble({ uri, ms, mine }: { uri: string; ms: number; mine: 
         <Icon name={playing ? 'pause' : 'play'} size={18} color={mine ? colors.ink : colors.white} filled />
       </Pressable>
       <View style={styles.voiceBody}>
-        <View style={[styles.track, mine ? styles.trackMine : styles.trackTheirs]}>
-          <View style={[styles.fill, { width: `${Math.round(frac * 100)}%`, backgroundColor: mine ? colors.lime : colors.cyanDeep }]} />
+        <Pressable
+          accessibilityRole="adjustable"
+          accessibilityLabel={nb.chat.voiceMessage}
+          onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}
+          onPress={(e) => seek(e.nativeEvent.locationX)}
+          hitSlop={{ top: 12, bottom: 12 }}
+          style={styles.trackHit}
+        >
+          <View style={[styles.track, mine ? styles.trackMine : styles.trackTheirs]}>
+            <View style={[styles.fill, { width: `${Math.round(frac * 100)}%`, backgroundColor: mine ? colors.lime : colors.cyanDeep }]} />
+          </View>
+        </Pressable>
+        <View style={styles.voiceFoot}>
+          <Text style={[text.time, styles.voiceTime, { color: fg }]}>{formatClip(playing || (at > 0 && !ended) ? at : total)}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={nb.innboks.chat.speedA11y(String(rate).replace('.', ','))}
+            onPress={nextRate}
+            hitSlop={10}
+            style={[styles.speed, mine ? styles.speedMine : styles.speedTheirs]}
+          >
+            <Text style={[styles.speedText, { color: fg }]}>{nb.innboks.chat.speed(String(rate).replace('.', ','))}</Text>
+          </Pressable>
         </View>
-        <Text style={[text.time, styles.voiceTime, { color: fg }]}>{formatClip(playing || (at > 0 && !ended) ? at : total)}</Text>
       </View>
     </View>
   );
@@ -263,4 +313,10 @@ const styles = StyleSheet.create({
   trackTheirs: { backgroundColor: colors.track },
   fill: { height: 4, borderRadius: 2 },
   voiceTime: { fontVariant: ['tabular-nums'] },
+  trackHit: { paddingVertical: 6 },
+  voiceFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  speed: { minWidth: 34, height: 22, paddingHorizontal: 6, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  speedMine: { backgroundColor: colors.onInk25 },
+  speedTheirs: { backgroundColor: colors.track },
+  speedText: { fontFamily: text.label.fontFamily, fontSize: 11.5 },
 });

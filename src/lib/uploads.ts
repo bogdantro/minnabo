@@ -71,13 +71,15 @@ export async function pickAndUpload(opts: {
   bucket: UploadBucket;
   folder: string;
   source: 'camera' | 'library';
+  /** let the person crop before it is uploaded («Bilde med beskjæring», 0109) */
+  edit?: boolean;
 }): Promise<PickResult | null> {
-  const { bucket, folder, source } = opts;
+  const { bucket, folder, source, edit } = opts;
 
   if (source === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) throw new UserError('MinNabo trenger tilgang til kameraet.');
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.9 });
+    const r = await ImagePicker.launchCameraAsync({ quality: 0.9, allowsEditing: !!edit });
     if (r.canceled) return null;
     const asset = r.assets[0];
     const err = validateImage(asset);
@@ -90,6 +92,7 @@ export async function pickAndUpload(opts: {
   const r = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     quality: 0.9,
+    allowsEditing: !!edit,
   });
   if (r.canceled) return null;
   const asset = r.assets[0];
@@ -151,4 +154,48 @@ export async function uploadVoice(uri: string, folder: string): Promise<PickResu
   const { error } = await supabase.storage.from('chat-attachments').upload(path, bytes, { contentType: type, upsert: true });
   if (error) throw backendError(error);
   return { path, publicUrl: '', localUri: uri, bytes: bytes.byteLength };
+}
+
+/** Up to 15 seconds of video for the chat (0109). */
+export const MAX_VIDEO_MS = 15 * 1000;
+/** A phone video of 15 s is well under this. */
+const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
+/** A PDF in the chat, e.g. a quote from a business. */
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
+
+async function uploadChatFile(uri: string, folder: string, contentType: string, ending: string, maxBytes: number, tooBig: string): Promise<PickResult> {
+  const res = await fetch(uri);
+  const bytes = await res.arrayBuffer();
+  if (bytes.byteLength > maxBytes) throw new UserError(tooBig);
+  const path = `${folder}/${Date.now()}-${rand()}.${ending}`;
+  const { error } = await supabase.storage.from('chat-attachments').upload(path, bytes, { contentType, upsert: true });
+  if (error) throw backendError(error);
+  return { path, publicUrl: '', localUri: uri, bytes: bytes.byteLength };
+}
+
+/** «Video» in the chat: pick or film up to 15 seconds, upload to the private chat bucket. Null when cancelled. */
+export async function pickAndUploadVideo(folder: string, source: 'camera' | 'library'): Promise<PickResult | null> {
+  const perm = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) throw new UserError(source === 'camera' ? 'MinNabo trenger tilgang til kameraet.' : 'MinNabo trenger tilgang til bildene dine.');
+  const opts = { mediaTypes: ['videos'] as ImagePicker.MediaType[], videoMaxDuration: MAX_VIDEO_MS / 1000, quality: 0.7 };
+  const r = source === 'camera' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
+  if (r.canceled) return null;
+  const asset = r.assets[0];
+  // `duration` is in milliseconds; a little slack for how phones round
+  if (asset.duration && asset.duration > MAX_VIDEO_MS + 900) throw new UserError('Videoen kan være inntil 15 sekunder.');
+  const ending = (/\.([a-z0-9]+)(?:\?|$)/i.exec(asset.uri)?.[1] ?? 'mp4').toLowerCase();
+  return uploadChatFile(asset.uri, folder, ending === 'mov' ? 'video/quicktime' : 'video/mp4', ending === 'mov' ? 'mov' : 'mp4', MAX_VIDEO_BYTES, 'Videoen er for stor.');
+}
+
+/** «PDF» in the chat. Null when cancelled. */
+export async function pickAndUploadPdf(folder: string): Promise<(PickResult & { name: string }) | null> {
+  const DocumentPicker = await import('expo-document-picker');
+  const r = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true, multiple: false });
+  if (r.canceled) return null;
+  const asset = r.assets[0];
+  const name = asset.name || 'dokument.pdf';
+  if (!/\.pdf$/i.test(name) && asset.mimeType !== 'application/pdf') throw new UserError('Bare PDF-filer kan sendes.');
+  if (asset.size && asset.size > MAX_PDF_BYTES) throw new UserError('Filen kan være inntil 10 MB.');
+  const up = await uploadChatFile(asset.uri, folder, 'application/pdf', 'pdf', MAX_PDF_BYTES, 'Filen kan være inntil 10 MB.');
+  return { ...up, name: /\.pdf$/i.test(name) ? name : `${name}.pdf` };
 }

@@ -102,7 +102,8 @@ test('a new oppslag goes to the whole kommune unless I pick one of my nabolag', 
   const create = jest.spyOn(noticeboardStore, 'create');
   await renderWithProviders(<NoticeboardScreen />);
   await fireEvent.press((await screen.findAllByLabelText('Nytt oppslag'))[0]);
-  expect(await screen.findByText('Hvem kan se oppslaget?')).toBeTruthy();
+  // who sees it is the pill under my name, like «Lag innlegg»; a tap shows the choices
+  await fireEvent.press(await screen.findByLabelText('Hvem kan se oppslaget? Hele Lillehammer'));
   expect(screen.getByLabelText('Hele Lillehammer')).toBeTruthy();
   // nabolag I am not in are not offered
   expect(screen.queryByLabelText('Bare Sentrum')).toBeNull();

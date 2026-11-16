@@ -21,7 +21,8 @@ test('shows matched oppdrag first as a card stack with "why" chips and a counter
   expect(screen.getByText('Passer Montering')).toBeTruthy();
   expect(counter()).toMatch(/^1 av \d+$/);
   expect(screen.getByText('Se og gi tilbud')).toBeTruthy();
-  expect(screen.getByText(/MinNabo håndterer ikke betaling/)).toBeTruthy();
+  // the payment note was taken off this screen on request (2026-11-14)
+  expect(screen.queryByText(/MinNabo håndterer ikke betaling/)).toBeNull();
 });
 
 test('"Ikke aktuelt" moves to the next card and "Angre" brings it back', async () => {

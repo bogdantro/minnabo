@@ -5,10 +5,10 @@
 import { forwardRef, useImperativeHandle, useState, type ReactNode } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 
-type ModalProps = { children?: ReactNode; onDismiss?: () => void };
+type ModalProps = { children?: ReactNode; onDismiss?: () => void; footerComponent?: (props: object) => ReactNode };
 
 export const BottomSheetModal = forwardRef<unknown, ModalProps>(function BottomSheetModal(
-  { children, onDismiss },
+  { children, onDismiss, footerComponent },
   ref,
 ) {
   const [open, setOpen] = useState(false);
@@ -21,13 +21,20 @@ export const BottomSheetModal = forwardRef<unknown, ModalProps>(function BottomS
       });
     },
   }));
-  return open ? <View>{children}</View> : null;
+  // a pinned footer (Sheet `footer`) is drawn after the content
+  return open ? (
+    <View>
+      {children}
+      {footerComponent ? footerComponent({}) : null}
+    </View>
+  ) : null;
 });
 
 export const BottomSheetModalProvider = ({ children }: { children?: ReactNode }) => <>{children}</>;
 export const BottomSheetView = View;
 export const BottomSheetScrollView = ScrollView;
 export const BottomSheetBackdrop = () => null;
+export const BottomSheetFooter = ({ children }: { children?: ReactNode }) => <View>{children}</View>;
 export const useBottomSheetTimingConfigs = () => ({});
 export const BottomSheetTextInput = TextInput;
 /** Real hook returns the sheet context; outside a sheet (unsafe) it is null. */

@@ -214,6 +214,16 @@ function Page({
   const y = useSharedValue(0);
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
+  // Which drag is live: swipe-down-to-close (not zoomed) or moving the photo (zoomed). Only one is switched on,
+  // so the zoomed drag can't win the race and swallow a swipe down (it did: «sveip ned for å lukke» never closed).
+  const [isZoomed, setIsZoomed] = useState(false);
+  const zoomChanged = useCallback(
+    (z: boolean) => {
+      setIsZoomed(z);
+      onZoom(z);
+    },
+    [onZoom],
+  );
 
   // never let a zoomed photo slide further than its own edges
   const clampX = (v: number, s: number) => {
@@ -228,7 +238,7 @@ function Page({
   };
   const settle = (s: number) => {
     'worklet';
-    runOnJS(onZoom)(s > 1.01);
+    runOnJS(zoomChanged)(s > 1.01);
   };
 
   const pinch = Gesture.Pinch()
@@ -243,6 +253,7 @@ function Page({
     });
 
   const pan = Gesture.Pan()
+    .enabled(!isZoomed)
     .minDistance(6)
     // not zoomed: only a downward drag belongs to the photo; sideways goes to the list of photos
     .activeOffsetY([-14, 14])
@@ -273,6 +284,7 @@ function Page({
 
   // a zoomed photo can be dragged sideways too, so it takes over from the list while zoomed
   const panZoomed = Gesture.Pan()
+    .enabled(isZoomed)
     .minDistance(4)
     .onStart(() => {
       startX.set(x.get());
@@ -317,9 +329,13 @@ function Page({
 
   return (
     <GestureDetector gesture={gesture}>
-      <View style={{ width, height }} collapsable={false}>
+      <View style={[styles.page, { width, height }]} collapsable={false}>
         <Animated.View entering={first ? ZoomIn.duration(240) : undefined} style={[styles.flex, style]}>
-          <Image source={{ uri }} style={[styles.clear, { width, height }]} resizeMode="contain" accessibilityIgnoresInvertColors accessibilityLabel={nb.detail.photo} />
+          {/* in a browser a mouse drag on a photo starts the browser's own image drag and the swipe never
+              ends: the photo itself takes no pointer, the page around it gets the gestures (as in the feed) */}
+          <View pointerEvents="none" style={styles.flex}>
+            <Image source={{ uri }} style={[styles.clear, { width, height }]} resizeMode="contain" accessibilityIgnoresInvertColors accessibilityLabel={nb.detail.photo} />
+          </View>
         </Animated.View>
       </View>
     </GestureDetector>
@@ -328,6 +344,8 @@ function Page({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  // no text/image selection while dragging with a mouse
+  page: { overflow: 'hidden', userSelect: 'none' },
   // the photo's grey loading colour would fill the whole screen around a contained photo
   clear: { backgroundColor: 'transparent' },
   bg: { backgroundColor: colors.viewerSolid },

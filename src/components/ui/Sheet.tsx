@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import {
+  BottomSheetFooter,
+  type BottomSheetFooterProps,
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
@@ -36,6 +38,8 @@ export type SheetProps = {
   tone?: 'white' | 'page';
   /** Horizontal padding override (Meny uses 16). */
   padding?: number;
+  /** Pinned to the bottom of the sheet above the keyboard (a reply field, «Publiser»); the content scrolls under it. */
+  footer?: ReactNode;
   children: ReactNode;
   testID?: string;
 };
@@ -58,6 +62,7 @@ export function Sheet({
   heightRatio,
   tone = 'white',
   padding,
+  footer,
   children,
   testID,
 }: SheetProps) {
@@ -72,20 +77,56 @@ export function Sheet({
   // Only dismiss a sheet we actually presented: dismissing a never-shown
   // modal leaves the library in a "dismissing" state that blocks later presents.
   const presented = useRef(false);
+  // `visible` turned false and the slide-down is still running. The library ignores `present()` until it ends,
+  // so a reopen in that time (Meny opened again, or back from a page opened in Meny) waits for `onDismiss`.
+  const closingByProp = useRef(false);
+  const wanted = useRef(visible);
+  const graceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // bumped to replace a modal stuck half-closed (see below)
+  const [epoch, setEpoch] = useState(0);
   useEffect(() => {
+    wanted.current = visible;
     if (visible) {
+      if (closingByProp.current) return;
       presented.current = true;
       ref.current?.present();
     } else if (presented.current) {
       presented.current = false;
+      closingByProp.current = true;
       ref.current?.dismiss();
+      // if the library never reports the close (it was never really shown), don't wait for ever.
+      // Kept in a ref: reopening during the close must not cancel it.
+      if (graceTimer.current) clearTimeout(graceTimer.current);
+      graceTimer.current = setTimeout(() => {
+        graceTimer.current = undefined;
+        if (!closingByProp.current) return;
+        // a modal stuck half-closed ignores present(): start over with a fresh one
+        closingByProp.current = false;
+        setEpoch((n) => n + 1);
+      }, motion.durations.sheet + CLOSE_GRACE_MS);
     }
   }, [visible]);
+  useEffect(() => () => clearTimeout(graceTimer.current), []);
+  // the fresh modal opens if the sheet is wanted
+  useEffect(() => {
+    if (epoch && wanted.current) {
+      presented.current = true;
+      ref.current?.present();
+    }
+  }, [epoch]);
 
-  // The library has already dismissed the modal here (swipe, scrim, close button),
-  // so the effect above must not dismiss it a second time when `visible` turns false.
   const handleDismiss = useCallback(() => {
     presented.current = false;
+    if (closingByProp.current) {
+      // our own close finished; open again if the sheet was asked for in the meantime
+      closingByProp.current = false;
+      if (wanted.current) {
+        presented.current = true;
+        ref.current?.present();
+      }
+      return;
+    }
+    // the person closed it (swipe, scrim, close button): tell the parent
     onClose();
   }, [onClose]);
 
@@ -107,9 +148,18 @@ export function Sheet({
   );
 
   const Body = scroll ? BottomSheetScrollView : BottomSheetView;
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => (
+      <BottomSheetFooter {...props}>
+        <View style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}>{footer}</View>
+      </BottomSheetFooter>
+    ),
+    [footer, insets.bottom],
+  );
 
   return (
     <BottomSheetModal
+      key={epoch}
       ref={ref}
       onDismiss={handleDismiss}
       // a date field inside a sheet opens a sheet of its own: the one below must stay open, not be replaced
@@ -121,6 +171,7 @@ export function Sheet({
       maxDynamicContentSize={Math.min(height * 0.9, height - insets.top - 8)}
       enablePanDownToClose={dismissible}
       backdropComponent={renderBackdrop}
+      footerComponent={footer ? renderFooter : undefined}
       animationConfigs={animationConfigs}
       handleComponent={Grabber}
       backgroundStyle={[styles.bg, tone === 'page' && styles.bgPage]}
@@ -133,7 +184,8 @@ export function Sheet({
       <Body
         testID={testID}
         style={[styles.body, padding != null && { paddingHorizontal: padding }]}
-        contentContainerStyle={scroll ? { paddingBottom: 34 + insets.bottom } : undefined}
+        // with a pinned footer the last lines must scroll clear of it
+        contentContainerStyle={scroll ? { paddingBottom: (footer ? FOOTER_SPACE : 34) + insets.bottom } : undefined}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -152,7 +204,7 @@ export function Sheet({
           </View>
         ) : null}
         {children}
-        {!scroll ? <View style={{ height: 34 + insets.bottom }} /> : null}
+        {!scroll ? <View style={{ height: (footer ? FOOTER_SPACE : 34) + insets.bottom }} /> : null}
       </Body>
     </BottomSheetModal>
   );
@@ -166,7 +218,14 @@ function Grabber() {
   );
 }
 
+/** Extra time after the slide-down before a close the library never reported is treated as done. */
+const CLOSE_GRACE_MS = 400;
+
+/** Room left under the content for a pinned footer (a 52 px field or button plus its padding). */
+const FOOTER_SPACE = 96;
+
 const styles = StyleSheet.create({
+  footer: { paddingHorizontal: 20, paddingTop: 10, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line2 },
   scrim: { backgroundColor: colors.scrim },
   bgPage: { backgroundColor: colors.bg },
   bg: { backgroundColor: colors.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet },

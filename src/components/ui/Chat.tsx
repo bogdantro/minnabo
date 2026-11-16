@@ -10,16 +10,31 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { colors, radius, shadow, text } from '@/theme/theme';
+import { colors, fonts, radius, shadow, text } from '@/theme/theme';
 import { Button } from './Button';
 import { Icon, type IconName } from './Icon';
 import { Pill } from './Pill';
 
 export const PAYMENT_NOTE = 'Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.';
+/** The same two sentences, split for the card: the promise first, then how. */
+const PAYMENT_TITLE = 'MinNabo håndterer ikke betaling';
+const PAYMENT_BODY = 'Pris og betaling avtales direkte mellom dere.';
 
 /** `.note` + info icon. Must appear near every price / offer (product rule 4). */
-export function PaymentNote({ text: body = PAYMENT_NOTE, style }: { text?: string; style?: StyleProp<ViewStyle> }) {
-  return <Note icon="info" style={style}>{body}</Note>;
+export function PaymentNote({ text: body, style }: { text?: string; style?: StyleProp<ViewStyle> }) {
+  // a screen with its own wording keeps the quiet one-liner
+  if (body && body !== PAYMENT_NOTE) return <Note icon="info" style={style}>{body}</Note>;
+  return (
+    <View style={[styles.pay, style]} accessible accessibilityLabel={PAYMENT_NOTE}>
+      <View style={styles.payIc}>
+        <Icon name="shield" size={17} color={colors.limeDeep} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={styles.payTitle}>{PAYMENT_TITLE}</Text>
+        <Text style={styles.payBody}>{PAYMENT_BODY}</Text>
+      </View>
+    </View>
+  );
 }
 
 /** `.note` – small grey line with a faint 15 px icon. */
@@ -264,6 +279,10 @@ const styles = StyleSheet.create({
   flex15: { flex: 1.5 },
   note: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   noteIcon: { marginTop: 1 },
+  pay: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderRadius: radius.card, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line2 },
+  payIc: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
+  payTitle: { fontFamily: fonts.bodyBold, fontSize: 13.5, lineHeight: 18, color: colors.ink },
+  payBody: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.mute },
   noteTop: { marginTop: 10 },
   bubCol: { maxWidth: '78%' },
   alignStart: { alignSelf: 'flex-start' },

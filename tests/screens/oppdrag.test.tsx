@@ -1,11 +1,13 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { OppdragScreen } from '@/screens/OppdragScreen';
+import { setFlagOverride } from '@/config/featureFlags';
 import { renderWithProviders } from '../testUtils';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
+afterEach(() => setFlagOverride('forMeOnHome', false));
 
 test('shows the greeting, header, location row, search and category chips', async () => {
   await renderWithProviders(<OppdragScreen />);
@@ -43,19 +45,24 @@ test('"Se alle oppdrag" goes to the full list', async () => {
   expect(router.push).toHaveBeenCalledWith('/oppdrag-liste');
 });
 
-test('the search bar opens Søk and the lead card opens Oppdrag for meg', async () => {
+test('the search bar opens Søk, and the «Oppdrag for meg» card is hidden for now (2026-11-14)', async () => {
   await renderWithProviders(<OppdragScreen />);
   await fireEvent.press(screen.getByLabelText('Søk etter oppdrag'));
   expect(router.push).toHaveBeenCalledWith('/sok');
+  expect(screen.queryByText('Oppdrag for meg')).toBeNull();
+});
+
+test('with its flag on, the «Oppdrag for meg» card is back and opens Oppdrag for meg', async () => {
+  setFlagOverride('forMeOnHome', true);
+  await renderWithProviders(<OppdragScreen />);
   await fireEvent.press(screen.getByText('Oppdrag for meg'));
   expect(router.push).toHaveBeenCalledWith('/oppdrag-for-meg');
 });
 
 test('the payment note is shown', async () => {
   await renderWithProviders(<OppdragScreen />);
-  expect(
-    screen.getByText('MinNabo håndterer ikke betaling. Pris og betaling avtales direkte mellom dere.'),
-  ).toBeTruthy();
+  // one card, read as one sentence (2026-11-14)
+  expect(screen.getByLabelText('Pris og betaling avtales direkte mellom dere. MinNabo håndterer ikke betaling.')).toBeTruthy();
 });
 
 describe('Hasteoppdrag', () => {
@@ -71,7 +78,8 @@ describe('Hasteoppdrag', () => {
     repositories.listings.replace({ ...oldest, urgentUntil: new Date(Date.now() + 3600000).toISOString() });
 
     await renderWithProviders(<OppdragScreen />);
-    const cards = await screen.findAllByLabelText(/(kr|Ønsker tilbud|Frivillig)$/);
+    // 0110: the card's tags («Ingen tilbud ennå» …) come after the price in its label
+    const cards = await screen.findAllByLabelText(/(kr|Ønsker tilbud|Frivillig)(, .*)?$/);
     expect(cards[0].props.accessibilityLabel).toMatch(new RegExp(`^${oldest.title}, Haster, `));
     expect(screen.getAllByText('Haster')).toHaveLength(1);
   });
@@ -84,7 +92,7 @@ describe('Hasteoppdrag', () => {
     repositories.listings.replace({ ...oldest, urgentUntil: new Date(Date.now() - 60000).toISOString() });
 
     await renderWithProviders(<OppdragScreen />);
-    const cards = await screen.findAllByLabelText(/(kr|Ønsker tilbud|Frivillig)$/);
+    const cards = await screen.findAllByLabelText(/(kr|Ønsker tilbud|Frivillig)(, .*)?$/);
     expect(cards[0].props.accessibilityLabel).not.toMatch(new RegExp(`^${oldest.title},`));
     expect(screen.queryByText('Haster')).toBeNull();
   });

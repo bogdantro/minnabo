@@ -2,7 +2,7 @@ import type { ListingExtras } from '@/api/ApiClient';
 import type { Listing } from '@/domain/types';
 
 /** The oppdrag being previewed (from the Legg ut wizard), plus how to save it. */
-type Meta = { extras?: ListingExtras; editId?: string; /** where to land after saving an edit */ back?: string };
+type Meta = { extras?: ListingExtras; editId?: string; /** where to land after saving an edit */ back?: string; /** the saved draft this came from */ draftId?: string };
 
 let draft: Listing | null = null;
 let meta: Meta = {};

@@ -3,10 +3,11 @@ import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'qrcode';
 import Svg, { Rect } from 'react-native-svg';
-import type { Listing } from '@/domain/types';
+import type { Listing, NoticeboardPost } from '@/domain/types';
 import { categoryArtId, categoryLabel } from '@/domain/categories';
 import { SITE } from '@/config/links';
-import { captureViewAsFile, shareImageFile, shareListing } from '@/lib/share';
+import { captureViewAsFile, shareImageFile, shareListing, shareNotice } from '@/lib/share';
+import { EVENT_ICON, EVENT_STYLE } from '@/components/community/noticeKinds';
 import { toast } from '@/lib/toast';
 import nb from '@/i18n/nb';
 import { colors, radius, text } from '@/theme/theme';
@@ -109,6 +110,172 @@ export function ShareListingSheet({ listing, visible, onClose }: { listing: List
             void shareListing(listing.id, listing.title);
           }}
         />
+      </View>
+    </Sheet>
+  );
+}
+
+/** An arrangement as a picture (0108): the date tile, the title and the place – never an address. */
+function EventImageCard({ post, innerRef }: { post: NoticeboardPost; innerRef: React.RefObject<View | null> }) {
+  const at = post.eventAt ? new Date(post.eventAt) : null;
+  const kind = post.eventType ?? 'ANNET';
+  const look = EVENT_STYLE[kind];
+  return (
+    <View ref={innerRef} collapsable={false} style={styles.lcard}>
+      <View style={styles.glow} />
+      <View style={styles.brand}>
+        <BrandMark size={28} showWordmark={false} />
+        <Text style={styles.brandText}>MinNabo</Text>
+      </View>
+      <View style={styles.erow}>
+        {at ? (
+          <View style={styles.etile}>
+            <Text style={styles.emonth}>{at.toLocaleDateString('nb-NO', { month: 'short' }).replace('.', '')}</Text>
+            <Text style={styles.eday}>{at.getDate()}</Text>
+          </View>
+        ) : null}
+        <View style={[styles.ekind, { backgroundColor: look.bg }]}>
+          <Icon name={EVENT_ICON[kind]} size={22} color={look.fg} />
+        </View>
+      </View>
+      <Text style={styles.lkind}>{`${nb.events.types[kind]}${post.repeatWeekly ? ` · ${nb.felles.event.weekly}` : ''}`}</Text>
+      <Text style={styles.ltitle} numberOfLines={3}>
+        {post.title}
+      </Text>
+      <View style={styles.lmeta}>
+        <Icon name="pin" size={16} color={colors.lime} />
+        <Text style={styles.lmetaText} numberOfLines={1}>
+          {[post.place || post.municipality, at ? at.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : null].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+      <Text style={styles.lsite}>{nb.share.cardFoot}</Text>
+    </View>
+  );
+}
+
+/** «Del arrangementet»: as a picture for Facebook and stories, or as a link. */
+export function ShareEventSheet({ post, visible, onClose }: { post: NoticeboardPost; visible: boolean; onClose: () => void }) {
+  const { ref, busy, share } = useCapture({ title: post.title, message: `${post.title}
+${SITE}` });
+  return (
+    <Sheet visible={visible} onClose={onClose} title={nb.felles.event.share} scroll>
+      {visible ? (
+        <View style={styles.preview}>
+          <EventImageCard post={post} innerRef={ref} />
+        </View>
+      ) : null}
+      <View style={styles.btns}>
+        {Platform.OS !== 'web' ? <Button label={nb.share.asImage} icon="image" variant="ink" loading={busy} onPress={() => void share()} /> : null}
+        <Button
+          label={nb.share.asLink}
+          icon="share"
+          variant="ghost"
+          onPress={() => {
+            onClose();
+            void shareNotice(post.id, nb.noticeboard.shareText(post.title));
+          }}
+        />
+      </View>
+    </Sheet>
+  );
+}
+
+/**
+ * «Jobben er gjort» as a picture (asked 2026-11-09): the base design's lime card with the white disc and a
+ * floating «Jobben er gjort» chip. No names and no address – just the job, the place and the stars.
+ */
+function JobDoneCard({
+  title,
+  category,
+  place,
+  rating,
+  photo,
+  innerRef,
+}: {
+  title: string;
+  category: string;
+  place?: string;
+  rating?: number;
+  photo?: string;
+  innerRef: React.RefObject<View | null>;
+}) {
+  const cat = categoryArtId(category);
+  return (
+    <View ref={innerRef} collapsable={false} style={styles.dcard}>
+      <View style={styles.dblob} />
+      <View style={styles.dblob2} />
+      <View style={styles.brand}>
+        <BrandMark size={28} showWordmark={false} />
+        <Text style={[styles.brandText, styles.inkText]}>MinNabo</Text>
+      </View>
+      <View style={styles.dart}>
+        <View style={styles.dring} />
+        <View style={styles.ddisc}>
+          <CategoryArt category={cat} uri={photo} width={132} height={132} radius={66} iconSize={52} />
+        </View>
+        <View style={[styles.dstamp, styles.tiltL]}>
+          <View style={styles.dcheck}>
+            <Icon name="check" size={14} color={colors.white} />
+          </View>
+          <Text style={styles.dstampText}>{nb.share.doneStamp}</Text>
+        </View>
+        <View style={[styles.ddot, styles.ddotCyan]} />
+        <View style={[styles.ddot, styles.ddotInk]} />
+      </View>
+      <Text style={styles.dtitle} numberOfLines={3}>
+        {title}
+      </Text>
+      <View style={styles.dmeta}>
+        <Icon name="pin" size={15} color={colors.ink} />
+        <Text style={styles.dmetaText} numberOfLines={1}>
+          {place ? nb.share.doneLine(place) : nb.share.doneLineNoPlace}
+        </Text>
+      </View>
+      {rating ? (
+        <View style={styles.dstars} accessibilityLabel={nb.share.doneStarsA11y(rating)}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Icon key={n} name="star" size={20} color={n <= rating ? colors.ink : colors.onLime35} filled />
+          ))}
+        </View>
+      ) : null}
+      <Text style={styles.dfoot}>{nb.share.doneFoot}</Text>
+    </View>
+  );
+}
+
+/** After the review: share that the job is done, as a picture (or as text on the web). */
+export function JobDoneShareSheet({
+  visible,
+  onClose,
+  title,
+  category,
+  place,
+  rating,
+  photo,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  category: string;
+  place?: string;
+  rating?: number;
+  photo?: string;
+}) {
+  const message = `${nb.share.doneMessage(title)}\n${SITE}`;
+  const { ref, busy, share } = useCapture({ title: nb.share.doneSheet, message });
+  return (
+    <Sheet visible={visible} onClose={onClose} title={nb.share.doneSheet} subtitle={nb.share.doneSub} scroll>
+      {visible ? (
+        <View style={styles.preview}>
+          <JobDoneCard title={title} category={category} place={place} rating={rating} photo={photo} innerRef={ref} />
+        </View>
+      ) : null}
+      <View style={styles.btns}>
+        {Platform.OS !== 'web' ? (
+          <Button label={nb.share.asImage} icon="image" variant="ink" loading={busy} onPress={() => void share()} testID="job-done-share" />
+        ) : (
+          <Button label={nb.share.doneButton} icon="share" variant="ink" onPress={() => void Share.share({ title: nb.share.doneSheet, message }).catch(() => undefined)} />
+        )}
       </View>
     </Sheet>
   );
@@ -275,6 +442,25 @@ export function PosterRow({ onPress }: { onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  dcard: { width: 320, padding: 22, paddingBottom: 18, borderRadius: 30, backgroundColor: colors.lime, overflow: 'hidden', alignItems: 'center', gap: 10 },
+  dblob: { position: 'absolute', width: 260, height: 260, borderRadius: 130, right: -110, top: -90, backgroundColor: colors.limeBlob },
+  dblob2: { position: 'absolute', width: 200, height: 200, borderRadius: 100, left: -120, bottom: -70, backgroundColor: colors.limeBlob },
+  inkText: { color: colors.ink },
+  dart: { width: 200, height: 186, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  dring: { position: 'absolute', width: 176, height: 176, borderRadius: 88, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.ink },
+  ddisc: { width: 148, height: 148, borderRadius: 74, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  dstamp: { position: 'absolute', bottom: 2, left: -18, flexDirection: 'row', alignItems: 'center', gap: 7, height: 38, paddingLeft: 6, paddingRight: 14, borderRadius: radius.pill, backgroundColor: colors.white },
+  tiltL: { transform: [{ rotate: '-6deg' }] },
+  dcheck: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ok, alignItems: 'center', justifyContent: 'center' },
+  dstampText: { fontFamily: text.label.fontFamily, fontSize: 14, color: colors.okText },
+  ddot: { position: 'absolute', borderRadius: 99 },
+  ddotCyan: { width: 12, height: 12, top: 10, right: 12, backgroundColor: colors.cyan },
+  ddotInk: { width: 8, height: 8, top: 40, left: 6, backgroundColor: colors.ink },
+  dtitle: { fontFamily: text.display34.fontFamily, fontSize: 28, lineHeight: 30, letterSpacing: -0.8, color: colors.ink, textAlign: 'center', marginTop: 6 },
+  dmeta: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.onLime20 },
+  dmetaText: { fontFamily: text.label.fontFamily, fontSize: 13.5, color: colors.ink },
+  dstars: { flexDirection: 'row', gap: 4 },
+  dfoot: { ...text.small, color: colors.ink2, marginTop: 6 },
   flex: { flex: 1, minWidth: 0 },
   pressed: { opacity: 0.85 },
   preview: { marginBottom: 16 },
@@ -284,6 +470,11 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   brandText: { fontFamily: text.h3.fontFamily, fontSize: 17, letterSpacing: -0.4, color: colors.white },
   lkind: { ...text.eyebrow, color: colors.lime, marginTop: 4 },
+  erow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
+  etile: { width: 74, height: 80, borderRadius: 20, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
+  emonth: { fontFamily: text.bodySemi.fontFamily, fontSize: 14, textTransform: 'uppercase', color: colors.ink },
+  eday: { fontFamily: text.h1.fontFamily, fontSize: 34, lineHeight: 38, color: colors.ink },
+  ekind: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   ltitle: { fontFamily: text.h1.fontFamily, fontSize: 25, lineHeight: 29, letterSpacing: -0.6, color: colors.white },
   lmeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   lmetaText: { flex: 1, fontFamily: text.bodySemi.fontFamily, fontSize: 14.5, color: colors.onInk78 },

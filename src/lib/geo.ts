@@ -84,6 +84,27 @@ export async function detectKommune(): Promise<DetectResult> {
   }
 }
 
+/**
+ * «Min posisjon» on the map (asked 2026-11-09): where the phone is, for drawing the person's own dot.
+ * Stays on the phone – it is never sent, saved or shown to anyone else.
+ */
+export async function myCoords(): Promise<Coords | { error: LocationError }> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Location = require('expo-location') as typeof import('expo-location');
+    const current = await Location.getForegroundPermissionsAsync();
+    if (!current.granted) {
+      if (current.canAskAgain === false) return { error: 'blocked' };
+      const asked = await Location.requestForegroundPermissionsAsync();
+      if (!asked.granted) return { error: 'denied' };
+    }
+    return (await currentCoords(Location)) ?? { error: 'unavailable' };
+  } catch (e) {
+    reportError(e, { where: 'myCoords' });
+    return { error: 'unavailable' };
+  }
+}
+
 /** A fix less precise than this can't honestly name the street. */
 const PLACE_MAX_ACCURACY_M = 250;
 

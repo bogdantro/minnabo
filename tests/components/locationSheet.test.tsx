@@ -2,6 +2,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OppdragScreen } from '@/screens/OppdragScreen';
 import { locationScope } from '@/lib/locationScope';
+import { profileRepository } from '@mocks/data/profileRepository';
 import { renderWithProviders } from '../testUtils';
 
 const openSheet = async () => {
@@ -31,10 +32,26 @@ describe('LocationSheet (Oppdrag › Endre)', () => {
     expect(await screen.findByText('Fant deg: Lillehammer kommune')).toBeTruthy();
   });
 
+  it('in Moelv the position names the town, and «Vis oppdrag» saves it as my area', async () => {
+    const Location = require('expo-location');
+    Location.reverseGeocodeAsync.mockResolvedValueOnce([{ subregion: 'Ringsaker', city: 'Moelv', region: 'Innlandet' }]);
+    await renderWithProviders(<OppdragScreen />);
+    await openSheet();
+    await fireEvent.press(screen.getByText('Bruk posisjonen min'));
+    expect(await screen.findByText('Fant deg: Moelv · Ringsaker')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Vis oppdrag'));
+    await waitFor(() => {
+      const me = profileRepository.getProfile(profileRepository.currentUserId);
+      expect(me?.location.municipality).toBe('Ringsaker');
+      expect(me?.location.place).toBe('Moelv');
+    });
+    expect(await screen.findByText('Moelv · Ringsaker')).toBeTruthy();
+  });
+
   it('a wider reach applies on "Vis oppdrag"', async () => {
     await renderWithProviders(<OppdragScreen />);
     await openSheet();
-    await fireEvent.press(screen.getByRole('tab', { name: 'Nabokommuner' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Nabokommuner' }));
     expect(screen.getByText('Lillehammer og kommunene rundt')).toBeTruthy();
     await fireEvent.press(screen.getByText('Vis oppdrag'));
     await waitFor(() => expect(locationScope.getReach()).toBe(1));

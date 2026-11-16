@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { townOf } from './places';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '@/auth/session';
 import { useProfile, useUpdateProfile } from '@/api/queries';
@@ -70,8 +71,10 @@ export function useLocationScope(): {
   municipalities: string[];
   reach: Reach;
   setReach: (r: Reach) => void;
-  /** Change kommune: saved on the profile, or locally without a backend user. */
-  setKommune: (k: string) => void;
+  /** Change kommune: saved on the profile, or locally without a backend user. `place` = the town found by «Bruk posisjonen min». */
+  setKommune: (k: string, place?: string) => void;
+  /** «Moelv» when the profile's area is a town in the kommune, else undefined */
+  town?: string;
   ready: boolean;
 } {
   const { userId } = useSession();
@@ -103,11 +106,13 @@ export function useLocationScope(): {
     municipalities,
     reach: r,
     setReach: locationScope.setReach,
-    setKommune: (k) => {
-      if (k === municipality) return;
-      if (userId) update.mutate({ municipality: k, place: k });
+    setKommune: (k, place) => {
+      const nextPlace = townOf(place, k) ?? k;
+      if (k === municipality && (!place || nextPlace === profile?.location.place)) return;
+      if (userId) update.mutate({ municipality: k, place: nextPlace });
       else locationScope.setLocalKommune(k);
     },
+    town: userId ? townOf(profile?.location.place, municipality) : undefined,
     ready: !userId || !isLoading,
   };
 }

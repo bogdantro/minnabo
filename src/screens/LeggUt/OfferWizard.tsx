@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { leaveFlow } from '@/lib/nav';
+import { PhotoOrderControls } from '@/components/PhotoOrder';
 import { useQueryClient } from '@tanstack/react-query';
 import nb from '@/i18n/nb';
 import { apiClient } from '@/api/client';
@@ -169,6 +170,7 @@ export function OfferWizard() {
   const [err, setErr] = useState<Err>(null);
   const [kSheet, setKSheet] = useState(false);
   const [uploading, setUploading] = useState(0);
+  const [photoSel, setPhotoSel] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const contentRef = useRef<View>(null);
@@ -427,11 +429,27 @@ export function OfferWizard() {
                 <View style={styles.photos}>
                   {f.photos.map((url, i) => (
                     <ScaleIn key={url} style={styles.photoCell}>
-                      <Image source={{ uri: url }} style={styles.photo} />
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: photoSel === i }}
+                        accessibilityLabel={nb.photoOrder.select(i + 1)}
+                        onPress={() => setPhotoSel(photoSel === i ? null : i)}
+                        style={[styles.photoTap, photoSel === i && styles.photoSel]}
+                      >
+                        <Image source={{ uri: url }} style={styles.photo} />
+                      </Pressable>
+                      {i === 0 && f.photos.length > 1 ? (
+                        <View style={styles.photoCover}>
+                          <Text style={[text.pill, { fontSize: 10.5 }]}>{nb.wizard.s3.cover}</Text>
+                        </View>
+                      ) : null}
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={nb.wizard.s3.removePhoto(i + 1)}
-                        onPress={() => set({ photos: f.photos.filter((p) => p !== url) })}
+                        onPress={() => {
+                          setPhotoSel(null);
+                          set({ photos: f.photos.filter((p) => p !== url) });
+                        }}
                         style={styles.photoX}
                       >
                         <Icon name="x" size={14} color={colors.white} />
@@ -449,6 +467,18 @@ export function OfferWizard() {
                     </View>
                   ) : null}
                 </View>
+                {photoSel !== null ? (
+                  <PhotoOrderControls
+                    photos={f.photos}
+                    selected={photoSel}
+                    onChange={(photos, sel) => {
+                      set({ photos });
+                      setPhotoSel(sel);
+                    }}
+                  />
+                ) : f.photos.length > 1 ? (
+                  <Text style={[text.hint, styles.hintTop]}>{nb.photoOrder.hint}</Text>
+                ) : null}
               </>
             ) : null}
 
@@ -666,6 +696,10 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   photoCell: { width: '31%', aspectRatio: 1 },
+  hintTop: { marginTop: 12 },
+  photoTap: { width: '100%', height: '100%', borderRadius: radius.thumb },
+  photoSel: { borderWidth: 3, borderColor: colors.ink },
+  photoCover: { position: 'absolute', left: 6, bottom: 6, paddingHorizontal: 7, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.lime },
   photo: { width: '100%', height: '100%', borderRadius: 16 },
   photoBusy: { borderRadius: 16, backgroundColor: colors.neutralPill, alignItems: 'center', justifyContent: 'center' },
   photoX: { position: 'absolute', top: 6, right: 6, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.photoClose, alignItems: 'center', justifyContent: 'center' },

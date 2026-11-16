@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { categoryArtId } from '@/domain/categories';
 import { formatPrice } from '@/domain/price';
+import { BeforeAfterCard } from '@/components/avtale/BeforeAfterCard';
 import nb from '@/i18n/nb';
 import { ThankCardPicker } from '@/components/ThankCards';
 import {
@@ -228,6 +229,9 @@ export function CompletionScreen({ proposalId }: { proposalId: string }) {
             <TextLink label={nb.completion.seeAgreement} icon="right" onPress={() => safePush(`/avtale/${proposalId}`)} style={styles.mt6} />
           </View>
         </FadeUp>
+
+        {/* «Før og etter» (0101): both see the result before they confirm */}
+        <BeforeAfterCard proposalId={proposalId} showJobbdagLink={false} style={[styles.px, styles.mt14]} />
 
         {canPortfolio ? (
           <FadeUp delay={180} style={[styles.px, styles.mt14]}>

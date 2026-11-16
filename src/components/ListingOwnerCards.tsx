@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Listing } from '@/domain/types';
 import { editListingHref, isOpenListing } from '@/domain/editing';
-import { useCloseHelperSlots, useHelperSlots } from '@/api/queries';
+import { useCloseHelperSlots, useHelperSlots, useListingViewCount } from '@/api/queries';
 import { serverMessage } from '@/lib/errors';
 import { confirm } from '@/lib/confirm';
 import { toast } from '@/lib/toast';
@@ -56,6 +56,24 @@ export function NoOffersTips({ listing, offers, force }: { listing: Listing; off
       </View>
       <Button label={nb.noOffers.edit} icon="edit" variant="ink" size="sm" onPress={() => router.push(editListingHref(listing.id))} />
     </Card>
+  );
+}
+
+/** «14 naboer har sett oppdraget»: for the owner, so a quiet start doesn't feel like nothing is happening. */
+export function ViewsCard({ listing, offers }: { listing: Listing; offers: number }) {
+  const n = useListingViewCount(listing.id, true).data;
+  if (!n || !isOpenListing(listing.status)) return null;
+  const offer = listing.type === 'SERVICE_OFFER';
+  return (
+    <FadeUp style={[styles.views, shadow.card]} testID="views-card">
+      <View style={[styles.icon, styles.viewsIcon]}>
+        <Icon name="eye" size={20} color={colors.cyanDeep} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={[text.label, styles.title]}>{offer ? nb.views.seenOffer(n) : nb.views.seen(n)}</Text>
+        {offers === 0 ? <Text style={text.meta}>{offer ? nb.views.waitingOffer : nb.views.waiting}</Text> : null}
+      </View>
+    </FadeUp>
   );
 }
 
@@ -112,6 +130,8 @@ const styles = StyleSheet.create({
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 15.5, marginBottom: 2 },
   row: { flexDirection: 'row', gap: 8 },
+  views: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.card, backgroundColor: colors.surface },
+  viewsIcon: { backgroundColor: colors.cyanTint },
   tips: { gap: 9 },
   tip: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   tipText: { color: colors.ink2 },

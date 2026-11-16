@@ -9,6 +9,8 @@ import { signOut } from '@/auth/session';
 import { toast } from '@/lib/toast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
+  useGuardianLinks,
+  useHousehold,
   useListing,
   useMyAgreements,
   useMyListings,
@@ -114,6 +116,9 @@ function Rows({ children, delay }: { children: ReactNode; delay: number }) {
 export function MenySheet({ visible, onClose, from }: { visible: boolean; onClose: () => void; /** the screen Meny was opened on */ from?: string }) {
   const me = useCurrentUser();
   const profile = useProfile(me.id).data;
+  // 0101: Husstand (adults) and the youths a foresatt follows
+  const household = useHousehold(!!me.id && !me.isYouth).data;
+  const followedYouths = (useGuardianLinks(!!me.id && !me.isYouth).data?.youths ?? []).length;
   const inboxUnread = useUnreadConversationCount();
   const notifUnread = useUnreadNotificationCount();
   const agreements = useMyAgreements().data ?? [];
@@ -350,6 +355,34 @@ export function MenySheet({ visible, onClose, from }: { visible: boolean; onClos
               title={nb.meny.agreedSum.title}
               subtitle={nb.meny.agreedSum.sub}
               onPress={() => go('/avtalt-sum')}
+            />
+          ) : null}
+          {!me.isYouth ? (
+            <ListRow
+              icon="home"
+              iconBg={colors.limeTint}
+              iconColor={colors.limeDeep}
+              title={nb.household.menuTitle}
+              subtitle={nb.household.menuSub(household?.partner?.name.split(' ')[0])}
+              onPress={() => go('/husstand')}
+            />
+          ) : null}
+          <ListRow
+            icon="montering"
+            iconBg={colors.cyanTint}
+            iconColor={colors.cyanDeep}
+            title={nb.lend.title}
+            subtitle={nb.lend.cardTitle}
+            onPress={() => go('/utlan')}
+          />
+          {followedYouths ? (
+            <ListRow
+              icon="users"
+              iconBg={colors.okTint}
+              iconColor={colors.ok}
+              title={nb.guardianView.menuTitle}
+              subtitle={nb.guardianView.menuSub(followedYouths)}
+              onPress={() => go('/foresatt')}
             />
           ) : null}
           {new Date().getMonth() === 11 || new Date().getMonth() === 0 ? (

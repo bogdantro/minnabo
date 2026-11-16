@@ -19,6 +19,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     const [open, setOpen] = React.useState(false);
     const status = React.useRef('INITIAL');
     const close = () => {
+      // eslint-disable-next-line react-hooks/immutability -- a stand-in for the library's own state
       status.current = 'INITIAL';
       setOpen(false);
       onDismiss?.();

@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import nb from '@/i18n/nb';
 import { ImageViewer } from '@/components/ImageViewer';
 import { ListingQuestions } from '@/components/ListingQuestions';
+import { ViewsCard } from '@/components/ListingOwnerCards';
 import { ReliableBadge } from '@/components/ReliableBadge';
-import { useIsSaved, useStartConversation } from '@/api/queries';
+import { useIsSaved, useRecordListingView, useStartConversation } from '@/api/queries';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCategoryCatalog } from '@/hooks/useCategories';
 import { categoryArtId, categoryLabel } from '@/domain/categories';
@@ -50,6 +51,7 @@ export function OfferDetailScreen({ listing, onBack }: { listing: Listing; onBac
   const owner = listing.owner;
   const first = owner.displayName.split(' ')[0];
   const isOwner = !!me.id && owner.id === me.id;
+  useRecordListingView(listing.id, !isOwner && !!me.id);
   const cat = categoryArtId(listing.category.slug);
   const price = listingPrice(listing);
   const place = [listing.location.place, listing.location.municipality].filter((x, i, a) => x && a.indexOf(x) === i).join(', ');
@@ -154,6 +156,12 @@ export function OfferDetailScreen({ listing, onBack }: { listing: Listing; onBac
           </Text>
           <Text style={text.meta}>{postedAgo(listing.createdAt, today, true)}</Text>
         </FadeUp>
+
+        {isOwner ? (
+          <View style={[styles.px, styles.mt16]}>
+            <ViewsCard listing={listing} offers={0} />
+          </View>
+        ) : null}
 
         {/* the helper and the price */}
         <FadeUp delay={120} style={[styles.px, styles.mt16]}>

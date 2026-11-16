@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { tabReselect } from '@/lib/tabReselect';
 import { BottomNav, type NavTarget } from './BottomNav';
 
 type TabRoute = { key: string; name: string };
@@ -43,6 +44,9 @@ export function TabBar({ state, navigation }: TabBarProps) {
         });
         if (activeRoute !== routeName && !event.defaultPrevented) {
           navigation.navigate(routeName);
+        } else if (activeRoute === routeName && !event.defaultPrevented) {
+          // already here: back to the top
+          tabReselect.emit(target);
         }
       }}
     />

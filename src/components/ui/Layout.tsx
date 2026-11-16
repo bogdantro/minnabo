@@ -135,6 +135,8 @@ export function useListPaging(length: number, resetKey = '') {
 }
 
 export type ListScreenProps<T> = {
+  /** lets the screen scroll its list (tap the tab you're on → back to the top) */
+  listRef?: RefObject<FlatList<T> | null>;
   data: readonly T[];
   renderItem: ListRenderItem<T>;
   keyExtractor: (item: T, index: number) => string;
@@ -169,6 +171,7 @@ export type ListScreenProps<T> = {
  * person scrolls, which keeps the first paint fast on a list of hundreds.
  */
 export function ListScreen<T>({
+  listRef,
   data,
   renderItem,
   keyExtractor,
@@ -196,6 +199,7 @@ export function ListScreen<T>({
       {header ? <KommuneBanner /> : null}
       <CachedContent>
         <FlatList
+          ref={listRef}
           data={onEndReached ? data : data.slice(0, shown)}
           renderItem={renderItem}
           keyExtractor={keyExtractor}

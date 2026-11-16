@@ -6,8 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import nb from '@/i18n/nb';
 import type { Listing, ListingSort } from '@/domain/types';
 import { categoryArtId, slugForArtId, categoryLabel } from '@/domain/categories';
-import { useAddSavedSearch, useListings, useRemoveSavedSearch } from '@/api/queries';
-import { matchesFilters, WHEN_FILTERS, type KindFilter, type WhenFilter } from '@/domain/listingFilters';
+import { useAddSavedSearch, useListings, useNoticeboard, useRemoveSavedSearch } from '@/api/queries';
+import { fitsAfterWork, matchesFilters, WHEN_FILTERS, type KindFilter, type WhenFilter } from '@/domain/listingFilters';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { fuzzyMatch } from '@/lib/fuzzy';
+import { VoiceSearchButton } from '@/components/VoiceSearchButton';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { ListingsMap } from '@/components/ListingsMap';
 import { useLocationScope } from '@/lib/locationScope';
@@ -54,8 +58,10 @@ type Filters = {
   when: WhenFilter | null;
   minKr: number;
   urgent: boolean;
+  /** «Etter jobb» (0110): says it can be done in the evening */
+  afterWork: boolean;
 };
-const NO_FILTERS: Filters = { cats: [], km: MAX_KM, sort: 'RELEVANCE', kind: 'ALL', when: null, minKr: 0, urgent: false };
+const NO_FILTERS: Filters = { cats: [], km: MAX_KM, sort: 'RELEVANCE', kind: 'ALL', when: null, minKr: 0, urgent: false, afterWork: false };
 
 const priceValue = (l: Listing) => (l.price ? l.price.amountMinor : Number.MAX_SAFE_INTEGER);
 
@@ -69,6 +75,7 @@ function applyFilters(list: Listing[], f: Filters): Listing[] {
   if (f.km < MAX_KM) out = out.filter((l) => (l.location.distanceKm ?? 0) <= f.km);
   const now = new Date();
   out = out.filter((l) => matchesFilters(l, { kind: f.kind, when: f.when, minBudgetKr: f.minKr, urgentOnly: f.urgent }, now));
+  if (f.afterWork) out = out.filter(fitsAfterWork);
   const s = [...out];
   if (f.sort === 'DISTANCE') s.sort((a, b) => (a.location.distanceKm ?? 999) - (b.location.distanceKm ?? 999));
   if (f.sort === 'NEWEST') s.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
@@ -121,6 +128,7 @@ export function SearchScreen({
       when: start?.when ?? null,
       minKr: start?.minKr ?? 0,
       urgent: !!start?.urgent,
+      afterWork: false,
     };
   });
   // a saved search ("Kjør søk") runs in the kommuner it was saved with
@@ -129,6 +137,8 @@ export function SearchScreen({
   const [sheet, setSheet] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [map, setMap] = useState(false);
+  // the map can also show «Gis bort» and «Mistet og funnet» in the same kommuner (0101)
+  const noticeData = useNoticeboard().data;
 
   const debounced = useDebouncedValue(q, 300);
   const recent = useRecentSearches();
@@ -141,13 +151,34 @@ export function SearchScreen({
 
   // your own «Tilbyr hjelp» and oppdrag are in Mine, not something to find
   const base = useMemo(() => (jobs.data ?? []).filter((l) => l.owner.id !== me.id && (!youth || l.type === 'TASK_REQUEST')), [jobs.data, me.id, youth]);
-  const results = useMemo(() => applyFilters(base, f), [base, f]);
+  // nothing on the server for a typo: match the kommune's posts loosely instead («snømåkign» -> «snømåking»)
+  const termNow = debounced.trim();
+  const needFuzzy = termNow.length >= 3 && !jobs.isLoading && !jobs.isError && (jobs.data ?? []).length === 0;
+  const everything = useListings({ municipalities }, 'NEWEST', needFuzzy);
+  const fuzzy = useMemo(
+    () => (needFuzzy ? fuzzyMatch((everything.data ?? []).filter((l) => l.owner.id !== me.id && (!youth || l.type === 'TASK_REQUEST')), termNow) : []),
+    [needFuzzy, everything.data, termNow, me.id, youth],
+  );
+  const fuzzyShown = needFuzzy && fuzzy.length > 0;
+  const exact = useMemo(() => applyFilters(base, f), [base, f]);
+  const fuzzyResults = useMemo(() => applyFilters(fuzzy, f), [fuzzy, f]);
+  const results = fuzzyShown ? fuzzyResults : exact;
+  // what neighbours in this kommune search for most (3+ searches, from 0110); the fixed list until there are some
+  const popularQ = useQuery({
+    queryKey: ['popular-search-terms', municipalities[0] ?? ''],
+    queryFn: () => apiClient.popularSearchTerms(municipalities[0]!),
+    enabled: !!municipalities[0],
+    staleTime: 60 * 60_000,
+  });
+  const popular = popularQ.data?.length ? popularQ.data.slice(0, 8) : nb.sok.popularTerms;
   const draftCount = useMemo(() => applyFilters(base, draft).length, [base, draft]);
 
   // Remember a settled, non-trivial query that returned something.
   const term = debounced.trim();
   useEffect(() => {
-    if (term.length >= 2 && !jobs.isLoading && base.length > 0) recent.add(term);
+    if (term.length >= 2 && !jobs.isLoading && base.length > 0) {
+      recent.add(term);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term, jobs.isLoading, base.length]);
 
@@ -162,13 +193,21 @@ export function SearchScreen({
     ...(f.when ? [{ label: nb.sok.whens[f.when], remove: () => set({ when: null }) }] : []),
     ...(f.minKr ? [{ label: nb.sok.minBudget(f.minKr), remove: () => set({ minKr: 0 }) }] : []),
     ...(f.urgent ? [{ label: nb.sok.urgentOnly, remove: () => set({ urgent: false }) }] : []),
+    ...(f.afterWork ? [{ label: nb.op.search.afterWork, remove: () => set({ afterWork: false }) }] : []),
     ...(f.km < MAX_KM ? [{ label: nb.sok.distanceUpTo(f.km), remove: () => set({ km: MAX_KM }) }] : []),
     ...(f.sort !== 'RELEVANCE' ? [{ label: nb.sok.sortedBy(nb.sok.sorts[f.sort].label), remove: () => set({ sort: 'RELEVANCE' }) }] : []),
   ];
+  // «Populære søk» counts finished searches only (search key, a chip, the microphone) – never «fl» on the way
+  // to «flytting». Per kommune with no name attached; the server keeps plain words only (0110).
+  const logSearch = (t: string) => {
+    const word = t.trim();
+    if (word.length >= 2 && municipalities[0]) void apiClient.logSearchTerm(municipalities[0], word).catch(() => undefined);
+  };
   const runQuery = (t: string) => {
     setQ(t);
     setSavedId(null);
     recent.add(t);
+    logSearch(t);
   };
 
   const where = kommuner
@@ -242,9 +281,12 @@ export function SearchScreen({
                 placeholderTextColor={colors.mute}
                 accessibilityLabel={nb.sok.a11y}
                 returnKeyType="search"
+                // the event's own text: a quick search key can come before the last letter is in `q`
+                onSubmitEditing={(e) => logSearch(e.nativeEvent.text ?? q)}
                 autoFocus={!initialQuery && !initialCategory}
                 style={[text.input, styles.input]}
               />
+              {q ? null : <VoiceSearchButton onText={(t, final) => { setQ(t); setSavedId(null); if (final) logSearch(t); }} />}
               {q ? (
                 <ScaleIn>
                   <Pressable accessibilityRole="button" accessibilityLabel={nb.sok.clear} onPress={() => setQ('')} style={styles.clr}>
@@ -271,6 +313,10 @@ export function SearchScreen({
                 />
               </View>
             )}
+            <View style={[styles.px, styles.quick]}>
+              <Chip label={nb.op.search.afterWork} icon="moon" size="sm" selected={f.afterWork} onPress={() => set({ afterWork: !f.afterWork })} />
+              <Chip label={nb.op.search.weekend} icon="cal" size="sm" selected={f.when === 'WEEKEND'} onPress={() => set({ when: f.when === 'WEEKEND' ? null : 'WEEKEND' })} />
+            </View>
             <FadeUp delay={100} style={styles.mt12}>
               <ChipRow style={styles.filterRow}>
                 <Pressable
@@ -332,14 +378,15 @@ export function SearchScreen({
                     <Icon name="zap" size={16} color={colors.limeDeep} />
                   </View>
                   <Text style={[text.sectionTitle, { fontSize: 18 }]} accessibilityRole="header">
-                    {nb.sok.popular(municipality ?? '')}
+                    {popularQ.data?.length ? nb.op.search.popular : nb.sok.popular(municipality ?? '')}
                   </Text>
                 </View>
                 <FadeUp delay={200} style={[styles.px, styles.wrap]}>
-                  {nb.sok.popularTerms.map((p) => (
+                  {popular.map((p) => (
                     <Pressable key={p} accessibilityRole="button" onPress={() => runQuery(p)} style={styles.pop}>
                       <Icon name="arrowur" size={14} color={colors.limeDeep} />
-                      <Text style={text.chip}>{p}</Text>
+                      {/* the log keeps words in lowercase; show «Snømåking», like the rest of the app */}
+                      <Text style={text.chip}>{p.charAt(0).toLocaleUpperCase('nb-NO') + p.slice(1)}</Text>
                     </Pressable>
                   ))}
                 </FadeUp>
@@ -349,7 +396,7 @@ export function SearchScreen({
               <View style={styles.resHead}>
                           <View style={[styles.flex, { gap: 3 }]}>
                             <Text style={[text.h3, { fontSize: 19 }]}>{nb.sok.count(results.length, where)}</Text>
-                            <Text style={text.meta}>{nb.sok.sortLine(term, nb.sok.sorts[f.sort].label)}</Text>
+                            <Text style={text.meta}>{fuzzyShown ? nb.op.search.fuzzy(term) : nb.sok.sortLine(term, nb.sok.sorts[f.sort].label)}</Text>
                             <TextLink label={nb.sok.viewMap} icon="map" onPress={() => setMap(true)} style={styles.viewLink} />
                           </View>
                           <Button
@@ -412,7 +459,11 @@ export function SearchScreen({
                   <>
                     <View style={styles.divider} />
                     <Text style={text.meta}>{nb.sok.notFound}</Text>
-                    <Button label={nb.sok.post} icon="plus" onPress={() => router.push('/legg-ut')} />
+                    <Button
+                      label={term ? nb.op.search.postThis(term) : nb.sok.post}
+                      icon="plus"
+                      onPress={() => router.push(term ? `/legg-ut?tittel=${encodeURIComponent(term)}` : '/legg-ut')}
+                    />
                   </>
                 )}
               </Card>
@@ -552,12 +603,19 @@ export function SearchScreen({
         />
       </Sheet>
 
-      {map ? <ListingsMap listings={results} onClose={() => setMap(false)} /> : null}
+      {map ? (
+        <ListingsMap
+          listings={results}
+          notices={(noticeData ?? []).filter((n) => !municipalities.length || municipalities.includes(n.municipality))}
+          onClose={() => setMap(false)}
+        />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  quick: { flexDirection: 'row', gap: 8, marginTop: 12 },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
   px: { paddingHorizontal: screenPadding },

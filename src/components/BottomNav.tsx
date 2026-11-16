@@ -4,7 +4,7 @@ import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import nb from '@/i18n/nb';
-import { useUnreadConversationCount } from '@/api/queries';
+import { useNewOfferCount, useUnreadConversationCount } from '@/api/queries';
 import { colors, motion, radius, shadow, sizes, text } from '@/theme/theme';
 import { CountBadge } from './ui/Badges';
 import { Icon, type IconKey } from './ui/Icon';
@@ -12,6 +12,9 @@ import { MenySheet } from './MenySheet';
 import { LeggUtChooser } from './LeggUtChooser';
 import { router, usePathname } from 'expo-router';
 import { menuReturn } from '@/lib/menuReturn';
+import { useOnceTip } from '@/lib/onceTips';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { CoachTip } from './ui/CoachTip';
 
 export type NavTarget = 'oppdrag' | 'fellesskap' | 'innboks';
 
@@ -32,12 +35,15 @@ export function NavItem({
   icon,
   active,
   badge = 0,
+  offers = 0,
   onPress,
 }: {
   label: string;
   icon: IconKey;
   active: boolean;
   badge?: number;
+  /** new tilbud (0109): a lime dot apart from the count of messages */
+  offers?: number;
   onPress: () => void;
 }) {
   const fg = active ? colors.limeDeep : colors.mute;
@@ -45,13 +51,14 @@ export function NavItem({
     <Pressable
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={badge > 0 ? `${label}, ${badge} ${badge === 1 ? 'ulest' : 'uleste'}` : label}
+      accessibilityLabel={`${badge > 0 ? `${label}, ${badge} ${badge === 1 ? 'ulest' : 'uleste'}` : label}${offers > 0 ? `, ${nb.innboks.tray.offers(offers)}` : ''}`}
       style={styles.item}
       onPress={onPress}
     >
       <View style={[styles.ni, active && styles.niOn]} testID={active ? 'nav-active-bubble' : undefined}>
         <Icon name={icon} size={sizes.navIcon} color={fg} />
         {badge > 0 ? <CountBadge count={badge} style={styles.count} /> : null}
+        {offers > 0 ? <View style={styles.offerDot} testID="nav-offer-dot" /> : null}
       </View>
       <Text style={[text.tabLabel, { color: fg }]} maxFontSizeMultiplier={1.2}>
         {label}
@@ -134,6 +141,10 @@ export function BottomNav({
   onLeggUt: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const insets = useSafeAreaInsets();
+  const me = useCurrentUser();
+  // the first time on Oppdrag: show where to post (once per phone)
+  const leggUtTip = useOnceTip('leggUt', active === 'oppdrag' && !!me.onboardedAt);
   // back from a page opened in Meny: Meny opens again on the screen it was opened on
   const path = usePathname();
   const [seenPath, setSeenPath] = useState(path);
@@ -144,6 +155,7 @@ export function BottomNav({
   // «Hva vil du legge ut?» – an oppdrag, or what you can help with (0076)
   const [chooseOpen, setChooseOpen] = useState(false);
   const unreadInbox = useUnreadConversationCount();
+  const newOffers = useNewOfferCount();
 
   const slot = (s: Slot) => (
     <NavItem
@@ -152,15 +164,33 @@ export function BottomNav({
       icon={s.icon}
       active={active === s.target}
       badge={s.target === 'innboks' ? unreadInbox : 0}
+      offers={s.target === 'innboks' ? newOffers : 0}
       onPress={() => onNavigate(s.target)}
     />
   );
 
   return (
     <>
+      {leggUtTip.show ? (
+        <View style={[styles.tipWrap, { bottom: sizes.navBottom + insets.bottom + sizes.navHeight + 22 }]} pointerEvents="box-none">
+          <CoachTip
+            icon="plus"
+            title={nb.tips.leggUtTitle}
+            body={nb.tips.leggUtBody}
+            okLabel={nb.tips.ok}
+            onDone={leggUtTip.done}
+            testID="tip-legg-ut"
+          />
+        </View>
+      ) : null}
       <NavFrame>
         {LEFT.map(slot)}
-        <PostButton onPress={() => setChooseOpen(true)} />
+        <PostButton
+          onPress={() => {
+            leggUtTip.done();
+            setChooseOpen(true);
+          }}
+        />
         {RIGHT.map(slot)}
         <NavItem label={nb.tabs.meny} icon="menu" active={menuOpen} onPress={() => setMenuOpen(true)} />
       </NavFrame>
@@ -180,6 +210,8 @@ export function BottomNav({
 }
 
 const styles = StyleSheet.create({
+  offerDot: { position: 'absolute', left: -2, top: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.lime, borderWidth: 2, borderColor: colors.ink },
+  tipWrap: { position: 'absolute', left: 16, right: 16, zIndex: 40 },
   nav: {
     position: 'absolute',
     left: sizes.navSide,

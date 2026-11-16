@@ -13,7 +13,8 @@ test('Innboks lists conversations with status tags', async () => {
   expect(screen.getByText('Innboks')).toBeTruthy();
   await waitFor(() => expect(screen.getByText('Emma Larsen')).toBeTruthy());
   expect(screen.getAllByText('Nytt tilbud').length).toBeGreaterThan(0);
-  expect(screen.getByText('Tilbud godtatt')).toBeTruthy();
+  // an accepted tilbud shows the avtale itself now (0109): «Avtale …» with its time, or «Avtalt»
+  expect(screen.getAllByText(/^(Avtale |Avtalt|Tilbud godtatt)/).length).toBeGreaterThan(0);
 });
 
 test('Innboks unread filter hides read conversations', async () => {
@@ -88,8 +89,9 @@ test('a reaction renders as a chip and can be toggled off', async () => {
 
   await renderWithProviders(<ChatScreen conversation={conversation} onBack={() => {}} />);
 
-  await fireEvent.press(await screen.findByLabelText('👍 1'));
-  await waitFor(() => expect(screen.queryByLabelText('👍 1')).toBeNull());
+  // my own reaction says so, like on Oppslagstavla
+  await fireEvent.press(await screen.findByLabelText('👍 1, din reaksjon'));
+  await waitFor(() => expect(screen.queryByLabelText('👍 1, din reaksjon')).toBeNull());
 });
 
 test('pinning a message shows the pinned banner until unpinned', async () => {

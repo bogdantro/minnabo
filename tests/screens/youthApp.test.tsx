@@ -1,7 +1,8 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { YouthAppScreen } from '@/screens/youth/YouthAppScreen';
+import { TaskDetailScreen } from '@/screens/TaskDetailScreen';
+import { repositories } from '@mocks/data/repositories';
 import { apiClient } from '@/api/client';
-import { toast } from '@/lib/toast';
 import nb from '@/i18n/nb';
 import { renderWithProviders } from '../testUtils';
 
@@ -21,42 +22,46 @@ test('youth app has four tabs and no Legg ut', async () => {
   expect(screen.getAllByText('Ungdomskonto').length).toBeGreaterThan(0);
 });
 
-test('giving an offer validates, sends and shows it under Mine tilbud', async () => {
+test('tapping an oppdrag opens its own page, not a popup', async () => {
+  const { router } = require('expo-router');
+  const push = jest.spyOn(router, 'push');
   await renderWithProviders(<YouthAppScreen />);
-  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
-  await fireEvent.press(screen.getByText('Klippe plen'));
-  await fireEvent.press(screen.getByText('Gi tilbud'));
-  await fireEvent.changeText(screen.getByLabelText('Pris'), '');
-  await fireEvent.press(screen.getByText('Send tilbud'));
-  expect(screen.getByText('Skriv inn en pris')).toBeTruthy();
-  expect(screen.getByText('Skriv minst 10 tegn')).toBeTruthy();
+  await fireEvent.press(await screen.findByText('Klippe plen'));
+  expect(push).toHaveBeenCalledWith('/oppdrag/l-klippe-plen');
+  push.mockRestore();
+});
 
-  await fireEvent.changeText(screen.getByLabelText('Pris'), '350');
-  await fireEvent.changeText(screen.getByLabelText('Melding'), 'Jeg har klipt plen mange ganger før.');
-  await fireEvent.press(screen.getByText('Send tilbud'));
-  await waitFor(() => expect(screen.getByText(/Tilbudet er sendt til/)).toBeTruthy(), { timeout: 4000 });
-  await fireEvent.press(screen.getByText('Se Mine tilbud'));
-  await waitFor(() => expect(screen.getByText('Sendt nå')).toBeTruthy());
-  // two steps before anything happens
+test('on the oppdrag page a youth gets «Gi tilbud» and the note, never «Send melding»', async () => {
+  const listing = repositories.listings.get('l-klippe-plen')!;
+  await renderWithProviders(<TaskDetailScreen listing={listing} onBack={() => {}} />);
+  expect(await screen.findByText(nb.youth.msgAfterOffer)).toBeTruthy();
+  expect(screen.getAllByText('Gi tilbud').length).toBeGreaterThan(0);
+  expect(screen.queryByText('Send melding')).toBeNull();
+});
+
+/** A tilbud this youth has already sent, the way «Gi tilbud» on the oppdrag page leaves it. */
+async function sentOffer() {
+  const conv = await apiClient.startConversationForListing('l-klippe-plen');
+  await apiClient.sendProposal({ conversationId: conv.id, listingId: 'l-klippe-plen', priceAmountMinor: 35000, message: 'Jeg har klipt plen mange ganger før.', scheduledText: 'Fleksibelt', scheduledAt: null });
+}
+
+test('a sent tilbud shows under Mine tilbud and is withdrawn in two steps', async () => {
+  await sentOffer();
+  await renderWithProviders(<YouthAppScreen />);
+  await fireEvent.press(screen.getAllByText('Mine tilbud').at(-1)!);
+  expect(await screen.findByText('Klippe plen')).toBeTruthy();
   const withdraw = jest.spyOn(apiClient, 'respondToProposal');
-  await fireEvent.press(screen.getByText('Trekk'));
+  await fireEvent.press(await screen.findByText('Trekk'));
   await fireEvent.press(await screen.findByText('Ja, trekk tilbudet'));
   expect(withdraw).not.toHaveBeenCalled();
   await fireEvent.press(await screen.findByText('Trekk tilbudet nå'));
   await waitFor(() => expect(withdraw).toHaveBeenCalled());
-  await waitFor(() => expect(screen.getAllByText('Trukket').length).toBeGreaterThan(0));
 });
 
 test('«Behold tilbudet» leaves the offer alone', async () => {
+  await sentOffer();
   await renderWithProviders(<YouthAppScreen />);
-  await waitFor(() => expect(screen.getByText('Klippe plen')).toBeTruthy());
-  await fireEvent.press(screen.getByText('Klippe plen'));
-  await fireEvent.press(screen.getByText('Gi tilbud'));
-  await fireEvent.changeText(screen.getByLabelText('Pris'), '350');
-  await fireEvent.changeText(screen.getByLabelText('Melding'), 'Jeg har klipt plen mange ganger før.');
-  // date and time are optional
-  await fireEvent.press(screen.getByText('Send tilbud'));
-  await fireEvent.press(await screen.findByText('Se Mine tilbud', {}, { timeout: 4000 }));
+  await fireEvent.press(screen.getAllByText('Mine tilbud').at(-1)!);
   await fireEvent.press(await screen.findByText('Trekk'));
   const withdraw = jest.spyOn(apiClient, 'respondToProposal');
   await fireEvent.press(await screen.findByText('Behold tilbudet'));
@@ -107,19 +112,6 @@ test('a youth account without a kommune is asked for one straight away, not show
   expect(await screen.findByText('Hvor vil du se oppdrag?')).toBeTruthy();
   // no unfiltered fetch of every oppdrag in the country while the kommune is missing
   expect(list.mock.calls.every(([params]) => (params?.filter?.municipalities?.length ?? 0) > 0)).toBe(true);
-});
-
-test('a technical error when sending an offer shows a friendly message, never the raw text', async () => {
-  const err = jest.spyOn(toast, 'error');
-  jest.spyOn(apiClient, 'sendProposal').mockRejectedValue(new Error('TypeError: Network request failed'));
-  await renderWithProviders(<YouthAppScreen />);
-  await fireEvent.press(await screen.findByText('Klippe plen'));
-  await fireEvent.press(screen.getByText('Gi tilbud'));
-  await fireEvent.changeText(screen.getByLabelText('Pris'), '350');
-  await fireEvent.changeText(screen.getByLabelText('Melding'), 'Jeg har klipt plen mange ganger før.');
-  await fireEvent.press(screen.getByText('Send tilbud'));
-  await waitFor(() => expect(err).toHaveBeenCalled());
-  expect(err).toHaveBeenCalledWith(nb.giTilbud.sendFailed);
 });
 
 // ------------------------------------------------------------

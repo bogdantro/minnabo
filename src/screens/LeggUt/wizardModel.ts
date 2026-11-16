@@ -1,3 +1,4 @@
+import { SHARED_STREET_CATEGORIES } from '@/domain/community';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ListingExtras } from '@/api/ApiClient';
 import type { Listing, PublicProfile } from '@/domain/types';
@@ -46,6 +47,8 @@ export type WizardState = {
   km: number;
   /** «Send til faste hjelpere først»: new oppdrag only, not when it hastes */
   firstToFollowed?: boolean;
+  /** «Del hjelperen med naboene» (0108): snømåking and hage only */
+  sharedStreet?: boolean;
 };
 
 export const emptyWizard = (kommune = ''): WizardState => ({
@@ -337,6 +340,7 @@ export function extrasFor(s: WizardState, from = new Date()): ListingExtras {
     urgentUntil: urgentUntilOf(s, from),
     // the server caps this at two hours and ignores it on an edit (0086)
     firstToFollowedUntil: s.firstToFollowed && !s.urgent ? new Date(from.getTime() + FIRST_REFUSAL_MS).toISOString() : null,
+    sharedStreet: !!s.sharedStreet && !!s.cat && SHARED_STREET_CATEGORIES.includes(s.cat),
     wizard: s,
   };
 }
@@ -397,22 +401,66 @@ export function wizardFromListing(l: Listing, privateEstimateMinor: number | nul
 
 // ---------------------------------------------------------------- draft
 
-const DRAFT_KEY = 'minnabo.leggUt.draft.v3';
+/** Before 2026-11-09 there was one draft; it is moved into the list the first time the list is read. */
+const OLD_DRAFT_KEY = 'minnabo.leggUt.draft.v3';
+const DRAFTS_KEY = 'minnabo.leggUt.drafts.v1';
+/** Kept on the phone; the oldest goes when a sixth is started. */
+export const MAX_DRAFTS = 5;
 
-export const wizardDraft = {
-  async load(): Promise<{ state: WizardState; step: number } | null> {
-    try {
-      const raw = await AsyncStorage.getItem(DRAFT_KEY);
-      const d = raw ? (JSON.parse(raw) as { state: unknown; step: number }) : null;
-      return d && isWizardState(d.state) ? { state: { ...emptyWizard(), ...d.state }, step: d.step } : null;
-    } catch {
-      return null;
+export type SavedDraft = { id: string; state: WizardState; step: number; updatedAt: string };
+
+/** A draft with a category or a title is worth keeping; an untouched one isn't. */
+export const draftHasContent = (d: { state: WizardState }) => !!(d.state.cat || d.state.title.trim());
+
+export const newDraftId = () => `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+async function readDrafts(): Promise<SavedDraft[]> {
+  try {
+    const raw = await AsyncStorage.getItem(DRAFTS_KEY);
+    let list = raw ? (JSON.parse(raw) as SavedDraft[]) : [];
+    const old = await AsyncStorage.getItem(OLD_DRAFT_KEY);
+    if (old) {
+      const d = JSON.parse(old) as { state: unknown; step: number };
+      if (isWizardState(d.state)) list = [{ id: newDraftId(), state: d.state, step: d.step, updatedAt: new Date().toISOString() }, ...list];
+      await AsyncStorage.removeItem(OLD_DRAFT_KEY);
+      await AsyncStorage.setItem(DRAFTS_KEY, JSON.stringify(list));
     }
+    return list
+      .filter((d) => d && typeof d.id === 'string' && isWizardState(d.state))
+      .map((d) => ({ ...d, state: { ...emptyWizard(), ...d.state } }))
+      .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Half-written oppdrag, one per id (asked 2026-11-09: starting a new oppdrag must not throw away the one
+ * you were writing). Newest first.
+ */
+export const wizardDraft = {
+  list: readDrafts,
+  /** One draft, or the newest when no id is given. */
+  async load(id?: string): Promise<SavedDraft | null> {
+    const all = await readDrafts();
+    return (id ? all.find((d) => d.id === id) : all[0]) ?? null;
   },
-  async save(state: WizardState, step: number) {
-    await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ state, step }));
+  async save(state: WizardState, step: number, id = 'main') {
+    const all = (await readDrafts()).filter((d) => d.id !== id);
+    const next = [{ id, state, step, updatedAt: new Date().toISOString() }, ...all].slice(0, MAX_DRAFTS);
+    await AsyncStorage.setItem(DRAFTS_KEY, JSON.stringify(next));
   },
-  async clear() {
-    await AsyncStorage.removeItem(DRAFT_KEY).catch(() => undefined);
+  /** One draft, or every draft when no id is given. */
+  async clear(id?: string) {
+    try {
+      if (!id) {
+        await AsyncStorage.multiRemove([DRAFTS_KEY, OLD_DRAFT_KEY]);
+        return;
+      }
+      const all = (await readDrafts()).filter((d) => d.id !== id);
+      await AsyncStorage.setItem(DRAFTS_KEY, JSON.stringify(all));
+    } catch {
+      /* nothing to clear */
+    }
   },
 };

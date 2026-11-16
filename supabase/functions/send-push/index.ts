@@ -4,8 +4,10 @@
 // shared PUSH_SECRET header.
 //
 // Applies the recipient's Varslinger settings before sending:
-//   master switch · push channel · per-type switch · quiet hours · muted chat
+//   master switch · push channel · per-type switch · quiet hours · muted chat (for good or until a time)
 // Safety / moderation messages ignore the master switch and quiet hours.
+// During quiet hours a push is held (held_pushes, 0109) and sent when they end; the database asks for that
+// every 10 minutes with `type: 'held'`. Several messages from one person come as «Kari sendte 4 meldinger».
 //
 // Secrets: PUSH_SECRET (required), EXPO_ACCESS_TOKEN (optional, if push security is on)
 // Deploy:  npx supabase functions deploy send-push --no-verify-jwt
@@ -50,8 +52,11 @@ const REVIEW_CATEGORY = 'review';
 // «Jeg kommer» on «Bekreft at du kommer», «Ja, jeg kan i dag» on «Oppdraget er ledig igjen».
 const ATTEND_CATEGORY = 'attend';
 const AVAILABLE_CATEGORY = 'available';
+// «Svar» straight from a chat push (2026-11-09): a text field in the notification, MESSAGE_CATEGORY in PushBridge.tsx
+const MESSAGE_CATEGORY = 'message';
 const categoryFor = (route?: string | null) =>
   !route ? undefined
+    : route.startsWith('/chat/') ? MESSAGE_CATEGORY
     : route.startsWith('/vurder/') ? REVIEW_CATEGORY
     : route.includes('?bekreft=1') ? ATTEND_CATEGORY
     : route.includes('?ledig=1') ? AVAILABLE_CATEGORY
@@ -70,6 +75,7 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    if (type === 'held') return json({ sent: await releaseHeld(db) });
     const pushes = type === 'message' ? await fromMessage(db, id) : await fromNotification(db, id);
     let sent = 0;
     for (const p of pushes) sent += await deliver(db, p);
@@ -87,26 +93,67 @@ async function fromNotification(db: any, id: string): Promise<Push[]> {
 }
 
 async function fromMessage(db: any, id: string): Promise<Push[]> {
-  const { data: m } = await db.from('messages').select('conversation_id, author_id, kind, text').eq('id', id).maybeSingle();
+  const { data: m } = await db.from('messages').select('conversation_id, author_id, kind, text, attachment_kind').eq('id', id).maybeSingle();
   if (!m) return [];
   const [{ data: author }, { data: others }] = await Promise.all([
     db.from('profiles').select('display_name').eq('id', m.author_id).maybeSingle(),
-    db.from('conversation_participants').select('profile_id, muted').eq('conversation_id', m.conversation_id).neq('profile_id', m.author_id),
+    db.from('conversation_participants').select('profile_id, muted, muted_until, last_read_at').eq('conversation_id', m.conversation_id).neq('profile_id', m.author_id),
   ]);
-  const body = m.kind === 'IMAGE' ? '📷 Bilde' : m.kind === 'AUDIO' ? '🎤 Talemelding' : String(m.text ?? '').slice(0, 140);
-  return (others ?? [])
-    .filter((o: any) => !o.muted)
-    .map((o: any) => ({
+  const body =
+    m.kind === 'IMAGE' ? '📷 Bilde'
+    : m.kind === 'AUDIO' ? '🎤 Talemelding'
+    : m.attachment_kind === 'VIDEO' ? '🎬 Video'
+    : m.attachment_kind === 'FILE' ? '📄 PDF'
+    : String(m.text ?? '').slice(0, 140);
+  const now = Date.now();
+  const name = author?.display_name ?? 'Ny melding';
+  const out: Push[] = [];
+  for (const o of others ?? []) {
+    if (o.muted || (o.muted_until && Date.parse(o.muted_until) > now)) continue;
+    // «Kari sendte 4 meldinger»: how many from this person the recipient hasn't read yet
+    const { count } = await db
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('conversation_id', m.conversation_id)
+      .eq('author_id', m.author_id)
+      .gt('created_at', o.last_read_at ?? '1970-01-01');
+    out.push({
       profileId: o.profile_id,
       key: 'msg' as Key,
-      title: author?.display_name ?? 'Ny melding',
+      title: (count ?? 0) > 1 ? `${name.split(' ')[0]} sendte ${count} meldinger` : name,
       body,
       route: `/chat/${m.conversation_id}`,
       conversationId: m.conversation_id,
-    }));
+    });
+  }
+  return out;
 }
 
-async function deliver(db: any, p: Push): Promise<number> {
+/** Quiet hours are over for these people: one push each with what was held (or the single one as it was). */
+async function releaseHeld(db: any): Promise<number> {
+  const { data: rows } = await db.from('held_pushes').select('*').order('created_at').limit(500);
+  if (!rows?.length) return 0;
+  const byProfile = new Map<string, any[]>();
+  for (const r of rows) byProfile.set(r.profile_id, [...(byProfile.get(r.profile_id) ?? []), r]);
+  let sent = 0;
+  for (const [profileId, list] of byProfile) {
+    const { data: settings } = await db.from('profile_settings').select('notification_prefs').eq('profile_id', profileId).maybeSingle();
+    const quiet = { on: false, from: '22:00', to: '07:00', ...((settings?.notification_prefs ?? {}).quiet ?? {}) };
+    if (quiet.on && inQuietHours(quiet.from, quiet.to)) continue;
+    const one = list.length === 1 ? list[0] : null;
+    sent += await deliver(
+      db,
+      one
+        ? { profileId, key: 'msg', title: one.title, body: one.body, route: one.route, conversationId: one.conversation_id ?? undefined }
+        : { profileId, key: 'msg', title: `${list.length} varsler mens det var stille`, body: list.slice(-3).map((r: any) => r.title).join(' · '), route: '/innboks' },
+      true,
+    );
+    await db.from('held_pushes').delete().in('id', list.map((r: any) => r.id));
+  }
+  return sent;
+}
+
+async function deliver(db: any, p: Push, released = false): Promise<number> {
   const [{ data: settings }, { data: tokens }, { data: profile }] = await Promise.all([
     db.from('profile_settings').select('notification_prefs').eq('profile_id', p.profileId).maybeSingle(),
     db.from('push_tokens').select('token').eq('profile_id', p.profileId),
@@ -121,7 +168,11 @@ async function deliver(db: any, p: Push): Promise<number> {
     if (prefs.channels?.push === false) return 0;
     if ((prefs.push?.[p.key] ?? DEFAULT_PUSH[p.key]) === false) return 0;
     const quiet = { on: false, from: '22:00', to: '07:00', ...(prefs.quiet ?? {}) };
-    if (quiet.on && inQuietHours(quiet.from, quiet.to)) return 0;
+    if (!released && quiet.on && inQuietHours(quiet.from, quiet.to)) {
+      // held, not dropped: it comes when the quiet hours end
+      await db.from('held_pushes').insert({ profile_id: p.profileId, title: p.title, body: p.body, route: p.route, conversation_id: p.conversationId ?? null });
+      return 0;
+    }
   }
 
   // the number on the app icon: unread notifications + conversations (0053; absent before it is pushed)
@@ -146,7 +197,8 @@ async function deliver(db: any, p: Push): Promise<number> {
         channelId: 'minnabo',
         priority: 'high',
         ...(typeof badge === 'number' ? { badge } : {}),
-        data: { route: p.route },
+        // the conversation goes along, so «Svar» in the notification knows where to send
+        data: { route: p.route, ...(p.conversationId ? { conversationId: p.conversationId } : {}) },
         ...(categoryFor(p.route) ? { categoryId: categoryFor(p.route) } : {}),
       })),
     ),

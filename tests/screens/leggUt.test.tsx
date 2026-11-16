@@ -86,13 +86,13 @@ test('Forhåndsvisning publishes and goes straight to Publisert', async () => {
 // phone at any time (a call, low memory), and the oppdrag must still be there.
 // ------------------------------------------------------------
 describe('Legg ut keeps a draft by itself', () => {
-  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  const DRAFT_KEY = 'minnabo.leggUt.draft.v3';
-  const draft = async () => JSON.parse((await AsyncStorage.getItem(DRAFT_KEY)) ?? 'null');
+  const { wizardDraft } = require('@/screens/LeggUt/wizardModel');
+  const expoRouter = require('expo-router');
+  const draft = () => wizardDraft.load();
 
-  beforeEach(() => AsyncStorage.removeItem(DRAFT_KEY));
+  beforeEach(() => wizardDraft.clear());
 
-  test('what was typed is saved shortly after, and is back when the wizard opens again', async () => {
+  test('what was typed is saved shortly after, and is back when the draft is opened again', async () => {
     const first = await renderWithProviders(<LeggUtWizard />);
     await fireEvent.press(screen.getByLabelText('Hage'));
     await fireEvent.press(screen.getByText('Neste'));
@@ -100,8 +100,20 @@ describe('Legg ut keeps a draft by itself', () => {
     await waitFor(async () => expect((await draft())?.state.title).toBe('Rake løv i hagen'), { timeout: 3000 });
 
     await first.unmount(); // the app was closed – nobody tapped «Lagre utkast»
+    const id = (await draft()).id;
+    jest.spyOn(expoRouter, 'useLocalSearchParams').mockReturnValue({ utkast: id }); // «Fortsett» on Oppdrag
     await renderWithProviders(<LeggUtWizard />);
     expect(await screen.findByDisplayValue('Rake løv i hagen')).toBeTruthy();
+    jest.restoreAllMocks();
+  });
+
+  test('a new oppdrag keeps the half-written one and offers it on step 1', async () => {
+    await wizardDraft.save({ ...emptyWizard('Lillehammer'), cat: 'hage', title: 'Rake løv' }, 3, 'd1');
+    await renderWithProviders(<LeggUtWizard />);
+    expect(await screen.findByText('Fortsett på et utkast')).toBeTruthy();
+    expect(screen.getByText('Hva trenger du hjelp med?')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Hage'));
+    await waitFor(async () => expect((await wizardDraft.list()).length).toBe(2), { timeout: 3000 });
   });
 
   test('just opening Legg ut leaves no draft behind', async () => {
@@ -132,11 +144,11 @@ test('after publishing, the app going to the background does not bring the oppdr
   });
   await renderWithProviders(<LeggUtWizard />);
   await fireEvent.press(screen.getByLabelText('Hage'));
-  await waitFor(async () => expect(await AsyncStorage.getItem('minnabo.leggUt.draft.v3')).not.toBeNull(), { timeout: 3000 });
-  await wizardDraft.clear(); // what Forhåndsvisning does when the oppdrag is published
+  await waitFor(async () => expect(await wizardDraft.load()).not.toBeNull(), { timeout: 3000 });
+  await wizardDraft.clear((await wizardDraft.load()).id); // what Forhåndsvisning does when the oppdrag is published
   listeners.forEach((l) => l('background'));
   await new Promise((r) => setTimeout(r, 50));
-  expect(await AsyncStorage.getItem('minnabo.leggUt.draft.v3')).toBeNull();
+  expect(await wizardDraft.load()).toBeNull();
 });
 
 test('every oppdrag is open to all naboer – the old «Kun verifiserte» choice is gone', () => {
@@ -145,12 +157,19 @@ test('every oppdrag is open to all naboer – the old «Kun verifiserte» choice
   expect(extrasFor({ ...emptyWizard(), who: 'verif' }).offerAudience).toBe('ALL');
 });
 
-test('a draft saved at the old step 9 opens on the summary', async () => {
+test('a draft saved at the old step 9 (before several drafts) opens on the summary', async () => {
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const { wizardDraft } = require('@/screens/LeggUt/wizardModel');
+  const expoRouter = require('expo-router');
   await AsyncStorage.setItem('minnabo.leggUt.draft.v3', JSON.stringify({ state: { ...emptyWizard(), cat: 'hage' }, step: 9 }));
+  // the old single draft moves into the list
+  const [old] = await wizardDraft.list();
+  expect(await AsyncStorage.getItem('minnabo.leggUt.draft.v3')).toBeNull();
+  jest.spyOn(expoRouter, 'useLocalSearchParams').mockReturnValue({ utkast: old.id });
   await renderWithProviders(<LeggUtWizard />);
   expect(await screen.findByText('Steg 8 av 8')).toBeTruthy();
-  await AsyncStorage.removeItem('minnabo.leggUt.draft.v3');
+  jest.restoreAllMocks();
+  await wizardDraft.clear();
 });
 
 // ------------------------------------------------------------

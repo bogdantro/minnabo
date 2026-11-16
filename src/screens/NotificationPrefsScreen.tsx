@@ -125,6 +125,34 @@ export function NotificationPrefsScreen() {
               })}
             </View>
           </View>
+          {g.rows.some((r) => r.key === 'match') ? (
+            <>
+            {/* 0110: one evening push with the number of new oppdrag instead of one push each */}
+            <View style={[styles.px, styles.mt10]}>
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityState={{ checked: !!prefs.matchDaily, disabled: !ready || !prefs.master }}
+                accessibilityLabel={nb.op.dailyPush}
+                accessibilityHint={nb.op.dailyPushSub}
+                disabled={!ready || !prefs.master}
+                onPress={() => commit({ ...prefs, matchDaily: !prefs.matchDaily })}
+                style={[styles.card, styles.quietHead, shadow.card, !prefs.master && styles.mxOff]}
+                testID="match-daily"
+              >
+                <View style={styles.quietIcon}>
+                  <Icon name="cal" size={18} color={colors.lavender} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.quietTitle}>{nb.op.dailyPush}</Text>
+                  <Text style={text.meta}>{nb.op.dailyPushSub}</Text>
+                </View>
+                <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  <Toggle value={!!prefs.matchDaily} onValueChange={() => undefined} accessibilityLabel={nb.op.dailyPush} />
+                </View>
+              </Pressable>
+            </View>
+            </>
+          ) : null}
         </FadeUp>
       ))}
 
