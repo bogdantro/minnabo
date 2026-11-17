@@ -260,7 +260,14 @@ export type MinNaboMessage = {
   myVote?: number;
   /** votes per option; only after I have voted or the poll has closed */
   pollCounts?: number[];
+  /** buttons and cards MinNabo attached (0111); names are filled in by the server */
+  attachments?: MinNaboAttachment[];
 };
+
+/** A button to a place in the app, or a business / nabolag / lag card (0111). See domain/minnaboLinks. */
+export type MinNaboAttachment =
+  | { type: 'route'; key: string; label?: string }
+  | { type: 'partner' | 'nabolag' | 'lag'; id: string; label?: string; name?: string; sub?: string; logo?: string; place?: string };
 
 /** One nabolag on the list MinNabo manages (0065). A person can be in at most 3. */
 export type NabolagSummary = {

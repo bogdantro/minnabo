@@ -11,7 +11,10 @@ import { serverMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { colors, fonts, radius, screenPadding, shadow, text } from '@/theme/theme';
-import { ErrorState, Icon, IconButton, Input, Note, Pill, RowSkeleton, Screen, SubHeader, VerifiedIcon } from '@/components/ui';
+import { Button, ErrorState, Icon, IconButton, Input, Note, Pill, RowSkeleton, Screen, SubHeader, VerifiedIcon } from '@/components/ui';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { minnaboLinks, type MinNaboLink } from '@/domain/minnaboLinks';
+import { safePush } from '@/lib/nav';
 
 const logo = require('../../assets/logo-icon.png');
 const MAX = 2000;
@@ -28,6 +31,7 @@ export function MinNaboScreen() {
   const markRead = useMinNaboMarkRead();
   const reply = useMinNaboReply();
   const vote = useMinNaboVote();
+  const youth = useCurrentUser().isYouth;
   const [draft, setDraft] = useState('');
   const scroll = useRef<ScrollView>(null);
 
@@ -97,7 +101,7 @@ export function MinNaboScreen() {
           ) : isError ? (
             <ErrorState onRetry={() => void refetch()} />
           ) : messages.length ? (
-            messages.map((m) => (m.fromAdmin ? <FromMinNabo key={m.id} m={m} onPick={pick} /> : <Mine key={m.id} m={m} />))
+            messages.map((m) => (m.fromAdmin ? <FromMinNabo key={m.id} m={m} youth={youth} onPick={pick} /> : <Mine key={m.id} m={m} />))
           ) : (
             <Text style={[text.meta, styles.center]}>{nb.minnabo.empty}</Text>
           )}
@@ -141,7 +145,8 @@ function Mine({ m }: { m: MinNaboMessage }) {
   );
 }
 
-function FromMinNabo({ m, onPick }: { m: MinNaboMessage; onPick: (m: MinNaboMessage, option: number) => void }) {
+function FromMinNabo({ m, youth, onPick }: { m: MinNaboMessage; youth: boolean; onPick: (m: MinNaboMessage, option: number) => void }) {
+  const links = minnaboLinks(m.attachments, youth);
   const total = (m.pollCounts ?? []).reduce((a, b) => a + b, 0);
   return (
     <View style={styles.rowTheirs}>
@@ -192,9 +197,54 @@ function FromMinNabo({ m, onPick }: { m: MinNaboMessage; onPick: (m: MinNaboMess
             </Text>
           </View>
         ) : null}
+
+        {links.length ? (
+          <View style={styles.links} testID="minnabo-links">
+            {links.map((l) => (l.kind === 'button' ? <LinkButton key={l.key} link={l} /> : <LinkCard key={l.key} link={l} />))}
+          </View>
+        ) : null}
       </View>
       <Text style={styles.time}>{when(m.createdAt)}</Text>
     </View>
+  );
+}
+
+/** A button MinNabo attached: «Velg kommune», «Se Fellesskap», a tab … */
+function LinkButton({ link }: { link: Extract<MinNaboLink, { kind: 'button' }> }) {
+  return <Button label={link.label} variant="ink" size="sm" flat icon={link.icon} iconRight="arrow" onPress={() => safePush(link.path)} />;
+}
+
+const CARD_ICON = { partner: 'building', nabolag: 'home', lag: 'award' } as const;
+
+/** A business, nabolag or lag MinNabo attached: the name with its logo, and where it opens. */
+function LinkCard({ link }: { link: Extract<MinNaboLink, { kind: 'card' }> }) {
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`${link.name}${link.sub ? `. ${link.sub}` : ''}. ${link.cta}`}
+      onPress={() => safePush(link.path)}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    >
+      <View style={styles.cardLogo}>
+        {link.logo ? (
+          <Image source={{ uri: link.logo }} style={styles.cardImg} resizeMode="cover" accessibilityIgnoresInvertColors />
+        ) : (
+          <Icon name={CARD_ICON[link.type]} size={20} color={colors.limeDeep} />
+        )}
+      </View>
+      <View style={styles.flex}>
+        <Text style={styles.cardName} numberOfLines={1}>
+          {link.name}
+        </Text>
+        {link.sub ? (
+          <Text style={text.meta} numberOfLines={1}>
+            {link.sub}
+          </Text>
+        ) : null}
+        <Text style={styles.cardCta}>{link.cta}</Text>
+      </View>
+      <Icon name="right" size={18} color={colors.faint} />
+    </Pressable>
   );
 }
 
@@ -241,6 +291,14 @@ const styles = StyleSheet.create({
   pct: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.ink2 },
   pollMeta: { fontFamily: fonts.body, fontSize: 12.5, color: colors.mute, marginTop: 2 },
   note: { marginTop: 8 },
+  links: { gap: 8, marginTop: 12 },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, padding: 10, borderRadius: radius.tile, backgroundColor: colors.surface2 },
+  pressed: { opacity: 0.7 },
+  cardLogo: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: colors.limeTint, alignItems: 'center', justifyContent: 'center' },
+  cardImg: { width: 44, height: 44 },
+  flex: { flex: 1, minWidth: 0 },
+  cardName: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
+  cardCta: { fontFamily: fonts.bodySemi, fontSize: 12.5, color: colors.limeDeep, marginTop: 2 },
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',

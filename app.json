@@ -3,7 +3,7 @@
     "name": "MinNabo",
     "slug": "minnabo",
     "scheme": "minnabo",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -71,7 +71,7 @@
         {
           "photosPermission": "MinNabo trenger tilgang til bildene dine for å legge ved bilder i oppdrag og samtaler.",
           "cameraPermission": "MinNabo trenger tilgang til kameraet for å ta bilder til oppdrag og samtaler.",
-          "microphonePermission": "MinNabo bruker mikrofonen når du filmer en kort video til en samtale."
+          "microphonePermission": "MinNabo bruker mikrofonen når du spiller inn en talemelding, filmer en kort video eller søker med stemmen."
         }
       ],
       [
@@ -86,7 +86,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "MinNabo bruker mikrofonen når du spiller inn en talemelding i chatten.",
+          "microphonePermission": "MinNabo bruker mikrofonen når du spiller inn en talemelding, filmer en kort video eller søker med stemmen.",
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }
@@ -131,7 +131,7 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "MinNabo bruker mikrofonen når du søker med stemmen.",
+          "microphonePermission": "MinNabo bruker mikrofonen når du spiller inn en talemelding, filmer en kort video eller søker med stemmen.",
           "speechRecognitionPermission": "MinNabo gjør om det du sier til tekst når du søker med stemmen."
         }
       ]

@@ -1620,4 +1620,110 @@ begin
                   and route = '/oppslagstavle?oppslag=' || n || '&svar=1'), 'NR1: the answer varsel opens the answers';
 end $$;
 
+-- ---------- 34. 0111: attachments on a message from MinNabo ----------
+do $$
+declare v uuid; pa uuid; nab uuid; org uuid; t json; a json; failed boolean;
+begin
+  perform as_admin();
+  insert into partners (name, blurb) values ('Vedlegg AS', 'Test') returning id into pa;
+  insert into neighbourhoods (name, place, municipality, active) values ('Vedleggsgrenda', 'Vedleggsgrenda', 'Lillehammer', true) returning id into nab;
+  insert into organisations (municipality, name) values ('Lillehammer', 'Vedlegg IL') returning id into org;
+  v := minnabo_send_message('00000000-0000-4000-8000-0000000000a1', 'Velg kommunen din', 'Test',
+         jsonb_build_array(jsonb_build_object('type', 'route', 'key', 'kommune', 'label', '  Velg nå  '),
+                           jsonb_build_object('type', 'nabolag', 'id', nab),
+                           jsonb_build_object('type', 'lag', 'id', org)));
+  assert (select actions->0->>'label' from minnabo_messages where id = v) = 'Velg nå', 'MA1: labels are trimmed';
+
+  perform as_user('00000000-0000-4000-8000-0000000000a1');
+  select x into t from json_array_elements(minnabo_thread()) x where x->>'id' = v::text;
+  a := t->'attachments';
+  assert json_array_length(a) = 3, 'MA2: three attachments in the thread';
+  assert a->1->>'name' = 'Vedleggsgrenda' and a->2->>'name' = 'Vedlegg IL', 'MA3: names are filled in';
+
+  perform as_admin();
+  update neighbourhoods set active = false where id = nab;
+  perform as_user('00000000-0000-4000-8000-0000000000a1');
+  select x into t from json_array_elements(minnabo_thread()) x where x->>'id' = v::text;
+  assert json_array_length(t->'attachments') = 2, 'MA4: a hidden nabolag is left out';
+
+  perform as_admin();
+  -- a partner that isn't visible (no paid account) never shows
+  v := minnabo_send_message('00000000-0000-4000-8000-0000000000a1', 'Se denne', 'Test',
+         jsonb_build_array(jsonb_build_object('type', 'partner', 'id', pa)));
+  assert (select json_array_length(minnabo_resolve_actions(actions)::json) from minnabo_messages where id = v)
+         = (select count(*)::int from partners_public where id = pa), 'MA5: only visible partners show';
+
+  failed := false;
+  begin
+    perform minnabo_send_message('00000000-0000-4000-8000-0000000000a1', 'For mange', 'Test',
+      '[{"type":"route","key":"a_a"},{"type":"route","key":"b_b"},{"type":"route","key":"c_c"},{"type":"route","key":"d_d"}]'::jsonb);
+  exception when others then failed := true;
+  end;
+  assert failed, 'MA6: four attachments are refused';
+  failed := false;
+  begin
+    perform minnabo_send_message('00000000-0000-4000-8000-0000000000a1', 'Rart', 'Test', '[{"type":"route","key":"../hack"}]'::jsonb);
+  exception when others then failed := true;
+  end;
+  assert failed, 'MA7: a route key must be a plain word';
+  failed := false;
+  begin
+    perform minnabo_send_message('00000000-0000-4000-8000-0000000000a1', 'To like', 'Test',
+      '[{"type":"route","key":"fellesskap"},{"type":"route","key":"fellesskap","label":"Igjen"}]'::jsonb);
+  exception when others then failed := true;
+  end;
+  assert failed, 'MA8: the same attachment twice is refused';
+
+  v := minnabo_send_broadcast('NEWS', 'Nytt', 'Bli med', null, '{"municipalities":["Lillehammer"]}'::jsonb, 'Test', null,
+         '[{"type":"route","key":"nabolag"}]'::jsonb);
+  assert not exists (select 1 from minnabo_messages where broadcast_id = v and actions <> '[{"type":"route","key":"nabolag"}]'::jsonb),
+         'MA9: every copy of a broadcast carries its attachments';
+  assert (select actions from minnabo_broadcast_stats where id = v) = '[{"type":"route","key":"nabolag"}]'::jsonb, 'MA10: the stats show them';
+  -- the old call without attachments still works
+  v := minnabo_send_message(p_profile => '00000000-0000-4000-8000-0000000000a1', p_body => 'Uten vedlegg', p_staff => 'Test');
+  assert (select actions from minnabo_messages where id = v) = '[]'::jsonb, 'MA11: no attachments = empty list';
+end $$;
+
+-- ---------- 35. 0112: «Slett konto» and the nightly cleanup cover what 1.3 added ----------
+do $$
+declare
+  o uuid := '00000000-0000-4000-8000-0000000000a1'; s uuid := '00000000-0000-4000-8000-0000000000a4';
+  conv uuid; ph uuid; old_ph uuid; k int;
+begin
+  perform as_admin();
+  update profiles set deleted_at = null where id in (o, s);
+  select id into conv from conversations limit 1;
+  insert into area_photos (profile_id, municipality, path) values (s, 'Lillehammer', s || '/sol.jpg') returning id into ph;
+  insert into area_photos (profile_id, municipality, path) values (o, 'Lillehammer', o || '/vinter.jpg') returning id into old_ph;
+  insert into area_photo_likes (photo_id, profile_id) values (old_ph, s);
+  insert into buddy_signups (profile_id, program, role) values (s, 'SPRAKVENN', 'WANTS') on conflict do nothing;
+  insert into shared_addresses (conversation_id, from_profile_id, address) values (conv, s, 'Storgata 1');
+  insert into scheduled_messages (conversation_id, author_id, text, send_at) values (conv, s, 'I morgen', now() + interval '1 day');
+  insert into profile_settings (profile_id, away_until, away_message) values (s, current_date + 3, 'På ferie')
+    on conflict (profile_id) do update set away_until = excluded.away_until, away_message = excluded.away_message;
+
+  update profiles set deleted_at = now() where id = s;
+  assert not exists (select 1 from area_photos where profile_id = s), 'PV1: Ukas bilde photos are deleted with the account';
+  assert exists (select 1 from storage_purge_queue where path = s || '/sol.jpg'), 'PV2: ... and the file is queued for deletion';
+  assert not exists (select 1 from area_photo_likes where profile_id = s), 'PV3: likes go';
+  assert not exists (select 1 from buddy_signups where profile_id = s), 'PV4: språkvenn sign-up goes';
+  assert not exists (select 1 from shared_addresses where from_profile_id = s), 'PV5: shared addresses go';
+  assert not exists (select 1 from scheduled_messages where author_id = s), 'PV6: messages waiting to be sent go';
+  assert (select away_message is null from profile_settings where profile_id = s), 'PV7: the away message goes';
+  update profiles set deleted_at = null where id = s;
+
+  -- nightly: old search words, old Ukas bilde, withdrawn addresses
+  insert into search_terms (municipality, term, searched_on) values ('Lillehammer', 'gammelt ord', current_date - 120), ('Lillehammer', 'nytt ord', current_date);
+  update area_photos set created_at = now() - interval '13 months' where id = old_ph;
+  insert into shared_addresses (conversation_id, from_profile_id, address, revoked_at) values (conv, o, 'Gamlevegen 2', now() - interval '2 days');
+  insert into shared_addresses (conversation_id, from_profile_id, address) values (conv, o, 'Ny adresse 3');
+  update shared_addresses set created_at = now() - interval '13 months' where address = 'Ny adresse 3';
+  k := privacy_cleanup();
+  assert k >= 3, 'PV8: the cleanup reports what it removed';
+  assert not exists (select 1 from search_terms where term = 'gammelt ord') and exists (select 1 from search_terms where term = 'nytt ord'),
+         'PV9: search words go after 90 days, new ones stay';
+  assert not exists (select 1 from area_photos where id = old_ph), 'PV10: Ukas bilde goes after 12 months';
+  assert not exists (select 1 from shared_addresses where address in ('Gamlevegen 2', 'Ny adresse 3')), 'PV11: withdrawn and year-old addresses go';
+end $$;
+
 \echo ALL CHECKS PASSED

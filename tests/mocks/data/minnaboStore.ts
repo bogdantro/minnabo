@@ -25,7 +25,7 @@ export const minnaboStore = {
     });
   },
   /** Test helper: what the website's admin does. */
-  adminSends(input: { body: string; kind?: MinNaboMessage['kind']; title?: string; options?: string[]; otherVotes?: number[] }): MinNaboMessage {
+  adminSends(input: { body: string; kind?: MinNaboMessage['kind']; title?: string; options?: string[]; otherVotes?: number[]; attachments?: MinNaboMessage['attachments'] }): MinNaboMessage {
     const id = `mn-${++seq}`;
     const kind = input.kind ?? 'MESSAGE';
     const broadcastId = kind === 'MESSAGE' && !input.title ? undefined : `bc-${seq}`;
@@ -36,7 +36,7 @@ export const minnaboStore = {
         votes: new Map((input.otherVotes ?? []).map((v, i) => [`other-${i}`, v])),
       });
     }
-    const m: MinNaboMessage = { id, fromAdmin: true, body: input.body, createdAt: new Date().toISOString(), kind, title: input.title, broadcastId };
+    const m: MinNaboMessage = { id, fromAdmin: true, body: input.body, createdAt: new Date().toISOString(), kind, title: input.title, broadcastId, attachments: input.attachments };
     messages = [...messages, m];
     return m;
   },

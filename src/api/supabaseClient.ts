@@ -71,6 +71,7 @@ import type {
   NeighbourhoodInfo,
   NeighbourhoodHighlight,
   NabolagSummary,
+  MinNaboAttachment,
   MinNaboMessage,
   ReviseProposalPatch,
   OfferCount,
@@ -1901,13 +1902,15 @@ export class SupabaseApiClient extends SupabaseOppdrag implements ApiClient {
   async getMinNaboThread(): Promise<MinNaboMessage[]> {
     const { data, error } = await supabase.rpc('minnabo_thread');
     if (error) fail(error);
-    type Row = Omit<MinNaboMessage, 'readAt' | 'broadcastId' | 'title' | 'pollOptions' | 'myVote' | 'pollCounts'> & {
+    type Row = Omit<MinNaboMessage, 'readAt' | 'broadcastId' | 'title' | 'pollOptions' | 'myVote' | 'pollCounts' | 'attachments'> & {
       readAt: string | null;
       broadcastId: string | null;
       title: string | null;
       pollOptions: string[] | null;
       myVote: number | null;
       pollCounts: number[] | null;
+      /** missing before 0111 */
+      attachments?: MinNaboAttachment[] | null;
     };
     return ((data ?? []) as Row[]).map((r) => ({
       id: r.id,
@@ -1922,6 +1925,7 @@ export class SupabaseApiClient extends SupabaseOppdrag implements ApiClient {
       pollClosed: !!r.pollClosed,
       myVote: r.myVote ?? undefined,
       pollCounts: r.pollCounts ?? undefined,
+      attachments: r.attachments?.length ? r.attachments : undefined,
     }));
   }
 

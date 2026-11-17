@@ -3629,9 +3629,12 @@ const nb = {
     retentionTitle: 'Hvor lenge lagrer vi data?',
     // Same periods as https://minnaboapp.no/personvern/ and the nightly job in 0064_retention.sql.
     retention: [
-      { q: 'Konto og profil', a: 'Så lenge du har konto. Når du sletter kontoen, fjernes navn, bilde, telefonnummer, e-postadresse, fødselsdato, profiltekst og vurderingene du har fått med en gang. Spørsmålene dine, takkekort, påmeldinger og lån som ikke er ferdige, fjernes også. Bildene dine slettes fra lagringen innen 30 dager.' },
+      { q: 'Konto og profil', a: 'Så lenge du har konto. Når du sletter kontoen, fjernes navn, bilde, telefonnummer, e-postadresse, fødselsdato, profiltekst og vurderingene du har fått med en gang. Spørsmålene dine, takkekort, påmeldinger, lån som ikke er ferdige, Ukas bilde, adresser du har delt og meldinger som venter på å bli sendt, fjernes også. Bildene dine slettes fra lagringen innen 30 dager.' },
       { q: 'Det andre fortsatt ser', a: 'Meldinger, tilbud og avtaler du har vært med på, blir stående hos den andre parten under navnet «Slettet bruker». Vurderinger du har gitt, blir også stående uten navnet ditt.' },
       { q: 'Meldinger og bilder', a: 'Meldinger og bilder i en samtale slettes 24 måneder etter siste melding. Bilder på et avsluttet oppdrag slettes 24 måneder etter siste aktivitet. En melding du sletter selv, fjernes med en gang.' },
+      { q: 'Adresse ved «Del adresse»', a: 'Slettes en dag etter at du trakk den tilbake, avtalen ble avlyst eller jobben ble ferdig – og senest etter 12 måneder.' },
+      { q: 'Ukas bilde', a: 'Slettes 12 måneder etter at du sendte det inn, eller med en gang du sletter det.' },
+      { q: 'Søkeord', a: 'Lagres uten navn – bare ordet og kommunen. Slettes etter 90 dager. «Populære søk» bruker bare de siste 30 dagene.' },
       { q: 'Oppdrag, tilbud og avtaler', a: 'Avsluttede oppdrag som ikke førte til en avtale, slettes helt etter 24 måneder. For jobber som ble avtalt, beholder vi tittel, pris og tidspunkt så lenge kontoen finnes, fordi vurderingene bygger på dem.' },
       { q: 'Vurderinger', a: 'Så lenge den som fikk vurderingen, har konto. Vurderinger som gjelder en ungdomskonto, leses av MinNabo før de vises. En avvist vurdering blir ikke vist, men slettes etter de samme reglene.' },
       { q: 'Liker på oppslag', a: 'Til du tar den tilbake, oppslaget fjernes eller du sletter kontoen.' },

@@ -127,6 +127,25 @@ time, the three filters, the live recipient count, and a confirm step before sen
 - Each message to a user creates one varsel of kind `MODERATION` with route `/minnabo`, which the app's
   push trigger sends. A broadcast to everyone therefore creates one varsel per user.
 
+### Vedlegg: buttons, a business, a nabolag or a lag (0111, 2026-11-16)
+
+A message to one person (thread reply, Brukere › «Send melding») or to many («Ny utsending») can carry up to
+**3** attachments, picked under «Legg ved knapp, bedrift eller nabolag»:
+
+- **Knapp i appen** – a fixed key the app maps to a screen: `oppdrag`, `fellesskap`, `innboks`, `profil`
+  (tabs), `kommune` (Rediger profil, where the kommune is chosen), `nabolag` (choose/join a nabolag),
+  `varslinger`, `legg_ut`*, `tilbyr`, `oppslagstavle`, `utlan`, `foreninger`, `prosjekter`, `ukas_bilde`,
+  `naboskap`*, `sesongsjekk`*, `sok`, `sikkerhet`, `hjelp`. * = adults only: youth never see that button.
+  Each has a default text; staff can write their own (max 40 characters).
+- **Bedrift** – a card with the partner's logo and name that opens the partner page. Only visible partners
+  (`partners_public`): an unpaid or hidden one disappears from the message in the app.
+- **Nabolag** / **Lag** – a card that opens that nabolag (where they can join) or that lag.
+
+Stored as `minnabo_messages.actions` / `minnabo_broadcasts.actions` (jsonb), checked by
+`minnabo_clean_actions()`, and read by the app through `minnabo_thread()` → `attachments`, with names filled
+in. The lists of keys live in the app (`src/domain/minnaboLinks.ts`) and the website
+(`apps/adminportal/chat_links.py`); add a new key to the app first – an older app ignores keys it doesn't know.
+
 ## 3. Texts
 
 - **Personvern, section 2:** add the rows "Nabolag du er med i" (Deg; vise oppslag og sende varsler) and
